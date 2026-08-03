@@ -7,7 +7,7 @@ Personal projects monorepo.
 | Pupils | `projects/wizard-of-oz/` | Production |
 | Polymath | `projects/polymath/` | Production |
 | Analogue | `projects/analogue/` | Active |
-| Idea Engine | `projects/idea-engine/` | Active |
+| Idea Engine | `projects/polymath/api/_lib/idea-engine-v2/` | Active |
 | Golf Masters | `projects/golf-masters/` | Active |
 
 React · TypeScript · Vite · Vercel · Supabase.

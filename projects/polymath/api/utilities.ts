@@ -8,7 +8,6 @@
  *   POST ?resource=refine-idea              — Reshape an idea given voice feedback
  *   GET  ?resource=session-brief&projectId= — AI project briefing on open
  *   POST ?resource=onboarding-start         — Bootstrap a coverage grid for the contextual onboarding chat
- *   POST ?resource=onboarding-turn          — Run the planner for one onboarding turn
  *   POST ?resource=onboarding-observe       — Observe-only planner call (no next-question gen) for the Live API hybrid
  *   POST ?resource=onboarding-token         — Mint an ephemeral Live API token for the browser
  *   POST ?resource=onboarding-segment       — Re-read the full voice chat and cut it into coherent memory chunks
@@ -18,9 +17,6 @@
  *   POST ?resource=generate-project-ideas    — Generate a fresh batch (cron + manual)
  *   GET  ?resource=idea-prompt               — User's custom "suggest an idea" brief (+ default)
  *   POST ?resource=idea-prompt               — Update or reset the brief (null/empty = reset)
- *   GET  ?resource=portrait                  — The Portrait — latest snapshot + last/next predictions + calibration
- *   POST ?resource=portrait                  — Regenerate the portrait (debounced 6h)
- *   POST ?resource=portrait-reckon           — Cron-only: score predictions whose sealed_until has passed
  */
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
@@ -31,7 +27,6 @@ import { generateText } from './_lib/gemini-chat.js'
 import { generateEmbedding, cosineSimilarity } from './_lib/gemini-embeddings.js'
 import {
   newCoverageGrid,
-  runPlanner,
   applyDecisionToGrid,
   newlyFilledSlots,
   computeStoppingHint,
@@ -41,17 +36,13 @@ import {
 import { MODELS } from './_lib/models.js'
 import { PLAIN_ENGLISH_RULES } from './_lib/plain-english.js'
 import { DEFAULT_IDEA_BRIEF } from './_lib/project-ideas/default-prompt.js'
-import { gatherWeek } from './_lib/portrait/gather-week.js'
-import { generatePortrait } from './_lib/portrait/generator.js'
-import { reckonPrediction, scoreForCall } from './_lib/portrait/reckoner.js'
-import type { PortraitPayload, PortraitPredictionWithReckoning } from './_lib/portrait/types.js'
-import type { CoverageGrid, CoverageSlotId } from '../src/types'
+import type { CoverageGrid } from '../src/types'
 
 export const config = {
-  // Vercel caps execution at 60s by default. Bumped to 300s because the
-  // portrait-reckon cron may iterate several due predictions, each with
-  // its own gather + Flash call. Other utilities resources run far
-  // shorter — bumping the cap is harmless for them.
+  // Vercel caps execution at 60s by default. Bumped to 300s for
+  // generate-project-ideas, which can run several Flash calls in a
+  // retry loop. Other utilities resources run far shorter — bumping
+  // the cap is harmless for them.
   maxDuration: 300,
   api: {
     bodyParser: {
@@ -81,10 +72,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   if (req.method === 'POST' && resource === 'onboarding-start') {
     return handleOnboardingStart(req, res)
-  }
-
-  if (req.method === 'POST' && resource === 'onboarding-turn') {
-    return handleOnboardingTurn(req, res)
   }
 
   if (req.method === 'POST' && resource === 'onboarding-observe') {
@@ -121,18 +108,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   if (resource === 'idea-prompt') {
     return handleIdeaPrompt(req, res)
-  }
-
-  if (req.method === 'GET' && resource === 'portrait') {
-    return handlePortraitGet(req, res)
-  }
-
-  if (req.method === 'POST' && resource === 'portrait') {
-    return handlePortraitGenerate(req, res)
-  }
-
-  if (req.method === 'POST' && resource === 'portrait-reckon') {
-    return handlePortraitReckon(req, res)
   }
 
   return res.status(404).json({ error: 'Not found' })
@@ -723,68 +698,6 @@ function handleOnboardingStart(_req: VercelRequest, res: VercelResponse) {
   } catch (err: any) {
     console.error('[utilities/onboarding-start]', err?.message)
     return res.status(500).json({ error: 'Onboarding start failed' })
-  }
-}
-
-async function handleOnboardingTurn(req: VercelRequest, res: VercelResponse) {
-  try {
-    const {
-      grid,
-      latest_transcript,
-      latest_question,
-      latest_target_slot,
-      skipped,
-    } = (req.body || {}) as {
-      grid: CoverageGrid
-      latest_transcript: string
-      latest_question: string
-      latest_target_slot: CoverageSlotId | null
-      skipped: boolean
-    }
-
-    if (!grid || !grid.slots || !Array.isArray(grid.turns)) {
-      return res.status(400).json({ error: 'Invalid grid' })
-    }
-    if (typeof latest_question !== 'string' || latest_question.length === 0) {
-      return res.status(400).json({ error: 'latest_question is required' })
-    }
-
-    const isSkipped = Boolean(skipped) || isOnboardingSkipTranscript(latest_transcript)
-    const transcript = isSkipped ? '' : (latest_transcript || '').trim()
-
-    const decision = await runPlanner({
-      grid,
-      latest_transcript: transcript,
-      latest_question,
-      latest_target_slot: latest_target_slot ?? null,
-      skipped: isSkipped,
-    })
-
-    const nextGrid = applyDecisionToGrid(grid, {
-      question: latest_question,
-      transcript,
-      target_slot: latest_target_slot ?? null,
-      skipped: isSkipped,
-      decision,
-    })
-
-    const filled = newlyFilledSlots(grid, nextGrid)
-    const stopping_hint = computeStoppingHint(nextGrid, decision.depth_signal)
-    const forcedStop = stopping_hint.should_stop
-
-    return res.status(200).json({
-      decision: forcedStop
-        ? { ...decision, should_stop: true, next_move: 'stop', next_question: null, next_slot_target: null }
-        : decision,
-      grid: forcedStop
-        ? { ...nextGrid, completed_at: new Date().toISOString() }
-        : nextGrid,
-      newly_filled_slots: filled,
-      stopping_hint,
-    })
-  } catch (err: any) {
-    console.error('[utilities/onboarding-turn]', err?.message, err?.stack)
-    return res.status(500).json({ error: 'Onboarding turn failed' })
   }
 }
 
@@ -1832,399 +1745,4 @@ function randomUuid(): string {
     const v = ch === 'x' ? r : (r & 0x3) | 0x8
     return v.toString(16)
   })
-}
-
-// ══ The Portrait ════════════════════════════════════════════════════════════
-// See projects/polymath/docs/PORTRAIT_SPEC.md
-//
-// Three endpoints:
-//   GET  ?resource=portrait         → latest snapshot + last/next predictions + calibration
-//   POST ?resource=portrait         → regenerate (debounced 6h server-side)
-//   POST ?resource=portrait-reckon  → cron-only: score any prediction whose sealed_until has passed
-
-const PORTRAIT_REFRESH_DEBOUNCE_MS = 6 * 60 * 60 * 1000  // 6h
-const CALIBRATION_WINDOW = 10
-
-async function handlePortraitGet(req: VercelRequest, res: VercelResponse) {
-  const userId = await getUserId(req)
-  if (!userId) return res.status(401).json({ error: 'Sign in to see your portrait' })
-  const supabase = getSupabaseClient()
-
-  try {
-    const payload = await buildPortraitPayload(supabase, userId)
-    return res.status(200).json(payload)
-  } catch (err: any) {
-    console.error('[utilities/portrait] GET failed:', err)
-    return res.status(500).json({ error: err?.message || 'Failed to load portrait' })
-  }
-}
-
-async function handlePortraitGenerate(req: VercelRequest, res: VercelResponse) {
-  const userId = await getUserId(req)
-  if (!userId) return res.status(401).json({ error: 'Sign in to generate a portrait' })
-  const supabase = getSupabaseClient()
-
-  try {
-    // Server-side debounce. If the user has a snapshot less than 6h old,
-    // return the existing payload rather than burning a Flash call.
-    const { data: existingRows } = await supabase
-      .from('portrait_snapshots')
-      .select('id, generated_at')
-      .eq('user_id', userId)
-      .order('generated_at', { ascending: false })
-      .limit(1)
-    const existing = existingRows?.[0]
-    if (existing) {
-      const ageMs = Date.now() - new Date(existing.generated_at).getTime()
-      if (ageMs < PORTRAIT_REFRESH_DEBOUNCE_MS) {
-        const payload = await buildPortraitPayload(supabase, userId)
-        return res.status(200).json({ ...payload, debounced: true })
-      }
-    }
-
-    const corpus = await gatherWeek(supabase, userId)
-    const result = await generatePortrait(corpus)
-
-    if (!result.ok) {
-      // Disambiguate. `insufficient_signal` is "you don't have enough
-      // this week" → 200 + empty state copy on the client. The other
-      // reasons are real generation failures → 5xx so the client can
-      // surface "couldn't write this — try again", not "capture more".
-      if (result.reason === 'insufficient_signal') {
-        return res.status(200).json({
-          snapshot: null,
-          last_prediction: null,
-          next_prediction: null,
-          calibration: null,
-          next_refresh_available_at: null,
-          reason: 'insufficient_signal',
-        })
-      }
-      return res.status(502).json({
-        error: result.reason === 'voice_failed'
-          ? "The model wrote something off-voice. Try again in a moment."
-          : "Couldn't write this week's read. Try again in a moment.",
-        reason: result.reason,
-      })
-    }
-
-    // The sealed prediction runs on a WEEKLY cadence that is decoupled
-    // from the snapshot. Refreshing the read-back can happen every 6h, so
-    // it must NOT reset the prediction clock. The original bug was exactly
-    // that: every refresh deleted the in-flight prediction and resealed a
-    // fresh 7-day one, so a prediction almost never survived long enough
-    // to be graded — meaning the "last week, the harness predicted" reveal
-    // never fired and the user only ever saw a permanently sealed box.
-    //
-    // Fix: only seal a NEW prediction when the slot is free — when there's
-    // no un-reckoned prediction still inside its sealed window. If one is
-    // already in flight, leave it running and just write the new snapshot.
-    // The cron grades it once sealed_until passes and the reveal lands on
-    // the next render.
-    const todayIso = new Date().toISOString().slice(0, 10)
-    const { data: inFlight } = await supabase
-      .from('portrait_predictions')
-      .select('id, portrait_reckonings(id)')
-      .eq('user_id', userId)
-      .gt('sealed_until', todayIso)
-    const hasLivePrediction = (inFlight ?? []).some(
-      (r: any) => !r.portrait_reckonings || r.portrait_reckonings.length === 0
-    )
-
-    // Always write the fresh snapshot — that's the read-back the user
-    // asked for, and it's independent of any prediction.
-    const { error: snapErr } = await supabase
-      .from('portrait_snapshots')
-      .insert({
-        user_id: userId,
-        body: result.output.body,
-        evidence_refs: result.output.evidence_refs,
-      })
-    if (snapErr) throw snapErr
-
-    // Seal a new prediction only if one isn't already running.
-    if (!hasLivePrediction) {
-      const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000)
-      const sealedUntil = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-      const { error: predErr } = await supabase
-        .from('portrait_predictions')
-        .insert({
-          user_id: userId,
-          prediction: result.output.next_prediction,
-          week_starting: tomorrow.toISOString().slice(0, 10),
-          sealed_until: sealedUntil.toISOString().slice(0, 10),
-        })
-      if (predErr) {
-        // Non-fatal — the snapshot is already written (the thing the user
-        // asked for). A missing seal just means no new prediction this
-        // cycle; the next refresh after the current one elapses will seal.
-        console.warn('[portrait] failed to seal prediction:', predErr.message)
-      }
-    }
-
-    const payload = await buildPortraitPayload(supabase, userId)
-    return res.status(200).json(payload)
-  } catch (err: any) {
-    console.error('[utilities/portrait] POST failed:', err)
-    return res.status(500).json({ error: err?.message || 'Failed to generate portrait' })
-  }
-}
-
-/**
- * Cron handler. Iterates predictions whose sealed_until has passed and
- * which don't yet have a reckoning row. Each prediction is graded by a
- * Flash call against the corpus from THAT prediction's own sealed week
- * — not the trailing 7 days from now. (Cron can lag by hours or even
- * days; using a fixed window means the verdict is always against the
- * week the prediction was actually sealed for.)
- *
- * Bearer-token authed via IDEA_ENGINE_SECRET, same as the rest of the
- * polymath cron endpoints — there's no end-user request driving this.
- */
-async function handlePortraitReckon(req: VercelRequest, res: VercelResponse) {
-  // Node lowercases all incoming header keys, so the lowercase lookup
-  // is enough; the capital-A fallback is defensive belt-and-braces.
-  const authHeaderRaw = req.headers['authorization'] || req.headers['Authorization']
-  const expectedToken = process.env.IDEA_ENGINE_SECRET
-  if (!expectedToken) {
-    return res.status(500).json({ error: 'Cron secret not configured' })
-  }
-  const headerStr = Array.isArray(authHeaderRaw) ? authHeaderRaw[0] : authHeaderRaw
-  if (!headerStr || !headerStr.startsWith('Bearer ')) {
-    return res.status(401).json({ error: 'Unauthorized' })
-  }
-  if (!timingSafeStringEqual(headerStr.slice(7), expectedToken)) {
-    return res.status(401).json({ error: 'Unauthorized' })
-  }
-
-  const supabase = getSupabaseClient()
-  const today = new Date().toISOString().slice(0, 10)
-
-  try {
-    // Find unscored predictions whose sealed_until has passed. Left join
-    // against reckonings to filter out ones already scored.
-    const { data: due, error } = await supabase
-      .from('portrait_predictions')
-      .select('id, user_id, prediction, week_starting, sealed_until, generated_at, portrait_reckonings(id)')
-      .lte('sealed_until', today)
-      .order('sealed_until', { ascending: true })
-      .limit(50)
-    if (error) throw error
-
-    const unscored = (due ?? []).filter((row: any) =>
-      !row.portrait_reckonings || row.portrait_reckonings.length === 0
-    )
-
-    let scored = 0
-    let failed = 0
-    // Group by user so we only do one gather per user, then run the
-    // Flash call per prediction in that user's group. Each prediction
-    // still gets graded against its own window — gather is called with
-    // since=generated_at, until=sealed_until+1d so we cover the full
-    // sealed window for each prediction.
-    const byUser = new Map<string, typeof unscored>()
-    for (const p of unscored) {
-      const list = byUser.get(p.user_id) ?? []
-      list.push(p)
-      byUser.set(p.user_id, list)
-    }
-
-    for (const [userId, predictions] of byUser) {
-      // Cache gathers by window — multiple predictions for the same
-      // user can share a window if they were generated together.
-      const cache = new Map<string, Awaited<ReturnType<typeof gatherWeek>>>()
-      for (const pred of predictions) {
-        try {
-          // Sealed window for this prediction: from generated_at through
-          // sealed_until (end of day, exclusive of the day after).
-          const since = pred.generated_at as string
-          const sealedEnd = new Date(pred.sealed_until as string)
-          // Push the upper bound to the END of sealed_until's day (UTC)
-          // so a capture made on the last day still counts.
-          sealedEnd.setUTCDate(sealedEnd.getUTCDate() + 1)
-          const until = sealedEnd.toISOString()
-          const cacheKey = `${since}|${until}`
-          let corpus = cache.get(cacheKey)
-          if (!corpus) {
-            corpus = await gatherWeek(supabase, userId, { since, until })
-            cache.set(cacheKey, corpus)
-          }
-          const result = await reckonPrediction(pred.prediction, corpus)
-          if (!result) {
-            failed++
-            continue
-          }
-          const { error: insErr } = await supabase
-            .from('portrait_reckonings')
-            .insert({
-              prediction_id: pred.id,
-              called: result.called,
-              evidence: result.evidence,
-              score: scoreForCall(result.called),
-            })
-          if (insErr) {
-            console.warn('[portrait/reckon] insert failed for', pred.id, insErr.message)
-            failed++
-          } else {
-            scored++
-          }
-        } catch (e: any) {
-          console.warn('[portrait/reckon] prediction', pred.id, 'failed:', e?.message)
-          failed++
-        }
-      }
-    }
-
-    return res.status(200).json({ checked: unscored.length, scored, failed })
-  } catch (err: any) {
-    console.error('[utilities/portrait-reckon] failed:', err)
-    return res.status(500).json({ error: err?.message || 'Reckon failed' })
-  }
-}
-
-/**
- * Constant-time string comparison. Returns false immediately on length
- * mismatch (a length-side-channel is not a meaningful attack vector
- * here — the secret length is fixed in the deployment), then xors each
- * byte to avoid an early return on the first mismatch.
- */
-function timingSafeStringEqual(a: string, b: string): boolean {
-  if (a.length !== b.length) return false
-  let mismatch = 0
-  for (let i = 0; i < a.length; i++) {
-    mismatch |= a.charCodeAt(i) ^ b.charCodeAt(i)
-  }
-  return mismatch === 0
-}
-
-/**
- * Assembles the page payload from the three portrait tables. Used by
- * both GET ?resource=portrait and POST ?resource=portrait (after a fresh
- * generation) so the page can render off a single shape.
- */
-async function buildPortraitPayload(
-  supabase: ReturnType<typeof getSupabaseClient>,
-  userId: string,
-): Promise<PortraitPayload> {
-  // First, fetch the user's prediction ids — this is the explicit guard
-  // for the calibration query (defence-in-depth on top of RLS). We
-  // resolve ids first, then constrain the reckonings query with .in().
-  const [snapRes, predsRes, userPredIdsRes] = await Promise.all([
-    supabase
-      .from('portrait_snapshots')
-      .select('id, body, evidence_refs, generated_at')
-      .eq('user_id', userId)
-      .order('generated_at', { ascending: false })
-      .limit(1),
-    supabase
-      .from('portrait_predictions')
-      .select(`
-        id, prediction, week_starting, sealed_until, generated_at,
-        portrait_reckonings(id, prediction_id, called, evidence, score, evaluated_at)
-      `)
-      .eq('user_id', userId)
-      .order('generated_at', { ascending: false })
-      .limit(16),
-    supabase
-      .from('portrait_predictions')
-      .select('id')
-      .eq('user_id', userId)
-      .limit(200),
-  ])
-
-  // Calibration. Filter reckonings to this user's prediction ids — no
-  // join, no PostgREST syntax ambiguity. Two round-trips but bulletproof.
-  const userPredIds = (userPredIdsRes.data ?? []).map((r: any) => r.id)
-  let calibration: PortraitPayload['calibration'] = null
-  if (userPredIds.length > 0) {
-    const { data: calibRows } = await supabase
-      .from('portrait_reckonings')
-      .select('id, score, evaluated_at')
-      .in('prediction_id', userPredIds)
-      .order('evaluated_at', { ascending: false })
-      .limit(CALIBRATION_WINDOW)
-    const reckonings = (calibRows ?? []) as any[]
-    if (reckonings.length > 0) {
-      const sum = reckonings.reduce((acc, r) => acc + (typeof r.score === 'string' ? parseFloat(r.score) : r.score), 0)
-      calibration = {
-        score_sum: sum,
-        count: reckonings.length,
-        display: `${formatScore(sum)} / ${reckonings.length}`,
-      }
-    }
-  }
-
-  const snapshot = snapRes.data?.[0]
-    ? {
-        id: snapRes.data[0].id,
-        body: snapRes.data[0].body,
-        evidence_refs: snapRes.data[0].evidence_refs ?? [],
-        generated_at: snapRes.data[0].generated_at,
-      }
-    : null
-
-  // Split predictions into "last_prediction" (most-recently-EVALUATED
-  // reckoned one — the most recent verdict the user has seen) and
-  // "next_prediction" (most recent un-reckoned). Picking by
-  // evaluated_at rather than generated_at means "last week's verdict"
-  // always shows the most recently delivered one, even if predictions
-  // arrive out of order under cron lag.
-  const predictions = (predsRes.data ?? []) as any[]
-
-  let next_prediction: PortraitPayload['next_prediction'] = null
-  for (const p of predictions) {
-    const r = Array.isArray(p.portrait_reckonings) && p.portrait_reckonings.length > 0
-      ? p.portrait_reckonings[0]
-      : null
-    if (!r) {
-      next_prediction = {
-        id: p.id,
-        prediction: p.prediction,
-        week_starting: p.week_starting,
-        sealed_until: p.sealed_until,
-        generated_at: p.generated_at,
-      }
-      break  // predictions are ordered DESC by generated_at; first un-reckoned wins
-    }
-  }
-
-  let last_prediction: PortraitPredictionWithReckoning | null = null
-  const reckonedPreds = predictions
-    .map((p: any) => {
-      const r = Array.isArray(p.portrait_reckonings) && p.portrait_reckonings.length > 0
-        ? p.portrait_reckonings[0]
-        : null
-      return r ? { pred: p, reckoning: r } : null
-    })
-    .filter((x): x is { pred: any; reckoning: any } => x !== null)
-    .sort((a, b) => new Date(b.reckoning.evaluated_at).getTime() - new Date(a.reckoning.evaluated_at).getTime())
-  const top = reckonedPreds[0]
-  if (top) {
-    last_prediction = {
-      id: top.pred.id,
-      prediction: top.pred.prediction,
-      week_starting: top.pred.week_starting,
-      sealed_until: top.pred.sealed_until,
-      generated_at: top.pred.generated_at,
-      reckoning: {
-        id: top.reckoning.id,
-        prediction_id: top.reckoning.prediction_id ?? top.pred.id,
-        called: top.reckoning.called,
-        evidence: top.reckoning.evidence,
-        score: typeof top.reckoning.score === 'string' ? parseFloat(top.reckoning.score) : top.reckoning.score,
-        evaluated_at: top.reckoning.evaluated_at,
-      },
-    }
-  }
-
-  const next_refresh_available_at = snapshot
-    ? new Date(new Date(snapshot.generated_at).getTime() + PORTRAIT_REFRESH_DEBOUNCE_MS).toISOString()
-    : null
-
-  return { snapshot, last_prediction, next_prediction, calibration, next_refresh_available_at }
-}
-
-function formatScore(n: number): string {
-  // Whole numbers render as "7", halves render as "7.5".
-  return Number.isInteger(n) ? String(n) : n.toFixed(1)
 }

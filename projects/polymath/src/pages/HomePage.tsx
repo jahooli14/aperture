@@ -40,7 +40,7 @@ import { ConsumingWidget } from '../components/home/ConsumingWidget'
 import { DeferMount } from '../components/DeferMount'
 import { UnauthHome } from '../components/onboarding/UnauthHome'
 import { ease, stagger } from '../lib/motion'
-import { AlertCircle, Search, Moon, Settings, Aperture, Flame } from 'lucide-react'
+import { AlertCircle, Search, Moon, Settings, Flame } from 'lucide-react'
 
 export function HomePage() {
   const { isAuthenticated } = useAuthContext()
@@ -212,14 +212,6 @@ export function HomePage() {
                     <Moon className="h-5 w-5" />
                   </button>
                 )}
-                <button
-                  onClick={() => navigate('/portrait')}
-                  aria-label="The portrait — read this week back"
-                  className="masthead-action press-spring"
-                  title="The portrait"
-                >
-                  <Aperture className="h-5 w-5" />
-                </button>
                 <button
                   onClick={() => navigate('/search')}
                   aria-label="Search everything"
