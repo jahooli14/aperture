@@ -28,11 +28,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'GET') {
     const { action, id, type } = req.query
 
-    // SERENDIPITY ENGINE - DEPRECATED
-    if (action === 'serendipity') {
-      return res.status(410).json({ error: 'Serendipity Engine has been deprecated.' })
-    }
-
     // REGENERATE CONNECTIONS - Admin utility (merged from admin/regenerate-connections.ts)
     if (action === 'regenerate') {
       try {

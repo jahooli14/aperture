@@ -3,19 +3,15 @@
  *
  * Handles:
  * - Daily job (runs at 21:30 UTC / 9:30pm GMT):
- *   - Strengthen nodes
  *   - Process stuck memories
  *   - Generate bedtime prompts
  *   - Weekly synthesis (Mondays only)
  * - Manual triggers for individual jobs
- * - Pupils reminders (send-reminders job)
  *
  * Route with ?job= query parameter:
  * - /api/cron/jobs?job=daily (auto-scheduled)
  * - /api/cron/jobs?job=synthesis (manual or weekly)
- * - /api/cron/jobs?job=strengthen (manual)
  * - /api/cron/jobs?job=process_stuck (manual)
- * - /api/cron/jobs?job=send-reminders (Pupils daily reminders)
  */
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
@@ -28,10 +24,7 @@ import { maintainEmbeddings } from '../_lib/embeddings-maintenance.js'
 import { extractCapabilities } from '../_lib/capabilities-extraction.js'
 import { identifyRottingProjects } from '../_lib/project-maintenance.js'
 import { recomputeHeatForUser } from '../_lib/metabolism.js'
-import { generateWeeklyIntersections } from '../_lib/intersection-weekly.js'
 import webpush from 'web-push'
-import { Resend } from 'resend'
-import { createClient } from '@supabase/supabase-js'
 
 // Configure web-push (globally or within the handler if needed per-request)
 // VAPID details from environment variables
@@ -99,24 +92,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         tasks: {}
       }
 
-      // 1. Strengthen nodes (Archived Feature)
-      // try {
-      //   const updates = await strengthenNodes(24)
-      //   results.tasks.strengthen = {
-      //     success: true,
-      //     nodes_strengthened: updates?.length || 0
-      //   }
-      //   console.log(`[cron/jobs/daily] Strengthened ${updates?.length || 0} nodes`)
-      // } catch (error) {
-      //   results.tasks.strengthen = {
-      //     success: false,
-      //     error: error instanceof Error ? error.message : 'Unknown error'
-      //   }
-      //   console.error('[cron/jobs/daily] Strengthen failed:', error)
-      // }
-      results.tasks.strengthen = { success: true, nodes_strengthened: 0, message: 'Feature archived' }
-
-      // 2. Process stuck memories (including retrying failed ones, but only
+      // 1. Process stuck memories (including retrying failed ones, but only
       // up to MAX_PROCESS_ATTEMPTS — see process-memory.ts).
       try {
         const { data: stuckMemories, error: fetchError } = await supabase
@@ -160,7 +136,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         console.error('[cron/jobs/daily] Process stuck failed:', error)
       }
 
-      // 3. Run synthesis on Mondays
+      // 2. Run synthesis on Mondays
       if (isMonday) {
         try {
           const suggestions = await runSynthesis(userId)
@@ -178,91 +154,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
       }
 
-      // 3b. Generate weekly intersection cards. Primary schedule is Mondays,
-      // but we also seed on any day when the row is missing or expired so
-      // a fresh install doesn't have to wait until Monday for the section
-      // to come alive. Results go to weekly_intersections; previous rows are
-      // archived to weekly_intersections_history by the generator.
-      if (userId) {
-        try {
-          const { data: existing, error: existingErr } = await supabase
-            .from('weekly_intersections')
-            .select('expires_at, intersections, insights')
-            .eq('user_id', userId)
-            .maybeSingle()
-
-          const isMissingTable =
-            existingErr && (
-              (existingErr as { code?: string }).code === '42P01' ||
-              /does not exist/i.test(existingErr.message || '')
-            )
-
-          if (isMissingTable) {
-            results.tasks.intersections = {
-              success: false,
-              error: 'weekly_intersections table not found — apply migration 20260411_weekly_intersections.sql',
-            }
-            console.warn('[cron/jobs/daily] weekly_intersections table missing; skipping intersection generation.')
-          } else {
-            const nowMs = Date.now()
-            const hasRow = !!existing
-            const isExpired = existing?.expires_at && new Date(existing.expires_at).getTime() < nowMs
-            const intArr = (existing?.intersections ?? []) as Array<Record<string, unknown>>
-            const insArr = (existing?.insights ?? []) as Array<Record<string, unknown>>
-            // A card has body content when its `reason` is a non-empty string
-            // OR its `crossover` object has a usable title + pattern. Empty
-            // strings or `{}` count as a shell (renders as chrome only).
-            const hasCardBody = (c: Record<string, unknown>) => {
-              const reason = typeof c.reason === 'string' ? c.reason.trim() : ''
-              if (reason) return true
-              const cx = c.crossover as Record<string, unknown> | undefined | null
-              if (!cx || typeof cx !== 'object') return false
-              const title = typeof cx.crossover_title === 'string' ? cx.crossover_title.trim() : ''
-              const pattern = typeof cx.the_pattern === 'string' ? cx.the_pattern.trim()
-                : typeof cx.why_it_works === 'string' ? cx.why_it_works.trim() : ''
-              return Boolean(title && pattern)
-            }
-            // A "healthy" deck has at least one card with body content. If either
-            // deck is empty or all shells, the UI ends up missing a whole
-            // section (e.g. mashups label disappears because its array is []),
-            // with no way for the user to trigger a retry mid-week. Heal that
-            // here so the next cron run rebuilds both decks from scratch.
-            const mashupsHealthy = intArr.some(hasCardBody)
-            const insightsHealthy = insArr.some(hasCardBody)
-            const isEmpty = hasRow && intArr.length === 0 && insArr.length === 0
-            const allShells = hasRow && !isEmpty && !mashupsHealthy && !insightsHealthy
-            const deckMissing = hasRow && !isEmpty && !allShells && (!mashupsHealthy || !insightsHealthy)
-            const shouldGenerate = isMonday || !hasRow || !!isExpired || isEmpty || allShells || deckMissing
-
-            if (shouldGenerate) {
-              const reason = isMonday ? 'weekly'
-                : !hasRow ? 'first_seed'
-                : isEmpty ? 'empty_retry'
-                : allShells ? 'shell_retry'
-                : deckMissing ? 'deck_retry'
-                : 'expired'
-              const result = await generateWeeklyIntersections(userId)
-              results.tasks.intersections = {
-                success: true,
-                reason,
-                intersections_count: result.intersections.length,
-                insights_count: result.insights.length,
-              }
-              console.log(`[cron/jobs/daily] Generated weekly intersections (${reason}): ${result.intersections.length} mashups, ${result.insights.length} insights`)
-            } else {
-              results.tasks.intersections = { success: true, skipped: true, reason: 'still_fresh' }
-            }
-          }
-        } catch (error) {
-          results.tasks.intersections = {
-            success: false,
-            error: error instanceof Error ? error.message : 'Unknown error',
-          }
-          console.error('[cron/jobs/daily] Weekly intersections failed:', error)
-        }
-      }
-
-      // 4. Generate bedtime prompts (runs once daily)
+      // 3. Generate bedtime prompts (runs once daily)
       try {
         const prompts = await generateBedtimePrompts(userId)
         results.tasks.bedtime = {
@@ -278,7 +170,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         console.error('[cron/jobs/daily] Bedtime prompts failed:', error)
       }
 
-      // 4b. Generate Power Hour Plan (Pre-calculation for instant load)
+      // 3b. Generate Power Hour Plan (Pre-calculation for instant load)
       try {
         const { generatePowerHourPlan } = await import('../_lib/power-hour-generator.js')
         console.log('[cron/jobs/daily] Generating Power Hour plan...')
@@ -308,7 +200,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
       }
 
-      // 5. Send Bedtime Push Notifications (if enabled).
+      // 4. Send Bedtime Push Notifications (if enabled).
       // Gate only on VAPID config — the daily job is itself scheduled for
       // 21:30 UTC, so re-checking the wall clock here just meant a delayed
       // cron run (common, per CLAUDE.md) silently skipped the push. Also the
@@ -349,7 +241,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
       }
 
-      // 6. Identify Rotting Projects
+      // 5. Identify Rotting Projects
       try {
         console.log('[cron/jobs/daily] Identifying rotting projects...')
         const rottingProjects = await identifyRottingProjects(userId)
@@ -367,7 +259,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
       }
 
-      // 7. Maintenance (Embeddings & Capabilities)
+      // 6. Maintenance (Embeddings & Capabilities)
       try {
         // Daily: Update embeddings for new/stale items (limit 20)
         console.log('[cron/jobs/daily] Running embedding maintenance...')
@@ -388,7 +280,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
       }
 
-      // 8. Metabolism: Recompute heat scores for drawer projects (daily)
+      // 7. Metabolism: Recompute heat scores for drawer projects (daily)
       if (userId) {
         try {
           console.log('[cron/jobs/daily] Recomputing heat scores...')
@@ -404,7 +296,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
       }
 
-      // 9. Metabolism: Generate drawer digest (Sundays only)
+      // 8. Metabolism: Generate drawer digest (Sundays only)
       const isSunday = now.getUTCDay() === 0
       if (isSunday && userId) {
         try {
@@ -514,33 +406,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         job: 'synthesis',
         suggestions_generated: suggestions?.length || 0,
         timestamp: new Date().toISOString()
-      })
-
-    } else if (job === 'intersections') {
-      // Manual trigger for weekly intersection regeneration. Use this after
-      // a deploy to seed the cache before Monday rolls around, or to refresh
-      // mid-week during testing.
-      if (!userId) {
-        return res.status(400).json({ error: 'No active user found' })
-      }
-      const result = await generateWeeklyIntersections(userId)
-      return res.status(200).json({
-        success: true,
-        job: 'intersections',
-        intersections_count: result.intersections.length,
-        insights_count: result.insights.length,
-        generated_at: result.generated_at,
-        expires_at: result.expires_at,
-        timestamp: new Date().toISOString(),
-      })
-
-    } else if (job === 'strengthen') {
-      // const updates = await strengthenNodes(24)
-      // console.log(`[cron/jobs] Strengthened ${updates?.length || 0} nodes`)
-      return res.status(200).json({
-        success: true,
-        job: 'strengthen',
-        message: 'Feature archived'
       })
 
     } else if (job === 'process_stuck' || job === 'process-memories') {
@@ -691,123 +556,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       return res.status(200).json(results)
 
-    } else if (job === 'send-reminders') {
-      // Pupils daily reminders
-      console.log('[cron/jobs/send-reminders] Starting Pupils reminder job...')
-
-      const resend = new Resend(process.env.RESEND_API_KEY)
-      const pupilsSupabase = createClient(
-        process.env.VITE_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!
-      )
-
-      const { data: users, error: usersError } = await pupilsSupabase
-        .from('user_settings')
-        .select('user_id, reminder_email, reminder_time, timezone, push_subscription')
-        .eq('reminders_enabled', true)
-
-      if (usersError) {
-        console.error('[cron/jobs/send-reminders] Error fetching users:', usersError)
-        return res.status(500).json({ error: 'Failed to fetch users' })
-      }
-
-      if (!users || users.length === 0) {
-        return res.status(200).json({ message: 'No users with reminders enabled', sent: 0 })
-      }
-
-      console.log(`[cron/jobs/send-reminders] Checking reminders for ${users.length} users...`)
-
-      const emailsSent: string[] = []
-      const pushSent: string[] = []
-      const errors: { userId: string; error: string }[] = []
-
-      for (const user of users) {
-        // Check if user already uploaded today
-        const now = new Date()
-        const userLocalDate = getUserLocalDate(now, user.timezone || 'UTC')
-
-        const { data: photos, error: photosError } = await pupilsSupabase
-          .from('photos')
-          .select('id')
-          .eq('user_id', user.user_id)
-          .gte('capture_date', userLocalDate)
-          .lt('capture_date', new Date(new Date(userLocalDate).getTime() + 24 * 60 * 60 * 1000).toISOString())
-
-        if (photosError) {
-          console.error(`[cron/jobs/send-reminders] Error checking photos for user ${user.user_id}:`, photosError)
-          errors.push({ userId: user.user_id, error: photosError.message })
-          continue
-        }
-
-        // If user already uploaded today, skip
-        if (photos && photos.length > 0) {
-          continue
-        }
-
-        // Try push notification first (preferred for mobile)
-        let pushSuccess = false
-        if (user.push_subscription) {
-          try {
-            const payload = JSON.stringify({
-              title: 'Don\'t forget today\'s photo! 📸',
-              body: 'Keep the streak alive and capture today\'s memory',
-              url: '/?upload=true'
-            })
-
-            await webpush.sendNotification(user.push_subscription, payload)
-            pushSent.push(user.user_id)
-            pushSuccess = true
-            console.log(`[cron/jobs/send-reminders] Push notification sent to user ${user.user_id}`)
-          } catch (pushError: any) {
-            console.error(`[cron/jobs/send-reminders] Failed to send push to user ${user.user_id}:`, pushError)
-
-            // If subscription is expired/invalid, remove it
-            if (pushError.statusCode === 410 || pushError.statusCode === 404) {
-              await pupilsSupabase
-                .from('user_settings')
-                .update({ push_subscription: null })
-                .eq('user_id', user.user_id)
-              console.log(`[cron/jobs/send-reminders] Removed expired push subscription for user ${user.user_id}`)
-            }
-          }
-        }
-
-        // Fall back to email if push failed or not available
-        if (!pushSuccess && user.reminder_email) {
-          try {
-            await resend.emails.send({
-              from: 'Pupils <onboarding@resend.dev>',
-              to: user.reminder_email,
-              subject: "Don't forget today's photo! 📸",
-              html: generateEmailHTML(user.user_id),
-            })
-
-            emailsSent.push(user.reminder_email)
-            console.log(`[cron/jobs/send-reminders] Email reminder sent to ${user.reminder_email}`)
-          } catch (emailError) {
-            console.error(`[cron/jobs/send-reminders] Failed to send email to ${user.reminder_email}:`, emailError)
-            errors.push({
-              userId: user.user_id,
-              error: emailError instanceof Error ? emailError.message : String(emailError)
-            })
-          }
-        }
-      }
-
-      return res.status(200).json({
-        success: true,
-        job: 'send-reminders',
-        pushNotifications: pushSent.length,
-        emailsSent: emailsSent.length,
-        total: pushSent.length + emailsSent.length,
-        pushRecipients: pushSent,
-        emailRecipients: emailsSent,
-        errors: errors.length > 0 ? errors : undefined,
-        timestamp: new Date().toISOString()
-      })
-
     } else {
-      return res.status(400).json({ error: `Unknown job: ${job}. Use ?job=daily, ?job=link-all, ?job=synthesis, ?job=strengthen, ?job=process_stuck, ?job=process-memories, ?job=voice-reminder, or ?job=send-reminders` })
+      return res.status(400).json({ error: `Unknown job: ${job}. Use ?job=daily, ?job=link-all, ?job=synthesis, ?job=process_stuck, ?job=process-memories, or ?job=voice-reminder` })
     }
 
   } catch (error) {
@@ -821,7 +571,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 }
 
-// Helper functions for send-reminders job
 function getUserLocalDate(date: Date, timezone: string): string {
   const formatter = new Intl.DateTimeFormat('en-CA', {
     timeZone: timezone,
@@ -843,63 +592,6 @@ function getUserLocalHour(date: Date, timezone: string): number {
   return Number(formatter.format(date)) % 24
 }
 
-function generateEmailHTML(userId: string): string {
-  const appUrl = process.env.VITE_APP_URL || 'https://aperture-production.vercel.app'
-  const uploadUrl = `${appUrl}?upload=true`
-  const settingsUrl = `${appUrl}?settings=true`
-
-  return `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Daily Photo Reminder</title>
-</head>
-<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 600px; margin: 40px auto; background-color: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-    <tr>
-      <td style="padding: 40px 30px; text-align: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-        <h1 style="margin: 0; color: white; font-size: 32px;">📸</h1>
-        <h2 style="margin: 10px 0 0 0; color: white; font-size: 24px; font-weight: 600;">Pupils</h2>
-      </td>
-    </tr>
-    <tr>
-      <td style="padding: 40px 30px;">
-        <h2 style="margin: 0 0 16px 0; color: #1f2937; font-size: 24px; font-weight: 600;">Don't forget today's photo!</h2>
-        <p style="margin: 0 0 24px 0; color: #6b7280; font-size: 16px; line-height: 1.6;">
-          Hi there! 👋
-        </p>
-        <p style="margin: 0 0 24px 0; color: #6b7280; font-size: 16px; line-height: 1.6;">
-          You haven't captured today's memory yet. Take a quick photo to keep your daily journey going!
-        </p>
-        <table width="100%" cellpadding="0" cellspacing="0">
-          <tr>
-            <td align="center" style="padding: 24px 0;">
-              <a href="${uploadUrl}" style="display: inline-block; padding: 14px 32px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">Upload Today's Photo</a>
-            </td>
-          </tr>
-        </table>
-        <p style="margin: 24px 0 0 0; color: #9ca3af; font-size: 14px; line-height: 1.6;">
-          Keep the streak alive and watch your baby grow day by day! ✨
-        </p>
-      </td>
-    </tr>
-    <tr>
-      <td style="padding: 24px 30px; background-color: #f9fafb; border-top: 1px solid #e5e7eb;">
-        <p style="margin: 0; color: #9ca3af; font-size: 12px; line-height: 1.6; text-align: center;">
-          You're receiving this because you have daily reminders enabled.
-          <br>
-          <a href="${settingsUrl}" style="color: #667eea; text-decoration: none;">Manage your settings</a>
-        </p>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>
-  `.trim()
-}
-
 // Vercel cron configuration (in vercel.json):
 /*
 {
@@ -911,7 +603,6 @@ function generateEmailHTML(userId: string): string {
   ]
 }
 Note: Hobby accounts limited to 1 cron/day. Daily job runs at 21:30 UTC (9:30pm GMT / 8:30pm BST):
-- Node strengthening (every day)
 - Stuck memory processing (every day)
 - Bedtime prompts generation (every day)
 - Synthesis (Mondays only)

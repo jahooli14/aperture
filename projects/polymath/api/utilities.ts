@@ -8,7 +8,6 @@
  *   POST ?resource=refine-idea              — Reshape an idea given voice feedback
  *   GET  ?resource=session-brief&projectId= — AI project briefing on open
  *   POST ?resource=onboarding-start         — Bootstrap a coverage grid for the contextual onboarding chat
- *   POST ?resource=onboarding-turn          — Run the planner for one onboarding turn
  *   POST ?resource=onboarding-observe       — Observe-only planner call (no next-question gen) for the Live API hybrid
  *   POST ?resource=onboarding-token         — Mint an ephemeral Live API token for the browser
  *   POST ?resource=onboarding-segment       — Re-read the full voice chat and cut it into coherent memory chunks
@@ -28,7 +27,6 @@ import { generateText } from './_lib/gemini-chat.js'
 import { generateEmbedding, cosineSimilarity } from './_lib/gemini-embeddings.js'
 import {
   newCoverageGrid,
-  runPlanner,
   applyDecisionToGrid,
   newlyFilledSlots,
   computeStoppingHint,
@@ -38,7 +36,7 @@ import {
 import { MODELS } from './_lib/models.js'
 import { PLAIN_ENGLISH_RULES } from './_lib/plain-english.js'
 import { DEFAULT_IDEA_BRIEF } from './_lib/project-ideas/default-prompt.js'
-import type { CoverageGrid, CoverageSlotId } from '../src/types'
+import type { CoverageGrid } from '../src/types'
 
 export const config = {
   // Vercel caps execution at 60s by default. Bumped to 300s for
@@ -74,10 +72,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   if (req.method === 'POST' && resource === 'onboarding-start') {
     return handleOnboardingStart(req, res)
-  }
-
-  if (req.method === 'POST' && resource === 'onboarding-turn') {
-    return handleOnboardingTurn(req, res)
   }
 
   if (req.method === 'POST' && resource === 'onboarding-observe') {
@@ -704,68 +698,6 @@ function handleOnboardingStart(_req: VercelRequest, res: VercelResponse) {
   } catch (err: any) {
     console.error('[utilities/onboarding-start]', err?.message)
     return res.status(500).json({ error: 'Onboarding start failed' })
-  }
-}
-
-async function handleOnboardingTurn(req: VercelRequest, res: VercelResponse) {
-  try {
-    const {
-      grid,
-      latest_transcript,
-      latest_question,
-      latest_target_slot,
-      skipped,
-    } = (req.body || {}) as {
-      grid: CoverageGrid
-      latest_transcript: string
-      latest_question: string
-      latest_target_slot: CoverageSlotId | null
-      skipped: boolean
-    }
-
-    if (!grid || !grid.slots || !Array.isArray(grid.turns)) {
-      return res.status(400).json({ error: 'Invalid grid' })
-    }
-    if (typeof latest_question !== 'string' || latest_question.length === 0) {
-      return res.status(400).json({ error: 'latest_question is required' })
-    }
-
-    const isSkipped = Boolean(skipped) || isOnboardingSkipTranscript(latest_transcript)
-    const transcript = isSkipped ? '' : (latest_transcript || '').trim()
-
-    const decision = await runPlanner({
-      grid,
-      latest_transcript: transcript,
-      latest_question,
-      latest_target_slot: latest_target_slot ?? null,
-      skipped: isSkipped,
-    })
-
-    const nextGrid = applyDecisionToGrid(grid, {
-      question: latest_question,
-      transcript,
-      target_slot: latest_target_slot ?? null,
-      skipped: isSkipped,
-      decision,
-    })
-
-    const filled = newlyFilledSlots(grid, nextGrid)
-    const stopping_hint = computeStoppingHint(nextGrid, decision.depth_signal)
-    const forcedStop = stopping_hint.should_stop
-
-    return res.status(200).json({
-      decision: forcedStop
-        ? { ...decision, should_stop: true, next_move: 'stop', next_question: null, next_slot_target: null }
-        : decision,
-      grid: forcedStop
-        ? { ...nextGrid, completed_at: new Date().toISOString() }
-        : nextGrid,
-      newly_filled_slots: filled,
-      stopping_hint,
-    })
-  } catch (err: any) {
-    console.error('[utilities/onboarding-turn]', err?.message, err?.stack)
-    return res.status(500).json({ error: 'Onboarding turn failed' })
   }
 }
 
