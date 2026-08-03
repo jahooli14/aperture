@@ -1265,6 +1265,30 @@ function countWords(content: string): number {
   return textOnly.split(/\s+/).length
 }
 
+// article_highlights has no user_id column of its own — ownership is via
+// the parent article, so look the highlight up and confirm its article
+// belongs to this user before returning it.
+async function getOwnedHighlight(supabase: any, highlightId: string, userId: string) {
+  const { data: highlight } = await supabase
+    .from('article_highlights')
+    .select('id, article_id')
+    .eq('id', highlightId)
+    .single()
+
+  if (!highlight) return null
+
+  const { data: article } = await supabase
+    .from('reading_queue')
+    .select('id')
+    .eq('id', highlight.article_id)
+    .eq('user_id', userId)
+    .single()
+
+  if (!article) return null
+
+  return highlight
+}
+
 async function internalHandler(req: VercelRequest, res: VercelResponse) {
   const supabase = getSupabaseClient()
   const userId = await getUserId(req)
@@ -1280,6 +1304,19 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
 
         if (!article_id || !highlight_text) {
           return res.status(400).json({ error: 'article_id and highlight_text required' })
+        }
+
+        // article_highlights has no user_id column of its own — ownership is
+        // via the parent article, so confirm it belongs to this user first.
+        const { data: ownedArticle } = await supabase
+          .from('reading_queue')
+          .select('id')
+          .eq('id', article_id)
+          .eq('user_id', userId)
+          .single()
+
+        if (!ownedArticle) {
+          return res.status(404).json({ error: 'Article not found' })
         }
 
         const highlightData = {
@@ -1318,6 +1355,11 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
           return res.status(400).json({ error: 'Highlight ID required' })
         }
 
+        const ownedHighlight = await getOwnedHighlight(supabase, highlightId, userId)
+        if (!ownedHighlight) {
+          return res.status(404).json({ error: 'Highlight not found' })
+        }
+
         const updates: any = {}
         if (notes !== undefined) updates.notes = notes
         if (color !== undefined) updates.color = color
@@ -1347,6 +1389,11 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
 
         if (!highlightId || typeof highlightId !== 'string') {
           return res.status(400).json({ error: 'Highlight ID required' })
+        }
+
+        const ownedHighlight = await getOwnedHighlight(supabase, highlightId, userId)
+        if (!ownedHighlight) {
+          return res.status(404).json({ error: 'Highlight not found' })
         }
 
         const { error } = await supabase

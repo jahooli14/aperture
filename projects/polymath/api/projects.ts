@@ -1664,6 +1664,7 @@ Return JSON only:
         .from('projects')
         .delete()
         .eq('id', id)
+        .eq('user_id', userId)
 
       if (error) throw error
 
@@ -1961,6 +1962,7 @@ async function handleRateSuggestion(req: VercelRequest, res: VercelResponse, id:
       .from('project_suggestions')
       .update({ status: newStatus })
       .eq('id', id)
+      .eq('user_id', userId)
       .select()
       .single()
 
@@ -2063,6 +2065,7 @@ async function handleBuildFromSuggestion(req: VercelRequest, res: VercelResponse
       .from('project_suggestions')
       .select('*')
       .eq('id', id)
+      .eq('user_id', userId)
       .single()
 
     if (fetchError) {
@@ -2107,6 +2110,7 @@ async function handleBuildFromSuggestion(req: VercelRequest, res: VercelResponse
         built_project_id: project.id
       })
       .eq('id', id)
+      .eq('user_id', userId)
 
     // Add automatic +2 rating
     await supabase

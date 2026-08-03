@@ -102,9 +102,11 @@ async function executeAction(action: FixAction): Promise<void> {
       break
     }
 
-    case 'smart_home':
-      await executeSmartHomeAction(action)
+    case 'smart_home': {
+      const result = await executeSmartHomeAction(action)
+      if (!result.success) throw new Error(result.message)
       break
+    }
   }
 }
 

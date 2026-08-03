@@ -946,9 +946,7 @@ export function ProjectDetailPage() {
                 )}
 
                 <ProjectPath
-                  tasks={project.metadata?.tasks?.filter((task: any, index: number, self: any[]) =>
-                    index === self.findIndex((t: any) => t.text.trim().toLowerCase() === task.text.trim().toLowerCase())
-                  ) || []}
+                  tasks={project.metadata?.tasks || []}
                   highlightedTasks={location.state?.powerHourTasks || []}
                   projectId={project.id}
                   onUpdate={async (tasks) => {

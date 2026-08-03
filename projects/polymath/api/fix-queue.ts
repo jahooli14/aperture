@@ -28,12 +28,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
   }
 
-  // User-facing actions require Supabase JWT auth
+  // User-facing actions require Supabase JWT auth, scoped to the app owner —
+  // this is a single-owner fix queue, so any other authenticated account
+  // must be rejected, not just any signed-in account.
   const userActions = ['approve', 'reject', 'list']
   if (userActions.includes(action)) {
     const userId = await getUserFromRequest(req)
     if (!userId) {
       return res.status(401).json({ error: 'Authentication required' })
+    }
+    if (userId !== USER_ID) {
+      return res.status(403).json({ error: 'Forbidden' })
     }
   }
 
@@ -106,13 +111,23 @@ async function handleDraftPending(res: VercelResponse) {
   for (const item of pendingItems) {
     const meta = item.metadata || {}
 
-    const draft = await draftFix({
-      content: item.content,
-      original_thought: meta.original_thought || '',
-      fix_hint: meta.fix_hint || '',
-      severity: meta.severity || 'annoying',
-      user_email: userEmail
-    })
+    let draft: FixDraft | null = null
+    try {
+      draft = await draftFix({
+        content: item.content,
+        original_thought: meta.original_thought || '',
+        fix_hint: meta.fix_hint || '',
+        severity: meta.severity || 'annoying',
+        user_email: userEmail
+      })
+    } catch (err) {
+      // Don't let one bad item abort the batch and permanently block every
+      // newer item behind it — leave it draft_pending so it's simply retried
+      // (not stuck) next run, and move on to the rest of the batch.
+      console.error(`[fix-queue] draftFix failed for item ${item.id}:`, err)
+      results.push({ item: item.content, status: 'error' })
+      continue
+    }
 
     if (draft) {
       // Store the draft in the list item metadata

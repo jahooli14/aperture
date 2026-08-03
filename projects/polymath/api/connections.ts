@@ -193,22 +193,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         let sourceEmbedding: number[] | null = null
 
         if (type === 'project') {
-          const { data } = await supabase.from('projects').select('*').eq('id', id).single()
+          const { data } = await supabase.from('projects').select('*').eq('id', id).eq('user_id', userId).single()
           sourceItem = data
           sourceContent = `Project: ${data?.title}\n${data?.description || ''}`
           sourceEmbedding = data?.embedding || null
         } else if (type === 'thought' || type === 'memory') {
-          const { data } = await supabase.from('memories').select('*').eq('id', id).single()
+          const { data } = await supabase.from('memories').select('*').eq('id', id).eq('user_id', userId).single()
           sourceItem = data
           sourceContent = `Thought: ${data?.title || ''}\n${data?.body || ''}`
           sourceEmbedding = data?.embedding || null
         } else if (type === 'article') {
-          const { data } = await supabase.from('reading_queue').select('*').eq('id', id).single()
+          const { data } = await supabase.from('reading_queue').select('*').eq('id', id).eq('user_id', userId).single()
           sourceItem = data
           sourceContent = `Article: ${data?.title}\n${data?.excerpt || data?.summary || ''}`
           sourceEmbedding = data?.embedding || null
         } else if (type === 'list') {
-          const { data } = await supabase.from('lists').select('*').eq('id', id).single()
+          const { data } = await supabase.from('lists').select('*').eq('id', id).eq('user_id', userId).single()
           sourceItem = data
           sourceContent = `List: ${data?.title}\n${data?.description || ''}`
         }
