@@ -238,8 +238,12 @@ self.addEventListener('push', (event: PushEvent) => {
   event.waitUntil(
     self.registration.showNotification(data.title || 'Aperture', {
       body: data.body || '',
-      icon: '/icon.png',
-      badge: '/icon.png',
+      // icon.png is opaque (solid white square, no alpha) — great for app icons,
+      // but Android needs real transparency here or it renders as a plain white
+      // square: notification-icon.png is the logo cut out on a transparent bg,
+      // notification-badge.png is a white silhouette for the status-bar mono icon.
+      icon: '/notification-icon.png',
+      badge: '/notification-badge.png',
       data: { url: data.url || '/' },
     })
   )
