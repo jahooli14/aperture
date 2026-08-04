@@ -17,10 +17,6 @@ const config: CapacitorConfig = {
       overlaysWebView: true,
       style: 'DARK',
       backgroundColor: '#00000000'
-    },
-    LocalNotifications: {
-      smallIcon: 'ic_stat_notify',
-      iconColor: '#F59F0A'
     }
   }
 };
