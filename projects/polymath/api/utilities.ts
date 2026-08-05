@@ -335,6 +335,8 @@ async function handleBookSearch(req: VercelRequest, res: VercelResponse) {
 
 // ── Analyze ────────────────────────────────────────────────────────────────
 async function handleAnalyze(req: VercelRequest, res: VercelResponse) {
+  const userId = await getUserId(req)
+  if (!userId) return res.status(401).json({ error: 'Sign in to access your data' })
   const { responses, books, coverage_grid } = req.body as {
     responses?: Array<{ transcript: string; question_number: number }>
     books?: Array<{ title: string; author: string }>
@@ -531,6 +533,8 @@ Be warm but not sycophantic. Be specific, not generic. Surprise them.`
 // coherent sections grouped by topic, so related turns stay together and
 // stray asides don't get promoted to standalone notes.
 async function handleOnboardingSegment(req: VercelRequest, res: VercelResponse) {
+  const userId = await getUserId(req)
+  if (!userId) return res.status(401).json({ error: 'Sign in to access your data' })
   const { coverage_grid } = req.body as {
     coverage_grid?: {
       turns: Array<{
@@ -621,6 +625,8 @@ function fallbackSingleMemory(
 
 // ── Refine Idea ────────────────────────────────────────────────────────────
 async function handleRefineIdea(req: VercelRequest, res: VercelResponse) {
+  const userId = await getUserId(req)
+  if (!userId) return res.status(401).json({ error: 'Sign in to access your data' })
   try {
     const { original, feedback, attempt, context } = req.body as {
       original: { title: string; description: string; reasoning: string }
@@ -719,6 +725,8 @@ function isOnboardingSkipTranscript(t: string | undefined | null): boolean {
 // was actually asked (since the model decides its own questions).
 
 async function handleOnboardingObserve(req: VercelRequest, res: VercelResponse) {
+  const userId = await getUserId(req)
+  if (!userId) return res.status(401).json({ error: 'Sign in to access your data' })
   try {
     const { grid, user_transcript, model_utterance } = (req.body || {}) as {
       grid: CoverageGrid
@@ -967,7 +975,9 @@ Rules for captured_projects:
 
 // ── Ephemeral Live API token ───────────────────────────────────────────────
 
-async function handleOnboardingToken(_req: VercelRequest, res: VercelResponse) {
+async function handleOnboardingToken(req: VercelRequest, res: VercelResponse) {
+  const userId = await getUserId(req)
+  if (!userId) return res.status(401).json({ error: 'Sign in to access your data' })
   try {
     if (!process.env.GEMINI_API_KEY) {
       console.error('[utilities/onboarding-token] GEMINI_API_KEY missing')
