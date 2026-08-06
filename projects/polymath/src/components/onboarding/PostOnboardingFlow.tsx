@@ -213,7 +213,7 @@ export function PostOnboardingFlow({ analysis, sparkedSuggestion, transcripts = 
               className="text-3xl font-bold mb-4"
               style={{ color: 'var(--brand-text-primary)' }}
             >
-              Polymath knows you now.
+              Aperture knows you now.
             </motion.h1>
 
             <motion.p
@@ -599,7 +599,7 @@ export function PostOnboardingFlow({ analysis, sparkedSuggestion, transcripts = 
                     className="text-xs"
                     style={{ color: 'var(--brand-text-secondary)', opacity: 0.35 }}
                   >
-                    Day 1 of your Polymath journey
+                    Day 1 of your Aperture journey
                   </motion.p>
                 </motion.div>
               )}
