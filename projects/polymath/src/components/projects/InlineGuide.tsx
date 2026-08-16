@@ -95,6 +95,10 @@ interface InlineGuideProps {
   onUpdateTasks?: (tasks: Task[]) => Promise<void>
   onUpdateGoal?: (newGoal: string) => Promise<void>
   onAppendNote?: (text: string) => Promise<void>
+  /** Fired once a chat-proposed change actually lands, so the page can
+   *  scroll to and flash the card it changed — makes the connection
+   *  between the conversation and the artifact visible. */
+  onApplied?: (kind: 'goal' | 'tasks' | 'note') => void
 }
 
 
@@ -105,6 +109,7 @@ export function InlineGuide({
   onUpdateTasks,
   onUpdateGoal,
   onAppendNote,
+  onApplied,
 }: InlineGuideProps) {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
@@ -193,6 +198,29 @@ export function InlineGuide({
     }
   }, [messages, thinking, expanded])
 
+  // Notice tasks finished outside the chat (checked off directly in The
+  // Path) — post a short local ack with no API call, so the Guide reads as
+  // aware of the page, not just of its own turns. Skips anything the Guide
+  // itself just completed via a taskOp (tracked in chatCompletedTextsRef)
+  // so applying a "complete" op doesn't also trigger a redundant ack.
+  const prevCompletionsLenRef = useRef(0)
+  useEffect(() => {
+    if (briefLoading) return
+    const prevLen = prevCompletionsLenRef.current
+    prevCompletionsLenRef.current = recentCompletions.length
+    if (recentCompletions.length <= prevLen) return
+    const toAck: string[] = []
+    recentCompletions.slice(prevLen).forEach(text => {
+      if (chatCompletedTextsRef.current.has(text)) chatCompletedTextsRef.current.delete(text)
+      else toAck.push(text)
+    })
+    if (toAck.length === 0) return
+    const content = toAck.length === 1
+      ? `Nice — "${toAck[0]}" done.`
+      : `Nice — knocked out ${toAck.length}: ${toAck.map(t => `"${t}"`).join(', ')}.`
+    setMessages(prev => [...prev, { kind: 'guide', content }])
+  }, [recentCompletions, briefLoading])
+
   const handleSend = async () => {
     const message = input.trim()
     if (!message || thinking) return
@@ -231,6 +259,8 @@ export function InlineGuide({
           })),
           message,
           history: getApiHistory(),
+          phase: brief?.phase,
+          momentum: brief?.momentum,
         }),
       })
 
@@ -354,14 +384,26 @@ export function InlineGuide({
     }))
   }, [getLatestTasks, getLatestGoal])
 
+  // Task text the Guide itself just marked complete — the recentCompletions
+  // watcher below skips these so a chat-applied "complete" doesn't also
+  // trigger a redundant local ack message.
+  const chatCompletedTextsRef = useRef<Set<string>>(new Set())
+  const markChatCompleted = (taskId?: string) => {
+    if (!taskId) return
+    const text = ((project.metadata?.tasks as Task[] | undefined) || []).find(t => t.id === taskId)?.text
+    if (text) chatCompletedTextsRef.current.add(text)
+  }
+
   const applyTaskOp = async (msgIndex: number, op: TaskOp, key: string) => {
     if (!onUpdateTasks) return
     if (op.action === 'add' && !op.newText) return
     if (op.action !== 'add' && !op.taskId) return
     recordSnapshot(msgIndex, false)
     try {
+      if (op.action === 'complete') markChatCompleted(op.taskId)
       await enqueueTaskUpdate(tasks => applyOpToTasks(tasks, op))
       markOpResolved(msgIndex, key)
+      onApplied?.('tasks')
     } catch (err) {
       console.error('[InlineGuide] apply op failed:', err)
     }
@@ -377,6 +419,7 @@ export function InlineGuide({
     try {
       await writeQueue.current
       setMessages(prev => prev.map((m, i) => (i === msgIndex && m.kind === 'guide') ? { ...m, resolvedGoal: true } : m))
+      onApplied?.('goal')
     } catch (err) {
       console.error('[InlineGuide] apply goal failed:', err)
     }
@@ -392,6 +435,7 @@ export function InlineGuide({
     try {
       await writeQueue.current
       setMessages(prev => prev.map((m, i) => (i === msgIndex && m.kind === 'guide') ? { ...m, resolvedNote: true } : m))
+      onApplied?.('note')
     } catch (err) {
       console.error('[InlineGuide] append note failed:', err)
     }
@@ -419,11 +463,14 @@ export function InlineGuide({
     recordSnapshot(msgIndex, !!goal)
     try {
       if (onUpdateTasks && ops.length > 0) {
+        ops.forEach(({ op }) => { if (op.action === 'complete') markChatCompleted(op.taskId) })
         await enqueueTaskUpdate(tasks => ops.reduce((acc, { op }) => applyOpToTasks(acc, op), tasks))
+        onApplied?.('tasks')
       }
       if (onUpdateGoal && goal) {
         writeQueue.current = writeQueue.current.catch(() => {}).then(() => onUpdateGoal(goal.newGoal))
         await writeQueue.current
+        onApplied?.('goal')
       }
       setMessages(prev => prev.map((m, i) => {
         if (i !== msgIndex || m.kind !== 'guide') return m

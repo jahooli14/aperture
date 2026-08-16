@@ -2,8 +2,8 @@
  * Brainstorm API
  *
  * Conversational project ideation with knowledge-lake awareness.
- * Four modes:
- *   chat         — conversational exchange, surfaces connections from knowledge lake
+ * Modes:
+ *   shaping      — deep interrogation to shape a new or unshaped project
  *   extract      — distill the conversation into a structured project definition
  *   studio-magic — AI writing partner for the Studio tab
  *   project-chat — contextual AI chat for an active project (replaces /api/project-chat)
@@ -16,7 +16,7 @@ import { createClient } from '@supabase/supabase-js'
 import { getUserId } from './_lib/auth.js'
 import { generateEmbedding, cosineSimilarity } from './_lib/gemini-embeddings.js'
 import { generateText } from './_lib/gemini-chat.js'
-import { PLAIN_ENGLISH_RULES } from './_lib/plain-english.js'
+import { PLAIN_ENGLISH_RULES, CHAT_TURN_RULES } from './_lib/plain-english.js'
 
 const supabase = createClient(
   process.env.VITE_SUPABASE_URL || '',
@@ -129,73 +129,6 @@ function buildContextBlock(results: LakeResults): string {
   return parts.join('\n\n')
 }
 
-// ─── Mode: chat ──────────────────────────────────────────────────────────────
-
-async function handleChat(
-  body: { message: string; history?: ConversationMessage[] },
-  userId: string
-): Promise<{ reply: string; echoes: EchoItem[]; readyToExtract: boolean }> {
-  const { message, history = [] } = body
-
-  const lakeResults = await searchKnowledgeLake(message, userId)
-  const contextBlock = buildContextBlock(lakeResults)
-
-  const priorTurns = history
-    .map(m => `${m.role === 'user' ? 'USER' : 'THINKING PARTNER'}: ${m.content}`)
-    .join('\n')
-
-  const prompt = `You are a thinking partner. Someone is figuring out what they want to build. You have their knowledge lake — notes, saved articles, existing projects.
-
-Respond to what they just said. One response: an observation, a connection, something that moves the thinking forward. Not a list. Not encouragement.
-
-${PLAIN_ENGLISH_RULES}
-
-Rules for your reply:
-- Short. 2-4 sentences.
-- No filler: never start with "Great", "Interesting", "That sounds exciting", "I see", or any variant.
-- If you spot something in their knowledge lake that connects, name it: "You wrote about X" or "You have a project called Y".
-- If there's an existing project in the same territory, ask whether this is the same thing or something new.
-- If nothing connects, say nothing about the lake.
-- At most one question. Often none is better.
-- Write like a person, not software.
-- When they mention something specific — a name, a domain, a particular problem — reflect it back with precision, not generality. "You mentioned X" beats "that area of work". Show you heard the specific thing.
-${contextBlock ? `\n${contextBlock}\n` : ''}
-${priorTurns ? `\nCONVERSATION SO FAR:\n${priorTurns}\n` : ''}
-USER: ${message}
-
-Now assess whether this conversation has enough to turn into a project definition. Check all four:
-1. Core idea — is what they're building clearly named?
-2. Motivation — do you know why this matters to them?
-3. Shape — is it a one-time finish or an ongoing practice?
-4. Starting point — is there any sense of where it begins?
-
-Even if all four are covered, set readyToExtract to false if the person is mid-tangent, building energy, or if the last message opened something new. Only mark ready when the conversation feels like it has reached a natural resting point and more talking wouldn't change the shape of the project.
-
-Return JSON only:
-{
-  "reply": "your response as thinking partner",
-  "readyToExtract": false
-}`
-
-  const raw = await generateText(prompt, { temperature: 0.75, maxTokens: 300, responseFormat: 'json' })
-
-  try {
-    const parsed = JSON.parse(raw)
-    return {
-      reply: (parsed.reply || '').trim(),
-      echoes: lakeResults.all.slice(0, 6),
-      readyToExtract: parsed.readyToExtract === true,
-    }
-  } catch {
-    // Fallback: treat raw as plain reply, no ready signal
-    return {
-      reply: raw.trim(),
-      echoes: lakeResults.all.slice(0, 6),
-      readyToExtract: false,
-    }
-  }
-}
-
 // ─── Mode: shaping ──────────────────────────────────────────────────────────
 // Deep project interrogation — probes motivation, constraints, skills, tools, end state.
 // Used when shaping a new idea or an existing unshaped project.
@@ -232,10 +165,9 @@ TOPICS TO EXPLORE (work through these, one per exchange, in natural order):
 6. FIRST MOVE — What's the smallest thing they could do in 30 minutes to start?
 
 Rules:
-- ONE question per response. Never more. Make it count.
-- 2-3 sentences max. The question is the point; everything else is setup.
+${CHAT_TURN_RULES}
+- The question is the point; everything else is setup.
 - Ask, don't lecture. Never tell them what they "aren't" doing or "haven't" figured out — invite them to think, don't diagnose them.
-- Skip filler openers like "Great", "Interesting", "Love it" — but stay warm and human.
 - If you spot something in their knowledge lake that connects, name it specifically.
 - If a previous answer was vague, gently follow up. "Can you say more about what you mean?" works.
 - Reflect back specifics: names, tools, references they've mentioned.
@@ -500,6 +432,11 @@ async function handleProjectChat(
     powerHourSuggestions?: PowerHourSuggestion[]
     message: string
     history?: ConversationMessage[]
+    /** From the session brief shown when the panel opened — carries the
+     *  opening framing forward so a mid-conversation reply doesn't
+     *  contradict how the session started. */
+    phase?: 'shaping' | 'building' | 'closing' | 'stale' | 'fresh'
+    momentum?: 'rising' | 'steady' | 'fading' | 'cold'
   },
   userId: string
 ): Promise<{ reply: string; suggestedTasks: SuggestedTask[]; taskOps: TaskOp[]; goalUpdate: GoalUpdate | null; noteAppend: NoteAppend | null; echoes: EchoItem[] }> {
@@ -514,6 +451,8 @@ async function handleProjectChat(
     powerHourSuggestions = [],
     message,
     history = [],
+    phase,
+    momentum,
   } = body
 
   if (!message || !projectTitle) {
@@ -566,9 +505,16 @@ async function handleProjectChat(
 
   const hasGoal = !!(projectGoal && projectGoal.trim())
   const goalIsThin = hasGoal && (projectGoal!.trim().length < 25 || /\b(improve|better|grow|iterate|explore|keep|continue)\b/i.test(projectGoal!))
+  // phase/momentum come from the session-brief opening greeting the user
+  // already saw when the panel loaded — carry that framing forward so this
+  // reply doesn't contradict it (e.g. brief said "it's been a while, ease
+  // back in gently" and the next reply shouldn't demand a sprint).
+  const sessionLine = phase
+    ? `\n- Session opened as: ${phase}${momentum ? `, momentum ${momentum}` : ''}${phase === 'stale' ? ' — they just came back after a gap, keep it gentle, don\'t pile on' : phase === 'closing' ? ' — they\'re close to done, stay focused on what\'s left' : ''}`
+    : ''
   const stateBlock = `STATE:
 - Finish line set: ${hasGoal ? (goalIsThin ? 'YES but it looks thin or vague — likely needs sharpening' : 'YES') : 'NO — this is your only priority right now'}
-- Open tasks: ${pendingTasks.length}${listFeelsBloated ? ' (list is long — prefer auditing over adding)' : ''}`
+- Open tasks: ${pendingTasks.length}${listFeelsBloated ? ' (list is long — prefer auditing over adding)' : ''}${sessionLine}`
 
   const prompt = `You are the project's finish-line coach. You've been following along and know what they're building, what's done, and what's left. Talk like a friend who's in this with them — not an assistant, not a life coach.
 
@@ -579,7 +525,7 @@ ${stateBlock}
 ${taskBlock}${completedBlock}${powerHourBlock}${echoBlock}
 
 ═══════════════════════════════════════════════════════════════════
-YOUR TWO JOBS — STRICT PRIORITY ORDER
+YOUR JOBS — STRICT PRIORITY ORDER
 ═══════════════════════════════════════════════════════════════════
 
 JOB 1 — LOCK IN THE FINISH LINE.
@@ -619,15 +565,17 @@ PROACTIVELY PROPOSE edit OR delete WHEN:
 
 AUDIT MODE (when list is long or scattered): call it out in the reply. "You've got 11 pending tasks and three of them say variations of 'design the UI'. Want me to fold those?" Then propose the cleanup as taskOps.
 
+JOB 3 — CAPTURE WORTH-KEEPING FACTS (runs alongside JOB 1/JOB 2, not after).
+If the user hands you a fact, decision, link, or reference that isn't itself a task — something they'd be annoyed to lose — propose it as a noteAppend, same confirm-card treatment as a taskOp. This is a real third action, not an afterthought: don't let a fact worth keeping dissolve into plain reply text just because it doesn't fit JOB 1 or JOB 2. Most turns still have nothing to append — default to null.
+
 ═══════════════════════════════════════════════════════════════════
 HOW TO TALK
 ═══════════════════════════════════════════════════════════════════
 
-- 2–3 sentences max. No "as an AI".
+${CHAT_TURN_RULES}
 ${PLAIN_ENGLISH_RULES}
-- Never open with "Great", "Interesting", "Absolutely", "That's a great point".
-- Ask at most ONE question per reply, and only if there's a real decision. Practical, grounded in what they just said. Not philosophical.
-- If you propose ANY taskOps or a goalUpdate, name them plainly in the reply so the user knows what the confirm button will do. "I've queued three tweaks: sharpen 'polish UI' to 'polish homepage hero spacing', delete the duplicate logo task, add 'deploy to Vercel'."
+- Your one question, if you ask one, should turn on a real decision — practical, grounded in what they just said. Not philosophical.
+- If you propose ANY taskOps, a goalUpdate, or a noteAppend, name them plainly in the reply so the user knows what the confirm button will do. "I've queued three tweaks: sharpen 'polish UI' to 'polish homepage hero spacing', delete the duplicate logo task, add 'deploy to Vercel'."
 - When the finish line is set and you propose task changes, end with one short clause tying them to it — the path, not a pep talk. "That's the straight line from here to a live Masters tracker." No more than one sentence; skip it if it would just restate the goal.
 - Reference specific tasks and the finish line by name. Show you're tracking the project.
 - If they drift onto a tangent, pull them back: "Before that — does this change the finish line, or is it a new task?"
@@ -812,8 +760,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     switch (body.step) {
-      case 'chat':
-        return res.json(await handleChat(body as unknown as Parameters<typeof handleChat>[0], userId))
       case 'shaping':
         return res.json(await handleShaping(body as unknown as Parameters<typeof handleShaping>[0], userId))
       case 'extract':

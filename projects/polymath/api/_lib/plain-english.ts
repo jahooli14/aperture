@@ -79,6 +79,20 @@ BAD: "Your multifaceted engagement with constraint-based creation unlocks transf
 GOOD: "You keep coming back to limits as a creative tool. This project fits that."`
 
 /**
+ * Shared turn-taking rules for back-and-forth chat prompts (the project
+ * Guide, shaping conversations, session-brief openers). Every conversational
+ * prompt was re-deriving its own slightly different version of these —
+ * centralized here so tone doesn't drift prompt to prompt. Persona
+ * ("finish-line coach" vs "shaping partner" vs "editor") stays inline in
+ * each prompt; only the mechanical rules live here.
+ */
+export const CHAT_TURN_RULES = `- Short. 2-3 sentences max.
+- No filler openers: never start with "Great", "Interesting", "Absolutely", "That's a great point", "I see".
+- At most ONE question per reply. Often none is better than one.
+- Write like a person, not software. No "as an AI".
+- Silence is fine — if there's nothing worth saying, say less, not more.`
+
+/**
  * Quick post-generation check. Returns the list of violations (empty = clean).
  */
 export function findVoiceViolations(text: string): string[] {

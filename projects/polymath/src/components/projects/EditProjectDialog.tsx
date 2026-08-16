@@ -62,6 +62,7 @@ export function EditProjectDialog({ project, isOpen, onOpenChange }: EditProject
                 metadata: {
                     ...project.metadata,
                     end_goal: formData.end_goal || undefined,
+                    end_goal_source: 'manual',
                 },
             })
 
