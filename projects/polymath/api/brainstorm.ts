@@ -200,8 +200,10 @@ Return JSON only:
       readyToExtract: parsed.readyToExtract === true,
     }
   } catch {
+    // Don't surface raw JSON as if it were a chat reply — that reads as a
+    // broken bot, the exact thing this whole feature is trying not to be.
     return {
-      reply: raw.trim(),
+      reply: "Lost my train of thought there — say that again?",
       echoes: lakeResults.all.slice(0, 6),
       readyToExtract: false,
     }
@@ -648,7 +650,10 @@ HARD RULES:
       }
     }
   } catch {
-    reply = raw.trim()
+    // Don't surface raw JSON as if it were a chat reply — that reads as a
+    // broken bot, the exact thing this whole feature is trying not to be.
+    // Leave taskOps/goalUpdate/noteAppend at their empty defaults above.
+    reply = "Lost my train of thought there — try that again?"
   }
 
   return { reply, suggestedTasks, taskOps, goalUpdate, noteAppend, echoes }
@@ -716,7 +721,10 @@ Return JSON only:
     const parsed = JSON.parse(raw)
     return { statement: (parsed.statement || '').trim() }
   } catch {
-    return { statement: raw.trim() }
+    // The frontend only renders this beat when statement is truthy
+    // (PostOnboardingFlow.tsx) — empty skips it cleanly instead of
+    // flashing raw JSON as someone's "why you" reveal.
+    return { statement: '' }
   }
 }
 

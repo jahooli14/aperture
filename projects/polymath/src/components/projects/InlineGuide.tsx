@@ -297,7 +297,7 @@ export function InlineGuide({
           ...prev,
           {
             kind: 'guide',
-            content: (data.reply as string) || "Couldn't reach the server.",
+            content: (data.reply as string) || "Lost my train of thought there — try that again?",
             suggestedTasks: (data.suggestedTasks as SuggestedTask[]) || [],
             echoes: (data.echoes as EchoItem[]) || [],
             pendingOps,
