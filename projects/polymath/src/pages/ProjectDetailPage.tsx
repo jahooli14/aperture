@@ -136,7 +136,7 @@ export function ProjectDetailPage() {
   const [showRetroRitual, setShowRetroRitual] = useState(false)
 
   // Inline guide state
-  const [recentCompletions, setRecentCompletions] = useState<string[]>([])
+  const [recentCompletions, setRecentCompletions] = useState<{ id: string; text: string }[]>([])
   const prevTasksRef = useRef<{ id: string; done: boolean }[]>([])
   const seededPrevTasksRef = useRef(false)
 
@@ -601,7 +601,7 @@ export function ProjectDetailPage() {
       t => t.done && !prevTasksRef.current.find(p => p.id === t.id && p.done)
     )
     if (newlyCompleted.length > 0) {
-      setRecentCompletions(prev => [...prev, ...newlyCompleted.map(t => t.text)])
+      setRecentCompletions(prev => [...prev, ...newlyCompleted.map(t => ({ id: t.id, text: t.text }))])
     }
     prevTasksRef.current = updatedTasks.map(t => ({ id: t.id, done: t.done }))
     await updateProject(fresh.id, {
@@ -983,7 +983,7 @@ export function ProjectDetailPage() {
                   onUpdate={async (tasks) => {
                     if (!project) return
                     const newlyCompleted = tasks.filter(t => t.done && !prevTasksRef.current.find(p => p.id === t.id && p.done))
-                    if (newlyCompleted.length > 0) { setRecentCompletions(prev => [...prev, ...newlyCompleted.map(t => t.text)]) }
+                    if (newlyCompleted.length > 0) { setRecentCompletions(prev => [...prev, ...newlyCompleted.map(t => ({ id: t.id, text: t.text }))]) }
                     prevTasksRef.current = tasks.map(t => ({ id: t.id, done: t.done }))
                     const now = new Date().toISOString()
                     try {

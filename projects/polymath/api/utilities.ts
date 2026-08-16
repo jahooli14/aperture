@@ -1236,6 +1236,7 @@ ${!hasGoal ? `THIS PROJECT HAS NO FINISH LINE SET. That's the only thing that ma
 
 Rules for ALL states:
 ${CHAT_TURN_RULES}
+${PLAIN_ENGLISH_RULES}
 - No filler. No "Great to see you", "Welcome back", "Let's dive in", "Let's explore".
 - Short sentences. Say it straight. Second person ("you").
 - Always reference specific tasks or the finish line by name. Never be vague.

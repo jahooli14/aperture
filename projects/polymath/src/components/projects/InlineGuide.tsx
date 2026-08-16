@@ -85,7 +85,7 @@ type Message =
 
 interface InlineGuideProps {
   project: Project
-  recentCompletions: string[]
+  recentCompletions: { id: string; text: string }[]
   onAddTask: (task: {
     text: string
     task_type?: 'ignition' | 'core' | 'shutdown'
@@ -201,8 +201,8 @@ export function InlineGuide({
   // Notice tasks finished outside the chat (checked off directly in The
   // Path) — post a short local ack with no API call, so the Guide reads as
   // aware of the page, not just of its own turns. Skips anything the Guide
-  // itself just completed via a taskOp (tracked in chatCompletedTextsRef)
-  // so applying a "complete" op doesn't also trigger a redundant ack.
+  // itself just completed via a taskOp (tracked in chatCompletedIdsRef, by
+  // task id — not text, since two tasks can share the same wording).
   const prevCompletionsLenRef = useRef(0)
   useEffect(() => {
     if (briefLoading) return
@@ -210,8 +210,8 @@ export function InlineGuide({
     prevCompletionsLenRef.current = recentCompletions.length
     if (recentCompletions.length <= prevLen) return
     const toAck: string[] = []
-    recentCompletions.slice(prevLen).forEach(text => {
-      if (chatCompletedTextsRef.current.has(text)) chatCompletedTextsRef.current.delete(text)
+    recentCompletions.slice(prevLen).forEach(({ id, text }) => {
+      if (chatCompletedIdsRef.current.has(id)) chatCompletedIdsRef.current.delete(id)
       else toAck.push(text)
     })
     if (toAck.length === 0) return
@@ -384,14 +384,12 @@ export function InlineGuide({
     }))
   }, [getLatestTasks, getLatestGoal])
 
-  // Task text the Guide itself just marked complete — the recentCompletions
-  // watcher below skips these so a chat-applied "complete" doesn't also
+  // Task ids the Guide itself just marked complete — the recentCompletions
+  // watcher above skips these so a chat-applied "complete" doesn't also
   // trigger a redundant local ack message.
-  const chatCompletedTextsRef = useRef<Set<string>>(new Set())
+  const chatCompletedIdsRef = useRef<Set<string>>(new Set())
   const markChatCompleted = (taskId?: string) => {
-    if (!taskId) return
-    const text = ((project.metadata?.tasks as Task[] | undefined) || []).find(t => t.id === taskId)?.text
-    if (text) chatCompletedTextsRef.current.add(text)
+    if (taskId) chatCompletedIdsRef.current.add(taskId)
   }
 
   const applyTaskOp = async (msgIndex: number, op: TaskOp, key: string) => {
