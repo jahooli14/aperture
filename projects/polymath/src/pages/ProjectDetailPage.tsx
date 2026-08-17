@@ -136,9 +136,20 @@ export function ProjectDetailPage() {
   const [showRetroRitual, setShowRetroRitual] = useState(false)
 
   // Inline guide state
-  const [recentCompletions, setRecentCompletions] = useState<string[]>([])
+  const [recentCompletions, setRecentCompletions] = useState<{ id: string; text: string }[]>([])
   const prevTasksRef = useRef<{ id: string; done: boolean }[]>([])
   const seededPrevTasksRef = useRef(false)
+
+  // When the Guide applies a change, scroll to and briefly flash the card
+  // it changed — makes the link between the conversation and the artifact
+  // visible instead of the change silently landing off-screen.
+  const [flashTarget, setFlashTarget] = useState<'goal' | 'tasks' | 'note' | null>(null)
+  const handleGuideApplied = useCallback((kind: 'goal' | 'tasks' | 'note') => {
+    const selector = kind === 'goal' ? '[data-finish-line]' : kind === 'tasks' ? '[data-task-list]' : '[data-notes-section]'
+    document.querySelector(selector)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    setFlashTarget(kind)
+    setTimeout(() => setFlashTarget(prev => (prev === kind ? null : prev)), 1600)
+  }, [])
 
   // Listen for AI enrichment completion to refresh tasks
   useEffect(() => {
@@ -344,7 +355,8 @@ export function ProjectDetailPage() {
       await updateProject(project.id, {
         metadata: {
           ...project.metadata,
-          end_goal: tempGoal.trim()
+          end_goal: tempGoal.trim(),
+          end_goal_source: 'manual',
         }
       })
       addToast({
@@ -572,6 +584,7 @@ export function ProjectDetailPage() {
       metadata: {
         ...fresh.metadata,
         end_goal: newGoal,
+        end_goal_source: 'guide',
       },
     })
     addToast({
@@ -588,7 +601,7 @@ export function ProjectDetailPage() {
       t => t.done && !prevTasksRef.current.find(p => p.id === t.id && p.done)
     )
     if (newlyCompleted.length > 0) {
-      setRecentCompletions(prev => [...prev, ...newlyCompleted.map(t => t.text)])
+      setRecentCompletions(prev => [...prev, ...newlyCompleted.map(t => ({ id: t.id, text: t.text }))])
     }
     prevTasksRef.current = updatedTasks.map(t => ({ id: t.id, done: t.done }))
     await updateProject(fresh.id, {
@@ -799,6 +812,7 @@ export function ProjectDetailPage() {
                   onUpdateTasks={handleChatUpdateTasks}
                   onUpdateGoal={handleChatUpdateGoal}
                   onAppendNote={handleChatAppendNote}
+                  onApplied={handleGuideApplied}
                 />
               )}
 
@@ -841,9 +855,20 @@ export function ProjectDetailPage() {
               )}
 
               {/* Finish Line */}
-              <div className="p-5 sm:p-6 rounded-2xl" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
-                <span className="text-[11px] font-medium tracking-wide block mb-2 flex items-center gap-1.5 lowercase" style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.5 }}>
+              <div
+                data-finish-line
+                className="p-5 sm:p-6 rounded-2xl transition-all duration-700"
+                style={{
+                  background: flashTarget === 'goal' ? 'rgba(var(--brand-primary-rgb),0.08)' : 'rgba(255,255,255,0.02)',
+                  border: `1px solid ${flashTarget === 'goal' ? 'rgba(var(--brand-primary-rgb),0.4)' : 'rgba(255,255,255,0.05)'}`,
+                  boxShadow: flashTarget === 'goal' ? '0 0 24px rgba(var(--brand-primary-rgb),0.15)' : 'none',
+                }}
+              >
+                <span className="text-[11px] font-medium tracking-wide mb-2 flex items-center gap-1.5 lowercase" style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.5 }}>
                   <Target className="h-3 w-3" /> finish line
+                  {project.metadata?.end_goal_source === 'guide' && (
+                    <span style={{ opacity: 0.7 }}>· via guide</span>
+                  )}
                 </span>
                 <div
                   className="cursor-pointer hover:opacity-80 transition-opacity"
@@ -929,7 +954,13 @@ export function ProjectDetailPage() {
               )}
 
               {/* The Path */}
-              <div data-task-list>
+              <div
+                data-task-list
+                className="rounded-2xl transition-shadow duration-700"
+                style={{
+                  boxShadow: flashTarget === 'tasks' ? '0 0 0 1px rgba(var(--brand-primary-rgb),0.4), 0 0 24px rgba(var(--brand-primary-rgb),0.15)' : 'none',
+                }}
+              >
                 {/* All Tasks Complete Banner */}
                 {tasks.length > 0 && tasks.every((t: any) => t.done) && (
                   <div className="mb-5 p-5 rounded-2xl text-center" style={{ background: 'rgba(var(--brand-primary-rgb),0.06)', border: '1px solid rgba(var(--brand-primary-rgb),0.12)' }}>
@@ -952,7 +983,7 @@ export function ProjectDetailPage() {
                   onUpdate={async (tasks) => {
                     if (!project) return
                     const newlyCompleted = tasks.filter(t => t.done && !prevTasksRef.current.find(p => p.id === t.id && p.done))
-                    if (newlyCompleted.length > 0) { setRecentCompletions(prev => [...prev, ...newlyCompleted.map(t => t.text)]) }
+                    if (newlyCompleted.length > 0) { setRecentCompletions(prev => [...prev, ...newlyCompleted.map(t => ({ id: t.id, text: t.text }))]) }
                     prevTasksRef.current = tasks.map(t => ({ id: t.id, done: t.done }))
                     const now = new Date().toISOString()
                     try {
@@ -966,7 +997,13 @@ export function ProjectDetailPage() {
               </div>
 
               {/* Notes — the project's freeform content space */}
-              <div className="pb-32 pt-2">
+              <div
+                data-notes-section
+                className="pb-32 pt-2 rounded-2xl transition-shadow duration-700"
+                style={{
+                  boxShadow: flashTarget === 'note' ? '0 0 0 1px rgba(var(--brand-primary-rgb),0.4), 0 0 24px rgba(var(--brand-primary-rgb),0.15)' : 'none',
+                }}
+              >
                 <ProjectNotes projectId={project.id} notesDoc={project.notes_doc} />
               </div>
       </div>

@@ -55,6 +55,12 @@ export function EditProjectDialog({ project, isOpen, onOpenChange }: EditProject
         setLoading(true)
 
         try {
+            // Only re-stamp provenance if the finish line text actually
+            // changed here — otherwise saving an unrelated field (title,
+            // description) would silently clear a "· via guide" tag that's
+            // still accurate.
+            const goalChanged = formData.end_goal.trim() !== (project.metadata?.end_goal || '').trim()
+
             await updateProject(project.id, {
                 title: formData.title,
                 description: formData.description,
@@ -62,6 +68,7 @@ export function EditProjectDialog({ project, isOpen, onOpenChange }: EditProject
                 metadata: {
                     ...project.metadata,
                     end_goal: formData.end_goal || undefined,
+                    ...(goalChanged ? { end_goal_source: 'manual' as const } : {}),
                 },
             })
 

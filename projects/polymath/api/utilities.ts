@@ -34,7 +34,7 @@ import {
   SLOT_CATALOGUE,
 } from './_lib/onboarding/coverage.js'
 import { MODELS } from './_lib/models.js'
-import { PLAIN_ENGLISH_RULES } from './_lib/plain-english.js'
+import { PLAIN_ENGLISH_RULES, CHAT_TURN_RULES } from './_lib/plain-english.js'
 import { DEFAULT_IDEA_BRIEF } from './_lib/project-ideas/default-prompt.js'
 import type { CoverageGrid } from '../src/types'
 
@@ -1235,11 +1235,12 @@ ${!hasGoal ? `THIS PROJECT HAS NO FINISH LINE SET. That's the only thing that ma
 `}
 
 Rules for ALL states:
-- Plain everyday English. Write like a real person. No buzzwords, no coaching speak, no "as an AI".
+${CHAT_TURN_RULES}
+${PLAIN_ENGLISH_RULES}
 - No filler. No "Great to see you", "Welcome back", "Let's dive in", "Let's explore".
 - Short sentences. Say it straight. Second person ("you").
 - Always reference specific tasks or the finish line by name. Never be vague.
-- Ask ONE question, not two. Don't stack questions with "and".
+- Don't stack questions with "and".
 
 Return JSON only:
 {
