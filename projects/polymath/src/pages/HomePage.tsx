@@ -32,6 +32,7 @@ import { useJourneyStore } from '../stores/useJourneyStore'
 import { useAuthContext } from '../contexts/AuthContext'
 import { SubtleBackground } from '../components/SubtleBackground'
 import { KeepGoingCard, KeepGoingEmpty } from '../components/home/KeepGoingCard'
+import { FocusChat } from '../components/home/FocusChat'
 import { RecentlyActiveMini } from '../components/home/RecentlyActiveMini'
 import { UpNextMini } from '../components/home/UpNextMini'
 import { ThoughtOfTheDay } from '../components/home/ThoughtOfTheDay'
@@ -222,6 +223,14 @@ export function HomePage() {
                 </button>
               </div>
             </header>
+          </motion.div>
+
+          {/* Focus chat — portfolio-level triage ("what should I work on,
+              across everything I've got going"). Distinct from the
+              per-project Guide: never touches task-level detail, only
+              picks which project. Self-hides below 2 live projects. */}
+          <motion.div {...stackTransition(1)}>
+            <FocusChat />
           </motion.div>
 
           {/* Section 1 — Priority. */}

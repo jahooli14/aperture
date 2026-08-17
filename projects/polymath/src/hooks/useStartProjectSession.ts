@@ -35,8 +35,12 @@ export function useStartProjectSession(projectId: string | undefined | null) {
   const { addToast } = useToast()
   const [loading, setLoading] = useState(false)
 
-  const start = async ({ prefetched }: StartOptions = {}) => {
-    if (!projectId) return
+  // Returns whether a session actually started — every existing caller
+  // fires this and ignores the result (the hook shows its own toast on
+  // failure), so this is purely additive. Callers that DO need to know
+  // (e.g. a confirm-card deciding whether to show "Done") can await it.
+  const start = async ({ prefetched }: StartOptions = {}): Promise<boolean> => {
+    if (!projectId) return false
     haptic.medium()
     setLoading(true)
     try {
@@ -44,7 +48,7 @@ export function useStartProjectSession(projectId: string | undefined | null) {
         const tasks = tasksFromPlan(prefetched)
         if (tasks.length > 0) {
           startSession(projectId, tasks)
-          return
+          return true
         }
       }
 
@@ -60,7 +64,7 @@ export function useStartProjectSession(projectId: string | undefined | null) {
           action: { label: 'Open project', onClick: () => navigate(`/projects/${projectId}`) },
         })
         navigate(`/projects/${projectId}`)
-        return
+        return false
       }
       if (!res.ok) {
         if (res.status !== 401) {
@@ -72,7 +76,7 @@ export function useStartProjectSession(projectId: string | undefined | null) {
             action: { label: 'Open project', onClick: () => navigate(`/projects/${projectId}`) },
           })
         }
-        return
+        return false
       }
       const data = await res.json()
       const tasks = tasksFromPlan(data.tasks?.[0])
@@ -83,9 +87,10 @@ export function useStartProjectSession(projectId: string | undefined | null) {
           variant: 'destructive',
           action: { label: 'Open project', onClick: () => navigate(`/projects/${projectId}`) },
         })
-        return
+        return false
       }
       startSession(projectId, tasks)
+      return true
     } catch (err) {
       console.error('[useStartProjectSession] failed:', err)
       addToast({
@@ -94,6 +99,7 @@ export function useStartProjectSession(projectId: string | undefined | null) {
         variant: 'destructive',
         action: { label: 'Open project', onClick: () => navigate(`/projects/${projectId}`) },
       })
+      return false
     } finally {
       setLoading(false)
     }
