@@ -288,31 +288,39 @@ export async function generatePowerHourPlan(userId: string, projectId?: string, 
     // 4. Gemini 1.5 Flash - The "Sherpa" Prompt
     const model = genAI.getGenerativeModel({ model: MODELS.DEFAULT_CHAT })
 
-    // Duration-specific session philosophy
-    const sessionPhilosophy = durationMinutes === 25
-        ? `SPARK SESSION (25m) - MICRO-OUTCOME PHILOSOPHY:
+    // Duration-specific session philosophy. Bucketed by range, not exact
+    // equality — real requests (e.g. Focus chat passing through whatever
+    // number the user actually said: "20 minutes", "45 minutes") almost
+    // never land on exactly 25/60/150, and a session governed by the wrong
+    // bucket's rules (e.g. "2-4 checklist items" + setup time budgeted in
+    // for what's actually a 20-minute ask) defeats the entire point of
+    // sizing the plan to their real time budget.
+    const setupMinutes = Math.round(durationMinutes * 0.25)
+    const workMinutes = durationMinutes - setupMinutes
+    const sessionPhilosophy = durationMinutes <= 30
+        ? `SPARK SESSION (${durationMinutes}m) - MICRO-OUTCOME PHILOSOPHY:
    This is a SHORT, DISCRETE session. The user will FINISH and walk away.
 
-   CRITICAL RULES FOR 25-MINUTE SESSIONS:
+   CRITICAL RULES FOR SHORT SESSIONS:
    - Design ONE small, completable outcome - not a step in a larger task
    - NEVER suggest setup-heavy tasks (getting out paints, setting up equipment)
    - NEVER suggest tasks that "start" something that needs continuation
-   - Think: "What can be DONE AND DUSTED in 25 minutes?"
+   - Think: "What can be DONE AND DUSTED in ${durationMinutes} minutes?"
 
-   PROJECT-TYPE SPECIFIC GUIDANCE FOR 25m:
+   PROJECT-TYPE SPECIFIC GUIDANCE:
    - ART: Reference hunting, buying supplies online, color palette planning, technique research, cleaning/organizing tools
    - TECH: Code review, bug triage, writing docs, PR reviews, dependency updates, reading/commenting on specs
    - WRITING: Outlining, research, editing a section, brainstorming, character notes, world-building notes
    - CREATIVE: Mood boards, inspiration collection, planning, quick sketches (if tools already out)
 
-   NEVER FOR 25m:
+   NEVER:
    - "Start painting...", "Begin building...", "Set up and work on..."
    - Any task requiring physical setup (studio, materials, equipment)
    - Tasks that will feel incomplete when time runs out
 
    OUTPUT: 1-2 checklist items MAX. Quality over quantity.`
-        : durationMinutes === 150
-            ? `DEEP DIVE (150m) - IMMERSIVE OUTCOME PHILOSOPHY:
+        : durationMinutes >= 120
+            ? `DEEP DIVE (${durationMinutes}m) - IMMERSIVE OUTCOME PHILOSOPHY:
    This is an extended, focused session for substantial progress.
 
    CRITICAL RULES FOR DEEP DIVES:
@@ -323,14 +331,14 @@ export async function generatePowerHourPlan(userId: string, projectId?: string, 
    - This should represent meaningful progress toward the Definition of Done
 
    OUTPUT: 3-5 checklist items representing a coherent work block, not disconnected tasks.`
-            : `POWER HOUR (60m) - FOCUSED OUTCOME PHILOSOPHY:
+            : `FOCUSED SESSION (${durationMinutes}m) - FOCUSED OUTCOME PHILOSOPHY:
    This is a focused work session for real progress.
 
-   CRITICAL RULES FOR POWER HOURS:
+   CRITICAL RULES FOR FOCUSED SESSIONS:
    - Design ONE clear outcome that the user can point to when done
    - If setup is needed (Art, Hardware), account for it in the time budget
-   - 60 minutes with 15m setup = only 45m of actual work - plan accordingly
-   - The outcome should be substantial but achievable
+   - ${durationMinutes} minutes with ~${setupMinutes}m setup = only ~${workMinutes}m of actual work - plan accordingly
+   - The outcome should be substantial but achievable in ${durationMinutes} minutes
    - Think: "What's the ONE thing they'll have accomplished?"
 
    OUTPUT: 2-4 checklist items representing focused progress, not a scattered to-do list.`
@@ -367,13 +375,13 @@ ${PLAIN_ENGLISH_RULES}
    - Do NOT duplicate good tasks. If a task is good, KEEP IT.
 
 4. ⚡️ MOMENTUM IS KING
-   - For 25m sessions: ONE thing done. Not "started". DONE.
+   - For short sessions (≤30m): ONE thing done. Not "started". DONE.
    - For 60m+ sessions: A solid chunk of progress.
    - If the project is dormant, suggest a "Re-entry" task (e.g., "Read through last notes", "Just open the file").
 
 === OUTPUT FORMAT ===
 Generate sessions for up to 12 projects.
-${durationMinutes === 25 ? `Pick 8 projects with clear 'Quick Wins'.` : `Prioritize active projects.`}
+${durationMinutes <= 30 ? `Pick 8 projects with clear 'Quick Wins'.` : `Prioritize active projects.`}
 
 {
   "tasks": [

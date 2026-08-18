@@ -33,6 +33,10 @@ export function FocusChatActionCard({ action, resolved, dismissed, blockedByPend
   const [applying, setApplying] = useState(false)
   const { label, verb } = describeAction(action.type)
   const isBlocked = action.type === 'start_session' && !!blockedByPendingTaskOp
+  // start_session can take several seconds (a real plan generation, not a
+  // toggle) — without a label change the button just goes inert with no
+  // sign anything's happening, which reads as broken rather than working.
+  const isPlanning = action.type === 'start_session' && (applying || starting)
 
   const apply = async () => {
     if (isBlocked) return
@@ -152,7 +156,7 @@ export function FocusChatActionCard({ action, resolved, dismissed, blockedByPend
             className="flex items-center gap-1 min-h-[36px] px-3 rounded-lg transition-all text-[11px] font-bold uppercase tracking-wider disabled:opacity-40"
             style={{ background: 'rgba(var(--brand-primary-rgb),0.18)', color: 'rgb(var(--brand-primary-rgb))', border: '1px solid rgba(var(--brand-primary-rgb),0.4)' }}
           >
-            <Check className="h-3.5 w-3.5" /> {verb}
+            {isPlanning ? 'Planning…' : <><Check className="h-3.5 w-3.5" /> {verb}</>}
           </button>
         </div>
       )}

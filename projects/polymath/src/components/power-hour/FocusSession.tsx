@@ -53,6 +53,7 @@ export function FocusSession() {
         tasks,
         currentTaskIndex,
         elapsedSeconds,
+        plannedDurationMinutes,
         beginTasks,
         completeTask,
         skipTask,
@@ -191,6 +192,7 @@ export function FocusSession() {
                             </h2>
                         )}
                         <p className="text-xs text-[var(--brand-text-muted)] text-center mb-8">
+                            {plannedDurationMinutes ? `${plannedDurationMinutes} min · ` : ''}
                             {tasks.length} task{tasks.length !== 1 ? 's' : ''} planned
                         </p>
 
@@ -433,7 +435,7 @@ export function FocusSession() {
                 {/* Timer (Minimalist) */}
                 <div className="flex flex-col gap-1">
                     <div className="text-4xl font-light tabular-nums text-[#475569] font-serif">
-                        {formatTime(elapsedSeconds)}
+                        {formatTime(elapsedSeconds)}{plannedDurationMinutes ? <span className="text-lg opacity-60"> / {plannedDurationMinutes}m</span> : ''}
                     </div>
                 </div>
 

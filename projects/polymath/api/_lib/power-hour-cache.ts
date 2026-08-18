@@ -16,6 +16,19 @@ const projectGenerationTimestamps = new Map<string, number>()
 
 const CACHE_DURATION_MS = 20 * 60 * 60 * 1000 // 20 hours
 const MIN_REGENERATION_INTERVAL_MS = 60 * 60 * 1000 // 1 hour between regenerations per project
+// Different callers ask for different durations for the same project —
+// KeepGoingCard always asks for the 60-minute default, Focus chat asks for
+// whatever the user actually said ("I've got 20 minutes"). A single cache
+// slot per project would make those two constantly evict each other,
+// regenerating on nearly every request. Cache a handful of durations per
+// project instead so both fit without fighting.
+const MAX_CACHED_DURATIONS_PER_PROJECT = 4
+
+interface CachedPlanEntry {
+  duration: number
+  tasks: any[]
+  timestamp: string
+}
 
 export interface CacheStrategy {
   useGlobalCache: boolean
@@ -136,34 +149,21 @@ async function getProjectCache(projectId: string, durationMinutes: number): Prom
     .eq('id', projectId)
     .single()
 
-  if (!project?.metadata?.suggested_power_hour_tasks) {
+  // Check if cache is invalidated (project changed since any of these were generated)
+  if (project?.metadata?.power_hour_cache_invalidated === true) {
     return null
   }
 
-  // Check if cache is invalidated
-  if (project.metadata.power_hour_cache_invalidated === true) {
-    return null
-  }
+  const plans: CachedPlanEntry[] = project?.metadata?.power_hour_plans || []
+  const entry = plans.find(p => p.duration === durationMinutes)
+  if (!entry) return null
 
-  const timestamp = project.metadata.suggested_power_hour_timestamp
-  if (!timestamp) return null
-
-  const age = Date.now() - new Date(timestamp).getTime()
+  const age = Date.now() - new Date(entry.timestamp).getTime()
   if (age > CACHE_DURATION_MS) {
     return null // Expired
   }
 
-  // Cached plans from before this field existed have no duration on
-  // record — treat those as the old default (60) rather than dropping
-  // the cache for everyone. A plan sized to a different time budget
-  // (e.g. Focus chat's "I've got 20 minutes") must regenerate, not hand
-  // back an outline built for an hour.
-  const cachedDuration = project.metadata.suggested_power_hour_duration ?? 60
-  if (cachedDuration !== durationMinutes) {
-    return null
-  }
-
-  return project.metadata.suggested_power_hour_tasks
+  return entry.tasks
 }
 
 async function getGlobalCache(userId: string): Promise<any[] | null> {
@@ -193,14 +193,20 @@ async function saveProjectCache(
     .eq('id', projectId)
     .single()
 
+  const existing: CachedPlanEntry[] = project?.metadata?.power_hour_plans || []
+  // Replace any existing entry for this exact duration, keep the rest,
+  // and cap the list so a project someone keeps re-planning at slightly
+  // different durations doesn't grow this unboundedly.
+  const nextPlans = [...existing.filter(p => p.duration !== durationMinutes), { duration: durationMinutes, tasks, timestamp }]
+    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+    .slice(0, MAX_CACHED_DURATIONS_PER_PROJECT)
+
   await supabase
     .from('projects')
     .update({
       metadata: {
         ...project?.metadata,
-        suggested_power_hour_tasks: tasks,
-        suggested_power_hour_timestamp: timestamp,
-        suggested_power_hour_duration: durationMinutes,
+        power_hour_plans: nextPlans,
         power_hour_cache_invalidated: false
       }
     })
