@@ -3,9 +3,11 @@
  *
  * Portfolio-level triage — "what should I work on, across everything I've
  * got going" — as distinct from the per-project Guide (InlineGuide.tsx),
- * which only helps once you've already opened a specific project. This
- * never touches task-level detail inside a project; its only job is
- * picking which project, and helping you start it.
+ * which only helps once you've already opened a specific project. Its main
+ * job is picking which project, and helping you start it — not curating a
+ * project's full task list. The one exception: it can fix a single stale
+ * next step when the user corrects it in conversation (see taskOp below),
+ * so a recommendation isn't working off out-of-date data after time away.
  *
  * Collapsed to a pill by default. The opening line is computed locally
  * from data already in the project store — no network call just to open
@@ -13,18 +15,22 @@
  */
 
 import { useState, useRef, useEffect, useMemo } from 'react'
-import { ArrowUp, Sparkles, ChevronRight } from 'lucide-react'
+import { ArrowUp, ChevronRight } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { supabase } from '../../lib/supabase'
 import { useProjectStore } from '../../stores/useProjectStore'
 import { useSessionContextStore } from '../../stores/useSessionContextStore'
 import { handleInputFocus } from '../../utils/keyboard'
-import { type PortfolioAction, toPortfolioSummaries, buildOpeningLine, parsePortfolioAction } from './focusChatOps'
+import {
+  type Message,
+  toPortfolioSummaries,
+  buildOpeningLine,
+  parsePortfolioAction,
+  parsePortfolioTaskOp,
+} from './focusChatOps'
 import { FocusChatActionCard } from './FocusChatActionCard'
-
-type Message =
-  | { kind: 'guide'; content: string; action?: PortfolioAction | null; resolved?: boolean; dismissed?: boolean }
-  | { kind: 'you'; content: string }
+import { FocusChatTaskOpCard } from './FocusChatTaskOpCard'
+import { FocusChatPill } from './FocusChatPill'
 
 export function FocusChat() {
   const allProjects = useProjectStore(s => s.allProjects)
@@ -34,6 +40,11 @@ export function FocusChat() {
   const [input, setInput] = useState('')
   const [thinking, setThinking] = useState(false)
   const threadRef = useRef<HTMLDivElement>(null)
+  // Project ids actually applied (not just proposed — dismissed should
+  // still resurface) this session — sent to the backend so a long "Keep
+  // going" sweep doesn't re-recommend something already settled, correctly
+  // regardless of the capped history below.
+  const discussedProjectIdsRef = useRef<Set<string>>(new Set())
 
   const summaries = useMemo(() => {
     // Excludes unshaped drafts (metadata.is_shaped === false) — same bar
@@ -65,23 +76,31 @@ export function FocusChat() {
     if (threadRef.current && expanded) threadRef.current.scrollTop = threadRef.current.scrollHeight
   }, [messages, thinking, expanded])
 
+  // Capped so a long "Keep going" sweep doesn't make every round-trip
+  // slower/pricier by resending the whole transcript — safe because
+  // discussedProjectIdsRef (not history) is what keeps a long sweep from
+  // re-recommending something already settled.
+  const MAX_HISTORY_TURNS = 16
   const getApiHistory = () =>
-    messages.map(m => ({ role: m.kind === 'you' ? 'user' as const : 'model' as const, content: m.content }))
+    messages
+      .slice(-MAX_HISTORY_TURNS)
+      .map(m => ({ role: m.kind === 'you' ? 'user' as const : 'model' as const, content: m.content }))
 
-  const handleSend = async () => {
-    const message = input.trim()
+  // Takes an explicit message so both the typed-input send and the
+  // one-tap "Keep going" chip (below) share the same request/parse path —
+  // the chip exists so clearing a backlog of several stale projects is a
+  // string of taps, not re-typing "what else" after every single one.
+  const sendMessage = async (message: string) => {
     if (!message || thinking) return
 
-    const nextMessages: Message[] = [...messages, { kind: 'you', content: message }]
-    setMessages(nextMessages)
-    setInput('')
+    setMessages(prev => [...prev, { kind: 'you', content: message }])
     setThinking(true)
 
-    // Snapshot what's actually being sent, so the response can only
-    // propose an action against a project the model was told about —
-    // not something hallucinated or gone stale by the time it replies.
+    // Snapshot what's sent, so the response can only propose an action
+    // against a project the model was actually told about.
     const sentSummaries = summaries
     const knownProjectIds = new Set(sentSummaries.map(p => p.id))
+    const knownProjectsById = new Map(sentSummaries.map(p => [p.id, p]))
 
     try {
       const token = (await supabase.auth.getSession()).data.session?.access_token
@@ -94,6 +113,7 @@ export function FocusChat() {
           history: getApiHistory(),
           feeling,
           projects: sentSummaries,
+          alreadyDiscussed: Array.from(discussedProjectIdsRef.current),
         }),
       })
 
@@ -109,13 +129,20 @@ export function FocusChat() {
 
       const rawActions = Array.isArray(data.actions) ? data.actions : []
       const action = parsePortfolioAction(rawActions[0], knownProjectIds)
+      const taskOp = parsePortfolioTaskOp(data.taskOp, knownProjectsById)
+      // Marked "discussed" only once the user actually applies the
+      // proposal (see the onResolve handlers below) — not here on mere
+      // receipt, so a dismissed suggestion can still resurface later.
 
       setMessages(prev => [...prev, {
         kind: 'guide',
         content: (data.reply as string) || 'Lost my train of thought there — try that again?',
         action,
-        resolved: false,
-        dismissed: false,
+        actionResolved: false,
+        actionDismissed: false,
+        taskOp,
+        taskOpResolved: false,
+        taskOpDismissed: false,
       }])
     } catch (err) {
       setMessages(prev => [...prev, { kind: 'guide', content: `Network error — ${err instanceof Error ? err.message : 'try again.'}` }])
@@ -123,6 +150,37 @@ export function FocusChat() {
       setThinking(false)
     }
   }
+
+  const handleSend = () => {
+    const message = input.trim()
+    if (!message || thinking) return
+    setInput('')
+    sendMessage(message)
+  }
+
+  // Flips one flag on a guide message. discussedProjectId (only passed by
+  // the action card) is a real decision made about the project — a taskOp
+  // resolving is just a data fix, so it must not suppress recommending
+  // that project again.
+  const markGuideFlag = (index: number, key: 'taskOpResolved' | 'taskOpDismissed' | 'actionResolved' | 'actionDismissed', discussedProjectId?: string) => {
+    if (discussedProjectId) discussedProjectIdsRef.current.add(discussedProjectId)
+    setMessages(prev => prev.map((m, idx) => (idx === index && m.kind === 'guide') ? { ...m, [key]: true } : m))
+  }
+
+  // Blocks start_session on an unresolved same-project taskOp from ANY
+  // turn, not just this message — the fix and the "start it" request can
+  // land in separate turns.
+  const hasPendingTaskOpFor = (projectId: string) =>
+    messages.some(m => m.kind === 'guide' && m.taskOp?.projectId === projectId && !m.taskOpResolved && !m.taskOpDismissed)
+
+  // Once the last turn's cards are all handled, offer a one-tap way to
+  // keep sweeping the backlog instead of making the user re-type "what
+  // else" after every single project — the point of this whole feature is
+  // clearing several stale projects quickly, not one slow exchange at a time.
+  const lastMessage = messages[messages.length - 1]
+  const canKeepGoing = !thinking && messages.length > 1 && lastMessage?.kind === 'guide' &&
+    (!lastMessage.action || lastMessage.actionResolved || lastMessage.actionDismissed) &&
+    (!lastMessage.taskOp || lastMessage.taskOpResolved || lastMessage.taskOpDismissed)
 
   // Only gate the collapsed pill on live count — once the user has opened
   // the panel, a confirmed action (e.g. burying a project) can legitimately
@@ -132,22 +190,7 @@ export function FocusChat() {
   if (!expanded && summaries.length < 2) return null
 
   if (!expanded) {
-    return (
-      <motion.button
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3 }}
-        onClick={openChat}
-        className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl transition-all active:scale-[0.99] text-left mb-6"
-        style={{ background: 'rgba(var(--brand-primary-rgb),0.05)', border: '1px solid rgba(var(--brand-primary-rgb),0.15)' }}
-      >
-        <div className="h-8 w-8 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(var(--brand-primary-rgb),0.12)' }}>
-          <Sparkles className="h-4 w-4" style={{ color: 'rgb(var(--brand-primary-rgb))' }} />
-        </div>
-        <p className="flex-1 min-w-0 text-[13px] leading-snug truncate" style={{ color: 'var(--brand-text-secondary)' }}>{openingLine}</p>
-        <ChevronRight className="h-4 w-4 flex-shrink-0 opacity-40" style={{ color: 'var(--brand-text-secondary)' }} />
-      </motion.button>
-    )
+    return <FocusChatPill openingLine={openingLine} onOpen={openChat} />
   }
 
   return (
@@ -165,13 +208,23 @@ export function FocusChat() {
               {msg.kind === 'guide' ? (
                 <div className="space-y-3">
                   <p className="text-[15px] leading-[1.65] whitespace-pre-wrap text-[var(--brand-text-secondary)]">{msg.content}</p>
+                  {msg.taskOp && (
+                    <FocusChatTaskOpCard
+                      taskOp={msg.taskOp}
+                      resolved={msg.taskOpResolved}
+                      dismissed={msg.taskOpDismissed}
+                      onResolve={() => markGuideFlag(i, 'taskOpResolved')}
+                      onDismiss={() => markGuideFlag(i, 'taskOpDismissed')}
+                    />
+                  )}
                   {msg.action && (
                     <FocusChatActionCard
                       action={msg.action}
-                      resolved={msg.resolved}
-                      dismissed={msg.dismissed}
-                      onResolve={() => setMessages(prev => prev.map((m, idx) => idx === i && m.kind === 'guide' ? { ...m, resolved: true } : m))}
-                      onDismiss={() => setMessages(prev => prev.map((m, idx) => idx === i && m.kind === 'guide' ? { ...m, dismissed: true } : m))}
+                      resolved={msg.actionResolved}
+                      dismissed={msg.actionDismissed}
+                      blockedByPendingTaskOp={hasPendingTaskOpFor(msg.action.projectId)}
+                      onResolve={() => markGuideFlag(i, 'actionResolved', msg.action?.projectId)}
+                      onDismiss={() => markGuideFlag(i, 'actionDismissed')}
                     />
                   )}
                 </div>
@@ -194,6 +247,18 @@ export function FocusChat() {
           </div>
         )}
       </div>
+
+      {canKeepGoing && (
+        <motion.button
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          onClick={() => sendMessage("What else needs attention?")}
+          className="w-full mt-3 flex items-center justify-center gap-1.5 py-2 rounded-xl text-[12px] font-medium transition-colors hover:bg-white/[0.04]"
+          style={{ color: 'var(--brand-text-secondary)', opacity: 0.6, border: '1px dashed rgba(255,255,255,0.1)' }}
+        >
+          Keep going <ChevronRight className="h-3.5 w-3.5" />
+        </motion.button>
+      )}
 
       <div className="mt-4 flex items-center gap-2">
         <input

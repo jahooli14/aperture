@@ -9,6 +9,7 @@
 
 import type { Project } from '../../types'
 import { getNextTask } from '../../lib/taskUtils'
+import type { TaskOp } from '../projects/inlineGuideOps'
 
 export interface PortfolioProjectSummary {
   id: string
@@ -21,6 +22,7 @@ export interface PortfolioProjectSummary {
   progressPercent: number
   totalTasks: number
   completedTasks: number
+  nextTaskId?: string
   nextTaskText?: string
   nextTaskMinutes?: number
   heatReason?: string
@@ -51,7 +53,7 @@ export function toPortfolioSummaries(projects: Project[]): PortfolioProjectSumma
     const tasks = (p.metadata?.tasks as { done: boolean }[] | undefined) || []
     const totalTasks = tasks.length
     const completedTasks = tasks.filter(t => t.done).length
-    const nextTask = getNextTask(p) as { text: string; estimated_minutes?: number } | undefined
+    const nextTask = getNextTask(p) as { id?: string; text: string; estimated_minutes?: number } | undefined
     return {
       id: p.id,
       title: p.title,
@@ -63,6 +65,7 @@ export function toPortfolioSummaries(projects: Project[]): PortfolioProjectSumma
       progressPercent: totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0,
       totalTasks,
       completedTasks,
+      nextTaskId: nextTask?.id,
       nextTaskText: nextTask?.text,
       nextTaskMinutes: nextTask?.estimated_minutes,
       heatReason: p.heat_reason,
@@ -142,4 +145,82 @@ export function isUpNextActionNoOp(currentPosition: number | null | undefined, t
  *  the priority would silently unstar it instead. */
 export function isSetPriorityNoOp(currentIsPriority: boolean, type: PortfolioActionType): boolean {
   return type === 'set_priority' && currentIsPriority
+}
+
+const PORTFOLIO_TASK_OP_ACTIONS = ['edit', 'complete', 'add'] as const
+type PortfolioTaskOpAction = typeof PORTFOLIO_TASK_OP_ACTIONS[number]
+
+/** A single stale-next-step correction, tied to one project. Deliberately
+ *  narrower than the per-project Guide's full taskOps (edit/complete/add
+ *  only, no delete/uncomplete) — this exists to fix ONE stale next-step so
+ *  a recommendation isn't working off out-of-date data, not to curate a
+ *  task list. Wraps a real `TaskOp` (inlineGuideOps.ts) — narrowed to the
+ *  3 allowed actions at the type level, not just at runtime via
+ *  parsePortfolioTaskOp — so applying it still reuses the same tested
+ *  reducer the per-project Guide already uses. */
+export interface PortfolioTaskOp {
+  projectId: string
+  projectTitle: string
+  op: TaskOp & { action: PortfolioTaskOpAction }
+}
+
+export type Message =
+  | {
+      kind: 'guide'
+      content: string
+      action?: PortfolioAction | null
+      actionResolved?: boolean
+      actionDismissed?: boolean
+      // A reply can carry both — e.g. fixing a stale next step AND
+      // proposing to start a session on the corrected one — so each gets
+      // its own independent confirm/dismiss state.
+      taskOp?: PortfolioTaskOp | null
+      taskOpResolved?: boolean
+      taskOpDismissed?: boolean
+    }
+  | { kind: 'you'; content: string }
+
+/** Same reasoning as parsePortfolioAction: validate before a hallucinated
+ *  or malformed op reaches a real mutation. Takes the full summaries (not
+ *  just known ids) because "add" is only legitimate when the project has
+ *  no existing correctable next task — the prompt (JOB 3) says so, but
+ *  that's not something the model is guaranteed to actually follow. */
+export function parsePortfolioTaskOp(raw: unknown, knownProjects: ReadonlyMap<string, PortfolioProjectSummary>): PortfolioTaskOp | null {
+  if (!raw || typeof raw !== 'object') return null
+  const a = raw as Record<string, unknown>
+  if (typeof a.projectId !== 'string' || !a.projectId) return null
+  const project = knownProjects.get(a.projectId)
+  if (!project) return null
+  if (typeof a.action !== 'string' || !(PORTFOLIO_TASK_OP_ACTIONS as readonly string[]).includes(a.action)) return null
+  const action = a.action as 'edit' | 'complete' | 'add'
+  const newText = typeof a.newText === 'string' ? a.newText.trim() : ''
+  const taskId = typeof a.taskId === 'string' ? a.taskId : ''
+  if (action === 'add' && !newText) return null
+  if (action !== 'add' && !taskId) return null
+  if (action === 'edit' && !newText) return null
+  // "add" appends to the end of the list; getNextTask sorts by order and
+  // returns the first undone one — so it can never override an existing
+  // next task, only pile a redundant duplicate behind it. Checked against
+  // nextTaskText, not nextTaskId: an id-less legacy task still blocks
+  // "add" from fixing anything (that's the exact case it can't help with).
+  if (action === 'add' && project.nextTaskText) return null
+  return {
+    projectId: a.projectId,
+    projectTitle: typeof a.projectTitle === 'string' && a.projectTitle ? a.projectTitle : project.title,
+    op: {
+      action,
+      taskId: taskId || undefined,
+      newText: newText || undefined,
+      reasoning: typeof a.reasoning === 'string' ? a.reasoning : undefined,
+    },
+  }
+}
+
+export function describePortfolioTaskOp(op: TaskOp): { label: string; verb: string } {
+  switch (op.action) {
+    case 'edit': return { label: 'Fix the next step', verb: 'Fix' }
+    case 'complete': return { label: 'Mark it done', verb: 'Mark done' }
+    case 'add': return { label: 'Add the real next step', verb: 'Add' }
+    default: return { label: 'Update task', verb: 'Update' }
+  }
 }
