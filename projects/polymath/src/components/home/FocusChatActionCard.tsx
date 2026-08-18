@@ -11,10 +11,17 @@ import { useStartProjectSession } from '../../hooks/useStartProjectSession'
 import { useToast } from '../ui/toast'
 import { type PortfolioAction, describeAction, isUpNextActionNoOp, isSetPriorityNoOp } from './focusChatOps'
 
-export function FocusChatActionCard({ action, resolved, dismissed, onResolve, onDismiss }: {
+export function FocusChatActionCard({ action, resolved, dismissed, blockedByPendingTaskOp, onResolve, onDismiss }: {
   action: PortfolioAction
   resolved?: boolean
   dismissed?: boolean
+  /** True when ANY turn this session still has an unresolved taskOp
+   *  correcting this same project's next step (not just this message —
+   *  the correction and the "start it" request can land in separate
+   *  turns). start_session pulls tasks straight from the database
+   *  (api/power-hour), so starting before that fix lands would launch a
+   *  session built from the stale text the user just corrected. */
+  blockedByPendingTaskOp?: boolean
   onResolve: () => void
   onDismiss: () => void
 }) {
@@ -25,8 +32,10 @@ export function FocusChatActionCard({ action, resolved, dismissed, onResolve, on
   const { addToast } = useToast()
   const [applying, setApplying] = useState(false)
   const { label, verb } = describeAction(action.type)
+  const isBlocked = action.type === 'start_session' && !!blockedByPendingTaskOp
 
   const apply = async () => {
+    if (isBlocked) return
     setApplying(true)
     try {
       // Without this, a project deleted/buried elsewhere between the
@@ -120,6 +129,9 @@ export function FocusChatActionCard({ action, resolved, dismissed, onResolve, on
         {action.reasoning && (
           <p className="text-[11px] leading-snug italic pt-0.5" style={{ color: 'var(--brand-text-muted)', opacity: 0.75 }}>{action.reasoning}</p>
         )}
+        {isBlocked && (
+          <p className="text-[11px] leading-snug pt-0.5" style={{ color: 'var(--brand-text-muted)', opacity: 0.6 }}>Fix the next step above first</p>
+        )}
       </div>
       {resolved ? (
         <span className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold" style={{ background: 'rgba(255,255,255,0.06)', color: 'var(--brand-text-muted)' }}>
@@ -132,7 +144,7 @@ export function FocusChatActionCard({ action, resolved, dismissed, onResolve, on
           </button>
           <button
             onClick={apply}
-            disabled={applying || starting}
+            disabled={applying || starting || isBlocked}
             className="flex items-center gap-1 min-h-[36px] px-3 rounded-lg transition-all text-[11px] font-bold uppercase tracking-wider disabled:opacity-40"
             style={{ background: 'rgba(var(--brand-primary-rgb),0.18)', color: 'rgb(var(--brand-primary-rgb))', border: '1px solid rgba(var(--brand-primary-rgb),0.4)' }}
           >

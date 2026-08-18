@@ -227,8 +227,10 @@ export function HomePage() {
 
           {/* Focus chat — portfolio-level triage ("what should I work on,
               across everything I've got going"). Distinct from the
-              per-project Guide: never touches task-level detail, only
-              picks which project. Self-hides below 2 live projects. */}
+              per-project Guide: doesn't curate a project's full task list,
+              only picks which project — the one exception is fixing a
+              single stale next-step the user corrects in conversation.
+              Self-hides below 2 live projects. */}
           <motion.div {...stackTransition(1)}>
             <FocusChat />
           </motion.div>
