@@ -30,7 +30,8 @@ export interface CacheStrategy {
 export async function shouldUseCachedPowerHour(
   userId: string,
   projectId?: string,
-  forceRefresh: boolean = false
+  forceRefresh: boolean = false,
+  durationMinutes: number = 60
 ): Promise<{ useCache: boolean; cachedTasks?: any; source?: string }> {
   if (forceRefresh) {
     return { useCache: false }
@@ -38,7 +39,7 @@ export async function shouldUseCachedPowerHour(
 
   // 1. Check project-specific cache first (if targeting a project)
   if (projectId) {
-    const projectCache = await getProjectCache(projectId)
+    const projectCache = await getProjectCache(projectId, durationMinutes)
     if (projectCache) {
       console.log('[PowerHourCache] Using project-specific cache for:', projectId)
       return { useCache: true, cachedTasks: projectCache, source: 'project' }
@@ -61,7 +62,8 @@ export async function shouldUseCachedPowerHour(
 export async function savePowerHourCache(
   userId: string,
   tasks: any[],
-  projectId?: string
+  projectId?: string,
+  durationMinutes: number = 60
 ): Promise<void> {
   const timestamp = new Date().toISOString()
 
@@ -69,7 +71,7 @@ export async function savePowerHourCache(
   if (projectId && tasks.length > 0) {
     const projectTask = tasks.find(t => t.project_id === projectId)
     if (projectTask) {
-      await saveProjectCache(projectId, [projectTask], timestamp)
+      await saveProjectCache(projectId, [projectTask], timestamp, durationMinutes)
     }
   }
 
@@ -127,7 +129,7 @@ export function markProjectRegenerated(projectId: string): void {
 
 // Private helpers
 
-async function getProjectCache(projectId: string): Promise<any[] | null> {
+async function getProjectCache(projectId: string, durationMinutes: number): Promise<any[] | null> {
   const { data: project } = await supabase
     .from('projects')
     .select('metadata')
@@ -151,6 +153,16 @@ async function getProjectCache(projectId: string): Promise<any[] | null> {
     return null // Expired
   }
 
+  // Cached plans from before this field existed have no duration on
+  // record — treat those as the old default (60) rather than dropping
+  // the cache for everyone. A plan sized to a different time budget
+  // (e.g. Focus chat's "I've got 20 minutes") must regenerate, not hand
+  // back an outline built for an hour.
+  const cachedDuration = project.metadata.suggested_power_hour_duration ?? 60
+  if (cachedDuration !== durationMinutes) {
+    return null
+  }
+
   return project.metadata.suggested_power_hour_tasks
 }
 
@@ -172,7 +184,8 @@ async function getGlobalCache(userId: string): Promise<any[] | null> {
 async function saveProjectCache(
   projectId: string,
   tasks: any[],
-  timestamp: string
+  timestamp: string,
+  durationMinutes: number
 ): Promise<void> {
   const { data: project } = await supabase
     .from('projects')
@@ -187,6 +200,7 @@ async function saveProjectCache(
         ...project?.metadata,
         suggested_power_hour_tasks: tasks,
         suggested_power_hour_timestamp: timestamp,
+        suggested_power_hour_duration: durationMinutes,
         power_hour_cache_invalidated: false
       }
     })

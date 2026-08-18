@@ -58,6 +58,20 @@ describe('parsePortfolioAction', () => {
   it('falls back projectTitle to projectId when missing', () => {
     expect(parsePortfolioAction({ type: 'bury', projectId: 'p1' }, known)?.projectTitle).toBe('p1')
   })
+
+  it('passes through minutesAvailable on start_session, clamped to a sane range', () => {
+    expect(parsePortfolioAction({ type: 'start_session', projectId: 'p1', minutesAvailable: 20 }, known)?.minutesAvailable).toBe(20)
+    expect(parsePortfolioAction({ type: 'start_session', projectId: 'p1', minutesAvailable: 2 }, known)?.minutesAvailable).toBe(5)
+    expect(parsePortfolioAction({ type: 'start_session', projectId: 'p1', minutesAvailable: 999 }, known)?.minutesAvailable).toBe(180)
+  })
+
+  it('drops minutesAvailable on any action that is not start_session', () => {
+    expect(parsePortfolioAction({ type: 'bury', projectId: 'p1', minutesAvailable: 20 }, known)?.minutesAvailable).toBeUndefined()
+  })
+
+  it('ignores a non-numeric minutesAvailable', () => {
+    expect(parsePortfolioAction({ type: 'start_session', projectId: 'p1', minutesAvailable: 'soon' }, known)?.minutesAvailable).toBeUndefined()
+  })
 })
 
 describe('parsePortfolioTaskOp', () => {

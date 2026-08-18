@@ -40,6 +40,10 @@ export interface PortfolioAction {
   projectId: string
   projectTitle: string
   reasoning?: string
+  /** Minutes the user said they've got, only ever set on start_session — so
+   *  the session plan is actually sized to right-now instead of defaulting
+   *  to a generic 60 minutes regardless of what they told the chat. */
+  minutesAvailable?: number
 }
 
 export function daysSince(dateStr?: string): number {
@@ -120,11 +124,17 @@ export function parsePortfolioAction(raw: unknown, knownProjectIds: ReadonlySet<
   if (typeof a.type !== 'string' || !(PORTFOLIO_ACTION_TYPES as readonly string[]).includes(a.type)) return null
   if (typeof a.projectId !== 'string' || !a.projectId) return null
   if (!knownProjectIds.has(a.projectId)) return null
+  // Clamped to a sane range rather than trusted verbatim — this reaches a
+  // real API call (power-hour's duration param) once the user confirms.
+  const minutesAvailable = typeof a.minutesAvailable === 'number' && Number.isFinite(a.minutesAvailable)
+    ? Math.min(180, Math.max(5, Math.round(a.minutesAvailable)))
+    : undefined
   return {
     type: a.type as PortfolioActionType,
     projectId: a.projectId,
     projectTitle: typeof a.projectTitle === 'string' && a.projectTitle ? a.projectTitle : a.projectId,
     reasoning: typeof a.reasoning === 'string' ? a.reasoning : undefined,
+    minutesAvailable: a.type === 'start_session' ? minutesAvailable : undefined,
   }
 }
 

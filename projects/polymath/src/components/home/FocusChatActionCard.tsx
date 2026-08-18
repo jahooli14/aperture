@@ -49,8 +49,10 @@ export function FocusChatActionCard({ action, resolved, dismissed, blockedByPend
         case 'start_session': {
           // start() catches its own errors and shows its own toast rather
           // than throwing — check the returned success flag so a failed
-          // session doesn't still flip this card to "Done".
-          const started = await start()
+          // session doesn't still flip this card to "Done". Pass through
+          // the time budget the chat gathered, if any, so the plan is
+          // sized to right-now instead of a generic default.
+          const started = await start({ durationMinutes: action.minutesAvailable })
           if (!started) return
           break
         }
@@ -124,7 +126,9 @@ export function FocusChatActionCard({ action, resolved, dismissed, blockedByPend
       style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)' }}
     >
       <div className="flex-1 min-w-0 space-y-0.5">
-        <p className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--brand-text-secondary)' }}>{label}</p>
+        <p className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--brand-text-secondary)' }}>
+          {label}{action.minutesAvailable ? ` · ${action.minutesAvailable} min` : ''}
+        </p>
         <p className="text-[13px] leading-snug text-[var(--brand-text-primary)]">{action.projectTitle}</p>
         {action.reasoning && (
           <p className="text-[11px] leading-snug italic pt-0.5" style={{ color: 'var(--brand-text-muted)', opacity: 0.75 }}>{action.reasoning}</p>
