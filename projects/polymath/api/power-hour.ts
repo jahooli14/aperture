@@ -320,56 +320,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             return res.status(500).json({ error: 'Failed to generate power hour plan' })
         }
 
-        // 3. Proactive Enrichment: If enrich is true, save suggestions to metadata (BUT DON'T ADD TO MAIN LIST)
-        if (req.query.enrich === 'true' && targetProject) {
-            if (tasks.length === 0) {
-                console.log('[power-hour] No tasks generated, skipping enrichment')
-            } else {
-                console.log('[power-hour] Saving suggestions for project:', targetProject)
+        // Note: `enrich=true` used to also write the plan into a separate
+        // suggested_power_hour_tasks/timestamp metadata pair here. Nothing
+        // ever read those fields (the real cache is power_hour_plans, saved
+        // below via savePowerHourCache) — it was a dead write on every
+        // enrichment call. Removed; enrichment's only real job is warming
+        // that cache, which already happens below regardless of this flag.
 
-                // Fetch current metadata to preserve other fields
-                const { data: project } = await supabase
-                    .from('projects')
-                    .select('metadata')
-                    .eq('id', targetProject)
-                    .single()
-
-                if (project) {
-                    // Extract the specific task plan for this project
-                    // The generator returns an array of tasks (one per project usually, or multiple if general)
-                    // If focusing on targetProject, tasks should contain just that one, or we find it
-                    const matchingTask = tasks.find(t =>
-                        t.project_id === targetProject ||
-                        t.project_id?.toLowerCase() === targetProject.toLowerCase()
-                    ) || tasks[0] // Fallback to first if only one generated
-
-                    if (matchingTask) {
-                        // We wrap it in an array to match the "tasks" structure the frontend expects for Power Hour
-                        // (The Power Hour UI expects an array of plans, even if just one)
-                        const suggestionsToSave = [matchingTask]
-
-                        const { error: updateError } = await supabase
-                            .from('projects')
-                            .update({
-                                metadata: {
-                                    ...project.metadata,
-                                    suggested_power_hour_tasks: suggestionsToSave,
-                                    suggested_power_hour_timestamp: new Date().toISOString()
-                                }
-                            })
-                            .eq('id', targetProject)
-
-                        if (updateError) {
-                            console.error(`[power-hour] Failed to save suggestions:`, updateError)
-                        } else {
-                            console.log(`[power-hour] Successfully saved suggestions to metadata.`)
-                        }
-                    }
-                }
-            }
-        }
-
-        // 4. Cache the generated plan using smart cache manager
+        // 3. Cache the generated plan using smart cache manager
         if (tasks.length > 0) {
             await savePowerHourCache(userId, tasks, targetProject, durationMinutes)
 

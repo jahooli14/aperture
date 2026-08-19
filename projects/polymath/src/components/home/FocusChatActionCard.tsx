@@ -4,6 +4,7 @@
  */
 
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Check, X } from 'lucide-react'
 import { api } from '../../lib/apiClient'
 import { useProjectStore } from '../../stores/useProjectStore'
@@ -25,6 +26,7 @@ export function FocusChatActionCard({ action, resolved, dismissed, blockedByPend
   onResolve: () => void
   onDismiss: () => void
 }) {
+  const navigate = useNavigate()
   const { setPriority, setUpNext, replaceUpNext, fetchProjects } = useProjectStore()
   const targetProject = useProjectStore(s => s.allProjects.find(p => p.id === action.projectId))
   const currentUpNextPosition = targetProject?.up_next_position ?? null
@@ -133,7 +135,16 @@ export function FocusChatActionCard({ action, resolved, dismissed, blockedByPend
         <p className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--brand-text-secondary)' }}>
           {label}{action.minutesAvailable ? ` · ${action.minutesAvailable} min` : ''}
         </p>
-        <p className="text-[13px] leading-snug text-[var(--brand-text-primary)]">{action.projectTitle}</p>
+        {/* The chat only ever proposes ONE action — if that's not what the
+            user wants (e.g. they want to read the task list, not start a
+            session right now), this is the only way out of the chat and
+            onto the project itself without dismissing and re-typing. */}
+        <button
+          onClick={() => navigate(`/projects/${action.projectId}`)}
+          className="text-[13px] leading-snug text-[var(--brand-text-primary)] underline decoration-dotted underline-offset-2 text-left hover:opacity-80 transition-opacity"
+        >
+          {action.projectTitle}
+        </button>
         {action.reasoning && (
           <p className="text-[11px] leading-snug italic pt-0.5" style={{ color: 'var(--brand-text-muted)', opacity: 0.75 }}>{action.reasoning}</p>
         )}
