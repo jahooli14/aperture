@@ -123,7 +123,8 @@ export function FocusChat() {
         return
       }
       if (!res.ok) {
-        setMessages(prev => [...prev, { kind: 'guide', content: `Error: ${(data as any)?.error || res.status}` }])
+        console.error('[FocusChat] request failed:', res.status, (data as any)?.error)
+        setMessages(prev => [...prev, { kind: 'guide', content: "Couldn't reach you there — try again?" }])
         return
       }
 
@@ -145,7 +146,8 @@ export function FocusChat() {
         taskOpDismissed: false,
       }])
     } catch (err) {
-      setMessages(prev => [...prev, { kind: 'guide', content: `Network error — ${err instanceof Error ? err.message : 'try again.'}` }])
+      console.error('[FocusChat] network error:', err)
+      setMessages(prev => [...prev, { kind: 'guide', content: "Couldn't reach you there — try again?" }])
     } finally {
       setThinking(false)
     }
