@@ -285,7 +285,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const { useCache, cachedTasks, source } = await shouldUseCachedPowerHour(
             userId,
             targetProject,
-            isRefresh
+            isRefresh,
+            durationMinutes
         )
 
         if (useCache && cachedTasks) {
@@ -370,7 +371,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         // 4. Cache the generated plan using smart cache manager
         if (tasks.length > 0) {
-            await savePowerHourCache(userId, tasks, targetProject)
+            await savePowerHourCache(userId, tasks, targetProject, durationMinutes)
 
             // Mark project as regenerated for rate limiting
             if (targetProject) {

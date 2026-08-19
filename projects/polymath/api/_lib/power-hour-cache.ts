@@ -16,6 +16,19 @@ const projectGenerationTimestamps = new Map<string, number>()
 
 const CACHE_DURATION_MS = 20 * 60 * 60 * 1000 // 20 hours
 const MIN_REGENERATION_INTERVAL_MS = 60 * 60 * 1000 // 1 hour between regenerations per project
+// Different callers ask for different durations for the same project —
+// KeepGoingCard always asks for the 60-minute default, Focus chat asks for
+// whatever the user actually said ("I've got 20 minutes"). A single cache
+// slot per project would make those two constantly evict each other,
+// regenerating on nearly every request. Cache a handful of durations per
+// project instead so both fit without fighting.
+const MAX_CACHED_DURATIONS_PER_PROJECT = 4
+
+interface CachedPlanEntry {
+  duration: number
+  tasks: any[]
+  timestamp: string
+}
 
 export interface CacheStrategy {
   useGlobalCache: boolean
@@ -30,7 +43,8 @@ export interface CacheStrategy {
 export async function shouldUseCachedPowerHour(
   userId: string,
   projectId?: string,
-  forceRefresh: boolean = false
+  forceRefresh: boolean = false,
+  durationMinutes: number = 60
 ): Promise<{ useCache: boolean; cachedTasks?: any; source?: string }> {
   if (forceRefresh) {
     return { useCache: false }
@@ -38,7 +52,7 @@ export async function shouldUseCachedPowerHour(
 
   // 1. Check project-specific cache first (if targeting a project)
   if (projectId) {
-    const projectCache = await getProjectCache(projectId)
+    const projectCache = await getProjectCache(projectId, durationMinutes)
     if (projectCache) {
       console.log('[PowerHourCache] Using project-specific cache for:', projectId)
       return { useCache: true, cachedTasks: projectCache, source: 'project' }
@@ -61,7 +75,8 @@ export async function shouldUseCachedPowerHour(
 export async function savePowerHourCache(
   userId: string,
   tasks: any[],
-  projectId?: string
+  projectId?: string,
+  durationMinutes: number = 60
 ): Promise<void> {
   const timestamp = new Date().toISOString()
 
@@ -69,7 +84,7 @@ export async function savePowerHourCache(
   if (projectId && tasks.length > 0) {
     const projectTask = tasks.find(t => t.project_id === projectId)
     if (projectTask) {
-      await saveProjectCache(projectId, [projectTask], timestamp)
+      await saveProjectCache(projectId, [projectTask], timestamp, durationMinutes)
     }
   }
 
@@ -127,31 +142,28 @@ export function markProjectRegenerated(projectId: string): void {
 
 // Private helpers
 
-async function getProjectCache(projectId: string): Promise<any[] | null> {
+async function getProjectCache(projectId: string, durationMinutes: number): Promise<any[] | null> {
   const { data: project } = await supabase
     .from('projects')
     .select('metadata')
     .eq('id', projectId)
     .single()
 
-  if (!project?.metadata?.suggested_power_hour_tasks) {
+  // Check if cache is invalidated (project changed since any of these were generated)
+  if (project?.metadata?.power_hour_cache_invalidated === true) {
     return null
   }
 
-  // Check if cache is invalidated
-  if (project.metadata.power_hour_cache_invalidated === true) {
-    return null
-  }
+  const plans: CachedPlanEntry[] = project?.metadata?.power_hour_plans || []
+  const entry = plans.find(p => p.duration === durationMinutes)
+  if (!entry) return null
 
-  const timestamp = project.metadata.suggested_power_hour_timestamp
-  if (!timestamp) return null
-
-  const age = Date.now() - new Date(timestamp).getTime()
+  const age = Date.now() - new Date(entry.timestamp).getTime()
   if (age > CACHE_DURATION_MS) {
     return null // Expired
   }
 
-  return project.metadata.suggested_power_hour_tasks
+  return entry.tasks
 }
 
 async function getGlobalCache(userId: string): Promise<any[] | null> {
@@ -172,7 +184,8 @@ async function getGlobalCache(userId: string): Promise<any[] | null> {
 async function saveProjectCache(
   projectId: string,
   tasks: any[],
-  timestamp: string
+  timestamp: string,
+  durationMinutes: number
 ): Promise<void> {
   const { data: project } = await supabase
     .from('projects')
@@ -180,13 +193,20 @@ async function saveProjectCache(
     .eq('id', projectId)
     .single()
 
+  const existing: CachedPlanEntry[] = project?.metadata?.power_hour_plans || []
+  // Replace any existing entry for this exact duration, keep the rest,
+  // and cap the list so a project someone keeps re-planning at slightly
+  // different durations doesn't grow this unboundedly.
+  const nextPlans = [...existing.filter(p => p.duration !== durationMinutes), { duration: durationMinutes, tasks, timestamp }]
+    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+    .slice(0, MAX_CACHED_DURATIONS_PER_PROJECT)
+
   await supabase
     .from('projects')
     .update({
       metadata: {
         ...project?.metadata,
-        suggested_power_hour_tasks: tasks,
-        suggested_power_hour_timestamp: timestamp,
+        power_hour_plans: nextPlans,
         power_hour_cache_invalidated: false
       }
     })

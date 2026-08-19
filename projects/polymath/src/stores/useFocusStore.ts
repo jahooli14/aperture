@@ -17,9 +17,14 @@ interface FocusSessionState {
     endTime: number | null
     elapsedSeconds: number
     projectId: string | null
+    /** Minutes the session was actually planned for — surfaced in the
+     *  overview so a time budget stated in Focus chat ("I've got 20
+     *  minutes") is visibly honored, not just used silently to size the
+     *  task list behind the scenes. */
+    plannedDurationMinutes: number | null
 
     // Actions
-    startSession: (projectId: string, tasks: { id: string, text: string }[]) => void
+    startSession: (projectId: string, tasks: { id: string, text: string }[], plannedDurationMinutes?: number) => void
     beginTasks: () => void // Transition from overview to task-by-task
     completeTask: (taskId: string) => void
     skipTask: () => void // Just moves to next without completing
@@ -39,12 +44,14 @@ export const useFocusStore = create<FocusSessionState>()(
             endTime: null,
             elapsedSeconds: 0,
             projectId: null,
+            plannedDurationMinutes: null,
 
-            startSession: (projectId, initialTasks) => {
+            startSession: (projectId, initialTasks, plannedDurationMinutes) => {
                 set({
                     status: 'focusing',
                     phase: 'overview',
                     projectId,
+                    plannedDurationMinutes: plannedDurationMinutes ?? null,
                     tasks: initialTasks.map((t, i) => ({
                         id: t.id,
                         text: t.text,
@@ -111,7 +118,8 @@ export const useFocusStore = create<FocusSessionState>()(
                     startTime: null,
                     endTime: null,
                     elapsedSeconds: 0,
-                    projectId: null
+                    projectId: null,
+                    plannedDurationMinutes: null
                 })
             },
 
