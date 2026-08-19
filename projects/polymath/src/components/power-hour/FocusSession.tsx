@@ -1,12 +1,14 @@
 import React, { useEffect, useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Check, X, ChevronRight, Loader2, PenTool, ArrowRight, Bookmark, AlertTriangle } from 'lucide-react'
+import { useLocation } from 'react-router-dom'
+import { Check, X, PenTool } from 'lucide-react'
 import { useFocusStore } from '../../stores/useFocusStore'
 import { useProjectStore } from '../../stores/useProjectStore'
 import { useMemoryStore } from '../../stores/useMemoryStore'
 import { haptic } from '../../utils/haptics'
 import { useToast } from '../ui/toast'
 import { FocusSummary } from './FocusSummary'
+import { FocusSessionOverviewSheet } from './FocusSessionOverviewSheet'
 
 // Helper for formatting time
 const formatTime = (seconds: number) => {
@@ -14,39 +16,8 @@ const formatTime = (seconds: number) => {
     return `${m}m`
 }
 
-// Short relative date for the carry-forward "last time" block.
-// "today" / "yesterday" / "3d ago" / "2w ago" / "1mo ago".
-function formatRelativeDate(iso: string): string {
-    try {
-        const ms = Date.now() - new Date(iso).getTime()
-        const days = Math.floor(ms / (1000 * 60 * 60 * 24))
-        if (days <= 0) return 'today'
-        if (days === 1) return 'yesterday'
-        if (days < 7) return `${days}d ago`
-        if (days < 30) return `${Math.floor(days / 7)}w ago`
-        return `${Math.floor(days / 30)}mo ago`
-    } catch {
-        return ''
-    }
-}
-
-// Group tasks by their ID prefix for the overview
-function groupTasks(tasks: { id: string; text: string }[]) {
-    const ignition = tasks.filter(t => t.id.startsWith('ign-'))
-    const core = tasks.filter(t => t.id.startsWith('core-'))
-    const shutdown = tasks.filter(t => t.id.startsWith('shut-'))
-    // If no prefix-based grouping works, treat all as core
-    if (ignition.length === 0 && core.length === 0 && shutdown.length === 0) {
-        return [{ label: 'Tasks', tasks }]
-    }
-    const groups = []
-    if (ignition.length > 0) groups.push({ label: 'Warm up', tasks: ignition })
-    if (core.length > 0) groups.push({ label: 'Core work', tasks: core })
-    if (shutdown.length > 0) groups.push({ label: 'Wind down', tasks: shutdown })
-    return groups
-}
-
 export function FocusSession() {
+    const location = useLocation()
     const {
         status,
         phase,
@@ -54,7 +25,6 @@ export function FocusSession() {
         currentTaskIndex,
         elapsedSeconds,
         plannedDurationMinutes,
-        beginTasks,
         completeTask,
         skipTask,
         endSession,
@@ -146,149 +116,15 @@ export function FocusSession() {
     if (status === 'summary') return <FocusSummary />
 
     // ── Overview Phase ──────────────────────────────────────────
+    // Rendered as a floating bottom sheet, not a full-screen takeover — see
+    // FocusSessionOverviewSheet for why. If the user is already looking at
+    // this exact project's own page, that page renders the same pending
+    // state as an inline card instead, so skip the floating sheet here to
+    // avoid showing it twice.
     if (phase === 'overview') {
-        const taskGroups = groupTasks(tasks)
-        // Carry forward the last session's bookmark + blocker so the user
-        // lands on the project with a real reminder of where they paused.
-        // This is the through-line that makes Mode 2b reshape work — every
-        // session has something concrete to react to from the last one.
-        const lastBookmark = (project?.metadata?.next_step as string | undefined)?.trim()
-        const lastBlocker = (project?.metadata?.blocker as string | undefined)?.trim()
-        const lastBlockerAt = project?.metadata?.blocker_at as string | undefined
-        const showLastTime = Boolean(lastBookmark || lastBlocker)
-
-        return (
-            <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="fixed inset-0 z-[100] bg-[var(--brand-bg)] text-[var(--brand-text-secondary)] flex flex-col overflow-hidden"
-            >
-                {/* Header */}
-                <div className="flex items-center justify-between p-6">
-                    <div className="flex items-center gap-2 opacity-50">
-                        <div className="w-2 h-2 rounded-full bg-white animate-pulse" />
-                        <span className="text-xs font-bold uppercase tracking-widest">Session Plan</span>
-                    </div>
-                    <button
-                        onClick={() => useFocusStore.getState().reset()}
-                        className="p-2 hover:bg-[rgba(255,255,255,0.1)] rounded-full transition-colors opacity-50 hover:opacity-100"
-                    >
-                        <X className="h-5 w-5" />
-                    </button>
-                </div>
-
-                {/* Task Overview */}
-                <div className="flex-1 flex flex-col items-center justify-center p-8 max-w-lg mx-auto w-full overflow-y-auto">
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.1 }}
-                        className="w-full"
-                    >
-                        {project && (
-                            <h2 className="text-2xl font-serif text-[var(--brand-text-primary)] mb-1 text-center">
-                                {project.title}
-                            </h2>
-                        )}
-                        <p className="text-xs text-[var(--brand-text-muted)] text-center mb-8">
-                            {plannedDurationMinutes ? `${plannedDurationMinutes} min · ` : ''}
-                            {tasks.length} task{tasks.length !== 1 ? 's' : ''} planned
-                        </p>
-
-                        {showLastTime && (
-                            <motion.div
-                                initial={{ opacity: 0, y: 8 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: 0.12 }}
-                                className="rounded-2xl p-4 mb-8"
-                                style={{
-                                    background: 'rgba(var(--brand-primary-rgb), 0.06)',
-                                    border: '1px solid rgba(var(--brand-primary-rgb), 0.18)',
-                                }}
-                            >
-                                <p className="text-[10px] tracking-[0.2em] mb-3"
-                                   style={{ color: 'rgba(var(--brand-primary-rgb), 0.7)' }}>
-                                    last time
-                                </p>
-                                {lastBookmark && (
-                                    <div className="flex items-start gap-2 mb-2">
-                                        <Bookmark className="h-3.5 w-3.5 mt-0.5 flex-shrink-0"
-                                                  style={{ color: 'rgba(var(--brand-primary-rgb), 0.85)' }} />
-                                        <p className="text-sm leading-snug text-[var(--brand-text-primary)]">
-                                            {lastBookmark}
-                                        </p>
-                                    </div>
-                                )}
-                                {lastBlocker && (
-                                    <div className="flex items-start gap-2">
-                                        <AlertTriangle className="h-3.5 w-3.5 mt-0.5 flex-shrink-0"
-                                                       style={{ color: 'rgba(245, 158, 11, 0.85)' }} />
-                                        <div className="flex-1 min-w-0">
-                                            <p className="text-sm leading-snug text-[var(--brand-text-secondary)]">
-                                                {lastBlocker}
-                                            </p>
-                                            {lastBlockerAt && (
-                                                <p className="text-[10px] mt-0.5 opacity-50">
-                                                    {formatRelativeDate(lastBlockerAt)}
-                                                </p>
-                                            )}
-                                        </div>
-                                    </div>
-                                )}
-                            </motion.div>
-                        )}
-
-                        <div className="space-y-6 mb-10">
-                            {taskGroups.map((group, gi) => (
-                                <motion.div
-                                    key={group.label}
-                                    initial={{ opacity: 0, y: 12 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: 0.15 + gi * 0.08 }}
-                                >
-                                    <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--brand-text-muted)] mb-3 aperture-header">
-                                        {group.label}
-                                    </h3>
-                                    <ul className="space-y-2">
-                                        {group.tasks.map((task, ti) => (
-                                            <motion.li
-                                                key={task.id}
-                                                initial={{ opacity: 0, x: -8 }}
-                                                animate={{ opacity: 1, x: 0 }}
-                                                transition={{ delay: 0.2 + gi * 0.08 + ti * 0.04 }}
-                                                className="text-sm text-[var(--brand-text-secondary)] leading-relaxed flex items-start gap-3"
-                                            >
-                                                <span className="w-1 h-1 rounded-full bg-[var(--brand-text-muted)] mt-2 flex-shrink-0" />
-                                                {task.text}
-                                            </motion.li>
-                                        ))}
-                                    </ul>
-                                </motion.div>
-                            ))}
-                        </div>
-
-                        <motion.button
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            transition={{ delay: 0.4 }}
-                            onClick={() => { haptic.medium(); beginTasks() }}
-                            className="w-full py-3 font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-2 transition-all hover:brightness-110"
-                            style={{
-                                background: 'rgba(255,255,255,0.1)',
-                                border: '1px solid rgba(255,255,255,0.25)',
-                                borderRadius: '4px',
-                                boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
-                                color: 'white',
-                            }}
-                        >
-                            Begin
-                            <ArrowRight className="h-3.5 w-3.5" />
-                        </motion.button>
-                    </motion.div>
-                </div>
-            </motion.div>
-        )
+        const isOnThisProjectsPage = projectId && location.pathname === `/projects/${projectId}`
+        if (isOnThisProjectsPage) return null
+        return <FocusSessionOverviewSheet />
     }
 
     // ── Task-by-Task Phase ──────────────────────────────────────
