@@ -33,6 +33,7 @@ import { useAuthContext } from '../contexts/AuthContext'
 import { SubtleBackground } from '../components/SubtleBackground'
 import { KeepGoingCard, KeepGoingEmpty } from '../components/home/KeepGoingCard'
 import { FocusChat } from '../components/home/FocusChat'
+import { FeelingPill } from '../components/home/FeelingPill'
 import { RecentlyActiveMini } from '../components/home/RecentlyActiveMini'
 import { UpNextMini } from '../components/home/UpNextMini'
 import { ThoughtOfTheDay } from '../components/home/ThoughtOfTheDay'
@@ -232,6 +233,7 @@ export function HomePage() {
               single stale next-step the user corrects in conversation.
               Self-hides below 2 live projects. */}
           <motion.div {...stackTransition(1)}>
+            <FeelingPill />
             <FocusChat />
           </motion.div>
 

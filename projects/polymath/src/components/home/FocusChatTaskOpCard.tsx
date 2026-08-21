@@ -9,11 +9,12 @@
  */
 
 import { useState } from 'react'
-import { Check, X, Pencil } from 'lucide-react'
+import { Check, Pencil } from 'lucide-react'
 import { useProjectStore } from '../../stores/useProjectStore'
 import { useToast } from '../ui/toast'
 import { applyOpToTasks } from '../projects/inlineGuideOps'
 import type { Task } from '../projects/TaskList'
+import { ConfirmButton, DismissButton, ResolvedBadge, DismissedRow, ProposalCard } from '../chat/ChatPrimitives'
 import { type PortfolioTaskOp, describePortfolioTaskOp } from './focusChatOps'
 
 export function FocusChatTaskOpCard({ taskOp, resolved, dismissed, onResolve, onDismiss }: {
@@ -76,19 +77,11 @@ export function FocusChatTaskOpCard({ taskOp, resolved, dismissed, onResolve, on
   }
 
   if (dismissed) {
-    return (
-      <div className="flex items-center gap-2 px-3 py-2 rounded-xl" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.04)', opacity: 0.4 }}>
-        <X className="h-3.5 w-3.5 flex-shrink-0" style={{ color: 'var(--brand-text-muted)' }} />
-        <p className="text-[12px] leading-snug line-through" style={{ color: 'var(--brand-text-muted)' }}>{taskOp.projectTitle}</p>
-      </div>
-    )
+    return <DismissedRow label={taskOp.projectTitle} />
   }
 
   return (
-    <div
-      className="flex items-start gap-3 px-3 py-3 rounded-xl"
-      style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)' }}
-    >
+    <ProposalCard>
       <Pencil className="h-4 w-4 flex-shrink-0 mt-0.5" style={{ color: 'var(--brand-text-secondary)' }} />
       <div className="flex-1 min-w-0 space-y-0.5">
         <p className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--brand-text-secondary)' }}>{label} · {taskOp.projectTitle}</p>
@@ -98,24 +91,15 @@ export function FocusChatTaskOpCard({ taskOp, resolved, dismissed, onResolve, on
         )}
       </div>
       {resolved ? (
-        <span className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold flex-shrink-0" style={{ background: 'rgba(255,255,255,0.06)', color: 'var(--brand-text-muted)' }}>
-          <Check className="h-3 w-3" /> Done
-        </span>
+        <ResolvedBadge />
       ) : (
         <div className="flex items-center gap-1 flex-shrink-0">
-          <button onClick={onDismiss} className="h-9 w-9 flex items-center justify-center rounded-lg transition-colors hover:bg-white/[0.08] text-[var(--brand-text-muted)]" aria-label="Skip">
-            <X className="h-4 w-4" />
-          </button>
-          <button
-            onClick={apply}
-            disabled={applying}
-            className="flex items-center gap-1 min-h-[36px] px-3 rounded-lg transition-all text-[11px] font-bold uppercase tracking-wider disabled:opacity-40"
-            style={{ background: 'rgba(var(--brand-primary-rgb),0.18)', color: 'rgb(var(--brand-primary-rgb))', border: '1px solid rgba(var(--brand-primary-rgb),0.4)' }}
-          >
+          <DismissButton onClick={onDismiss} />
+          <ConfirmButton onClick={apply} disabled={applying} busy={applying}>
             <Check className="h-3.5 w-3.5" /> {verb}
-          </button>
+          </ConfirmButton>
         </div>
       )}
-    </div>
+    </ProposalCard>
   )
 }
