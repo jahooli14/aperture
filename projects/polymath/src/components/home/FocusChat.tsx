@@ -31,6 +31,8 @@ import {
 import { FocusChatActionCard } from './FocusChatActionCard'
 import { FocusChatTaskOpCard } from './FocusChatTaskOpCard'
 import { FocusChatPill } from './FocusChatPill'
+import { UserBubble, RegenerateRow } from '../chat/ChatPrimitives'
+import { ThinkingIndicator } from '../chat/ThinkingIndicator'
 
 export function FocusChat() {
   const allProjects = useProjectStore(s => s.allProjects)
@@ -40,6 +42,7 @@ export function FocusChat() {
   const [input, setInput] = useState('')
   const [thinking, setThinking] = useState(false)
   const threadRef = useRef<HTMLDivElement>(null)
+  const bottomRef = useRef<HTMLDivElement>(null)
   // Project ids actually applied (not just proposed — dismissed should
   // still resurface) this session — sent to the backend so a long "Keep
   // going" sweep doesn't re-recommend something already settled, correctly
@@ -72,8 +75,13 @@ export function FocusChat() {
     setExpanded(true)
   }
 
+  // Scrolls the newest message into view within the page, rather than
+  // capping the thread at a fixed height with its own internal scrollbar —
+  // a nested scroll region inside a scrolling page is a classic mobile
+  // trap (the wrong region grabs the touch, especially with the keyboard
+  // up). The whole card just grows with the conversation instead.
   useEffect(() => {
-    if (threadRef.current && expanded) threadRef.current.scrollTop = threadRef.current.scrollHeight
+    if (expanded) bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
   }, [messages, thinking, expanded])
 
   // Capped so a long "Keep going" sweep doesn't make every round-trip
@@ -81,19 +89,16 @@ export function FocusChat() {
   // discussedProjectIdsRef (not history) is what keeps a long sweep from
   // re-recommending something already settled.
   const MAX_HISTORY_TURNS = 16
-  const getApiHistory = () =>
-    messages
+  const getApiHistory = (fromMessages: Message[]) =>
+    fromMessages
       .slice(-MAX_HISTORY_TURNS)
       .map(m => ({ role: m.kind === 'you' ? 'user' as const : 'model' as const, content: m.content }))
 
-  // Takes an explicit message so both the typed-input send and the
-  // one-tap "Keep going" chip (below) share the same request/parse path —
-  // the chip exists so clearing a backlog of several stale projects is a
-  // string of taps, not re-typing "what else" after every single one.
-  const sendMessage = async (message: string) => {
-    if (!message || thinking) return
-
-    setMessages(prev => [...prev, { kind: 'you', content: message }])
+  // Runs one turn against the API and appends the guide's reply. Takes the
+  // conversation to send explicitly (rather than reading `messages`) so
+  // regenerate can re-run the same user turn against history that no
+  // longer includes the reply being replaced.
+  const runTurn = async (message: string, historyBase: Message[]) => {
     setThinking(true)
 
     // Snapshot what's sent, so the response can only propose an action
@@ -110,7 +115,7 @@ export function FocusChat() {
         body: JSON.stringify({
           step: 'portfolio-chat',
           message,
-          history: getApiHistory(),
+          history: getApiHistory(historyBase),
           feeling,
           projects: sentSummaries,
           alreadyDiscussed: Array.from(discussedProjectIdsRef.current),
@@ -153,12 +158,50 @@ export function FocusChat() {
     }
   }
 
+  // Takes an explicit message so both the typed-input send and the
+  // one-tap "Keep going" chip (below) share the same request/parse path —
+  // the chip exists so clearing a backlog of several stale projects is a
+  // string of taps, not re-typing "what else" after every single one.
+  const sendMessage = async (message: string) => {
+    if (!message || thinking) return
+    const nextMessages: Message[] = [...messages, { kind: 'you', content: message }]
+    setMessages(nextMessages)
+    await runTurn(message, nextMessages)
+  }
+
   const handleSend = () => {
     const message = input.trim()
     if (!message || thinking) return
     setInput('')
     sendMessage(message)
   }
+
+  // Redo the last exchange — drops the guide's last reply and re-asks with
+  // the same user message, so a reply that missed the mark doesn't force
+  // dismissing every card and retyping the whole thing.
+  const regenerate = () => {
+    if (thinking || messages.length === 0) return
+    const last = messages[messages.length - 1]
+    if (last.kind !== 'guide') return
+    const priorUserMsg = [...messages].reverse().find(m => m.kind === 'you')
+    if (!priorUserMsg) return
+    const historyBase = messages.slice(0, -1)
+    setMessages(historyBase)
+    runTurn(priorUserMsg.content, historyBase)
+  }
+
+  // Loads a previously-sent message back into the input for editing, and
+  // drops it (and whatever the guide said in response) from the thread —
+  // the only escape from a misunderstood message used to be dismissing its
+  // cards and typing the whole thing again from scratch.
+  const editMessage = (index: number) => {
+    const msg = messages[index]
+    if (msg.kind !== 'you' || thinking) return
+    setInput(msg.content)
+    setMessages(messages.slice(0, index))
+  }
+
+  const lastUserIndex = messages.reduce((acc, m, i) => (m.kind === 'you' ? i : acc), -1)
 
   // Flips one flag on a guide message. discussedProjectId (only passed by
   // the action card) is a real decision made about the project — a taskOp
@@ -180,9 +223,17 @@ export function FocusChat() {
   // else" after every single project — the point of this whole feature is
   // clearing several stale projects quickly, not one slow exchange at a time.
   const lastMessage = messages[messages.length - 1]
-  const canKeepGoing = !thinking && messages.length > 1 && lastMessage?.kind === 'guide' &&
+  const lastTurnSettled = !!lastMessage && lastMessage.kind === 'guide' &&
     (!lastMessage.action || lastMessage.actionResolved || lastMessage.actionDismissed) &&
     (!lastMessage.taskOp || lastMessage.taskOpResolved || lastMessage.taskOpDismissed)
+  const canKeepGoing = !thinking && messages.length > 1 && lastTurnSettled
+  // Regenerating after a real mutation already landed (action/taskOp
+  // resolved, not just dismissed) would only replace the text underneath
+  // an applied change, not undo it — confusing, so it's withheld exactly
+  // then. A merely-dismissed proposal is fair game to redo.
+  const canRegenerate = !thinking && lastMessage?.kind === 'guide' &&
+    !(lastMessage.action && lastMessage.actionResolved) &&
+    !(lastMessage.taskOp && lastMessage.taskOpResolved)
 
   // Only gate the collapsed pill on live count — once the user has opened
   // the panel, a confirmed action (e.g. burying a project) can legitimately
@@ -203,7 +254,7 @@ export function FocusChat() {
         <button onClick={() => setExpanded(false)} className="text-[11px] font-medium" style={{ color: 'var(--brand-text-secondary)', opacity: 0.4 }}>Close</button>
       </div>
 
-      <div ref={threadRef} className="space-y-4 max-h-[50vh] overflow-y-auto scroll-minimal">
+      <div ref={threadRef} className="space-y-4">
         <AnimatePresence initial={false}>
           {messages.map((msg, i) => (
             <motion.div key={i} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
@@ -229,25 +280,19 @@ export function FocusChat() {
                       onDismiss={() => markGuideFlag(i, 'actionDismissed')}
                     />
                   )}
+                  {i === messages.length - 1 && canRegenerate && (
+                    <RegenerateRow onRegenerate={regenerate} />
+                  )}
                 </div>
               ) : (
-                <div className="flex justify-end">
-                  <p className="text-[15px] leading-[1.65] px-4 py-2.5 rounded-2xl rounded-br-md max-w-[85%]" style={{ background: 'rgba(var(--brand-primary-rgb),0.08)', border: '1px solid rgba(var(--brand-primary-rgb),0.1)', color: 'var(--brand-text-primary)', opacity: 0.85 }}>
-                    {msg.content}
-                  </p>
-                </div>
+                <UserBubble content={msg.content} onEdit={i === lastUserIndex ? () => editMessage(i) : undefined} />
               )}
             </motion.div>
           ))}
         </AnimatePresence>
 
-        {thinking && (
-          <div className="flex gap-1 pt-1 px-1">
-            {[0, 1, 2].map(i => (
-              <motion.span key={i} className="block w-1.5 h-1.5 rounded-full" style={{ background: 'var(--brand-text-secondary)', opacity: 0.2 }} animate={{ opacity: [0.1, 0.4, 0.1] }} transition={{ duration: 1.2, repeat: Infinity, delay: i * 0.2 }} />
-            ))}
-          </div>
-        )}
+        {thinking && <ThinkingIndicator />}
+        <div ref={bottomRef} />
       </div>
 
       {canKeepGoing && (

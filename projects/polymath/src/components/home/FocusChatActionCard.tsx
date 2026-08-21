@@ -5,11 +5,13 @@
 
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Check, X } from 'lucide-react'
+import { Check } from 'lucide-react'
 import { api } from '../../lib/apiClient'
 import { useProjectStore } from '../../stores/useProjectStore'
 import { useStartProjectSession } from '../../hooks/useStartProjectSession'
 import { useToast } from '../ui/toast'
+import { setChatHandoff } from '../../lib/chatHandoff'
+import { ConfirmButton, DismissButton, ResolvedBadge, DismissedRow, ProposalCard } from '../chat/ChatPrimitives'
 import { type PortfolioAction, describeAction, isUpNextActionNoOp, isSetPriorityNoOp } from './focusChatOps'
 
 export function FocusChatActionCard({ action, resolved, dismissed, blockedByPendingTaskOp, onResolve, onDismiss }: {
@@ -40,6 +42,15 @@ export function FocusChatActionCard({ action, resolved, dismissed, blockedByPend
   // sign anything's happening, which reads as broken rather than working.
   const isPlanning = action.type === 'start_session' && (applying || starting)
 
+  // Focus chat and the per-project Guide are separate conversations —
+  // without this, landing on the project after Focus chat just talked
+  // through why to pick it up meant the Guide re-greeted from scratch,
+  // ignorant of what was just said. One line is enough for the Guide's
+  // opening turn to acknowledge it instead.
+  const handoffSummary = action.reasoning
+    ? `Just talked through "${action.projectTitle}" in Focus — ${action.reasoning}`
+    : `Just picked "${action.projectTitle}" to work on in Focus.`
+
   const apply = async () => {
     if (isBlocked) return
     setApplying(true)
@@ -58,6 +69,7 @@ export function FocusChatActionCard({ action, resolved, dismissed, blockedByPend
           // session doesn't still flip this card to "Done". Pass through
           // the time budget the chat gathered, if any, so the plan is
           // sized to right-now instead of a generic default.
+          setChatHandoff(action.projectId, handoffSummary)
           const started = await start({ durationMinutes: action.minutesAvailable })
           if (!started) return
           break
@@ -118,19 +130,11 @@ export function FocusChatActionCard({ action, resolved, dismissed, blockedByPend
   }
 
   if (dismissed) {
-    return (
-      <div className="flex items-center gap-2 px-3 py-2 rounded-xl" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.04)', opacity: 0.4 }}>
-        <X className="h-3.5 w-3.5 flex-shrink-0" style={{ color: 'var(--brand-text-muted)' }} />
-        <p className="text-[12px] leading-snug line-through" style={{ color: 'var(--brand-text-muted)' }}>{action.projectTitle}</p>
-      </div>
-    )
+    return <DismissedRow label={action.projectTitle} />
   }
 
   return (
-    <div
-      className="flex items-start gap-3 px-3 py-3 rounded-xl"
-      style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)' }}
-    >
+    <ProposalCard>
       <div className="flex-1 min-w-0 space-y-0.5">
         <p className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--brand-text-secondary)' }}>
           {label}{action.minutesAvailable ? ` · ${action.minutesAvailable} min` : ''}
@@ -138,9 +142,11 @@ export function FocusChatActionCard({ action, resolved, dismissed, blockedByPend
         {/* The chat only ever proposes ONE action — if that's not what the
             user wants (e.g. they want to read the task list, not start a
             session right now), this is the only way out of the chat and
-            onto the project itself without dismissing and re-typing. */}
+            onto the project itself without dismissing and re-typing. Carries
+            a one-line handoff so the project's own Guide isn't cold on what
+            was just discussed here. */}
         <button
-          onClick={() => navigate(`/projects/${action.projectId}`)}
+          onClick={() => { setChatHandoff(action.projectId, handoffSummary); navigate(`/projects/${action.projectId}`) }}
           className="text-[13px] leading-snug text-[var(--brand-text-primary)] underline decoration-dotted underline-offset-2 text-left hover:opacity-80 transition-opacity"
         >
           {action.projectTitle}
@@ -153,24 +159,15 @@ export function FocusChatActionCard({ action, resolved, dismissed, blockedByPend
         )}
       </div>
       {resolved ? (
-        <span className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold" style={{ background: 'rgba(255,255,255,0.06)', color: 'var(--brand-text-muted)' }}>
-          <Check className="h-3 w-3" /> Done
-        </span>
+        <ResolvedBadge />
       ) : (
         <div className="flex items-center gap-1 flex-shrink-0">
-          <button onClick={onDismiss} className="h-9 w-9 flex items-center justify-center rounded-lg transition-colors hover:bg-white/[0.08] text-[var(--brand-text-muted)]" aria-label="Skip">
-            <X className="h-4 w-4" />
-          </button>
-          <button
-            onClick={apply}
-            disabled={applying || starting || isBlocked}
-            className="flex items-center gap-1 min-h-[36px] px-3 rounded-lg transition-all text-[11px] font-bold uppercase tracking-wider disabled:opacity-40"
-            style={{ background: 'rgba(var(--brand-primary-rgb),0.18)', color: 'rgb(var(--brand-primary-rgb))', border: '1px solid rgba(var(--brand-primary-rgb),0.4)' }}
-          >
-            {isPlanning ? 'Planning…' : <><Check className="h-3.5 w-3.5" /> {verb}</>}
-          </button>
+          <DismissButton onClick={onDismiss} />
+          <ConfirmButton onClick={apply} disabled={applying || starting || isBlocked} busy={isPlanning} busyLabel="Planning…">
+            <Check className="h-3.5 w-3.5" /> {verb}
+          </ConfirmButton>
         </div>
       )}
-    </div>
+    </ProposalCard>
   )
 }

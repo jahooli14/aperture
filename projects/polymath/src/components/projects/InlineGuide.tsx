@@ -12,13 +12,16 @@
  */
 
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { ArrowUp, Plus, Check, X, Target, Trash2, Pencil, RotateCcw, FileText } from 'lucide-react'
+import { ArrowUp, Plus, Check, Target, Trash2, Pencil, RotateCcw, FileText } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { supabase } from '../../lib/supabase'
 import type { Project, ChatTurn } from '../../types'
 import type { Task } from './TaskList'
 import { useProjectStore } from '../../stores/useProjectStore'
 import { applyOpToTasks, opKey, type TaskOp } from './inlineGuideOps'
+import { consumeChatHandoff } from '../../lib/chatHandoff'
+import { UserBubble, ConfirmButton, DismissButton, ResolvedBadge, DismissedRow, ProposalCard, RegenerateRow } from '../chat/ChatPrimitives'
+import { ThinkingIndicator } from '../chat/ThinkingIndicator'
 
 const MAX_PERSISTED_TURNS = 40
 
@@ -68,6 +71,13 @@ type Message =
   | {
       kind: 'guide'
       content: string
+      /** A short line above the message body — either a handoff summary
+       *  from Focus chat ("Picking up from Focus — ...") or, when this
+       *  project has a persisted conversation but the thread isn't
+       *  replaying it, an honest "continuing from earlier" label instead
+       *  of silently re-greeting as if nothing was said before. Only ever
+       *  set on the opening message. */
+      leadNote?: string
       suggestedTasks?: SuggestedTask[]
       echoes?: EchoItem[]
       pendingOps?: TaskOp[]
@@ -119,6 +129,7 @@ export function InlineGuide({
   const [briefLoading, setBriefLoading] = useState(true)
   const [expanded, setExpanded] = useState(false)
   const threadRef = useRef<HTMLDivElement>(null)
+  const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const updateProjectMeta = useProjectStore(state => state.updateProject)
   // Serialize task-op writes so rapid Apply clicks don't read stale state
@@ -136,13 +147,13 @@ export function InlineGuide({
     return ((fresh?.metadata?.end_goal as string | undefined) ?? (project.metadata?.end_goal as string | undefined) ?? '')
   }, [project.id, project.metadata])
 
-  const getApiHistory = useCallback(() => {
-    return messages
+  const getApiHistory = useCallback((fromMessages: Message[]) => {
+    return fromMessages
       .map(m => ({
         role: m.kind === 'you' ? 'user' as const : 'model' as const,
         content: m.content,
       }))
-  }, [messages])
+  }, [])
 
   const persistConversation = useCallback((msgs: Message[]) => {
     try {
@@ -178,7 +189,14 @@ export function InlineGuide({
 
         setBrief(data)
         const opening = data.greeting + (data.proactiveQuestion ? `\n\n${data.proactiveQuestion}` : '')
-        setMessages([{ kind: 'guide', content: opening }])
+        // Handoff from Focus chat takes priority over the generic "picking
+        // this back up" note — it's more specific about what was just said.
+        // Consumed once, right here, so a later unrelated visit doesn't
+        // replay stale context.
+        const handoff = consumeChatHandoff(project.id)
+        const hasPriorConversation = !!(project.metadata?.conversation as ChatTurn[] | undefined)?.length
+        const leadNote = handoff || (hasPriorConversation ? 'Continuing from earlier — this greeting is fresh, but the project remembers.' : undefined)
+        setMessages([{ kind: 'guide', content: opening, leadNote }])
       } catch {
         if (!cancelled) {
           setMessages([{ kind: 'guide', content: 'What are you thinking about for this project?' }])
@@ -190,12 +208,20 @@ export function InlineGuide({
 
     load()
     return () => { cancelled = true }
+    // Deliberately keyed on project.id alone — this fetches the session
+    // brief and seeds the thread once per project open. Adding
+    // project.metadata would re-run it (and reset the visible thread) on
+    // every background metadata write, e.g. a task checked off elsewhere.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [project.id])
 
+  // Scrolls the newest message into view within the page rather than
+  // capping the thread at a fixed height with its own internal
+  // scrollbar — a nested scroll region inside a scrolling page traps
+  // touch input on mobile, especially with the keyboard open. The card
+  // just grows with the conversation instead.
   useEffect(() => {
-    if (threadRef.current && expanded) {
-      threadRef.current.scrollTop = threadRef.current.scrollHeight
-    }
+    if (expanded) bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
   }, [messages, thinking, expanded])
 
   // Notice tasks finished outside the chat (checked off directly in The
@@ -221,16 +247,13 @@ export function InlineGuide({
     setMessages(prev => [...prev, { kind: 'guide', content }])
   }, [recentCompletions, briefLoading])
 
-  const handleSend = async () => {
-    const message = input.trim()
-    if (!message || thinking) return
-
+  // Runs one turn against the API and appends the guide's reply. Takes the
+  // message and the history to send explicitly, rather than reading
+  // `messages`, so regenerate can re-run the same user turn against
+  // history that no longer includes the reply being replaced.
+  const runTurn = useCallback(async (message: string, historyBase: Message[]) => {
     const tasks: Task[] = (project.metadata?.tasks as Task[] | undefined) || []
-    const nextMessages: Message[] = [...messages, { kind: 'you', content: message }]
-    setMessages(nextMessages)
-    setInput('')
     setThinking(true)
-    setExpanded(true)
 
     try {
       const token = (await supabase.auth.getSession()).data.session?.access_token
@@ -258,7 +281,7 @@ export function InlineGuide({
             estimated_minutes: t.estimated_minutes,
           })),
           message,
-          history: getApiHistory(),
+          history: getApiHistory(historyBase),
           phase: brief?.phase,
           momentum: brief?.momentum,
         }),
@@ -319,6 +342,42 @@ export function InlineGuide({
     } finally {
       setThinking(false)
     }
+  }, [project.id, project.title, project.description, project.metadata, project.notes_doc, brief, onAppendNote, getApiHistory, persistConversation])
+
+  const handleSend = async () => {
+    const message = input.trim()
+    if (!message || thinking) return
+    const nextMessages: Message[] = [...messages, { kind: 'you', content: message }]
+    setMessages(nextMessages)
+    setInput('')
+    setExpanded(true)
+    await runTurn(message, nextMessages)
+  }
+
+  // Redo the last exchange — drops the guide's last reply and re-asks with
+  // the same user message, so a reply that missed the mark doesn't force
+  // dismissing/skipping every card in it and retyping the whole thing.
+  const regenerate = () => {
+    if (thinking || messages.length === 0) return
+    const last = messages[messages.length - 1]
+    if (last.kind !== 'guide') return
+    const priorUserMsg = [...messages].reverse().find(m => m.kind === 'you')
+    if (!priorUserMsg) return
+    const historyBase = messages.slice(0, -1)
+    setMessages(historyBase)
+    runTurn(priorUserMsg.content, historyBase)
+  }
+
+  // Loads a previously-sent message back into the input for editing, and
+  // drops it (and the guide's response to it) from the thread — the only
+  // way to correct a misunderstood message used to be dismissing its cards
+  // one by one and typing the whole thing again from scratch.
+  const editMessage = (index: number) => {
+    const msg = messages[index]
+    if (msg.kind !== 'you' || thinking) return
+    setInput(msg.content)
+    setMessages(messages.slice(0, index))
+    inputRef.current?.focus()
   }
 
   const handleAddTask = (task: SuggestedTask) => {
@@ -552,6 +611,19 @@ export function InlineGuide({
     }
   }
 
+  const lastUserIndex = messages.reduce((acc, m, i) => (m.kind === 'you' ? i : acc), -1)
+
+  // Regenerating after a real mutation already landed (a task op applied,
+  // the goal updated, a note added) would only replace the text sitting
+  // above an applied change, not undo it — confusing, so it's withheld
+  // exactly then. Merely-dismissed proposals are fair game to redo.
+  const canRegenerateMessage = (msg: Message): boolean => {
+    if (msg.kind !== 'guide') return false
+    if ((msg.resolvedOpIds?.length || 0) > 0) return false
+    if (msg.resolvedGoal || msg.resolvedNote) return false
+    return true
+  }
+
   return (
     <div className="glass-card-strong rounded-2xl p-5 sm:p-6">
       {/* Header */}
@@ -572,10 +644,7 @@ export function InlineGuide({
 
       {/* Thread */}
       {!briefLoading && (
-        <div
-          ref={threadRef}
-          className={`space-y-4 ${expanded ? 'max-h-[50vh] overflow-y-auto scroll-minimal' : ''}`}
-        >
+        <div ref={threadRef} className="space-y-4">
           <AnimatePresence initial={false}>
             {messages.map((msg, i) => (
               <motion.div
@@ -586,6 +655,11 @@ export function InlineGuide({
               >
                 {msg.kind === 'guide' ? (
                   <div className="space-y-3">
+                    {msg.leadNote && (
+                      <p className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.55 }}>
+                        {msg.leadNote}
+                      </p>
+                    )}
                     <p className="text-[15px] leading-[1.65] whitespace-pre-wrap text-[var(--brand-text-secondary)]">
                       {msg.content}
                     </p>
@@ -615,29 +689,10 @@ export function InlineGuide({
                           const dismissed = (msg.dismissedOpIds || []).includes(key)
                           const { label, preview, icon: OpIcon, destructive } = describeOp(op)
                           if (dismissed) {
-                            return (
-                              <div
-                                key={key}
-                                className="flex items-center gap-2 px-3 py-2 rounded-xl"
-                                style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.04)', opacity: 0.4 }}
-                              >
-                                <X className="h-3.5 w-3.5 flex-shrink-0" style={{ color: 'var(--brand-text-muted)' }} />
-                                <p className="text-[12px] leading-snug line-through truncate" style={{ color: 'var(--brand-text-muted)' }}>
-                                  {preview}
-                                </p>
-                                <span className="ml-auto text-[10px] uppercase tracking-wider" style={{ color: 'var(--brand-text-muted)' }}>Skipped</span>
-                              </div>
-                            )
+                            return <DismissedRow key={key} label={preview} />
                           }
                           return (
-                            <div
-                              key={key}
-                              className="flex items-start gap-3 px-3 py-3 rounded-xl"
-                              style={{
-                                background: destructive ? 'rgba(239,68,68,0.08)' : 'rgba(255,255,255,0.04)',
-                                border: `1px solid ${destructive ? 'rgba(239,68,68,0.25)' : 'rgba(255,255,255,0.1)'}`,
-                              }}
-                            >
+                            <ProposalCard key={key} destructive={destructive}>
                               <OpIcon className="h-4 w-4 flex-shrink-0 mt-0.5" style={{ color: destructive ? 'rgb(248,113,113)' : 'var(--brand-text-secondary)' }} />
                               <div className="flex-1 min-w-0 space-y-0.5">
                                 <p className="text-[11px] font-bold uppercase tracking-wider" style={{ color: destructive ? 'rgb(248,113,113)' : 'var(--brand-text-secondary)' }}>
@@ -653,32 +708,16 @@ export function InlineGuide({
                                 )}
                               </div>
                               {resolved ? (
-                                <span className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold" style={{ background: 'rgba(255,255,255,0.06)', color: 'var(--brand-text-muted)' }}>
-                                  <Check className="h-3 w-3" /> Applied
-                                </span>
+                                <ResolvedBadge>Applied</ResolvedBadge>
                               ) : (
                                 <div className="flex items-center gap-1 flex-shrink-0">
-                                  <button
-                                    onClick={() => dismissOp(i, key)}
-                                    className="h-9 w-9 flex items-center justify-center rounded-lg transition-colors hover:bg-white/[0.08] text-[var(--brand-text-muted)]"
-                                    aria-label="Skip"
-                                  >
-                                    <X className="h-4 w-4" />
-                                  </button>
-                                  <button
-                                    onClick={() => applyTaskOp(i, op, key)}
-                                    className="flex items-center gap-1 min-h-[36px] px-3 rounded-lg transition-all text-[11px] font-bold uppercase tracking-wider"
-                                    style={{
-                                      background: destructive ? 'rgba(239,68,68,0.18)' : 'rgba(var(--brand-primary-rgb),0.18)',
-                                      color: destructive ? 'rgb(248,113,113)' : 'rgb(var(--brand-primary-rgb))',
-                                      border: `1px solid ${destructive ? 'rgba(239,68,68,0.4)' : 'rgba(var(--brand-primary-rgb),0.4)'}`,
-                                    }}
-                                  >
+                                  <DismissButton onClick={() => dismissOp(i, key)} />
+                                  <ConfirmButton onClick={() => applyTaskOp(i, op, key)} destructive={destructive}>
                                     <Check className="h-3.5 w-3.5" /> {destructive ? 'Delete' : 'Apply'}
-                                  </button>
+                                  </ConfirmButton>
                                 </div>
                               )}
-                            </div>
+                            </ProposalCard>
                           )
                         })}
                       </div>
@@ -708,33 +747,15 @@ export function InlineGuide({
                           </p>
                         )}
                         {msg.resolvedGoal ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium" style={{ background: 'rgba(255,255,255,0.03)', color: 'var(--brand-text-secondary)', opacity: 0.4 }}>
-                            <Check className="h-3 w-3" /> Updated
-                          </span>
+                          <div className="flex justify-end"><ResolvedBadge>Updated</ResolvedBadge></div>
                         ) : msg.goalDismissed ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium" style={{ color: 'var(--brand-text-muted)', opacity: 0.5 }}>
-                            <X className="h-3 w-3" /> Skipped
-                          </span>
+                          <div className="flex justify-end"><DismissedRow label="Skipped" /></div>
                         ) : (
                           <div className="flex items-center gap-1 justify-end">
-                            <button
-                              onClick={() => dismissGoalUpdate(i)}
-                              className="px-2.5 py-1 text-[11px] font-medium rounded-lg hover:bg-white/[0.05] transition-colors"
-                              style={{ color: 'var(--brand-text-secondary)', opacity: 0.5 }}
-                            >
-                              Skip
-                            </button>
-                            <button
-                              onClick={() => msg.pendingGoal && applyGoalUpdate(i, msg.pendingGoal)}
-                              className="flex items-center gap-1 px-2.5 py-1 rounded-lg transition-all text-[11px] font-medium"
-                              style={{
-                                background: 'rgba(var(--brand-primary-rgb),0.1)',
-                                color: 'rgb(var(--brand-primary-rgb))',
-                                opacity: 0.85,
-                              }}
-                            >
-                              <Check className="h-3 w-3" /> Apply
-                            </button>
+                            <DismissButton onClick={() => dismissGoalUpdate(i)} />
+                            <ConfirmButton onClick={() => msg.pendingGoal && applyGoalUpdate(i, msg.pendingGoal)}>
+                              <Check className="h-3.5 w-3.5" /> Apply
+                            </ConfirmButton>
                           </div>
                         )}
                       </div>
@@ -761,29 +782,15 @@ export function InlineGuide({
                           </p>
                         )}
                         {msg.resolvedNote ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium" style={{ background: 'rgba(255,255,255,0.03)', color: 'var(--brand-text-secondary)', opacity: 0.4 }}>
-                            <Check className="h-3 w-3" /> Added to notes
-                          </span>
+                          <div className="flex justify-end"><ResolvedBadge>Added to notes</ResolvedBadge></div>
                         ) : msg.noteDismissed ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium" style={{ color: 'var(--brand-text-muted)', opacity: 0.5 }}>
-                            <X className="h-3 w-3" /> Skipped
-                          </span>
+                          <div className="flex justify-end"><DismissedRow label="Skipped" /></div>
                         ) : (
                           <div className="flex items-center gap-1 justify-end">
-                            <button
-                              onClick={() => dismissNoteAppend(i)}
-                              className="px-2.5 py-1 text-[11px] font-medium rounded-lg hover:bg-white/[0.05] transition-colors"
-                              style={{ color: 'var(--brand-text-secondary)', opacity: 0.5 }}
-                            >
-                              Skip
-                            </button>
-                            <button
-                              onClick={() => msg.pendingNote && applyNoteAppend(i, msg.pendingNote)}
-                              className="flex items-center gap-1 px-2.5 py-1 rounded-lg transition-all text-[11px] font-medium"
-                              style={{ background: 'rgba(var(--brand-primary-rgb),0.1)', color: 'rgb(var(--brand-primary-rgb))', opacity: 0.85 }}
-                            >
-                              <Check className="h-3 w-3" /> Add
-                            </button>
+                            <DismissButton onClick={() => dismissNoteAppend(i)} />
+                            <ConfirmButton onClick={() => msg.pendingNote && applyNoteAppend(i, msg.pendingNote)}>
+                              <Check className="h-3.5 w-3.5" /> Add
+                            </ConfirmButton>
                           </div>
                         )}
                       </div>
@@ -905,36 +912,20 @@ export function InlineGuide({
                         })}
                       </div>
                     )}
+
+                    {i === messages.length - 1 && !thinking && canRegenerateMessage(msg) && (
+                      <RegenerateRow onRegenerate={regenerate} />
+                    )}
                   </div>
                 ) : (
-                  /* User message */
-                  <div className="flex justify-end">
-                    <p
-                      className="text-[15px] leading-[1.65] px-4 py-2.5 rounded-2xl rounded-br-md max-w-[85%]"
-                      style={{ background: 'rgba(var(--brand-primary-rgb),0.08)', border: '1px solid rgba(var(--brand-primary-rgb),0.1)', color: 'var(--brand-text-primary)', opacity: 0.85 }}
-                    >
-                      {msg.content}
-                    </p>
-                  </div>
+                  <UserBubble content={msg.content} onEdit={i === lastUserIndex ? () => editMessage(i) : undefined} />
                 )}
               </motion.div>
             ))}
           </AnimatePresence>
 
-          {/* Thinking indicator */}
-          {thinking && (
-            <div className="flex gap-1 pt-1 px-1">
-              {[0, 1, 2].map(i => (
-                <motion.span
-                  key={i}
-                  className="block w-1.5 h-1.5 rounded-full"
-                  style={{ background: 'var(--brand-text-secondary)', opacity: 0.2 }}
-                  animate={{ opacity: [0.1, 0.4, 0.1] }}
-                  transition={{ duration: 1.2, repeat: Infinity, delay: i * 0.2 }}
-                />
-              ))}
-            </div>
-          )}
+          {thinking && <ThinkingIndicator />}
+          <div ref={bottomRef} />
         </div>
       )}
 
