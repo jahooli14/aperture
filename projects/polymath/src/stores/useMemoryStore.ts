@@ -6,6 +6,8 @@ import type { Memory, Bridge, BridgeWithMemories, SourceReference, ChecklistItem
 import { queueOperation } from '../lib/offlineQueue'
 import { useOfflineStore } from './useOfflineStore'
 import { CACHE_TTL } from '../lib/cacheConfig'
+import { fetchWithTimeout, NetworkError } from '../lib/network'
+import { uploadImageFile } from '../lib/imageUpload'
 
 interface CreateMemoryInput {
   title?: string
@@ -13,6 +15,13 @@ interface CreateMemoryInput {
   tags?: string[]
   memory_type?: 'foundational' | 'event' | 'insight' | 'quick-note'
   image_urls?: string[]
+  /**
+   * Photos picked but not yet uploaded. Preferred over pre-uploading in the
+   * caller: on a flaky connection the upload itself can be the thing that
+   * fails, and passing the raw files lets createMemory fall back to queuing
+   * them for background sync instead of the photo silently vanishing.
+   */
+  image_files?: File[]
   source_reference?: SourceReference
   checklist_items?: ChecklistItem[]
 }
@@ -352,7 +361,9 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
       || (input.checklist_items?.length ? 'Checklist' : null)
       || (input.body?.trim().split(/\s+/).slice(0, 8).join(' ') || 'New thought')
 
-    const newMemory = {
+    const pendingFiles = input.image_files || []
+
+    const baseMemory = {
       audiopen_id: `manual_${Date.now()}`, // Generate unique ID for manual entries
       title: input.title || fallbackTitle,
       body: input.body,
@@ -360,7 +371,6 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
       tags: input.tags || [],
       audiopen_created_at: now,
       memory_type: input.memory_type || null,
-      image_urls: input.image_urls || null,
       checklist_items: input.checklist_items || null,
       entities: null,
       themes: null,
@@ -372,45 +382,20 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
       source_reference: input.source_reference || null,
     }
 
-    const { isOnline } = useOfflineStore.getState()
-
-    // If offline, queue operation and show optimistically
-    if (!isOnline) {
-      const tempId = `offline_${Date.now()}`
-      const optimisticMemory = {
-        id: tempId,
-        created_at: now,
-        ...newMemory,
-        last_reviewed_at: null,
-        review_count: 0,
-        source_reference: input.source_reference || null,
-        triage: null
-      } as Memory
-
-      // Add to UI immediately
-      set((state) => ({
-        memories: [optimisticMemory, ...(Array.isArray(state.memories) ? state.memories : [])],
-      }))
-
-      // Queue for sync when back online — strip the fallback title so the
-      // server can generate a proper Gemini summary once we're online again.
-      // Carry a real client UUID as the eventual server id (so a retry after a
-      // lost response upserts rather than duplicates) plus the optimistic
-      // tempId, so any edit queued before sync maps to the real row.
-      await queueOperation('create_memory', { ...newMemory, title: input.title || null, tempId, id: uuidv4() })
-      await useOfflineStore.getState().updateQueueSize()
-
-      logger.debug('[MemoryStore] Memory queued for offline sync')
-      return optimisticMemory
-    }
-
-    // Online flow — show the memory IMMEDIATELY (optimistic), then reconcile
-    // with the server response. This is what makes capture feel instant.
+    // Show the memory IMMEDIATELY (optimistic), then reconcile with the
+    // server response. Picked photos preview from local blob URLs right away
+    // — swapped for the real hosted URLs once they've actually uploaded —
+    // so attaching a photo never looks like a no-op.
     const tempId = `temp_${Date.now()}`
+    const previewImageUrls = pendingFiles.length > 0
+      ? pendingFiles.map((f) => URL.createObjectURL(f))
+      : (input.image_urls || null)
+
     const optimisticMemory = {
       id: tempId,
       created_at: now,
-      ...newMemory,
+      ...baseMemory,
+      image_urls: previewImageUrls,
       last_reviewed_at: null,
       review_count: 0,
       source_reference: input.source_reference || null,
@@ -422,9 +407,72 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
       lastFetched: Date.now(),
     }))
 
+    // Queue for background sync instead of losing the note. Used both when
+    // we already know we're offline and as the fallback when an "online"
+    // attempt turns out not to be able to reach the network — a bad cell
+    // signal often reports online right up until a request stalls.
+    const queueOffline = async (resolvedImageUrls: string[] | null, filesToRetry: File[]) => {
+      const realId = uuidv4()
+      await queueOperation('create_memory', {
+        ...baseMemory,
+        // Strip the fallback title so the server can generate a proper
+        // Gemini summary once we're online again.
+        title: input.title || null,
+        image_urls: resolvedImageUrls,
+        // Raw files ride along for background sync to upload — never
+        // require a successful upload just to save the note's text.
+        pending_image_files: filesToRetry.length > 0 ? filesToRetry : undefined,
+        tempId,
+        id: realId,
+      })
+      await useOfflineStore.getState().updateQueueSize()
+
+      // Mark the already-visible optimistic row as offline-pending so the
+      // card shows it honestly instead of looking indistinguishable from a
+      // normal saved note (this only fires once we actually know we
+      // couldn't reach the server — never on the brief optimistic window
+      // while a healthy online save is still in flight).
+      set((state) => ({
+        memories: Array.isArray(state.memories)
+          ? state.memories.map((m) =>
+            m.id === tempId ? { ...m, tags: [...(m.tags || []), 'offline-pending'] } : m
+          )
+          : state.memories,
+      }))
+
+      logger.debug('[MemoryStore] Memory queued for offline sync')
+      return optimisticMemory
+    }
+
+    const { isOnline } = useOfflineStore.getState()
+    if (!isOnline) {
+      return queueOffline(input.image_urls || null, pendingFiles)
+    }
+
+    // Online flow. Every request here is time-bounded — on a flaky
+    // connection a hung request is worse than a fast, honest fallback to
+    // the offline queue.
+    let uploadedUrls: string[] = []
+    if (pendingFiles.length > 0) {
+      try {
+        uploadedUrls = await Promise.all(pendingFiles.map(uploadImageFile))
+      } catch (error) {
+        if (error instanceof NetworkError) {
+          logger.debug('[MemoryStore] Photo upload unreachable, queuing memory + photos offline')
+          useOfflineStore.getState().setOnlineStatus(false)
+          return queueOffline(input.image_urls || null, pendingFiles)
+        }
+        // A real (non-network) upload failure — save the note anyway, just
+        // without the photo, rather than losing the whole capture.
+        logger.error('[MemoryStore] Image upload failed:', error)
+      }
+    }
+
+    const finalImageUrls = [...(input.image_urls || []), ...uploadedUrls]
+
     try {
       logger.debug('[MemoryStore] Creating memory via API...')
-      const response = await fetch('/api/memories?capture=true', {
+      const response = await fetchWithTimeout('/api/memories?capture=true', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -432,7 +480,7 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
           title: input.title,
           tags: input.tags,
           memory_type: input.memory_type,
-          image_urls: input.image_urls,
+          image_urls: finalImageUrls.length > 0 ? finalImageUrls : null,
           source_reference: input.source_reference,
           checklist_items: input.checklist_items,
         })
@@ -479,6 +527,13 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
 
       return data
     } catch (error) {
+      if (error instanceof NetworkError) {
+        logger.debug('[MemoryStore] Save unreachable, queuing memory offline')
+        useOfflineStore.getState().setOnlineStatus(false)
+        // Any photos already uploaded keep their real URLs — only the text
+        // row itself needs to queue.
+        return queueOffline(finalImageUrls.length > 0 ? finalImageUrls : null, [])
+      }
       logger.error('[MemoryStore] Create memory failed:', error)
       // Roll back the optimistic memory so the user knows it failed
       set((state) => ({

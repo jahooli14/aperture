@@ -32,11 +32,22 @@ async function processOperation(operation: QueuedOperation): Promise<boolean> {
         // Strip any client-only fallback title — the offline path may have
         // stuffed in a "first 8 words" placeholder so the optimistic memory
         // wasn't blank. We want Gemini to write the real title server-side.
-        // tempId is the optimistic-row id used for temp→real remapping; it's
-        // not a memories column, so drop it before the upsert.
-        const { tempId: _tempId, ...insertPayload } = operation.data
+        // tempId is the optimistic-row id used for temp→real remapping;
+        // pending_image_files are raw blobs that never had network to
+        // upload — neither is a memories column, so drop both before upsert.
+        const { tempId: _tempId, pending_image_files: pendingImageFiles, ...insertPayload } = operation.data
         if (typeof insertPayload.title === 'string' && insertPayload.title.trim() === '') {
           insertPayload.title = null
+        }
+
+        // Upload any photos that were queued as raw files because the
+        // connection wasn't there to upload them at capture time. Left
+        // un-mutated in operation.data, so a failure here just retries the
+        // whole op (including the upload) on the next sync pass.
+        if (Array.isArray(pendingImageFiles) && pendingImageFiles.length > 0) {
+          const { uploadImageFile } = await import('./imageUpload')
+          const uploadedUrls = await Promise.all(pendingImageFiles.map(uploadImageFile))
+          insertPayload.image_urls = [...(insertPayload.image_urls || []), ...uploadedUrls]
         }
 
         // Upsert (not insert) keyed on the client-supplied id so a retry after

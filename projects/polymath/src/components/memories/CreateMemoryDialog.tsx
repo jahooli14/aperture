@@ -135,17 +135,29 @@ function VoiceSeeds({
 }
 
 function ToolbarBtn({
-  title, onClick, children, active,
+  title, onClick, children, active, emphasized,
 }: {
   title: string; onClick: () => void; children: React.ReactNode; active?: boolean
+  /** Persistent chip background instead of a faint icon — for actions worth
+   * making obviously tappable rather than blending into the toolbar. */
+  emphasized?: boolean
 }) {
   return (
     <button
       type="button"
       title={title}
+      aria-label={title}
       onClick={onClick}
-      className="relative p-2 rounded-lg transition-all"
-      style={{
+      className="relative flex items-center gap-1.5 transition-all"
+      style={emphasized ? {
+        padding: '6px 10px',
+        borderRadius: '999px',
+        background: 'rgba(255,255,255,0.06)',
+        border: '1px solid rgba(255,255,255,0.10)',
+        color: 'var(--brand-text-secondary)',
+      } : {
+        padding: '8px',
+        borderRadius: '8px',
         color: active ? 'var(--brand-primary)' : 'var(--brand-text-secondary)',
         opacity: active ? 1 : 0.4,
       }}
@@ -286,7 +298,6 @@ export function CreateMemoryDialog({
   const [lastCreatedId, setLastCreatedId] = useState<string | null>(null)
   const [selectedFiles, setSelectedFiles] = useState<File[]>([])
   const [previewUrls, setPreviewUrls] = useState<string[]>([])
-  const [uploading, setUploading] = useState(false)
 
   const { initialDraft, persist: persistDraft, clear: clearDraft } = useNoteDraft()
 
@@ -388,53 +399,6 @@ export function CreateMemoryDialog({
     setSelectedFiles((prev) => prev.filter((_, i) => i !== index))
   }
 
-  const uploadImages = async (): Promise<string[]> => {
-    if (selectedFiles.length === 0) return []
-
-    setUploading(true)
-    const urls: string[] = []
-
-    try {
-      for (const file of selectedFiles) {
-        const fileExt = file.name.split('.').pop()
-        const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`
-
-        const authResponse = await fetch('/api/utilities?resource=upload-image', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ fileName, fileType: file.type })
-        }).catch(() => {
-          throw new Error('Network error - check your internet connection')
-        })
-
-        if (!authResponse.ok) {
-          const errorData = await authResponse.json().catch(() => ({}))
-          throw new Error(errorData.details || errorData.error || `Server error (${authResponse.status})`)
-        }
-
-        const { signedUrl, publicUrl } = await authResponse.json()
-        if (!signedUrl || !publicUrl) throw new Error('Invalid response from upload server')
-
-        const uploadResponse = await fetch(signedUrl, {
-          method: 'PUT',
-          headers: { 'Content-Type': file.type, 'x-upsert': 'true' },
-          body: file
-        }).catch(() => {
-          throw new Error('Upload failed - check your internet connection')
-        })
-
-        if (!uploadResponse.ok) throw new Error(`Upload failed (${uploadResponse.status})`)
-        urls.push(publicUrl)
-      }
-      return urls
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown upload error'
-      throw new Error(`Failed to upload images: ${message}`)
-    } finally {
-      setUploading(false)
-    }
-  }
-
   const hasChecklistContent = checklistItems.some((item) => item.text.trim().length > 0)
   const hasContent = isChecklistMode ? hasChecklistContent : body.trim().length > 0
 
@@ -452,6 +416,11 @@ export function CreateMemoryDialog({
 
     const userTitle = formData.title.trim() || undefined
 
+    // Photos ride along as raw files — createMemory handles uploading them,
+    // and falls back to queuing them for background sync if the connection
+    // can't be trusted, so a picked photo is never silently dropped.
+    const imageFiles = selectedFiles.length > 0 ? selectedFiles : undefined
+
     let memoryData: Parameters<typeof createMemory>[0]
     if (isChecklistMode) {
       const validItems = checklistItems.filter((item) => item.text.trim().length > 0)
@@ -460,6 +429,7 @@ export function CreateMemoryDialog({
         checklist_items: validItems,
         tags: tags.length > 0 ? tags : undefined,
         memory_type: 'quick-note',
+        image_files: imageFiles,
       }
     } else {
       memoryData = {
@@ -467,6 +437,7 @@ export function CreateMemoryDialog({
         body: body.trim(),
         tags: tags.length > 0 ? tags : undefined,
         memory_type: formData.memory_type || undefined,
+        image_files: imageFiles,
       }
     }
 
@@ -475,6 +446,7 @@ export function CreateMemoryDialog({
       || 'Quick thought'
 
     const previousMemoryCount = memories.length
+    const hadPhotos = !!imageFiles
 
     // Tear down the form synchronously so the UI feels instant. The store
     // already adds an optimistic memory at the top of the list.
@@ -483,24 +455,7 @@ export function CreateMemoryDialog({
     // Run the network work in the background — never block the UI.
     void (async () => {
       try {
-        let imageUrls: string[] = []
-        if (selectedFiles.length > 0) {
-          try {
-            imageUrls = await uploadImages()
-          } catch (uploadErr) {
-            addToast({
-              title: 'Image upload failed',
-              description: uploadErr instanceof Error ? uploadErr.message : 'Try again in a moment.',
-              variant: 'destructive',
-            })
-          }
-        }
-
-        const finalData = imageUrls.length > 0
-          ? { ...memoryData, image_urls: imageUrls }
-          : memoryData
-
-        const newMemory = await createMemory(finalData)
+        const newMemory = await createMemory(memoryData)
 
         if (newMemory?.id) {
           setLastCreatedId(newMemory.id)
@@ -513,6 +468,12 @@ export function CreateMemoryDialog({
         const isMilestone = checkThoughtMilestone(newCount)
         const milestoneMessage = getMilestoneMessage('thought', newCount)
 
+        // A queued (not yet synced) memory keeps its client-generated
+        // "temp_" id — that's the honest signal for whether this actually
+        // reached the server, independent of what isOnline said before we
+        // tried (a bad signal can report online right up until it isn't).
+        const wasQueued = !!newMemory?.id?.startsWith('temp_')
+
         if (isMilestone) {
           if (newCount === 1) celebrate.firstThought()
           else if (newCount === 10) celebrate.tenthThought()
@@ -524,10 +485,12 @@ export function CreateMemoryDialog({
             description: newCount === 1 ? 'Keep going.' : `That's ${newCount}. Keep going.`,
             variant: 'success',
           })
-        } else if (!isOnline) {
+        } else if (wasQueued) {
           addToast({
             title: 'Saved offline',
-            description: 'Will sync once you\'re back online.',
+            description: hadPhotos
+              ? 'Note saved. Photo will upload once you\'re back online.'
+              : 'Will sync once you\'re back online.',
             variant: 'success',
           })
         }
@@ -543,7 +506,7 @@ export function CreateMemoryDialog({
     return true
   }, [
     hasContent, formData, body, isChecklistMode, checklistItems, memories.length,
-    selectedFiles, isOnline, createMemory, fetchSuggestions, addToast, resetForm,
+    selectedFiles, createMemory, fetchSuggestions, addToast, resetForm,
   ])
 
   // Auto-save on close. Closing the sheet IS the save action — no button required.
@@ -681,14 +644,11 @@ export function CreateMemoryDialog({
                   onChange={handleFileSelect}
                   className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10"
                 />
-                <ToolbarBtn title="Add photo" onClick={() => {}}>
+                <ToolbarBtn title="Add photo" onClick={() => {}} emphasized>
                   <ImageIcon className="h-4 w-4" />
-                  {selectedFiles.length > 0 && (
-                    <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full text-[8px] font-bold flex items-center justify-center text-black"
-                      style={{ background: 'var(--brand-primary)' }}>
-                      {selectedFiles.length}
-                    </span>
-                  )}
+                  <span className="text-[11px] font-medium">
+                    {selectedFiles.length > 0 ? `${selectedFiles.length} photo${selectedFiles.length > 1 ? 's' : ''}` : 'Photo'}
+                  </span>
                 </ToolbarBtn>
               </div>
 
@@ -753,7 +713,7 @@ export function CreateMemoryDialog({
               {/* Done — explicit save shortcut. Close-to-save still works without it. */}
               <button
                 type="submit"
-                disabled={!hasContent || uploading}
+                disabled={!hasContent}
                 aria-label="Done"
                 className="flex-shrink-0 px-3 h-9 rounded-full text-[12px] font-bold uppercase tracking-[0.15em] transition-all touch-manipulation disabled:opacity-30"
                 style={{
@@ -763,9 +723,9 @@ export function CreateMemoryDialog({
                     ? '1px solid rgba(var(--brand-primary-rgb), 0.35)'
                     : '1px solid transparent',
                 }}
-                title={uploading ? 'Uploading…' : 'Done'}
+                title="Done"
               >
-                {uploading ? '…' : 'Done'}
+                Done
               </button>
             </div>
 
