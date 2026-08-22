@@ -32,11 +32,22 @@ async function processOperation(operation: QueuedOperation): Promise<boolean> {
         // Strip any client-only fallback title — the offline path may have
         // stuffed in a "first 8 words" placeholder so the optimistic memory
         // wasn't blank. We want Gemini to write the real title server-side.
-        // tempId is the optimistic-row id used for temp→real remapping; it's
-        // not a memories column, so drop it before the upsert.
-        const { tempId: _tempId, ...insertPayload } = operation.data
+        // tempId is the optimistic-row id used for temp→real remapping;
+        // pending_image_files are raw blobs that never had network to
+        // upload — neither is a memories column, so drop both before upsert.
+        const { tempId: _tempId, pending_image_files: pendingImageFiles, ...insertPayload } = operation.data
         if (typeof insertPayload.title === 'string' && insertPayload.title.trim() === '') {
           insertPayload.title = null
+        }
+
+        // Upload any photos that were queued as raw files because the
+        // connection wasn't there to upload them at capture time. Left
+        // un-mutated in operation.data, so a failure here just retries the
+        // whole op (including the upload) on the next sync pass.
+        if (Array.isArray(pendingImageFiles) && pendingImageFiles.length > 0) {
+          const { uploadImageFile } = await import('./imageUpload')
+          const uploadedUrls = await Promise.all(pendingImageFiles.map(uploadImageFile))
+          insertPayload.image_urls = [...(insertPayload.image_urls || []), ...uploadedUrls]
         }
 
         // Upsert (not insert) keyed on the client-supplied id so a retry after
@@ -150,6 +161,32 @@ async function processOperation(operation: QueuedOperation): Promise<boolean> {
         const { error } = await supabase
           .from('lists')
           .upsert(operation.data, { onConflict: 'id' })
+
+        if (error) throw error
+        return true
+      }
+
+      case 'update_list': {
+        const { id, ...updateData } = operation.data
+
+        // Settings is a partial patch on the client (see useListStore's
+        // optimistic `{ ...l.settings, ...settings }` merge and the API's
+        // matching server-side merge) — a raw column replace here would
+        // wipe out any settings keys not present in this particular queued
+        // update, so merge against the current row first.
+        if (updateData.settings !== undefined) {
+          const { data: existing } = await supabase
+            .from('lists')
+            .select('settings')
+            .eq('id', id)
+            .single()
+          updateData.settings = { ...(existing?.settings ?? {}), ...(updateData.settings ?? {}) }
+        }
+
+        const { error } = await supabase
+          .from('lists')
+          .update(updateData)
+          .eq('id', id)
 
         if (error) throw error
         return true

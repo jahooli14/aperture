@@ -7,6 +7,7 @@ import { logger } from '../logger'
 import { offlineContentManager } from '../offline/OfflineContentManager'
 import { readingDb } from '../db'
 import { SYNC_INTERVAL } from '../cacheConfig'
+import { fetchWithTimeout } from '../network'
 
 class DataSynchronizer {
   private static instance: DataSynchronizer
@@ -163,7 +164,7 @@ class DataSynchronizer {
           await useListStore.getState().fetchListItems(list.id)
         } else {
           try {
-            const response = await fetch(`/api/lists?scope=items&listId=${list.id}`)
+            const response = await fetchWithTimeout(`/api/lists?scope=items&listId=${list.id}`)
             if (response.ok) {
               const items = await response.json()
               await readingDb.cacheListItems(items)
@@ -194,7 +195,7 @@ class DataSynchronizer {
         return
       }
 
-      const response = await fetch('/api/connections?action=list-all')
+      const response = await fetchWithTimeout('/api/connections?action=list-all')
       if (response.ok) {
         const { connections } = await response.json()
         if (connections && Array.isArray(connections)) {
@@ -221,7 +222,7 @@ class DataSynchronizer {
       // Wrap each fetch in try-catch to prevent one failure from blocking others
       await Promise.allSettled([
         // Inspiration
-        fetch('/api/analytics?resource=inspiration').then(async (res) => {
+        fetchWithTimeout('/api/analytics?resource=inspiration').then(async (res) => {
           if (res.ok) {
             const data = await res.json()
             await readingDb.cacheDashboard('inspiration', data)
@@ -229,7 +230,7 @@ class DataSynchronizer {
         }).catch(err => logger.warn('[DataSynchronizer] Inspiration fetch failed:', err)),
 
         // Evolution (Insights)
-        fetch('/api/memories?action=evolution').then(async (res) => {
+        fetchWithTimeout('/api/memories?action=evolution').then(async (res) => {
           if (res.ok) {
             const data = await res.json()
             await readingDb.cacheDashboard('evolution', data)
@@ -237,7 +238,7 @@ class DataSynchronizer {
         }).catch(err => logger.warn('[DataSynchronizer] Evolution fetch failed:', err)),
 
         // Patterns (Timeline)
-        fetch('/api/analytics?resource=patterns').then(async (res) => {
+        fetchWithTimeout('/api/analytics?resource=patterns').then(async (res) => {
           if (res.ok) {
             const data = await res.json()
             await readingDb.cacheDashboard('patterns', data)
@@ -245,7 +246,7 @@ class DataSynchronizer {
         }).catch(err => logger.warn('[DataSynchronizer] Patterns fetch failed:', err)),
 
         // Bedtime prompts
-        fetch('/api/projects?resource=bedtime').then(async (res) => {
+        fetchWithTimeout('/api/projects?resource=bedtime').then(async (res) => {
           if (res.ok) {
             const data = await res.json()
             await readingDb.cacheDashboard('bedtime', data)
@@ -260,7 +261,7 @@ class DataSynchronizer {
         // Syncing it every 5 minutes was costing 13-15/month!
 
         // RSS Feeds
-        fetch('/api/reading?resource=rss').then(async (res) => {
+        fetchWithTimeout('/api/reading?resource=rss').then(async (res) => {
           if (res.ok) {
             const data = await res.json()
             if (Array.isArray(data.feeds)) {

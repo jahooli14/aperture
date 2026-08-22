@@ -20,7 +20,7 @@ import Placeholder from '@tiptap/extension-placeholder'
 import { Markdown } from 'tiptap-markdown'
 import { Bold, Italic, Strikethrough, Link2, Heading1, Heading2, List, Quote, ImagePlus, Loader2 } from 'lucide-react'
 import { useToast } from './toast'
-import { api } from '../../lib/apiClient'
+import { uploadImageFile } from '../../lib/imageUpload'
 import { cn } from '../../lib/utils'
 import '../../styles/rich-text.css'
 
@@ -28,23 +28,6 @@ import '../../styles/rich-text.css'
 const getMarkdown = (editor: Editor): string => {
   const md = (editor.storage as unknown as Record<string, unknown>).markdown as { getMarkdown: () => string } | undefined
   return md?.getMarkdown() ?? ''
-}
-
-async function uploadImage(file: File): Promise<string> {
-  const fileExt = file.name.split('.').pop() || 'png'
-  const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`
-  const { signedUrl, publicUrl } = await api.post('utilities?resource=upload-image', {
-    fileName,
-    fileType: file.type || 'image/png',
-  })
-  if (!signedUrl || !publicUrl) throw new Error('Upload server gave no URL')
-  const res = await fetch(signedUrl, {
-    method: 'PUT',
-    headers: { 'Content-Type': file.type || 'image/png', 'x-upsert': 'true' },
-    body: file,
-  }).catch(() => { throw new Error('Upload failed — check your connection') })
-  if (!res.ok) throw new Error(`Upload failed (${res.status})`)
-  return publicUrl
 }
 
 export interface RichTextEditorProps {
@@ -137,7 +120,7 @@ export function RichTextEditor({
     setUploading(true)
     try {
       for (const file of images) {
-        const url = await uploadImage(file)
+        const url = await uploadImageFile(file)
         editor.chain().focus().setImage({ src: url }).run()
       }
     } catch (err) {

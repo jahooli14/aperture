@@ -11,12 +11,20 @@ import { create } from 'zustand'
 import { useShallow } from 'zustand/react/shallow'
 import { persist } from 'zustand/middleware'
 import type { Project } from '../types'
-import { api } from '../lib/apiClient'
+import { api, ApiError } from '../lib/apiClient'
 import { logger } from '../lib/logger'
 import { v4 as uuidv4 } from 'uuid'
 import { queueOperation } from '../lib/offlineQueue'
 import { useOfflineStore } from './useOfflineStore'
 import { scheduleAIEnrichment } from '../lib/aiEnrichmentManager'
+
+// The `api` client's fetchWithTimeout rethrows a raw TypeError for a genuine
+// connectivity failure, and wraps its own abort-timeout as ApiError(408) —
+// both mean "couldn't reach the server," as distinct from a real rejection
+// (4xx/5xx), so writes should queue rather than roll back the user's edit.
+function isNetworkFailure(error: unknown): boolean {
+  return error instanceof TypeError || (error instanceof ApiError && error.status === 408)
+}
 
 /**
  * Smart project sorting with resurfacing algorithm
@@ -307,6 +315,15 @@ export const useProjectStore = create<ProjectState>()(
             }
           })
         } catch (error) {
+          // Network failure (not a real server rejection) — queue instead
+          // of rolling back the project the user just created.
+          if (isNetworkFailure(error)) {
+            useOfflineStore.getState().setOnlineStatus(false)
+            await queueOperation('create_project', { ...data, tempId, id: uuidv4() })
+            await useOfflineStore.getState().updateQueueSize()
+            logger.debug('[ProjectStore] Queued create_project after network failure')
+            return
+          }
           logger.error('[ProjectStore] Failed to create project:', error)
           // Rollback
           set(state => ({
@@ -379,6 +396,15 @@ export const useProjectStore = create<ProjectState>()(
             scheduleAIEnrichment(id, currentTaskCount, hasNewOrCompletedTasks || hasContextUpdates)
           }
         } catch (error) {
+          // Network failure (not a real server rejection) — queue instead
+          // of rolling back the edit the user just made.
+          if (isNetworkFailure(error)) {
+            useOfflineStore.getState().setOnlineStatus(false)
+            await queueOperation('update_project', { id, ...data })
+            await useOfflineStore.getState().updateQueueSize()
+            logger.debug('[ProjectStore] Queued update_project after network failure')
+            return
+          }
           logger.error('Failed to update project:', error)
           // Rollback
           set(state => ({
@@ -421,6 +447,15 @@ export const useProjectStore = create<ProjectState>()(
         try {
           await api.delete(`projects/${id}`)
         } catch (error) {
+          // Network failure (not a real server rejection) — queue instead
+          // of resurrecting the project the user just deleted.
+          if (isNetworkFailure(error)) {
+            useOfflineStore.getState().setOnlineStatus(false)
+            await queueOperation('delete_project', { id })
+            await useOfflineStore.getState().updateQueueSize()
+            logger.debug('[ProjectStore] Queued delete_project after network failure')
+            return
+          }
           logger.error('Failed to delete project:', error)
           // Rollback
           set(state => ({

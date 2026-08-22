@@ -13,6 +13,7 @@ import { SubtleBackground } from '../components/SubtleBackground'
 import { ZenMode } from '../components/bedtime/ZenMode'
 import { DriftMode } from '../components/bedtime/DriftMode'
 import { readingDb } from '../lib/db'
+import { fetchWithTimeout } from '../lib/network'
 
 interface BedtimePrompt {
   id: string
@@ -73,7 +74,7 @@ export function BedtimePage() {
 
       // 3. Fetch fresh data from network
       setIsOffline(false)
-      const response = await fetch('/api/projects?resource=bedtime')
+      const response = await fetchWithTimeout('/api/projects?resource=bedtime')
       const data = await response.json()
 
       // Ensure unique IDs to prevent feedback applying to all items

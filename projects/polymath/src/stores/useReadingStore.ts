@@ -9,6 +9,7 @@ import type { Article, ArticleStatus, SaveArticleRequest } from '../types/readin
 import { queueOperation } from '../lib/offlineQueue'
 import { useOfflineStore } from './useOfflineStore'
 import { CACHE_TTL } from '../lib/cacheConfig'
+import { fetchWithTimeout, NetworkError } from '../lib/network'
 
 /**
  * Debounced localStorage write to reduce I/O operations
@@ -133,7 +134,7 @@ export const useReadingStore = create<ReadingState>((set, get) => {
         const params = new URLSearchParams()
         if (status) params.append('status', status)
 
-        const response = await fetch(`/api/reading?${params}`)
+        const response = await fetchWithTimeout(`/api/reading?${params}`)
 
         if (!response.ok) {
           throw new Error('Failed to fetch articles')
@@ -459,7 +460,7 @@ export const useReadingStore = create<ReadingState>((set, get) => {
       }
 
       try {
-        const response = await fetch('/api/reading', {
+        const response = await fetchWithTimeout('/api/reading', {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ id, ...updates }),
@@ -472,9 +473,12 @@ export const useReadingStore = create<ReadingState>((set, get) => {
         // intent; a server replace here clobbers rapid follow-up taps
         // (e.g. switching reactions twice in 200ms) and causes flicker.
       } catch (error) {
-        // Network blip: queue rather than rolling back — the user's
-        // intent shouldn't disappear because the request timed out.
-        if (!navigator.onLine || error instanceof TypeError) {
+        // Network blip (including our own timeout): queue rather than
+        // rolling back — the user's intent shouldn't disappear because the
+        // request timed out. Also correct the online flag so the next write
+        // this session skips straight to the queue instead of stalling again.
+        if (error instanceof NetworkError) {
+          useOfflineStore.getState().setOnlineStatus(false)
           await queueOperation('update_article', { id, ...updates })
           await useOfflineStore.getState().updateQueueSize()
           return
@@ -524,7 +528,7 @@ export const useReadingStore = create<ReadingState>((set, get) => {
       }
 
       try {
-        const response = await fetch('/api/reading', {
+        const response = await fetchWithTimeout('/api/reading', {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ id, status }),
@@ -554,7 +558,17 @@ export const useReadingStore = create<ReadingState>((set, get) => {
           ),
         }))
       } catch (error) {
-        // Rollback on error
+        // Network blip (including our own timeout): the status change was
+        // real user intent (archive, favorite, etc) — queue it instead of
+        // rolling it back just because the request couldn't reach the server.
+        if (error instanceof NetworkError) {
+          useOfflineStore.getState().setOnlineStatus(false)
+          await queueOperation('update_article', { id, status })
+          await useOfflineStore.getState().updateQueueSize()
+          logger.debug('[ReadingStore] Article status update queued after network failure')
+          return
+        }
+        // Rollback on a real (non-network) error
         set({ articles: previousArticles })
         const errorMessage = error instanceof Error ? error.message : 'Unknown error'
         set({ error: errorMessage })
@@ -598,7 +612,7 @@ export const useReadingStore = create<ReadingState>((set, get) => {
       }
 
       try {
-        const response = await fetch(`/api/reading?id=${id}`, {
+        const response = await fetchWithTimeout(`/api/reading?id=${id}`, {
           method: 'DELETE',
         })
 
@@ -606,7 +620,17 @@ export const useReadingStore = create<ReadingState>((set, get) => {
           throw new Error('Failed to delete article')
         }
       } catch (error) {
-        // Rollback on error
+        // Network blip (including our own timeout): the delete was real
+        // intent — queue it instead of resurrecting the article the user
+        // just removed just because the request couldn't reach the server.
+        if (error instanceof NetworkError) {
+          useOfflineStore.getState().setOnlineStatus(false)
+          await queueOperation('delete_article', { id })
+          await useOfflineStore.getState().updateQueueSize()
+          logger.debug('[ReadingStore] Article deletion queued after network failure')
+          return
+        }
+        // Rollback on a real (non-network) error
         set({ articles: previousArticles })
         const errorMessage = error instanceof Error ? error.message : 'Unknown error'
         set({ error: errorMessage })

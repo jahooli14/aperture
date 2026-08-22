@@ -4,6 +4,7 @@ import { v4 as uuidv4 } from 'uuid'
 import type { List, ListItem, ListSettings, CreateListInput, CreateListItemInput, ListType } from '../types'
 import { queueOperation } from '../lib/offlineQueue'
 import { useOfflineStore } from './useOfflineStore'
+import { fetchWithTimeout, NetworkError } from '../lib/network'
 
 interface ListStore {
     lists: List[]
@@ -71,7 +72,7 @@ export const useListStore = create<ListStore>()(
 
                 set({ loading: true })
                 try {
-                    const response = await fetch('/api/lists')
+                    const response = await fetchWithTimeout('/api/lists')
                     if (!response.ok) throw new Error('Failed to fetch lists')
                     const data = await response.json()
 
@@ -155,7 +156,7 @@ export const useListStore = create<ListStore>()(
                 }
 
                 try {
-                    const response = await fetch('/api/lists', {
+                    const response = await fetchWithTimeout('/api/lists', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(input)
@@ -175,8 +176,10 @@ export const useListStore = create<ListStore>()(
 
                     return realList.id
                 } catch (error: any) {
-                    // If network error, queue for later
-                    if (!navigator.onLine) {
+                    // Network error (including our own timeout) — queue for
+                    // later instead of trusting a stale "online" flag.
+                    if (error instanceof NetworkError) {
+                        useOfflineStore.getState().setOnlineStatus(false)
                         await queueOperation('create_list', {
                             id: tempId,
                             ...input,
@@ -275,7 +278,7 @@ export const useListStore = create<ListStore>()(
                 }
 
                 try {
-                    const response = await fetch(`/api/lists?scope=items&listId=${listId}`)
+                    const response = await fetchWithTimeout(`/api/lists?scope=items&listId=${listId}`)
                     if (!response.ok) throw new Error('Failed to fetch items')
                     const data = await response.json()
 
@@ -398,7 +401,7 @@ export const useListStore = create<ListStore>()(
 
                 let response: Response
                 try {
-                    response = await fetch(`/api/lists?scope=items&listId=${input.list_id}`, {
+                    response = await fetchWithTimeout(`/api/lists?scope=items&listId=${input.list_id}`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
@@ -407,10 +410,12 @@ export const useListStore = create<ListStore>()(
                         })
                     })
                 } catch (networkError) {
-                    // fetch() throws only on network failure (DNS, TLS, offline).
-                    // Server reachability problems aren't the user's mistake —
-                    // queue the add and let the sync manager retry rather than
-                    // making the item vanish from the UI.
+                    // fetchWithTimeout only throws on network failure (DNS,
+                    // TLS, offline, or our own timeout). Server reachability
+                    // problems aren't the user's mistake — queue the add and
+                    // let the sync manager retry rather than making the item
+                    // vanish from the UI.
+                    useOfflineStore.getState().setOnlineStatus(false)
                     await queueOperation('add_list_item', {
                         id: tempId,
                         list_id: input.list_id,
@@ -492,7 +497,7 @@ export const useListStore = create<ListStore>()(
 
                 // Update via API when online
                 try {
-                    const response = await fetch(`/api/lists?scope=items&id=${itemId}`, {
+                    const response = await fetchWithTimeout(`/api/lists?scope=items&id=${itemId}`, {
                         method: 'PATCH',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ status })
@@ -519,6 +524,15 @@ export const useListStore = create<ListStore>()(
                         }
                     })
                 } catch (error) {
+                    // Network blip (including our own timeout) → queue instead
+                    // of throwing, so a slow connection doesn't lose the check.
+                    if (error instanceof NetworkError) {
+                        useOfflineStore.getState().setOnlineStatus(false)
+                        await queueOperation('update_list_item', { id: itemId, status })
+                        await useOfflineStore.getState().updateQueueSize()
+                        console.log('[ListStore] Queued update_list_item status after network failure')
+                        return
+                    }
                     console.error('[ListStore] Failed to update status:', error)
                     throw error
                 }
@@ -564,7 +578,7 @@ export const useListStore = create<ListStore>()(
 
                 // Update via API when online
                 try {
-                    const response = await fetch(`/api/lists?scope=items&id=${itemId}`, {
+                    const response = await fetchWithTimeout(`/api/lists?scope=items&id=${itemId}`, {
                         method: 'PATCH',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ metadata })
@@ -578,9 +592,11 @@ export const useListStore = create<ListStore>()(
                     // follow-up taps (rating, reaction toggles) that landed
                     // while this request was in flight.
                 } catch (error) {
-                    // Network blip → queue instead of throwing, so a slow
-                    // connection doesn't lose the reaction/rating.
-                    if (!navigator.onLine || error instanceof TypeError) {
+                    // Network blip (including our own timeout) → queue instead
+                    // of throwing, so a slow connection doesn't lose the
+                    // reaction/rating.
+                    if (error instanceof NetworkError) {
+                        useOfflineStore.getState().setOnlineStatus(false)
                         await queueOperation('update_list_item', { id: itemId, metadata })
                         await useOfflineStore.getState().updateQueueSize()
                         return
@@ -614,7 +630,7 @@ export const useListStore = create<ListStore>()(
                 }
 
                 try {
-                    const response = await fetch(`/api/lists?scope=items&id=${itemId}`, {
+                    const response = await fetchWithTimeout(`/api/lists?scope=items&id=${itemId}`, {
                         method: 'PATCH',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ content })
@@ -636,6 +652,14 @@ export const useListStore = create<ListStore>()(
                         }
                     })
                 } catch (error) {
+                    // Network blip (including our own timeout) → queue instead
+                    // of throwing, so a slow connection doesn't lose the edit.
+                    if (error instanceof NetworkError) {
+                        useOfflineStore.getState().setOnlineStatus(false)
+                        await queueOperation('update_list_item', { id: itemId, content })
+                        await useOfflineStore.getState().updateQueueSize()
+                        return
+                    }
                     console.error('[ListStore] Failed to update content:', error)
                     throw error
                 }
@@ -681,14 +705,16 @@ export const useListStore = create<ListStore>()(
                 }
 
                 try {
-                    const response = await fetch(`/api/lists?scope=items&id=${itemId}`, {
+                    const response = await fetchWithTimeout(`/api/lists?scope=items&id=${itemId}`, {
                         method: 'DELETE'
                     })
 
                     if (!response.ok) throw new Error('Failed to delete item')
                 } catch (error: any) {
-                    // If network error, queue for later
-                    if (!navigator.onLine) {
+                    // Network error (including our own timeout) — queue for
+                    // later instead of trusting a stale "online" flag.
+                    if (error instanceof NetworkError) {
+                        useOfflineStore.getState().setOnlineStatus(false)
                         await queueOperation('delete_list_item', { id: itemId })
                         await useOfflineStore.getState().updateQueueSize()
                         console.log('[ListStore] Queued delete_list_item after failed attempt')
@@ -705,6 +731,8 @@ export const useListStore = create<ListStore>()(
             },
 
             updateList: async (listId, updates) => {
+                const { isOnline } = useOfflineStore.getState()
+
                 // Optimistic update
                 set(state => ({
                     lists: state.lists.map(l =>
@@ -712,8 +740,15 @@ export const useListStore = create<ListStore>()(
                     )
                 }))
 
+                if (!isOnline) {
+                    await queueOperation('update_list', { id: listId, ...updates })
+                    await useOfflineStore.getState().updateQueueSize()
+                    console.log('[ListStore] Queued update_list for offline sync')
+                    return
+                }
+
                 try {
-                    const response = await fetch('/api/lists', {
+                    const response = await fetchWithTimeout('/api/lists', {
                         method: 'PATCH',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ id: listId, ...updates })
@@ -724,12 +759,22 @@ export const useListStore = create<ListStore>()(
                         lists: state.lists.map(l => l.id === listId ? { ...l, ...updatedList } : l)
                     }))
                 } catch (error) {
+                    // Network blip (including our own timeout) → queue instead
+                    // of throwing, so a slow connection doesn't lose the edit.
+                    if (error instanceof NetworkError) {
+                        useOfflineStore.getState().setOnlineStatus(false)
+                        await queueOperation('update_list', { id: listId, ...updates })
+                        await useOfflineStore.getState().updateQueueSize()
+                        return
+                    }
                     console.error('[ListStore] Failed to update list:', error)
                     throw error
                 }
             },
 
             updateListSettings: async (listId, settings) => {
+                const { isOnline } = useOfflineStore.getState()
+
                 // Optimistic update
                 set(state => ({
                     lists: state.lists.map(l =>
@@ -737,8 +782,15 @@ export const useListStore = create<ListStore>()(
                     )
                 }))
 
+                if (!isOnline) {
+                    await queueOperation('update_list', { id: listId, settings })
+                    await useOfflineStore.getState().updateQueueSize()
+                    console.log('[ListStore] Queued update_list settings for offline sync')
+                    return
+                }
+
                 try {
-                    const response = await fetch('/api/lists', {
+                    const response = await fetchWithTimeout('/api/lists', {
                         method: 'PATCH',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ id: listId, settings })
@@ -749,6 +801,14 @@ export const useListStore = create<ListStore>()(
                         lists: state.lists.map(l => l.id === listId ? { ...l, ...updatedList } : l)
                     }))
                 } catch (error) {
+                    // Network blip (including our own timeout) → queue instead
+                    // of throwing, so a slow connection doesn't lose the change.
+                    if (error instanceof NetworkError) {
+                        useOfflineStore.getState().setOnlineStatus(false)
+                        await queueOperation('update_list', { id: listId, settings })
+                        await useOfflineStore.getState().updateQueueSize()
+                        return
+                    }
                     console.error('[ListStore] Failed to update list settings:', error)
                     throw error
                 }
@@ -780,13 +840,15 @@ export const useListStore = create<ListStore>()(
                 }
 
                 try {
-                    const response = await fetch(`/api/lists?id=${listId}`, {
+                    const response = await fetchWithTimeout(`/api/lists?id=${listId}`, {
                         method: 'DELETE'
                     })
                     if (!response.ok) throw new Error('Failed to delete list')
                 } catch (error: any) {
-                    // If network error, queue for later
-                    if (!navigator.onLine) {
+                    // Network error (including our own timeout) — queue for
+                    // later instead of trusting a stale "online" flag.
+                    if (error instanceof NetworkError) {
+                        useOfflineStore.getState().setOnlineStatus(false)
                         await queueOperation('delete_list', { id: listId })
                         await useOfflineStore.getState().updateQueueSize()
                         console.log('[ListStore] Queued delete_list after failed attempt')
@@ -829,15 +891,17 @@ export const useListStore = create<ListStore>()(
                 }
 
                 try {
-                    const response = await fetch(`/api/lists?scope=items&resource=reorder&listId=${listId}`, {
+                    const response = await fetchWithTimeout(`/api/lists?scope=items&resource=reorder&listId=${listId}`, {
                         method: 'PATCH',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ itemIds })
                     })
                     if (!response.ok) throw new Error('Failed to reorder items')
                 } catch (error: any) {
-                    // If network error, queue for later
-                    if (!navigator.onLine) {
+                    // Network error (including our own timeout) — queue for
+                    // later instead of trusting a stale "online" flag.
+                    if (error instanceof NetworkError) {
+                        useOfflineStore.getState().setOnlineStatus(false)
                         await queueOperation('reorder_list_items', { listId, itemIds })
                         await useOfflineStore.getState().updateQueueSize()
                         console.log('[ListStore] Queued reorder_list_items after failed attempt')
@@ -877,15 +941,17 @@ export const useListStore = create<ListStore>()(
                 }
 
                 try {
-                    const response = await fetch('/api/lists?resource=reorder', {
+                    const response = await fetchWithTimeout('/api/lists?resource=reorder', {
                         method: 'PATCH',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ listIds })
                     })
                     if (!response.ok) throw new Error('Failed to reorder lists')
                 } catch (error: any) {
-                    // If network error, queue for later
-                    if (!navigator.onLine) {
+                    // Network error (including our own timeout) — queue for
+                    // later instead of trusting a stale "online" flag.
+                    if (error instanceof NetworkError) {
+                        useOfflineStore.getState().setOnlineStatus(false)
                         await queueOperation('reorder_lists', { listIds })
                         await useOfflineStore.getState().updateQueueSize()
                         console.log('[ListStore] Queued reorder_lists after failed attempt')

@@ -6,6 +6,7 @@
 import { create } from 'zustand'
 import type { RSSFeed, SaveFeedRequest, UpdateFeedRequest } from '../types/rss'
 import { readingDb } from '../lib/db'
+import { fetchWithTimeout } from '../lib/network'
 
 interface RSSState {
   feeds: RSSFeed[]
@@ -45,7 +46,7 @@ export const useRSSStore = create<RSSState>((set, get) => ({
       }
 
       // 3. Fetch fresh data from network
-      const response = await fetch('/api/reading?resource=rss')
+      const response = await fetchWithTimeout('/api/reading?resource=rss')
 
       if (!response.ok) {
         throw new Error('Failed to fetch feeds')

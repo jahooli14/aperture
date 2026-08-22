@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, Star } from 'lucide-react'
 import { OptimizedImage } from '../components/ui/optimized-image'
 import { ListIcon, ListColor } from '../lib/listTheme'
+import { fetchWithTimeout } from '../lib/network'
 import type { ListItem, ListType } from '../types'
 
 type FavouriteItem = ListItem & {
@@ -137,13 +138,39 @@ export default function FavouritesPage() {
     useEffect(() => {
         let cancelled = false
         setError(null)
-        fetch('/api/lists?scope=items&resource=favourites')
+        fetchWithTimeout('/api/lists?scope=items&resource=favourites')
             .then(async r => {
                 if (!r.ok) throw new Error(`Failed (${r.status})`)
                 return r.json()
             })
             .then(data => { if (!cancelled) setItems(data as FavouriteItem[]) })
-            .catch(e => { if (!cancelled) setError(e.message) })
+            .catch(async (e) => {
+                if (cancelled) return
+                // Offline or unreachable — rebuild favourites from the Dexie
+                // cache instead of leaving the page on a spinner or an error.
+                try {
+                    const { readingDb } = await import('../lib/db')
+                    const [cachedItems, cachedLists] = await Promise.all([
+                        readingDb.getAllCachedListItems(),
+                        readingDb.getCachedLists(),
+                    ])
+                    const listsById = new Map(cachedLists.map((l) => [l.id, l]))
+                    const favourites = cachedItems
+                        .filter((i: any) => (i.user_rating ?? 0) >= 4)
+                        .map((i: any) => {
+                            const list = listsById.get(i.list_id)
+                            return list ? { ...i, list: { id: list.id, title: list.title, type: list.type as ListType } } : null
+                        })
+                        .filter((i): i is FavouriteItem => i !== null)
+                    if (!cancelled && favourites.length > 0) {
+                        setItems(favourites)
+                        return
+                    }
+                } catch {
+                    // Fall through to the error state below.
+                }
+                if (!cancelled) setError(e.message)
+            })
         return () => { cancelled = true }
     }, [])
 
