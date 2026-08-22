@@ -9,6 +9,7 @@ import { EmptyState } from '../components/ui/empty-state'
 import { VoiceSearch } from '../components/VoiceSearch'
 import { readingDb } from '../lib/db'
 import { useOfflineStore } from '../stores/useOfflineStore'
+import { fetchWithTimeout } from '../lib/network'
 import { handleInputFocus } from '../utils/keyboard'
 
 interface SearchResult {
@@ -189,7 +190,7 @@ export function SearchPage() {
         haptic.light()
       } else {
         try {
-          const response = await fetch(`/api/memories?q=${encodeURIComponent(searchQuery)}&semantic=true`)
+          const response = await fetchWithTimeout(`/api/memories?q=${encodeURIComponent(searchQuery)}&semantic=true`)
           if (!response.ok) {
             throw new Error('Online search failed')
           }

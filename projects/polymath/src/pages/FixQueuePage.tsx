@@ -84,28 +84,35 @@ export function FixQueuePage() {
 
   const fetchItems = useCallback(async () => {
     if (!user) return
-    // Find the fix queue list
-    const { data: fixList } = await supabase
-      .from('lists')
-      .select('id')
-      .eq('user_id', user.id)
-      .eq('type', 'fix')
-      .maybeSingle()
+    setLoading(true)
+    try {
+      // Find the fix queue list
+      const { data: fixList } = await supabase
+        .from('lists')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('type', 'fix')
+        .maybeSingle()
 
-    if (!fixList) {
-      setItems([])
+      if (!fixList) {
+        setItems([])
+        return
+      }
+
+      const { data } = await supabase
+        .from('list_items')
+        .select('*')
+        .eq('list_id', fixList.id)
+        .order('created_at', { ascending: false })
+
+      setItems((data as FixItem[]) || [])
+    } catch (error) {
+      // Offline or unreachable — leave whatever's already showing rather
+      // than blanking the page, and don't let this hang the spinner forever.
+      console.warn('[FixQueuePage] Failed to load fix queue:', error)
+    } finally {
       setLoading(false)
-      return
     }
-
-    const { data } = await supabase
-      .from('list_items')
-      .select('*')
-      .eq('list_id', fixList.id)
-      .order('created_at', { ascending: false })
-
-    setItems((data as FixItem[]) || [])
-    setLoading(false)
   }, [user])
 
   useEffect(() => { fetchItems() }, [fetchItems])

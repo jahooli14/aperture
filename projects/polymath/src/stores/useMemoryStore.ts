@@ -157,7 +157,7 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
 
     try {
       // Use API endpoint to ensure consistency with search and avoiding RLS issues with client-side auth
-      const response = await fetch('/api/memories')
+      const response = await fetchWithTimeout('/api/memories')
 
       if (!response.ok) {
         throw new Error(`Failed to fetch memories: ${response.statusText}`)
@@ -265,6 +265,9 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
       set({ memories: mergedMemories, loading: false, lastFetched: now })
     } catch (error) {
       logger.error('[MemoryStore] Fetch failed, attempting offline fallback:', error)
+      if (error instanceof NetworkError) {
+        useOfflineStore.getState().setOnlineStatus(false)
+      }
 
       const loadedOffline = await get().loadFromOfflineDB()
       if (!loadedOffline) {

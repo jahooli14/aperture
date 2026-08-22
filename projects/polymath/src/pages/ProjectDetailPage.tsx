@@ -24,6 +24,7 @@ import { CompletionRitual } from '../components/projects/CompletionRitual'
 import { LineageBreadcrumb } from '../components/projects/LineageBreadcrumb'
 import type { Project, Memory } from '../types'
 import { supabase } from '../lib/supabase'
+import { fetchWithTimeout } from '../lib/network'
 import { useMemoryStore } from '../stores/useMemoryStore'
 import { usePin } from '../contexts/PinContext'
 
@@ -243,7 +244,7 @@ export function ProjectDetailPage() {
 
     try {
       // Fetch fresh data from API
-      const response = await fetch(`/api/projects?id=${id}`)
+      const response = await fetchWithTimeout(`/api/projects?id=${id}`)
 
       if (!response.ok) {
         throw new Error('Failed to fetch project details')

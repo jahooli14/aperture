@@ -9,6 +9,7 @@ import { Card, CardContent } from '../components/ui/card'
 import { Clock, TrendingUp, Calendar, Zap, WifiOff } from 'lucide-react'
 import type { CognitivePattern, TimelinePattern } from '../types'
 import { readingDb } from '../lib/db'
+import { fetchWithTimeout } from '../lib/network'
 import { SubtleBackground } from '../components/SubtleBackground'
 
 export function TimelinePage() {
@@ -37,7 +38,7 @@ export function TimelinePage() {
 
       // 3. Fetch fresh data from network
       setIsOffline(false)
-      const response = await fetch('/api/analytics?resource=patterns')
+      const response = await fetchWithTimeout('/api/analytics?resource=patterns')
       if (!response.ok) throw new Error('Failed to fetch patterns')
       const data = await response.json()
       setPatterns(data.patterns || [])

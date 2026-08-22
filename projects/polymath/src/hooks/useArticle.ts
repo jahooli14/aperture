@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import type { Article, ArticleHighlight } from '../types/reading'
 import { readingDb } from '../lib/db'
+import { fetchWithTimeout } from '../lib/network'
 
 export function useArticle(id: string | undefined, options?: { noPromote?: boolean }) {
   const [data, setData] = useState<{ article: Article | null, highlights: ArticleHighlight[] } | null>(null)
@@ -50,7 +51,7 @@ export function useArticle(id: string | undefined, options?: { noPromote?: boole
         }
 
         // If online, revalidate in background (don't await)
-        fetch(`/api/reading?id=${articleId}${queryString}`)
+        fetchWithTimeout(`/api/reading?id=${articleId}${queryString}`)
           .then(async (response) => {
             if (response.ok) {
               const result = await response.json()
@@ -86,7 +87,7 @@ export function useArticle(id: string | undefined, options?: { noPromote?: boole
       }
 
       console.log('[useArticle] No cache found, fetching from network...')
-      const response = await fetch(`/api/reading?id=${articleId}${queryString}`)
+      const response = await fetchWithTimeout(`/api/reading?id=${articleId}${queryString}`)
 
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`)

@@ -166,6 +166,32 @@ async function processOperation(operation: QueuedOperation): Promise<boolean> {
         return true
       }
 
+      case 'update_list': {
+        const { id, ...updateData } = operation.data
+
+        // Settings is a partial patch on the client (see useListStore's
+        // optimistic `{ ...l.settings, ...settings }` merge and the API's
+        // matching server-side merge) — a raw column replace here would
+        // wipe out any settings keys not present in this particular queued
+        // update, so merge against the current row first.
+        if (updateData.settings !== undefined) {
+          const { data: existing } = await supabase
+            .from('lists')
+            .select('settings')
+            .eq('id', id)
+            .single()
+          updateData.settings = { ...(existing?.settings ?? {}), ...(updateData.settings ?? {}) }
+        }
+
+        const { error } = await supabase
+          .from('lists')
+          .update(updateData)
+          .eq('id', id)
+
+        if (error) throw error
+        return true
+      }
+
       case 'delete_list': {
         const { error } = await supabase
           .from('lists')
