@@ -91,7 +91,23 @@ const BottomSheetContent = React.forwardRef<
   const opacity = useTransform(y, [0, 300], [1, 0.8], { clamp: true })
   const keyboardInset = useKeyboardInset()
 
+  // backdrop-filter (the frosted-glass look) is expensive to recompute every
+  // frame on a rounded, overflow-hidden layer that's also being transform-
+  // animated — that combo is the classic mobile jank case. So the blur is
+  // only switched on once the sheet is sitting still: off during the slide-up
+  // entrance and off again while actively dragged, on (a plain solid panel
+  // instead) the rest of the time.
+  const [settled, setSettled] = React.useState(false)
+  const [dragging, setDragging] = React.useState(false)
+  React.useEffect(() => {
+    if (!open) setSettled(false)
+  }, [open])
+  const showBlur = settled && !dragging
+
+  const handleDragStart = () => setDragging(true)
+
   const handleDragEnd = (_: any, info: PanInfo) => {
+    setDragging(false)
     // Dismiss if dragged down more than 80px or with fast velocity
     if (info.offset.y > 80 || info.velocity.y > 400) {
       haptic.light()
@@ -127,10 +143,12 @@ const BottomSheetContent = React.forwardRef<
           stiffness: 560,
           mass: 0.4,
         }}
+        onAnimationComplete={() => { if (open) setSettled(true) }}
         drag="y"
         dragConstraints={{ top: 0, bottom: 0 }}
         dragElastic={{ top: 0, bottom: 0.3 }}
         dragMomentum={false}
+        onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
         style={{
           y,
@@ -138,9 +156,13 @@ const BottomSheetContent = React.forwardRef<
           bottom: keyboardInset,
           maxHeight: keyboardInset > 0 ? `calc(100vh - ${keyboardInset + 16}px)` : undefined,
           transition: 'bottom 0.2s ease-out',
-          background: 'linear-gradient(180deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0) 12%), rgba(15, 24, 41, 0.78)',
-          backdropFilter: 'blur(40px) saturate(200%)',
-          WebkitBackdropFilter: 'blur(40px) saturate(200%)',
+          background: showBlur
+            ? 'linear-gradient(180deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0) 12%), rgba(15, 24, 41, 0.78)'
+            // Solid fallback while moving — same read at a glance, none of the
+            // per-frame blur recompute cost of an animated backdrop-filter.
+            : 'rgb(15, 22, 36)',
+          backdropFilter: showBlur ? 'blur(40px) saturate(200%)' : 'none',
+          WebkitBackdropFilter: showBlur ? 'blur(40px) saturate(200%)' : 'none',
           borderTop: '1px solid rgba(255, 255, 255, 0.18)',
           boxShadow: '0 -28px 80px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.10)',
         }}
