@@ -15,8 +15,8 @@
  * design work this was built from for the full rationale.
  */
 
-import { useEffect, useMemo, useState } from 'react'
-import { Play, ChevronRight } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { Play, ArrowUp, ChevronRight } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import {
@@ -27,27 +27,15 @@ import {
 import { useSessionContextStore } from '../../stores/useSessionContextStore'
 import { useFocusChatStore } from '../../stores/useFocusChatStore'
 import { useProjectIdeasStore, type ProjectIdea } from '../../stores/useProjectIdeasStore'
-import { useStartProjectSession } from '../../hooks/useStartProjectSession'
+import { useStartProjectSession, SESSION_DURATION_MINUTES } from '../../hooks/useStartProjectSession'
 import { toPortfolioSummaries, buildOpeningLine } from './focusChatOps'
 import { formatRelativeTime, KeepGoingEmpty } from './KeepGoingEmpty'
 import { ProjectIdeasHome } from './ProjectIdeasHome'
 import { FocusChat } from './FocusChat'
-import { api } from '../../lib/apiClient'
+import { createProjectFromIdea } from '../../lib/createProjectFromIdea'
 import { haptic } from '../../utils/haptics'
 import { useToast } from '../ui/toast'
 import { handleInputFocus } from '../../utils/keyboard'
-
-const SESSION_DURATION_MINUTES = 60
-
-// Mirrors ProjectIdeasHome's deriveFinishLine exactly — every idea prompt
-// ends its pitch with "what done looks like," so that sentence IS the
-// finish line. Kept in sync deliberately rather than imported: that file
-// keeps the type locally too, and this card only needs the one helper.
-function deriveFinishLine(idea: ProjectIdea): string {
-  const sentences = idea.pitch.split(/(?<=[.!?])\s+/).map(s => s.trim()).filter(Boolean)
-  if (sentences.length >= 2) return sentences[sentences.length - 1]
-  return `${idea.title.replace(/\.$/, '')} exists as a finished thing you can show someone.`
-}
 
 export function TodaysAnswerCard() {
   const navigate = useNavigate()
@@ -68,6 +56,19 @@ export function TodaysAnswerCard() {
     [overrideProjectId, allProjects, priorityProject, recentProject],
   )
 
+  // Drop the override the moment the REAL priority changes to something
+  // else — without this, a chip pick from earlier in the session would
+  // keep winning forever even after starring a different project
+  // elsewhere in the app, since the override always took precedence.
+  const priorityProjectId = priorityProject?.id ?? null
+  const prevPriorityIdRef = useRef(priorityProjectId)
+  useEffect(() => {
+    if (prevPriorityIdRef.current !== priorityProjectId) {
+      prevPriorityIdRef.current = priorityProjectId
+      setOverrideProjectId(null)
+    }
+  }, [priorityProjectId])
+
   const [plan, setPlan] = useState<any>(null)
   const { start, loading: startingSession } = useStartProjectSession(focusProject?.id)
 
@@ -80,6 +81,10 @@ export function TodaysAnswerCard() {
   const chipsLoading = useProjectIdeasStore(s => s.loading)
   const chips = useProjectIdeasStore(s => s.ideas)
   const [resolvingChipId, setResolvingChipId] = useState<string | null>(null)
+  // Flips true if a chip resolve is taking a while — createProject is
+  // usually near-instant, but a slow network shouldn't leave "Starting…"
+  // sitting there indefinitely with no sign anything's still happening.
+  const [resolveSlow, setResolveSlow] = useState(false)
   const [steerText, setSteerText] = useState('')
   const [showDeck, setShowDeck] = useState(false)
 
@@ -129,7 +134,19 @@ export function TodaysAnswerCard() {
     const text = steerText.trim()
     if (!text) return
     setSteerText('')
+    // The deck (if open) belongs to the "browsing" register, not the
+    // "talking" one — close it in the same action that starts a
+    // conversation, so it reads as a deliberate handoff instead of
+    // silently vanishing a moment later.
+    setShowDeck(false)
     useFocusChatStore.getState().sendMessage(text, summaries, feeling)
+  }
+
+  // Ends the conversation for real (clears the transcript), not just
+  // hides it — otherwise there'd be no way back to fresh corpus chips
+  // for the rest of the session short of reloading the page.
+  const startOver = () => {
+    useFocusChatStore.getState().reset()
   }
 
   // Tapping a chip commits it — same create-project flow ProjectIdeasHome's
@@ -140,37 +157,9 @@ export function TodaysAnswerCard() {
     if (resolvingChipId) return
     setResolvingChipId(idea.id)
     haptic.medium()
+    const slowTimer = window.setTimeout(() => setResolveSlow(true), 4000)
     try {
-      const description = [
-        idea.mode === 'read' && idea.pattern ? idea.pattern : null,
-        idea.pitch,
-        idea.next_step ? `First move: ${idea.next_step}` : null,
-      ].filter(Boolean).join('\n\n')
-
-      const created = await createProject({
-        title: idea.title,
-        description,
-        status: 'active',
-        type: 'Creative',
-        metadata: {
-          tasks: [],
-          progress: 0,
-          is_shaped: false,
-          from_idea: idea.id,
-          end_goal: deriveFinishLine(idea),
-          project_mode: 'completion',
-        },
-      })
-
-      try {
-        await api.post('utilities?resource=project-ideas-feedback', { id: idea.id, status: 'built' })
-      } catch {
-        // Non-fatal: the project exists; the queue reconciles on next load.
-      }
-
-      // Shared store — ProjectIdeasHome loses this idea too, immediately,
-      // rather than showing a stale row for an idea that's already built.
-      useProjectIdeasStore.getState().removeIdea(idea.id)
+      const created = await createProjectFromIdea(idea, createProject)
       setEngaged(false)
       setOverrideProjectId(created.id)
       addToast({
@@ -185,6 +174,8 @@ export function TodaysAnswerCard() {
         variant: 'destructive',
       })
     } finally {
+      window.clearTimeout(slowTimer)
+      setResolveSlow(false)
       setResolvingChipId(null)
     }
   }
@@ -228,8 +219,10 @@ export function TodaysAnswerCard() {
             chipsLoaded={chipsLoaded}
             chipsLoading={chipsLoading}
             resolvingChipId={resolvingChipId}
+            resolveSlow={resolveSlow}
             onResolveChip={resolveChip}
             hasThread={hasThread}
+            onStartOver={startOver}
             steerText={steerText}
             onSteerTextChange={setSteerText}
             onSubmitSteer={submitSteer}
@@ -322,7 +315,9 @@ export function TodaysAnswerCard() {
             {pitch && <p className="text-xs text-[var(--brand-text-secondary)] opacity-60 line-clamp-2">{pitch}</p>}
           </div>
         ) : (
-          <div className="mb-4" />
+          <p className="text-xs mb-4" style={{ color: 'var(--brand-text-secondary)', opacity: 0.4 }}>
+            No plan yet — start and we'll work out the first move together.
+          </p>
         )}
 
         <button
@@ -358,8 +353,10 @@ export function TodaysAnswerCard() {
             chipsLoaded={chipsLoaded}
             chipsLoading={chipsLoading}
             resolvingChipId={resolvingChipId}
+            resolveSlow={resolveSlow}
             onResolveChip={resolveChip}
             hasThread={hasThread}
+            onStartOver={startOver}
             steerText={steerText}
             onSteerTextChange={setSteerText}
             onSubmitSteer={submitSteer}
@@ -398,8 +395,10 @@ function SteerPanel({
   chipsLoaded,
   chipsLoading,
   resolvingChipId,
+  resolveSlow,
   onResolveChip,
   hasThread,
+  onStartOver,
   steerText,
   onSteerTextChange,
   onSubmitSteer,
@@ -411,8 +410,10 @@ function SteerPanel({
   chipsLoaded: boolean
   chipsLoading: boolean
   resolvingChipId: string | null
+  resolveSlow: boolean
   onResolveChip: (idea: ProjectIdea) => void
   hasThread: boolean
+  onStartOver: () => void
   steerText: string
   onSteerTextChange: (v: string) => void
   onSubmitSteer: () => void
@@ -433,7 +434,15 @@ function SteerPanel({
         <span className="text-[10px] font-bold uppercase tracking-[0.28em]" style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.7 }}>
           {hasThread ? 'focus' : 'already noticed'}
         </span>
-        <button onClick={onClose} className="text-[11px] font-medium" style={{ color: 'var(--brand-text-secondary)', opacity: 0.4 }}>Close</button>
+        <div className="flex items-center gap-3">
+          {/* Close only hides the thread (resumable); start over actually
+              ends it, so "or steer it" can open back to fresh chips
+              instead of the same conversation for the rest of the visit. */}
+          {hasThread && (
+            <button onClick={onStartOver} className="text-[11px] font-medium" style={{ color: 'var(--brand-text-secondary)', opacity: 0.4 }}>Start over</button>
+          )}
+          <button onClick={onClose} className="text-[11px] font-medium" style={{ color: 'var(--brand-text-secondary)', opacity: 0.4 }}>Close</button>
+        </div>
       </div>
 
       {/* Once a real conversation exists, it replaces the chips entirely —
@@ -469,7 +478,7 @@ function SteerPanel({
                 <div className="flex-1 min-w-0">
                   <span className="block text-[15px] font-medium line-clamp-1" style={{ color: 'var(--brand-text-primary)' }}>{idea.title}</span>
                   <span className="text-[11px] opacity-60 line-clamp-1" style={{ color: 'var(--brand-text-secondary)' }}>
-                    {resolvingChipId === idea.id ? 'Starting…' : (idea.evidence?.[0]?.label || idea.why_now)}
+                    {resolvingChipId === idea.id ? (resolveSlow ? 'Still working…' : 'Starting…') : (idea.evidence?.[0]?.label || idea.why_now)}
                   </span>
                 </div>
                 <ChevronRight className="h-3.5 w-3.5 opacity-30 flex-shrink-0" style={{ color: 'var(--brand-text-secondary)' }} />
@@ -505,7 +514,7 @@ function SteerPanel({
               color: 'var(--brand-text-primary)',
             }}
           >
-            <ChevronRight className="h-4 w-4" strokeWidth={2.5} />
+            <ArrowUp className="h-4 w-4" strokeWidth={2.5} />
           </button>
         </div>
       </div>
@@ -528,7 +537,7 @@ function SteerPanel({
           </button>
           {showDeck && (
             <div className="mt-3">
-              <ProjectIdeasHome />
+              <ProjectIdeasHome startExpanded />
             </div>
           )}
         </div>

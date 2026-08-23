@@ -22,6 +22,7 @@ import { api } from '../../lib/apiClient'
 import { useSessionContextStore } from '../../stores/useSessionContextStore'
 import { useProjectStore } from '../../stores/useProjectStore'
 import { useProjectIdeasStore, type ProjectIdea } from '../../stores/useProjectIdeasStore'
+import { createProjectFromIdea } from '../../lib/createProjectFromIdea'
 import { useToast } from '../ui/toast'
 
 interface GenerateResponse {
@@ -57,20 +58,6 @@ function deriveMode(idea: ProjectIdea): IdeaMode {
   return 'new_idea'
 }
 
-// A project without a finish line can't tell when it's done — so an
-// accepted idea must land with one set, not as an unshaped project the
-// user has to define later. Every idea prompt ends the pitch with "what
-// done looks like in one observable test", so the pitch's last sentence
-// IS the finish line. Pull it out; fall back to a concrete line built
-// from the title when the pitch is a single sentence (template ideas).
-function deriveFinishLine(idea: ProjectIdea): string {
-  const sentences = idea.pitch
-    .split(/(?<=[.!?])\s+/)
-    .map(s => s.trim())
-    .filter(Boolean)
-  if (sentences.length >= 2) return sentences[sentences.length - 1]
-  return `${idea.title.replace(/\.$/, '')} exists as a finished thing you can show someone.`
-}
 
 // Each mode gets a glyph + accent so the card reads as correspondence FROM
 // the harness, not a generic note. The glyphs are typographic ornaments
@@ -114,7 +101,7 @@ const LOADING_STAGES: Array<{ at_ms: number; line: string }> = [
 // it's the harness's rarest, most valuable move, so it earns a louder door.
 const RESURRECTION_MIN_CONFIDENCE = 60
 
-export function ProjectIdeasHome() {
+export function ProjectIdeasHome({ startExpanded = false }: { startExpanded?: boolean } = {}) {
   const createProject = useProjectStore(s => s.createProject)
   const { addToast } = useToast()
   // Shared with TodaysAnswerCard's "already noticed" chips — one fetch,
@@ -137,7 +124,10 @@ export function ProjectIdeasHome() {
   // expands it explicitly by clicking "unlock" or "suggest a project."
   // Each save / dismiss / build collapses back so the user always lands
   // on the choice "do I want another?" rather than a chained reveal.
-  const [expanded, setExpanded] = useState(false)
+  // TodaysAnswerCard's "or browse the full deck" passes startExpanded so
+  // that door opens straight to the deck itself — otherwise it's a button
+  // that reveals a second button, not the content it promised.
+  const [expanded, setExpanded] = useState(startExpanded)
 
   useEffect(() => {
     // Idempotent — if TodaysAnswerCard's redirect already triggered this
@@ -276,49 +266,7 @@ export function ProjectIdeasHome() {
     setPendingFeedback(idea.id)
     haptic.medium()
     try {
-      // For Read mode lead the description with the pattern — that's the
-      // line worth keeping as the project's own reminder of why it's the
-      // right one. Fold the next step in so it isn't lost (the API
-      // auto-scaffolds tasks from the description).
-      const description = [
-        idea.mode === 'read' && idea.pattern ? idea.pattern : null,
-        idea.pitch,
-        idea.next_step ? `First move: ${idea.next_step}` : null,
-      ].filter(Boolean).join('\n\n')
-
-      // Add a finish line so the new project knows what done looks like
-      // from the moment it's created. project_mode 'completion' marks it
-      // as a thing with an end state (not a recurring habit). The user
-      // can still sharpen the finish line later via shaping.
-      await createProject({
-        title: idea.title,
-        description,
-        status: 'active',
-        type: 'Creative',
-        metadata: {
-          tasks: [],
-          progress: 0,
-          is_shaped: false,
-          from_idea: idea.id,
-          end_goal: deriveFinishLine(idea),
-          project_mode: 'completion',
-          // Mark one-hour things so they're distinguishable from full
-          // projects (a tonight-sized commitment, not an open-ended one).
-          ...(idea.mode === 'hour' ? { scope: 'hour' } : {}),
-        },
-      })
-
-      // Mark it built so the server clears it from the pending queue and
-      // the generator's avoid-list never re-proposes it. Best-effort —
-      // the project is already created, so a feedback hiccup shouldn't
-      // block the user.
-      try {
-        await api.post('utilities?resource=project-ideas-feedback', { id: idea.id, status: 'built' })
-      } catch {
-        // Non-fatal: the project exists; the queue will reconcile on next load.
-      }
-
-      useProjectIdeasStore.getState().removeIdea(idea.id)
+      await createProjectFromIdea(idea, createProject)
       setActiveIndex(0)
       setExpanded(false)
       setShowEvidence(false)

@@ -24,6 +24,12 @@ interface FocusChatState {
 
   open: (openingLine: string) => void
   close: () => void
+  // Actually ends the conversation — unlike close (which just hides it,
+  // resumable later), this clears the transcript so "or steer it" opens
+  // back to fresh corpus-signal chips instead of the old thread. Without
+  // this, one conversation permanently replaces the chips for the rest of
+  // the session with no way back short of reloading the page.
+  reset: () => void
   sendMessage: (message: string, summaries: PortfolioProjectSummary[], feeling: string | null) => Promise<void>
   regenerate: (summaries: PortfolioProjectSummary[], feeling: string | null) => Promise<void>
   editMessage: (index: number) => string | null
@@ -102,6 +108,8 @@ export const useFocusChatStore = create<FocusChatState>((set, get) => ({
   },
 
   close: () => set({ expanded: false }),
+
+  reset: () => set({ expanded: false, messages: [], thinking: false, discussedProjectIds: new Set() }),
 
   sendMessage: async (message, summaries, feeling) => {
     if (!message || get().thinking) return

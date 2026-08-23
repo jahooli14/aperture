@@ -11,7 +11,7 @@ import { useFocusStore } from '../stores/useFocusStore'
 import { useToast } from '../components/ui/toast'
 import { haptic } from '../utils/haptics'
 
-const SESSION_DURATION_MINUTES = 60
+export const SESSION_DURATION_MINUTES = 60
 
 type Task = { id: string; text: string }
 
