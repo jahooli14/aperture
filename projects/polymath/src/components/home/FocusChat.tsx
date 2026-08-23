@@ -102,7 +102,16 @@ export function FocusChat({ onEditMessage }: { onEditMessage: (content: string) 
           <motion.div key={i} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
             {msg.kind === 'guide' ? (
               <div className="space-y-3">
-                <p className="text-[15px] leading-[1.65] whitespace-pre-wrap text-[var(--brand-text-secondary)]">{msg.content}</p>
+                {/* Matches UserBubble's own rounded-2xl/rounded-corner recipe
+                    (mirrored corner) so both sides of the thread read as
+                    objects resting on the glass, not a bubble opposite a
+                    caption floating on the card's bare background. */}
+                <p
+                  className="text-[15px] leading-[1.65] whitespace-pre-wrap text-[var(--brand-text-secondary)] rounded-2xl rounded-bl-md px-4 py-3"
+                  style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}
+                >
+                  {msg.content}
+                </p>
                 {msg.taskOp && (
                   <FocusChatTaskOpCard
                     taskOp={msg.taskOp}

@@ -14,6 +14,7 @@
 
 import { useNavigate } from 'react-router-dom'
 import { Play } from 'lucide-react'
+import { getTheme } from '../../lib/projectTheme'
 import { haptic } from '../../utils/haptics'
 import { useStartProjectSession } from '../../hooks/useStartProjectSession'
 import type { Project } from '../../types'
@@ -35,27 +36,30 @@ export function ProjectMiniCard({
 }: ProjectMiniCardProps) {
   const navigate = useNavigate()
   const { start, loading } = useStartProjectSession(project.id)
+  const theme = getTheme(project.type || 'other', project.title)
 
   const isGhost = variant === 'ghost'
 
-  // Single restrained palette — mirrors ThoughtOfTheDay. Project identity
-  // shows up only in the tiny accent dot. Cards read as one cohesive
-  // editorial set, not a kaleidoscope.
+  // Project identity comes through as color in the card's own light — the
+  // border, the glow, the top hairline — not a glyph. Each project type
+  // already has a real RGB token (projectTheme.ts); this is what actually
+  // uses it instead of every card glowing the same brand cyan regardless
+  // of what it is.
   const surface = isGhost
     ? {
         background: 'rgba(15, 24, 41, 0.30)',
-        border: '1px solid rgba(var(--brand-primary-rgb), 0.18)',
+        border: `1px solid rgba(${theme.rgb}, 0.18)`,
         boxShadow:
-          '0 0 22px rgba(var(--brand-primary-rgb), 0.10),' +
+          `0 0 22px rgba(${theme.rgb}, 0.10),` +
           'inset 0 1px 0 rgba(255,255,255,0.03)',
         backdropFilter: 'blur(8px)',
         WebkitBackdropFilter: 'blur(8px)',
       }
     : {
-        background: 'linear-gradient(155deg, rgba(var(--brand-primary-rgb),0.10) 0%, rgba(15,24,41,0.65) 60%)',
-        border: '1px solid rgba(var(--brand-primary-rgb),0.32)',
+        background: `linear-gradient(155deg, rgba(${theme.rgb},0.10) 0%, rgba(15,24,41,0.65) 60%)`,
+        border: `1px solid rgba(${theme.rgb},0.32)`,
         boxShadow:
-          '0 0 32px rgba(var(--brand-primary-rgb),0.20),' +
+          `0 0 32px rgba(${theme.rgb},0.20),` +
           '0 8px 24px -10px rgba(0,0,0,0.55),' +
           'inset 0 1px 0 rgba(255,255,255,0.05)',
         backdropFilter: 'blur(14px) saturate(140%)',
@@ -74,12 +78,12 @@ export function ProjectMiniCard({
         minHeight: '120px',
       }}
     >
-      {/* Top hairline glow — single editorial cue, mirrors ThoughtOfTheDay. */}
+      {/* Top hairline glow — same project color as the card's own border/glow. */}
       {!isGhost && (
         <span
           aria-hidden
           className="absolute top-0 left-0 right-0 h-px"
-          style={{ background: 'linear-gradient(90deg, transparent, rgba(var(--brand-primary-rgb),0.45), transparent)' }}
+          style={{ background: `linear-gradient(90deg, transparent, rgba(${theme.rgb},0.45), transparent)` }}
         />
       )}
 

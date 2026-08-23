@@ -212,13 +212,14 @@ export function TodaysAnswerCard() {
         className="rounded-2xl p-5 relative"
         style={{
           background: 'linear-gradient(155deg, rgba(var(--brand-primary-rgb),0.10) 0%, rgba(15,24,41,0.65) 60%)',
-          backdropFilter: 'blur(18px)',
+          backdropFilter: 'blur(32px) saturate(190%)',
+          WebkitBackdropFilter: 'blur(32px) saturate(190%)',
           border: '1px solid rgba(var(--brand-primary-rgb),0.35)',
           boxShadow: '0 0 42px rgba(var(--brand-primary-rgb),0.22), 0 12px 36px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.06)',
         }}
       >
-        <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.7 }}>today's answer</span>
-        <p className="mt-3 text-[16px] leading-relaxed" style={{ color: 'var(--brand-text-secondary)' }}>{openingLine}</p>
+        <span className="text-[10px] font-bold uppercase tracking-[0.28em]" style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.7 }}>today's answer</span>
+        <p className="mt-3 text-[17px] leading-[1.4]" style={{ color: 'var(--brand-text-secondary)', fontFamily: 'var(--brand-font-serif)' }}>{openingLine}</p>
         {!engaged ? (
           <SteerRow onOpen={openSteer} />
         ) : (
@@ -269,7 +270,8 @@ export function TodaysAnswerCard() {
       className="rounded-2xl p-5 flex flex-col overflow-hidden relative transition-all duration-700"
       style={{
         background: 'linear-gradient(155deg, rgba(var(--brand-primary-rgb),0.10) 0%, rgba(15,24,41,0.65) 60%)',
-        backdropFilter: 'blur(18px)',
+        backdropFilter: 'blur(32px) saturate(190%)',
+        WebkitBackdropFilter: 'blur(32px) saturate(190%)',
         border: `1px solid ${dormancyColor ?? 'rgba(var(--brand-primary-rgb),0.35)'}`,
         boxShadow: dormancyColor
           ? `0 0 36px ${dormancyColor.replace('0.55', '0.22')}, 0 12px 36px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.06)`
@@ -288,14 +290,19 @@ export function TodaysAnswerCard() {
           {dormancyLabel && (
             <span
               className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full flex-shrink-0 mt-0.5"
-              style={{ color: dormancyColor ?? undefined, border: `1px solid ${dormancyColor}`, background: 'rgba(0,0,0,0.3)' }}
+              style={{
+                color: dormancyColor ?? undefined,
+                border: `1px solid ${dormancyColor}`,
+                background: 'rgba(0,0,0,0.3)',
+                boxShadow: dormancyColor ? `0 0 8px ${dormancyColor.replace('0.55', '0.25')}` : undefined,
+              }}
             >
               {dormancyLabel}
             </span>
           )}
         </div>
         <span
-          className="text-[10px] uppercase tracking-[0.32em] font-semibold mb-3 inline-block"
+          className="text-[10px] uppercase tracking-[0.28em] font-semibold mb-3 inline-block"
           style={{ color: dormancyColor ?? 'rgba(var(--brand-primary-rgb),0.7)' }}
         >
           {formatRelativeTime(focusProject.last_active || focusProject.updated_at)}
@@ -303,11 +310,16 @@ export function TodaysAnswerCard() {
 
         {answer ? (
           <div className="p-3 rounded-xl mb-4" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
-            <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--brand-text-secondary)] opacity-40 mb-1">
+            <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-[var(--brand-text-secondary)] opacity-40 mb-1">
               {headline ? "today's answer" : "what's next"}
             </p>
-            <p className="text-sm text-[var(--brand-text-secondary)] leading-relaxed line-clamp-2 mb-1">{answer}</p>
-            {pitch && <p className="text-xs text-[var(--brand-text-secondary)] opacity-50 line-clamp-2">{pitch}</p>}
+            <p
+              className="text-[17px] leading-[1.4] line-clamp-2 mb-1"
+              style={{ color: 'var(--brand-text-secondary)', fontFamily: 'var(--brand-font-serif)' }}
+            >
+              {answer}
+            </p>
+            {pitch && <p className="text-xs text-[var(--brand-text-secondary)] opacity-60 line-clamp-2">{pitch}</p>}
           </div>
         ) : (
           <div className="mb-4" />
@@ -368,10 +380,10 @@ function SteerRow({ onOpen }: { onOpen: () => void }) {
   return (
     <button
       onClick={onOpen}
-      className="w-full mt-4 pt-4 flex items-center justify-between text-left"
+      className="w-full mt-5 pt-4 flex items-center justify-between text-left"
       style={{ borderTop: '1px solid rgba(255,255,255,0.09)' }}
     >
-      <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--brand-text-secondary)', opacity: 0.4 }}>or steer it</span>
+      <span className="text-[13px] font-medium" style={{ color: 'var(--brand-text-secondary)', opacity: 0.4 }}>or steer it</span>
       <ChevronRight className="h-3.5 w-3.5 opacity-30" style={{ color: 'var(--brand-text-secondary)' }} />
     </button>
   )
@@ -414,11 +426,11 @@ function SteerPanel({
       animate={{ opacity: 1, height: 'auto' }}
       exit={{ opacity: 0, height: 0 }}
       transition={{ duration: 0.2 }}
-      className="mt-4 pt-4"
+      className="mt-5 pt-4"
       style={{ borderTop: '1px solid rgba(255,255,255,0.09)' }}
     >
       <div className="flex items-center justify-between mb-3">
-        <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.7 }}>
+        <span className="text-[10px] font-bold uppercase tracking-[0.28em]" style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.7 }}>
           {hasThread ? 'focus' : 'already noticed'}
         </span>
         <button onClick={onClose} className="text-[11px] font-medium" style={{ color: 'var(--brand-text-secondary)', opacity: 0.4 }}>Close</button>
@@ -452,7 +464,7 @@ function SteerPanel({
                 onClick={() => onResolveChip(idea)}
                 disabled={!!resolvingChipId}
                 className="w-full flex items-center gap-2.5 px-4 py-3 rounded-xl mb-2 text-left transition-opacity disabled:opacity-40"
-                style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(var(--brand-primary-rgb),0.2)' }}
+                style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(var(--brand-primary-rgb),0.2)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.06)' }}
               >
                 <div className="flex-1 min-w-0">
                   <span className="block text-[15px] font-medium line-clamp-1" style={{ color: 'var(--brand-text-primary)' }}>{idea.title}</span>
@@ -467,9 +479,9 @@ function SteerPanel({
         </>
       )}
 
-      <div className="mt-3">
+      <div className="mt-4">
         {!hasThread && (
-          <span className="block mb-2 text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--brand-text-secondary)', opacity: 0.4 }}>or steer it</span>
+          <span className="block mb-2 text-[13px] font-medium" style={{ color: 'var(--brand-text-secondary)', opacity: 0.4 }}>or steer it</span>
         )}
         <div className="flex items-center gap-2">
           <input
@@ -480,7 +492,7 @@ function SteerPanel({
             onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); onSubmitSteer() } }}
             autoComplete="off"
             className="flex-1 px-4 py-3 rounded-xl text-[15px] focus:outline-none focus:ring-0"
-            style={{ color: 'var(--brand-text-primary)', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}
+            style={{ color: 'var(--brand-text-primary)', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.06)' }}
           />
           <button
             type="button"
@@ -506,7 +518,7 @@ function SteerPanel({
           conversation — one thing to look at while you're talking, not
           a browsing door left dangling under it. */}
       {!hasThread && (
-        <div className="mt-4 pt-3" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+        <div className="mt-5 pt-4" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
           <button
             onClick={onToggleDeck}
             className="text-[11px] font-medium"
