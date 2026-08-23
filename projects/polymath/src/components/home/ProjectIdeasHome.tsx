@@ -21,50 +21,8 @@ import { haptic } from '../../utils/haptics'
 import { api } from '../../lib/apiClient'
 import { useSessionContextStore } from '../../stores/useSessionContextStore'
 import { useProjectStore } from '../../stores/useProjectStore'
+import { useProjectIdeasStore, type ProjectIdea } from '../../stores/useProjectIdeasStore'
 import { useToast } from '../ui/toast'
-
-interface IdeaEvidence {
-  kind: string
-  source_id: string
-  label: string
-  date: string
-  excerpt: string
-}
-
-interface ProjectIdea {
-  id: string
-  batch_id: string
-  rank: number
-  title: string
-  pitch: string
-  why_now: string
-  next_step: string
-  evidence: IdeaEvidence[]
-  status: 'pending' | 'saved' | 'rejected' | 'built'
-  generated_at: string
-  /** 'crossover' for the locked-pairs / permissive paths (the default).
-   *  'read' for the longitudinal pattern reader — the row also carries a
-   *  non-empty `pattern` and the card leads with it as the hero block.
-   *  'hour' for a self-contained one-hour thing, complete start to finish. */
-  mode?: 'crossover' | 'read' | 'hour'
-  pattern?: string | null
-  /** Read-only: model's honest 0–100 self-score on the pattern. The home
-   *  auto-surfaces the prominent teaser only when this is >= 70; below
-   *  that the idea sits in the queue and the user has to reach for the
-   *  button. NULL on crossover (no threshold gate). */
-  confidence?: number | null
-  /** Read-mode sub-shape. 'reshape' / 'recent_forgotten' are resurrections —
-   *  a dormant project handed back at the right moment, the harness's rarest
-   *  and most valuable move. We surface those assertively rather than hiding
-   *  them behind the generic pill. NULL on crossover / fallback rows. */
-  shape?: 'coalescing' | 'recent_forgotten' | 'reshape' | 'extend' | null
-}
-
-interface ProjectIdeasResponse {
-  ideas: ProjectIdea[]
-  generated_at: string | null
-  has_any: boolean
-}
 
 interface GenerateResponse {
   ideas: ProjectIdea[]
@@ -159,9 +117,12 @@ const RESURRECTION_MIN_CONFIDENCE = 60
 export function ProjectIdeasHome() {
   const createProject = useProjectStore(s => s.createProject)
   const { addToast } = useToast()
-  const [ideas, setIdeas] = useState<ProjectIdea[]>([])
+  // Shared with TodaysAnswerCard's "already noticed" chips — one fetch,
+  // one cache, so resolving an idea from either surface is instantly
+  // reflected in the other instead of leaving a stale copy behind.
+  const ideas = useProjectIdeasStore(s => s.ideas)
+  const loading = useProjectIdeasStore(s => s.loading)
   const [insufficientSignals, setInsufficientSignals] = useState<number | null>(null)
-  const [loading, setLoading] = useState(true)
   const [generating, setGenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showEvidence, setShowEvidence] = useState(false)
@@ -178,27 +139,12 @@ export function ProjectIdeasHome() {
   // on the choice "do I want another?" rather than a chained reveal.
   const [expanded, setExpanded] = useState(false)
 
-  const load = useCallback(async () => {
-    setError(null)
-    try {
-      const res = await api.get('utilities?resource=project-ideas') as ProjectIdeasResponse
-      // Only pending ideas belong in the deck. Saved ideas have been
-      // turned into projects and live in the projects section now —
-      // they're cleared from this queue and never resurface here.
-      const active = (res.ideas ?? []).filter(i => i.status === 'pending').slice(0, 3)
-      setIdeas(active)
-      setActiveIndex(0)
-    } catch {
-      // Swallow load errors quietly — the collapsed pill remains usable.
-      // Raw DB / network messages have no place in this surface.
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
   useEffect(() => {
-    void load()
-  }, [load])
+    // Idempotent — if TodaysAnswerCard's redirect already triggered this
+    // fetch first, this just reads the cached result instead of firing a
+    // second request.
+    void useProjectIdeasStore.getState().load()
+  }, [])
 
   // Advance the loading-stage copy while a generation is in flight. Stages
   // are time-anchored to the start of `generating`; on completion the
@@ -262,8 +208,9 @@ export function ProjectIdeasHome() {
       }
       setInsufficientSignals(null)
       // POST already returns the inserted rows — use them directly to
-      // skip the GET round-trip and expand the card immediately.
-      setIdeas(res.ideas.slice(0, 3))
+      // skip the GET round-trip and expand the card immediately. Full
+      // replace, shared with TodaysAnswerCard's chips.
+      useProjectIdeasStore.getState().setIdeas(res.ideas.slice(0, 3))
       setActiveIndex(0)
       setExpanded(true)
     } catch (err) {
@@ -296,10 +243,11 @@ export function ProjectIdeasHome() {
         // for me" without picking one.
         ...(reason ? { feedback: reason } : {}),
       })
-      // Drop the rejected idea from the local deck and collapse back to
-      // the button. If the queue still has more, the button will show
-      // "unlock" again; if not, it'll show "suggest a project."
-      setIdeas(prev => prev.filter(i => i.id !== idea.id))
+      // Drop the rejected idea from the shared deck (TodaysAnswerCard's
+      // chips lose it too) and collapse back to the button. If the queue
+      // still has more, the button will show "unlock" again; if not,
+      // it'll show "suggest a project."
+      useProjectIdeasStore.getState().removeIdea(idea.id)
       setActiveIndex(0)
       setExpanded(false)
       setShowEvidence(false)
@@ -370,7 +318,7 @@ export function ProjectIdeasHome() {
         // Non-fatal: the project exists; the queue will reconcile on next load.
       }
 
-      setIdeas(prev => prev.filter(i => i.id !== idea.id))
+      useProjectIdeasStore.getState().removeIdea(idea.id)
       setActiveIndex(0)
       setExpanded(false)
       setShowEvidence(false)
