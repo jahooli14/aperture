@@ -15,8 +15,8 @@
  * design work this was built from for the full rationale.
  */
 
-import { useEffect, useMemo, useState } from 'react'
-import { Play, ChevronRight } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { Play, ArrowUp, ChevronRight } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import {
@@ -27,26 +27,15 @@ import {
 import { useSessionContextStore } from '../../stores/useSessionContextStore'
 import { useFocusChatStore } from '../../stores/useFocusChatStore'
 import { useProjectIdeasStore, type ProjectIdea } from '../../stores/useProjectIdeasStore'
-import { useStartProjectSession } from '../../hooks/useStartProjectSession'
-import { getTheme, iconForType } from '../../lib/projectTheme'
+import { useStartProjectSession, SESSION_DURATION_MINUTES } from '../../hooks/useStartProjectSession'
 import { toPortfolioSummaries, buildOpeningLine } from './focusChatOps'
 import { formatRelativeTime, KeepGoingEmpty } from './KeepGoingEmpty'
-import { api } from '../../lib/apiClient'
+import { ProjectIdeasHome } from './ProjectIdeasHome'
+import { FocusChat } from './FocusChat'
+import { createProjectFromIdea } from '../../lib/createProjectFromIdea'
 import { haptic } from '../../utils/haptics'
 import { useToast } from '../ui/toast'
 import { handleInputFocus } from '../../utils/keyboard'
-
-const SESSION_DURATION_MINUTES = 60
-
-// Mirrors ProjectIdeasHome's deriveFinishLine exactly — every idea prompt
-// ends its pitch with "what done looks like," so that sentence IS the
-// finish line. Kept in sync deliberately rather than imported: that file
-// keeps the type locally too, and this card only needs the one helper.
-function deriveFinishLine(idea: ProjectIdea): string {
-  const sentences = idea.pitch.split(/(?<=[.!?])\s+/).map(s => s.trim()).filter(Boolean)
-  if (sentences.length >= 2) return sentences[sentences.length - 1]
-  return `${idea.title.replace(/\.$/, '')} exists as a finished thing you can show someone.`
-}
 
 export function TodaysAnswerCard() {
   const navigate = useNavigate()
@@ -67,6 +56,19 @@ export function TodaysAnswerCard() {
     [overrideProjectId, allProjects, priorityProject, recentProject],
   )
 
+  // Drop the override the moment the REAL priority changes to something
+  // else — without this, a chip pick from earlier in the session would
+  // keep winning forever even after starring a different project
+  // elsewhere in the app, since the override always took precedence.
+  const priorityProjectId = priorityProject?.id ?? null
+  const prevPriorityIdRef = useRef(priorityProjectId)
+  useEffect(() => {
+    if (prevPriorityIdRef.current !== priorityProjectId) {
+      prevPriorityIdRef.current = priorityProjectId
+      setOverrideProjectId(null)
+    }
+  }, [priorityProjectId])
+
   const [plan, setPlan] = useState<any>(null)
   const { start, loading: startingSession } = useStartProjectSession(focusProject?.id)
 
@@ -79,7 +81,12 @@ export function TodaysAnswerCard() {
   const chipsLoading = useProjectIdeasStore(s => s.loading)
   const chips = useProjectIdeasStore(s => s.ideas)
   const [resolvingChipId, setResolvingChipId] = useState<string | null>(null)
+  // Flips true if a chip resolve is taking a while — createProject is
+  // usually near-instant, but a slow network shouldn't leave "Starting…"
+  // sitting there indefinitely with no sign anything's still happening.
+  const [resolveSlow, setResolveSlow] = useState(false)
   const [steerText, setSteerText] = useState('')
+  const [showDeck, setShowDeck] = useState(false)
 
   useEffect(() => {
     if (!focusProject) { setPlan(null); return }
@@ -112,15 +119,34 @@ export function TodaysAnswerCard() {
     void useProjectIdeasStore.getState().load()
   }
 
+  // True once a real conversation exists — the panel switches from
+  // chips-to-tap into the thread itself at that point, using this same
+  // input to keep talking rather than opening a second card underneath
+  // with its own header and its own copy of this exact field.
+  const hasThread = useFocusChatStore(s => s.messages.length > 0)
+
   // Free-text steer hands straight to the existing Focus chat thread
   // rather than a second resolution mechanism — real conversation, the
-  // same one that already knows how to propose, start, or reshape.
+  // same one that already knows how to propose, start, or reshape. Stays
+  // open after sending (this IS the reply box for whatever it asks next),
+  // not collapsed back to a chip list.
   const submitSteer = () => {
     const text = steerText.trim()
     if (!text) return
     setSteerText('')
-    setEngaged(false)
+    // The deck (if open) belongs to the "browsing" register, not the
+    // "talking" one — close it in the same action that starts a
+    // conversation, so it reads as a deliberate handoff instead of
+    // silently vanishing a moment later.
+    setShowDeck(false)
     useFocusChatStore.getState().sendMessage(text, summaries, feeling)
+  }
+
+  // Ends the conversation for real (clears the transcript), not just
+  // hides it — otherwise there'd be no way back to fresh corpus chips
+  // for the rest of the session short of reloading the page.
+  const startOver = () => {
+    useFocusChatStore.getState().reset()
   }
 
   // Tapping a chip commits it — same create-project flow ProjectIdeasHome's
@@ -131,37 +157,9 @@ export function TodaysAnswerCard() {
     if (resolvingChipId) return
     setResolvingChipId(idea.id)
     haptic.medium()
+    const slowTimer = window.setTimeout(() => setResolveSlow(true), 4000)
     try {
-      const description = [
-        idea.mode === 'read' && idea.pattern ? idea.pattern : null,
-        idea.pitch,
-        idea.next_step ? `First move: ${idea.next_step}` : null,
-      ].filter(Boolean).join('\n\n')
-
-      const created = await createProject({
-        title: idea.title,
-        description,
-        status: 'active',
-        type: 'Creative',
-        metadata: {
-          tasks: [],
-          progress: 0,
-          is_shaped: false,
-          from_idea: idea.id,
-          end_goal: deriveFinishLine(idea),
-          project_mode: 'completion',
-        },
-      })
-
-      try {
-        await api.post('utilities?resource=project-ideas-feedback', { id: idea.id, status: 'built' })
-      } catch {
-        // Non-fatal: the project exists; the queue reconciles on next load.
-      }
-
-      // Shared store — ProjectIdeasHome loses this idea too, immediately,
-      // rather than showing a stale row for an idea that's already built.
-      useProjectIdeasStore.getState().removeIdea(idea.id)
+      const created = await createProjectFromIdea(idea, createProject)
       setEngaged(false)
       setOverrideProjectId(created.id)
       addToast({
@@ -176,6 +174,8 @@ export function TodaysAnswerCard() {
         variant: 'destructive',
       })
     } finally {
+      window.clearTimeout(slowTimer)
+      setResolveSlow(false)
       setResolvingChipId(null)
     }
   }
@@ -203,13 +203,14 @@ export function TodaysAnswerCard() {
         className="rounded-2xl p-5 relative"
         style={{
           background: 'linear-gradient(155deg, rgba(var(--brand-primary-rgb),0.10) 0%, rgba(15,24,41,0.65) 60%)',
-          backdropFilter: 'blur(18px)',
+          backdropFilter: 'blur(32px) saturate(190%)',
+          WebkitBackdropFilter: 'blur(32px) saturate(190%)',
           border: '1px solid rgba(var(--brand-primary-rgb),0.35)',
           boxShadow: '0 0 42px rgba(var(--brand-primary-rgb),0.22), 0 12px 36px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.06)',
         }}
       >
-        <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.7 }}>today's answer</span>
-        <p className="mt-3 text-[16px] leading-relaxed" style={{ color: 'var(--brand-text-secondary)' }}>{openingLine}</p>
+        <span className="text-[10px] font-bold uppercase tracking-[0.28em]" style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.7 }}>today's answer</span>
+        <p className="mt-3 text-[17px] leading-[1.4]" style={{ color: 'var(--brand-text-secondary)', fontFamily: 'var(--brand-font-serif)' }}>{openingLine}</p>
         {!engaged ? (
           <SteerRow onOpen={openSteer} />
         ) : (
@@ -218,11 +219,16 @@ export function TodaysAnswerCard() {
             chipsLoaded={chipsLoaded}
             chipsLoading={chipsLoading}
             resolvingChipId={resolvingChipId}
+            resolveSlow={resolveSlow}
             onResolveChip={resolveChip}
+            hasThread={hasThread}
+            onStartOver={startOver}
             steerText={steerText}
             onSteerTextChange={setSteerText}
             onSubmitSteer={submitSteer}
-            onClose={() => setEngaged(false)}
+            onClose={() => { setEngaged(false); setShowDeck(false); useFocusChatStore.getState().close() }}
+            showDeck={showDeck}
+            onToggleDeck={() => setShowDeck(v => !v)}
           />
         )}
       </div>
@@ -230,8 +236,6 @@ export function TodaysAnswerCard() {
   }
 
   const handleStartSession = () => start({ prefetched: plan })
-  const TypeIcon = iconForType(focusProject.type)
-  const theme = getTheme(focusProject.type || 'other', focusProject.title)
 
   const headline = plan?.task_title || focusProject.metadata?.session_headline
   const pitch = plan?.task_description || focusProject.metadata?.session_pitch
@@ -259,7 +263,8 @@ export function TodaysAnswerCard() {
       className="rounded-2xl p-5 flex flex-col overflow-hidden relative transition-all duration-700"
       style={{
         background: 'linear-gradient(155deg, rgba(var(--brand-primary-rgb),0.10) 0%, rgba(15,24,41,0.65) 60%)',
-        backdropFilter: 'blur(18px)',
+        backdropFilter: 'blur(32px) saturate(190%)',
+        WebkitBackdropFilter: 'blur(32px) saturate(190%)',
         border: `1px solid ${dormancyColor ?? 'rgba(var(--brand-primary-rgb),0.35)'}`,
         boxShadow: dormancyColor
           ? `0 0 36px ${dormancyColor.replace('0.55', '0.22')}, 0 12px 36px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.06)`
@@ -278,27 +283,19 @@ export function TodaysAnswerCard() {
           {dormancyLabel && (
             <span
               className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full flex-shrink-0 mt-0.5"
-              style={{ color: dormancyColor ?? undefined, border: `1px solid ${dormancyColor}`, background: 'rgba(0,0,0,0.3)' }}
+              style={{
+                color: dormancyColor ?? undefined,
+                border: `1px solid ${dormancyColor}`,
+                background: 'rgba(0,0,0,0.3)',
+                boxShadow: dormancyColor ? `0 0 8px ${dormancyColor.replace('0.55', '0.25')}` : undefined,
+              }}
             >
               {dormancyLabel}
             </span>
           )}
-          <div className="relative flex-shrink-0 mt-0.5">
-            <span
-              aria-hidden
-              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none rounded-full"
-              style={{
-                width: '48px',
-                height: '48px',
-                background: `radial-gradient(circle, rgba(${theme.rgb}, 0.42) 0%, rgba(${theme.rgb}, 0.16) 45%, transparent 75%)`,
-                filter: 'blur(5px)',
-              }}
-            />
-            <TypeIcon className="relative h-[18px] w-[18px]" style={{ color: 'rgba(255, 255, 255, 0.88)' }} strokeWidth={1.75} />
-          </div>
         </div>
         <span
-          className="text-[10px] uppercase tracking-[0.32em] font-semibold mb-3 inline-block"
+          className="text-[10px] uppercase tracking-[0.28em] font-semibold mb-3 inline-block"
           style={{ color: dormancyColor ?? 'rgba(var(--brand-primary-rgb),0.7)' }}
         >
           {formatRelativeTime(focusProject.last_active || focusProject.updated_at)}
@@ -306,14 +303,21 @@ export function TodaysAnswerCard() {
 
         {answer ? (
           <div className="p-3 rounded-xl mb-4" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
-            <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--brand-text-secondary)] opacity-40 mb-1">
+            <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-[var(--brand-text-secondary)] opacity-40 mb-1">
               {headline ? "today's answer" : "what's next"}
             </p>
-            <p className="text-sm text-[var(--brand-text-secondary)] leading-relaxed line-clamp-2 mb-1">{answer}</p>
-            {pitch && <p className="text-xs text-[var(--brand-text-secondary)] opacity-50 line-clamp-2">{pitch}</p>}
+            <p
+              className="text-[17px] leading-[1.4] line-clamp-2 mb-1"
+              style={{ color: 'var(--brand-text-secondary)', fontFamily: 'var(--brand-font-serif)' }}
+            >
+              {answer}
+            </p>
+            {pitch && <p className="text-xs text-[var(--brand-text-secondary)] opacity-60 line-clamp-2">{pitch}</p>}
           </div>
         ) : (
-          <div className="mb-4" />
+          <p className="text-xs mb-4" style={{ color: 'var(--brand-text-secondary)', opacity: 0.4 }}>
+            No plan yet — start and we'll work out the first move together.
+          </p>
         )}
 
         <button
@@ -349,11 +353,16 @@ export function TodaysAnswerCard() {
             chipsLoaded={chipsLoaded}
             chipsLoading={chipsLoading}
             resolvingChipId={resolvingChipId}
+            resolveSlow={resolveSlow}
             onResolveChip={resolveChip}
+            hasThread={hasThread}
+            onStartOver={startOver}
             steerText={steerText}
             onSteerTextChange={setSteerText}
             onSubmitSteer={submitSteer}
-            onClose={() => setEngaged(false)}
+            onClose={() => { setEngaged(false); setShowDeck(false); useFocusChatStore.getState().close() }}
+            showDeck={showDeck}
+            onToggleDeck={() => setShowDeck(v => !v)}
           />
         )}
       </div>
@@ -368,10 +377,10 @@ function SteerRow({ onOpen }: { onOpen: () => void }) {
   return (
     <button
       onClick={onOpen}
-      className="w-full mt-4 pt-4 flex items-center justify-between text-left"
+      className="w-full mt-5 pt-4 flex items-center justify-between text-left"
       style={{ borderTop: '1px solid rgba(255,255,255,0.09)' }}
     >
-      <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--brand-text-secondary)', opacity: 0.4 }}>or steer it</span>
+      <span className="text-[13px] font-medium" style={{ color: 'var(--brand-text-secondary)', opacity: 0.4 }}>or steer it</span>
       <ChevronRight className="h-3.5 w-3.5 opacity-30" style={{ color: 'var(--brand-text-secondary)' }} />
     </button>
   )
@@ -386,21 +395,31 @@ function SteerPanel({
   chipsLoaded,
   chipsLoading,
   resolvingChipId,
+  resolveSlow,
   onResolveChip,
+  hasThread,
+  onStartOver,
   steerText,
   onSteerTextChange,
   onSubmitSteer,
   onClose,
+  showDeck,
+  onToggleDeck,
 }: {
   chips: ProjectIdea[]
   chipsLoaded: boolean
   chipsLoading: boolean
   resolvingChipId: string | null
+  resolveSlow: boolean
   onResolveChip: (idea: ProjectIdea) => void
+  hasThread: boolean
+  onStartOver: () => void
   steerText: string
   onSteerTextChange: (v: string) => void
   onSubmitSteer: () => void
   onClose: () => void
+  showDeck: boolean
+  onToggleDeck: () => void
 }) {
   return (
     <motion.div
@@ -408,57 +427,81 @@ function SteerPanel({
       animate={{ opacity: 1, height: 'auto' }}
       exit={{ opacity: 0, height: 0 }}
       transition={{ duration: 0.2 }}
-      className="mt-4 pt-4"
+      className="mt-5 pt-4"
       style={{ borderTop: '1px solid rgba(255,255,255,0.09)' }}
     >
       <div className="flex items-center justify-between mb-3">
-        <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.7 }}>already noticed</span>
-        <button onClick={onClose} className="text-[11px] font-medium" style={{ color: 'var(--brand-text-secondary)', opacity: 0.4 }}>Close</button>
+        <span className="text-[10px] font-bold uppercase tracking-[0.28em]" style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.7 }}>
+          {hasThread ? 'focus' : 'already noticed'}
+        </span>
+        <div className="flex items-center gap-3">
+          {/* Close only hides the thread (resumable); start over actually
+              ends it, so "or steer it" can open back to fresh chips
+              instead of the same conversation for the rest of the visit. */}
+          {hasThread && (
+            <button onClick={onStartOver} className="text-[11px] font-medium" style={{ color: 'var(--brand-text-secondary)', opacity: 0.4 }}>Start over</button>
+          )}
+          <button onClick={onClose} className="text-[11px] font-medium" style={{ color: 'var(--brand-text-secondary)', opacity: 0.4 }}>Close</button>
+        </div>
       </div>
 
-      {chipsLoading && (
-        <p className="text-xs mb-3" style={{ color: 'var(--brand-text-secondary)', opacity: 0.4 }}>Reading your captures…</p>
+      {/* Once a real conversation exists, it replaces the chips entirely —
+          this IS the thread now, rendered in place rather than as a
+          second card underneath with its own header and its own copy of
+          the input below. */}
+      {hasThread ? (
+        <div className="mb-3">
+          <FocusChat onEditMessage={onSteerTextChange} />
+        </div>
+      ) : (
+        <>
+          {chipsLoading && (
+            <p className="text-xs mb-3" style={{ color: 'var(--brand-text-secondary)', opacity: 0.4 }}>Reading your captures…</p>
+          )}
+
+          {!chipsLoading && chipsLoaded && chips.length === 0 && (
+            <p className="text-xs mb-3" style={{ color: 'var(--brand-text-secondary)', opacity: 0.4 }}>Nothing waiting yet — say what you're after below.</p>
+          )}
+
+          <AnimatePresence initial={false}>
+            {chips.map(idea => (
+              <motion.button
+                key={idea.id}
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+                onClick={() => onResolveChip(idea)}
+                disabled={!!resolvingChipId}
+                className="w-full flex items-center gap-2.5 px-4 py-3 rounded-xl mb-2 text-left transition-opacity disabled:opacity-40"
+                style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(var(--brand-primary-rgb),0.2)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.06)' }}
+              >
+                <div className="flex-1 min-w-0">
+                  <span className="block text-[15px] font-medium line-clamp-1" style={{ color: 'var(--brand-text-primary)' }}>{idea.title}</span>
+                  <span className="text-[11px] opacity-60 line-clamp-1" style={{ color: 'var(--brand-text-secondary)' }}>
+                    {resolvingChipId === idea.id ? (resolveSlow ? 'Still working…' : 'Starting…') : (idea.evidence?.[0]?.label || idea.why_now)}
+                  </span>
+                </div>
+                <ChevronRight className="h-3.5 w-3.5 opacity-30 flex-shrink-0" style={{ color: 'var(--brand-text-secondary)' }} />
+              </motion.button>
+            ))}
+          </AnimatePresence>
+        </>
       )}
 
-      {!chipsLoading && chipsLoaded && chips.length === 0 && (
-        <p className="text-xs mb-3" style={{ color: 'var(--brand-text-secondary)', opacity: 0.4 }}>Nothing waiting yet — say what you're after below.</p>
-      )}
-
-      <AnimatePresence initial={false}>
-        {chips.map(idea => (
-          <motion.button
-            key={idea.id}
-            initial={{ opacity: 0, y: 4 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, height: 0, marginBottom: 0 }}
-            onClick={() => onResolveChip(idea)}
-            disabled={!!resolvingChipId}
-            className="w-full flex items-center gap-2.5 px-4 py-3 rounded-xl mb-2 text-left transition-opacity disabled:opacity-40"
-            style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(var(--brand-primary-rgb),0.2)' }}
-          >
-            <div className="flex-1 min-w-0">
-              <span className="block text-[15px] font-medium line-clamp-1" style={{ color: 'var(--brand-text-primary)' }}>{idea.title}</span>
-              <span className="text-[11px] opacity-60 line-clamp-1" style={{ color: 'var(--brand-text-secondary)' }}>
-                {resolvingChipId === idea.id ? 'Starting…' : (idea.evidence?.[0]?.label || idea.why_now)}
-              </span>
-            </div>
-            <ChevronRight className="h-3.5 w-3.5 opacity-30 flex-shrink-0" style={{ color: 'var(--brand-text-secondary)' }} />
-          </motion.button>
-        ))}
-      </AnimatePresence>
-
-      <div className="mt-3">
-        <span className="block mb-2 text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--brand-text-secondary)', opacity: 0.4 }}>or steer it</span>
+      <div className="mt-4">
+        {!hasThread && (
+          <span className="block mb-2 text-[13px] font-medium" style={{ color: 'var(--brand-text-secondary)', opacity: 0.4 }}>or steer it</span>
+        )}
         <div className="flex items-center gap-2">
           <input
-            placeholder="What's actually got you right now?"
+            placeholder={hasThread ? 'Reply…' : "What's actually got you right now?"}
             value={steerText}
             onChange={e => onSteerTextChange(e.target.value)}
             onFocus={handleInputFocus}
             onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); onSubmitSteer() } }}
             autoComplete="off"
             className="flex-1 px-4 py-3 rounded-xl text-[15px] focus:outline-none focus:ring-0"
-            style={{ color: 'var(--brand-text-primary)', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}
+            style={{ color: 'var(--brand-text-primary)', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.06)' }}
           />
           <button
             type="button"
@@ -471,10 +514,34 @@ function SteerPanel({
               color: 'var(--brand-text-primary)',
             }}
           >
-            <ChevronRight className="h-4 w-4" strokeWidth={2.5} />
+            <ArrowUp className="h-4 w-4" strokeWidth={2.5} />
           </button>
         </div>
       </div>
+
+      {/* The full deck — evidence, mode visuals, hour scope, reject with a
+          reason — lives here now instead of as its own "try something new"
+          section further down the page, which just put a second suggest-
+          a-project pill next to this card's own. One entry point; this is
+          its "go deeper" door, collapsed until asked for. Hidden mid-
+          conversation — one thing to look at while you're talking, not
+          a browsing door left dangling under it. */}
+      {!hasThread && (
+        <div className="mt-5 pt-4" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+          <button
+            onClick={onToggleDeck}
+            className="text-[11px] font-medium"
+            style={{ color: 'var(--brand-text-secondary)', opacity: 0.4 }}
+          >
+            {showDeck ? 'hide the full deck' : 'or browse the full deck →'}
+          </button>
+          {showDeck && (
+            <div className="mt-3">
+              <ProjectIdeasHome startExpanded />
+            </div>
+          )}
+        </div>
+      )}
     </motion.div>
   )
 }

@@ -2,18 +2,19 @@
  * ProjectMiniCard — compact two-up card used in the home's project rows.
  *
  * Two variants drive the home's atmospheric stack:
- *   • glass — recent / active. Filled glass surface with accent dot + soft
- *     inner corner vignette in the project's accent colour.
+ *   • glass — recent / active. Filled glass surface.
  *   • ghost — soon / queued. Outline-only. Same anatomy, quieter material —
  *     reads as "further away" without anyone labelling it.
  *
  * Section identity on the home now lives in material, not in headings.
- * The card carries its own framing (accent dot, type icon, mode line).
+ * The card carries its own framing (title + mode line) — no per-type
+ * icon badge; the title and meta line already say what this is without
+ * a decorative glyph repeating it.
  */
 
 import { useNavigate } from 'react-router-dom'
 import { Play } from 'lucide-react'
-import { getTheme, iconForType } from '../../lib/projectTheme'
+import { getTheme } from '../../lib/projectTheme'
 import { haptic } from '../../utils/haptics'
 import { useStartProjectSession } from '../../hooks/useStartProjectSession'
 import type { Project } from '../../types'
@@ -34,30 +35,31 @@ export function ProjectMiniCard({
   variant = 'glass',
 }: ProjectMiniCardProps) {
   const navigate = useNavigate()
-  const theme = getTheme(project.type || 'other', project.title)
   const { start, loading } = useStartProjectSession(project.id)
-  const TypeIcon = iconForType(project.type ?? undefined)
+  const theme = getTheme(project.type || 'other', project.title)
 
   const isGhost = variant === 'ghost'
 
-  // Single restrained palette — mirrors ThoughtOfTheDay. Project identity
-  // shows up only in the tiny accent dot. Cards read as one cohesive
-  // editorial set, not a kaleidoscope.
+  // Project identity comes through as color in the card's own light — the
+  // border, the glow, the top hairline — not a glyph. Each project type
+  // already has a real RGB token (projectTheme.ts); this is what actually
+  // uses it instead of every card glowing the same brand cyan regardless
+  // of what it is.
   const surface = isGhost
     ? {
         background: 'rgba(15, 24, 41, 0.30)',
-        border: '1px solid rgba(var(--brand-primary-rgb), 0.18)',
+        border: `1px solid rgba(${theme.rgb}, 0.18)`,
         boxShadow:
-          '0 0 22px rgba(var(--brand-primary-rgb), 0.10),' +
+          `0 0 22px rgba(${theme.rgb}, 0.10),` +
           'inset 0 1px 0 rgba(255,255,255,0.03)',
         backdropFilter: 'blur(8px)',
         WebkitBackdropFilter: 'blur(8px)',
       }
     : {
-        background: 'linear-gradient(155deg, rgba(var(--brand-primary-rgb),0.10) 0%, rgba(15,24,41,0.65) 60%)',
-        border: '1px solid rgba(var(--brand-primary-rgb),0.32)',
+        background: `linear-gradient(155deg, rgba(${theme.rgb},0.10) 0%, rgba(15,24,41,0.65) 60%)`,
+        border: `1px solid rgba(${theme.rgb},0.32)`,
         boxShadow:
-          '0 0 32px rgba(var(--brand-primary-rgb),0.20),' +
+          `0 0 32px rgba(${theme.rgb},0.20),` +
           '0 8px 24px -10px rgba(0,0,0,0.55),' +
           'inset 0 1px 0 rgba(255,255,255,0.05)',
         backdropFilter: 'blur(14px) saturate(140%)',
@@ -76,39 +78,16 @@ export function ProjectMiniCard({
         minHeight: '120px',
       }}
     >
-      {/* Top hairline glow — single editorial cue, mirrors ThoughtOfTheDay. */}
+      {/* Top hairline glow — same project color as the card's own border/glow. */}
       {!isGhost && (
         <span
           aria-hidden
           className="absolute top-0 left-0 right-0 h-px"
-          style={{ background: 'linear-gradient(90deg, transparent, rgba(var(--brand-primary-rgb),0.45), transparent)' }}
+          style={{ background: `linear-gradient(90deg, transparent, rgba(${theme.rgb},0.45), transparent)` }}
         />
       )}
 
       <div className="relative z-10 flex flex-col gap-1.5 h-full min-h-[92px]">
-        {/* Top row: type icon sits inside a soft project-coloured halo.
-            The area glows, not the icon — feels like ambient identity
-            instead of a coloured pin. */}
-        <div className="flex items-center justify-end">
-          <div className="relative">
-            <span
-              aria-hidden
-              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none rounded-full"
-              style={{
-                width: '40px',
-                height: '40px',
-                background: `radial-gradient(circle, rgba(${theme.rgb}, 0.38) 0%, rgba(${theme.rgb}, 0.14) 45%, transparent 75%)`,
-                filter: 'blur(4px)',
-              }}
-            />
-            <TypeIcon
-              className="relative h-4 w-4"
-              style={{ color: 'rgba(255, 255, 255, 0.85)' }}
-              strokeWidth={1.75}
-            />
-          </div>
-        </div>
-
         {/* Title — canonical .card-title (serif, full primary). Ghost
             variant used to fade to 0.82 opacity which dropped contrast
             below readable on the outline surface; both variants now share

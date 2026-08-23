@@ -7,16 +7,22 @@
  *
  * Section order:
  *   1. Today's answer    — TodaysAnswerCard: one statement, one action, one
- *                          redirect. Owns the Focus chat entry point too —
- *                          FocusChat only renders once that thread is open.
- *   2. Still warm        — RecentlyActiveMini (2-up glass)
- *   3. The queue         — UpNextMini (2-up ghost)
- *   4. Try something new — ProjectIdeasHome (full idea deck — evidence,
- *                          modes, save/reject. TodaysAnswerCard's chips are
- *                          a fast one-tap door into the same queue; this is
- *                          where you actually browse and reject freely)
- *   5. Now consuming     — ConsumingWidget (identity layer + reading drawers)
- *   6. Thought of the day — ThoughtOfTheDay (editorial pull-quote)
+ *                          redirect. The redirect panel owns both the
+ *                          Focus chat thread AND the full idea deck
+ *                          (evidence, modes, hour scope, reject-with-
+ *                          reason) — both used to be separate pieces on
+ *                          this page (FocusChat as its own stacked card
+ *                          with a duplicate input field; the deck as its
+ *                          own "try something new" section) and are
+ *                          reached from inside the card now instead.
+ *   2. Everything else   — EverythingElseMini: one swipeable row, still
+ *                          warm projects then queued ones. Used to be two
+ *                          stacked 2-up grids ("still warm" / "the queue");
+ *                          merged into the single carousel the design
+ *                          settled on, so priority/warm/queue reads as one
+ *                          continuum instead of three separate lists.
+ *   3. Now consuming     — ConsumingWidget (identity layer + reading drawers)
+ *   4. Thought of the day — ThoughtOfTheDay (editorial pull-quote)
  *
  * Behind everything: a vanishingly subtle vertical wash (.home-atmosphere) —
  * warmer at the top, cooler at the bottom.
@@ -32,12 +38,9 @@ import { useJourneyStore } from '../stores/useJourneyStore'
 import { useAuthContext } from '../contexts/AuthContext'
 import { SubtleBackground } from '../components/SubtleBackground'
 import { TodaysAnswerCard } from '../components/home/TodaysAnswerCard'
-import { FocusChat } from '../components/home/FocusChat'
 import { FeelingPill } from '../components/home/FeelingPill'
-import { RecentlyActiveMini } from '../components/home/RecentlyActiveMini'
-import { UpNextMini } from '../components/home/UpNextMini'
+import { EverythingElseMini } from '../components/home/EverythingElseMini'
 import { ThoughtOfTheDay } from '../components/home/ThoughtOfTheDay'
-import { ProjectIdeasHome } from '../components/home/ProjectIdeasHome'
 import { ConsumingWidget } from '../components/home/ConsumingWidget'
 import { DeferMount } from '../components/DeferMount'
 import { UnauthHome } from '../components/onboarding/UnauthHome'
@@ -53,11 +56,12 @@ export function HomePage() {
   const setContext = useContextEngineStore(s => s.setContext)
   const onboardingCompletedAt = useJourneyStore(s => s.onboardingCompletedAt)
   const startSession = useJourneyStore(s => s.startSession)
-  // Mirror the minis' selectors here so we can drop the section header +
-  // seam when the row would be empty — a bare "still warm" header over
-  // nothing reads as a bug, not a quiet state.
+  // Mirror EverythingElseMini's selectors here so we can drop the section
+  // header + seam when the row would be empty — a bare "everything else"
+  // header over nothing reads as a bug, not a quiet state.
   const recentMini = useRecentNonPriorityProjects(2)
   const upNextMini = useUpNextMiniProjects()
+  const hasEverythingElse = recentMini.length > 0 || upNextMini.length > 0
 
   const [error, setError] = useState<string | null>(null)
 
@@ -210,66 +214,40 @@ export function HomePage() {
           {/* Section 1 — Today's answer. One statement, one action, one
               redirect. FeelingPill still feeds the session-context signal
               the redirect and the idea generator both read; kept small and
-              out of the way rather than a competing control above the box. */}
+              out of the way rather than a competing control above the box.
+              The Focus chat thread renders INSIDE this card now (its own
+              redirect panel), not as a second card mounted separately here
+              — that used to produce two stacked glass cards with duplicate
+              headers and duplicate input fields. */}
           <motion.div {...stackTransition(1)}>
             <FeelingPill />
             <TodaysAnswerCard />
           </motion.div>
 
-          {/* Focus chat thread — only renders once the card's redirect has
-              opened it (typed steer, or nothing to reveal). Same
-              portfolio-level triage as before: picks which project, starts
-              it, and can fix a single stale next-step the user corrects in
-              conversation — it just no longer has its own separate entry
-              point on the page. */}
-          <motion.div {...stackTransition(2)}>
-            <FocusChat />
-          </motion.div>
-
-          {/* Section 2 — Recently active. 2-up glass cards. Header + seam
-              only when there's something to show, so we never strand a
-              heading over an empty row. */}
-          {recentMini.length > 0 && (
+          {/* Section 2 — Everything else. Still warm projects then queued
+              ones, one swipeable row. Header + seam only when there's
+              something to show, so we never strand a heading over an
+              empty row. */}
+          {hasEverythingElse && (
             <>
               <div className="section-seam" aria-hidden />
-              <h2 className="section-header" style={{ margin: '0 0 10px' }}>still <span>warm</span></h2>
-              <motion.div {...stackTransition(3)}>
-                <RecentlyActiveMini />
-              </motion.div>
-            </>
-          )}
-
-          {/* Section 3 — Up Next. 2-up ghost cards, quieter material. */}
-          {upNextMini.length > 0 && (
-            <>
-              <div className="section-seam" aria-hidden />
-              <h2 className="section-header" style={{ margin: '0 0 10px' }}>the <span>queue</span></h2>
-              <motion.div {...stackTransition(4)}>
-                <UpNextMini />
+              <h2 className="section-header" style={{ margin: '0 0 10px' }}>everything <span>else</span></h2>
+              <motion.div {...stackTransition(2)}>
+                <EverythingElseMini />
               </motion.div>
             </>
           )}
 
           <div className="section-seam" aria-hidden />
 
-          {/* Section 4 — Try something new. Compact escape-hatch for
-              on-demand idea generation. Sits below the project lists so
-              the user sees what they're already working on first. */}
-          <h2 className="section-header" style={{ margin: '0 0 10px' }}>try something <span>new</span></h2>
-          <motion.div {...stackTransition(5)}>
-            <ProjectIdeasHome />
-          </motion.div>
-
-          <div className="section-seam" aria-hidden />
-
-          {/* Section 5 — Now consuming. Identity layer.
+          {/* Section 3 — Now consuming. Identity layer.
               Non-article lists in the top strip; Saved reads + New reads
               dropdowns hold articles from the reading queue and RSS feeds.
               Deferred: it fetches the reading queue + RSS on mount, so we
               hold it back until it's near the viewport rather than letting
               it compete with the first paint. */}
           <h2 className="section-header" style={{ margin: '0 0 10px' }}>now <span>consuming</span></h2>
-          <motion.div {...stackTransition(6)}>
+          <motion.div {...stackTransition(3)}>
             <DeferMount minHeight={120}>
               <ConsumingWidget />
             </DeferMount>
@@ -277,10 +255,10 @@ export function HomePage() {
 
           <div className="section-seam" aria-hidden />
 
-          {/* Section 6 — Thought of the day. Component renders its own
+          {/* Section 4 — Thought of the day. Component renders its own
               section-header internally. Deferred for the same reason — it
               fetches a batch of resurfaced memories on mount. */}
-          <motion.div {...stackTransition(7)}>
+          <motion.div {...stackTransition(4)}>
             <DeferMount minHeight={160}>
               <ThoughtOfTheDay />
             </DeferMount>
@@ -288,7 +266,7 @@ export function HomePage() {
 
           {/* Quiet exit to Settings — small, centred, low-contrast.
               Lives at the very bottom so it never competes with content. */}
-          <motion.div {...stackTransition(8)}>
+          <motion.div {...stackTransition(5)}>
             <div className="pt-10 pb-2 flex justify-center">
               <button
                 onClick={() => navigate('/settings')}
