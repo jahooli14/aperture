@@ -26,6 +26,7 @@ import {
 } from '../../stores/useProjectStore'
 import { useSessionContextStore } from '../../stores/useSessionContextStore'
 import { useFocusChatStore } from '../../stores/useFocusChatStore'
+import { useProjectIdeasStore, type ProjectIdea } from '../../stores/useProjectIdeasStore'
 import { useStartProjectSession } from '../../hooks/useStartProjectSession'
 import { getTheme, iconForType } from '../../lib/projectTheme'
 import { toPortfolioSummaries, buildOpeningLine } from './focusChatOps'
@@ -36,19 +37,6 @@ import { useToast } from '../ui/toast'
 import { handleInputFocus } from '../../utils/keyboard'
 
 const SESSION_DURATION_MINUTES = 60
-
-interface IdeaEvidence { kind: string; source_id: string; label: string; date: string; excerpt: string }
-interface ProjectIdea {
-  id: string
-  title: string
-  pitch: string
-  why_now: string
-  next_step: string
-  evidence: IdeaEvidence[]
-  status: 'pending' | 'saved' | 'rejected' | 'built'
-  mode?: 'crossover' | 'read' | 'hour'
-  pattern?: string | null
-}
 
 // Mirrors ProjectIdeasHome's deriveFinishLine exactly — every idea prompt
 // ends its pitch with "what done looks like," so that sentence IS the
@@ -83,8 +71,13 @@ export function TodaysAnswerCard() {
   const { start, loading: startingSession } = useStartProjectSession(focusProject?.id)
 
   const [engaged, setEngaged] = useState(false)
-  const [chips, setChips] = useState<ProjectIdea[] | null>(null)
-  const [chipsLoading, setChipsLoading] = useState(false)
+  // Shared with ProjectIdeasHome — same cache, same fetch. In practice
+  // ProjectIdeasHome's own mount-time load usually wins the race, so
+  // tapping "or steer it" here shows chips instantly instead of a spinner;
+  // either way, resolving one from here is instantly reflected there too.
+  const chipsLoaded = useProjectIdeasStore(s => s.loaded)
+  const chipsLoading = useProjectIdeasStore(s => s.loading)
+  const chips = useProjectIdeasStore(s => s.ideas)
   const [resolvingChipId, setResolvingChipId] = useState<string | null>(null)
   const [steerText, setSteerText] = useState('')
 
@@ -109,23 +102,14 @@ export function TodaysAnswerCard() {
   ), [allProjects])
 
   // Real corpus signals for "already noticed" — the same evidence-backed
-  // queue ProjectIdeasHome draws from, fetched lazily on first engage (not
-  // on mount) so the resting home page never pays for a request nobody
-  // asked for.
-  const openSteer = async () => {
+  // queue ProjectIdeasHome draws from, off the shared store. Idempotent:
+  // if that fetch already ran (usual case — ProjectIdeasHome mounts and
+  // loads before anyone taps this), this is a no-op and chips are already
+  // populated by the time the panel opens.
+  const openSteer = () => {
     haptic.light()
     setEngaged(true)
-    if (chips !== null) return
-    setChipsLoading(true)
-    try {
-      const res = await api.get('utilities?resource=project-ideas') as { ideas: ProjectIdea[] }
-      const pending = (res.ideas ?? []).filter(i => i.status === 'pending').slice(0, 3)
-      setChips(pending)
-    } catch {
-      setChips([])
-    } finally {
-      setChipsLoading(false)
-    }
+    void useProjectIdeasStore.getState().load()
   }
 
   // Free-text steer hands straight to the existing Focus chat thread
@@ -175,7 +159,9 @@ export function TodaysAnswerCard() {
         // Non-fatal: the project exists; the queue reconciles on next load.
       }
 
-      setChips(prev => prev?.filter(i => i.id !== idea.id) ?? null)
+      // Shared store — ProjectIdeasHome loses this idea too, immediately,
+      // rather than showing a stale row for an idea that's already built.
+      useProjectIdeasStore.getState().removeIdea(idea.id)
       setEngaged(false)
       setOverrideProjectId(created.id)
       addToast({
@@ -229,6 +215,7 @@ export function TodaysAnswerCard() {
         ) : (
           <SteerPanel
             chips={chips}
+            chipsLoaded={chipsLoaded}
             chipsLoading={chipsLoading}
             resolvingChipId={resolvingChipId}
             onResolveChip={resolveChip}
@@ -359,6 +346,7 @@ export function TodaysAnswerCard() {
         ) : (
           <SteerPanel
             chips={chips}
+            chipsLoaded={chipsLoaded}
             chipsLoading={chipsLoading}
             resolvingChipId={resolvingChipId}
             onResolveChip={resolveChip}
@@ -395,6 +383,7 @@ function SteerRow({ onOpen }: { onOpen: () => void }) {
  *  out what either does. */
 function SteerPanel({
   chips,
+  chipsLoaded,
   chipsLoading,
   resolvingChipId,
   onResolveChip,
@@ -403,7 +392,8 @@ function SteerPanel({
   onSubmitSteer,
   onClose,
 }: {
-  chips: ProjectIdea[] | null
+  chips: ProjectIdea[]
+  chipsLoaded: boolean
   chipsLoading: boolean
   resolvingChipId: string | null
   onResolveChip: (idea: ProjectIdea) => void
@@ -430,12 +420,12 @@ function SteerPanel({
         <p className="text-xs mb-3" style={{ color: 'var(--brand-text-secondary)', opacity: 0.4 }}>Reading your captures…</p>
       )}
 
-      {!chipsLoading && chips !== null && chips.length === 0 && (
+      {!chipsLoading && chipsLoaded && chips.length === 0 && (
         <p className="text-xs mb-3" style={{ color: 'var(--brand-text-secondary)', opacity: 0.4 }}>Nothing waiting yet — say what you're after below.</p>
       )}
 
       <AnimatePresence initial={false}>
-        {chips?.map(idea => (
+        {chips.map(idea => (
           <motion.button
             key={idea.id}
             initial={{ opacity: 0, y: 4 }}
