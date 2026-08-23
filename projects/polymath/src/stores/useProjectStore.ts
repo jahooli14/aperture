@@ -83,7 +83,11 @@ interface ProjectState {
 
   // Actions
   fetchProjects: (retryCount?: number) => Promise<void>
-  createProject: (data: Partial<Project>) => Promise<void>
+  // Resolves to the created project (real server id once online, the
+  // optimistic temp-id row when queued offline) — callers that need to act
+  // on the new project immediately (e.g. starting a session from it) don't
+  // have to re-derive it from the list.
+  createProject: (data: Partial<Project>) => Promise<Project>
   updateProject: (id: string, data: Partial<Project>) => Promise<void>
   deleteProject: (id: string) => Promise<void>
   setPriority: (id: string) => Promise<void>
@@ -282,16 +286,17 @@ export const useProjectStore = create<ProjectState>()(
           // any edits queued before sync land on the right project.
           await queueOperation('create_project', { ...data, tempId, id: uuidv4() })
           await useOfflineStore.getState().updateQueueSize()
-          return
+          return newProject
         }
 
         try {
           const result = await api.post('projects', data)
+          const createdProject = { ...result, ...data } as Project
 
           // Replace temp ID with real ID
           set(state => {
             const updatedAll = state.allProjects.map(p =>
-              p.id === tempId ? { ...result, ...data } : p
+              p.id === tempId ? createdProject : p
             )
             // Re-sort in case server data changes order (unlikely for new)
             const sorted = smartSortProjects(updatedAll)
@@ -306,6 +311,8 @@ export const useProjectStore = create<ProjectState>()(
               projects: filterProjects(sorted, state.filter)
             }
           })
+
+          return createdProject
         } catch (error) {
           logger.error('[ProjectStore] Failed to create project:', error)
           // Rollback

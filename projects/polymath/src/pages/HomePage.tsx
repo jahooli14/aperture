@@ -6,32 +6,32 @@
  * separated by 1px .section-seam hairlines that fade across the page width.
  *
  * Section order:
- *   1. Your priority     — KeepGoingCard for the starred project (hero)
+ *   1. Today's answer    — TodaysAnswerCard: one statement, one action, one
+ *                          redirect. Owns the Focus chat entry point too —
+ *                          FocusChat only renders once that thread is open.
  *   2. Still warm        — RecentlyActiveMini (2-up glass)
  *   3. The queue         — UpNextMini (2-up ghost)
- *   4. Try something new — ProjectIdeasHome (compact on-demand suggestion)
+ *   4. Try something new — ProjectIdeasHome (full idea deck — evidence,
+ *                          modes, save/reject. TodaysAnswerCard's chips are
+ *                          a fast one-tap door into the same queue; this is
+ *                          where you actually browse and reject freely)
  *   5. Now consuming     — ConsumingWidget (identity layer + reading drawers)
  *   6. Thought of the day — ThoughtOfTheDay (editorial pull-quote)
  *
  * Behind everything: a vanishingly subtle vertical wash (.home-atmosphere) —
  * warmer at the top, cooler at the bottom.
- *
- * Top-left of the masthead carries a "mode register" chip naming what the
- * lead card is firing in: priority / keep going / quiet. Replaces the
- * removed wordmark/eyebrow.
  */
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { useProjectStore, usePriorityProject, useMostRecentNonPriorityProject, useRecentNonPriorityProjects, useUpNextMiniProjects } from '../stores/useProjectStore'
+import { useProjectStore, useRecentNonPriorityProjects, useUpNextMiniProjects } from '../stores/useProjectStore'
 import { useMemoryStore } from '../stores/useMemoryStore'
-import { computeVoiceStreak } from '../lib/streak'
 import { useContextEngineStore } from '../stores/useContextEngineStore'
 import { useJourneyStore } from '../stores/useJourneyStore'
 import { useAuthContext } from '../contexts/AuthContext'
 import { SubtleBackground } from '../components/SubtleBackground'
-import { KeepGoingCard, KeepGoingEmpty } from '../components/home/KeepGoingCard'
+import { TodaysAnswerCard } from '../components/home/TodaysAnswerCard'
 import { FocusChat } from '../components/home/FocusChat'
 import { FeelingPill } from '../components/home/FeelingPill'
 import { RecentlyActiveMini } from '../components/home/RecentlyActiveMini'
@@ -42,7 +42,7 @@ import { ConsumingWidget } from '../components/home/ConsumingWidget'
 import { DeferMount } from '../components/DeferMount'
 import { UnauthHome } from '../components/onboarding/UnauthHome'
 import { ease, stagger } from '../lib/motion'
-import { AlertCircle, Search, Moon, Settings, Flame } from 'lucide-react'
+import { AlertCircle, Search, Moon, Settings } from 'lucide-react'
 
 export function HomePage() {
   const { isAuthenticated } = useAuthContext()
@@ -50,14 +50,9 @@ export function HomePage() {
   const fetchProjects = useProjectStore(s => s.fetchProjects)
   const projects = useProjectStore(s => s.projects)
   const fetchMemories = useMemoryStore(s => s.fetchMemories)
-  const memories = useMemoryStore(s => s.memories)
-  const voiceStreak = useMemo(() => computeVoiceStreak(memories), [memories])
   const setContext = useContextEngineStore(s => s.setContext)
   const onboardingCompletedAt = useJourneyStore(s => s.onboardingCompletedAt)
   const startSession = useJourneyStore(s => s.startSession)
-  const priorityProject = usePriorityProject()
-  const recentProject = useMostRecentNonPriorityProject()
-  const hasAnyFocus = priorityProject || recentProject
   // Mirror the minis' selectors here so we can drop the section header +
   // seam when the row would be empty — a bare "still warm" header over
   // nothing reads as a bug, not a quiet state.
@@ -177,27 +172,13 @@ export function HomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative" style={{ zIndex: 1 }}>
 
           {/* Masthead: bedtime/search actions (right). The mode label lives
-              with each section header below ("your priority", "still warm")
-              so the page reads as one editorial stack. */}
+              with each section header below ("today's answer", "still warm")
+              so the page reads as one editorial stack. No streak counter —
+              creative work isn't a daily-login habit. */}
           <motion.div {...stackTransition(0)}>
             <header className="page-masthead">
               <div className="page-masthead-text" style={{ display: 'flex', alignItems: 'baseline', gap: '10px' }}>
                 <h1 className="page-hero">Aperture.</h1>
-                {voiceStreak > 0 && (
-                  <span
-                    title={`${voiceStreak} day${voiceStreak === 1 ? '' : 's'} of capturing a thought`}
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                      fontSize: '13px',
-                      color: 'var(--brand-text-muted)',
-                    }}
-                  >
-                    <Flame className="h-3.5 w-3.5" style={{ color: 'var(--brand-primary)' }} />
-                    {voiceStreak}
-                  </span>
-                )}
               </div>
               <div className="page-masthead-actions">
                 {isAfterBedtime && (
@@ -226,39 +207,24 @@ export function HomePage() {
             </header>
           </motion.div>
 
-          {/* Focus chat — portfolio-level triage ("what should I work on,
-              across everything I've got going"). Distinct from the
-              per-project Guide: doesn't curate a project's full task list,
-              only picks which project — the one exception is fixing a
-              single stale next-step the user corrects in conversation.
-              Self-hides below 2 live projects. */}
+          {/* Section 1 — Today's answer. One statement, one action, one
+              redirect. FeelingPill still feeds the session-context signal
+              the redirect and the idea generator both read; kept small and
+              out of the way rather than a competing control above the box. */}
           <motion.div {...stackTransition(1)}>
             <FeelingPill />
-            <FocusChat />
+            <TodaysAnswerCard />
           </motion.div>
 
-          {/* Section 1 — Priority. */}
-          {priorityProject ? (
-            <motion.div {...stackTransition(2)}>
-              <h2 className="section-header" style={{ margin: '0 0 10px' }}>your <span>priority</span></h2>
-              <KeepGoingCard project={priorityProject} />
-            </motion.div>
-          ) : !hasAnyFocus ? (
-            <motion.div {...stackTransition(2)}>
-              <h2 className="section-header" style={{ margin: '0 0 10px' }}>your <span>priority</span></h2>
-              {projects.length === 0 ? (
-                // Brand-new account: point at the core loop (capture), not an
-                // empty projects list they'd just bounce off.
-                <KeepGoingEmpty
-                  message="Nothing here yet. Start by capturing a thought."
-                  actionLabel="Capture a thought"
-                  onAction={() => window.dispatchEvent(new Event('openVoiceCapture'))}
-                />
-              ) : (
-                <KeepGoingEmpty />
-              )}
-            </motion.div>
-          ) : null}
+          {/* Focus chat thread — only renders once the card's redirect has
+              opened it (typed steer, or nothing to reveal). Same
+              portfolio-level triage as before: picks which project, starts
+              it, and can fix a single stale next-step the user corrects in
+              conversation — it just no longer has its own separate entry
+              point on the page. */}
+          <motion.div {...stackTransition(2)}>
+            <FocusChat />
+          </motion.div>
 
           {/* Section 2 — Recently active. 2-up glass cards. Header + seam
               only when there's something to show, so we never strand a

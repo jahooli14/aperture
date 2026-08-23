@@ -9,71 +9,46 @@
  * next step when the user corrects it in conversation (see taskOp below),
  * so a recommendation isn't working off out-of-date data after time away.
  *
- * Collapsed to a pill by default. The opening line is computed locally
- * from data already in the project store — no network call just to open
- * it. The AI only runs once the user actually sends a message.
+ * State lives in useFocusChatStore, not local component state — the "or
+ * steer it" field on TodaysAnswerCard opens and sends into this same
+ * thread, so this component just renders whatever the store holds. Only
+ * ever mounted when the thread is open; the card owns the collapsed entry
+ * point.
  */
 
-import { useState, useRef, useEffect, useMemo } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { ArrowUp, ChevronRight } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { supabase } from '../../lib/supabase'
 import { useProjectStore } from '../../stores/useProjectStore'
 import { useSessionContextStore } from '../../stores/useSessionContextStore'
+import { useFocusChatStore } from '../../stores/useFocusChatStore'
 import { handleInputFocus } from '../../utils/keyboard'
-import {
-  type Message,
-  toPortfolioSummaries,
-  buildOpeningLine,
-  parsePortfolioAction,
-  parsePortfolioTaskOp,
-} from './focusChatOps'
+import { toPortfolioSummaries } from './focusChatOps'
 import { FocusChatActionCard } from './FocusChatActionCard'
 import { FocusChatTaskOpCard } from './FocusChatTaskOpCard'
-import { FocusChatPill } from './FocusChatPill'
 import { UserBubble, RegenerateRow } from '../chat/ChatPrimitives'
 import { ThinkingIndicator } from '../chat/ThinkingIndicator'
 
 export function FocusChat() {
   const allProjects = useProjectStore(s => s.allProjects)
   const feeling = useSessionContextStore(s => s.feeling)
-  const [expanded, setExpanded] = useState(false)
-  const [messages, setMessages] = useState<Message[]>([])
+  const expanded = useFocusChatStore(s => s.expanded)
+  const messages = useFocusChatStore(s => s.messages)
+  const thinking = useFocusChatStore(s => s.thinking)
+  const close = useFocusChatStore(s => s.close)
   const [input, setInput] = useState('')
-  const [thinking, setThinking] = useState(false)
-  const threadRef = useRef<HTMLDivElement>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
-  // Project ids actually applied (not just proposed — dismissed should
-  // still resurface) this session — sent to the backend so a long "Keep
-  // going" sweep doesn't re-recommend something already settled, correctly
-  // regardless of the capped history below.
-  const discussedProjectIdsRef = useRef<Set<string>>(new Set())
 
-  const summaries = useMemo(() => {
-    // Excludes unshaped drafts (metadata.is_shaped === false) — same bar
-    // usePriorityProject/isActiveShaped hold elsewhere, so this can't
-    // propose set_priority on a draft KeepGoingCard would then ignore
-    // (which would silently demote the real priority for nothing).
-    // Deliberately broader than isActiveShaped on status though — dormant/
-    // on-hold projects are exactly the "you left this unfinished, pick it
-    // back up" candidates this feature exists to surface.
-    const live = allProjects.filter(p =>
-      p.status !== 'completed' && p.status !== 'graveyard' && p.metadata?.is_shaped !== false
-    )
-    return toPortfolioSummaries(live)
-  }, [allProjects])
-
-  const openingLine = useMemo(() => buildOpeningLine(summaries), [summaries])
-
-  // Seed the thread on first expand, not on mount — the pill can render
-  // before the project store finishes its initial fetch, and a mount-time
-  // effect would freeze a "0 things going" opening line in place forever
-  // (it only seeds once). Expanding happens after the user has already
-  // seen the live pill text, so summaries/openingLine are correct by then.
-  const openChat = () => {
-    if (messages.length === 0) setMessages([{ kind: 'guide', content: openingLine }])
-    setExpanded(true)
-  }
+  // Excludes unshaped drafts (metadata.is_shaped === false) — same bar
+  // usePriorityProject/isActiveShaped hold elsewhere, so this can't
+  // propose set_priority on a draft TodaysAnswerCard would then ignore
+  // (which would silently demote the real priority for nothing).
+  // Deliberately broader than isActiveShaped on status though — dormant/
+  // on-hold projects are exactly the "you left this unfinished, pick it
+  // back up" candidates this feature exists to surface.
+  const summaries = allProjects
+    .filter(p => p.status !== 'completed' && p.status !== 'graveyard' && p.metadata?.is_shaped !== false)
+  const portfolioSummaries = toPortfolioSummaries(summaries)
 
   // Scrolls the newest message into view within the page, rather than
   // capping the thread at a fixed height with its own internal scrollbar —
@@ -84,90 +59,7 @@ export function FocusChat() {
     if (expanded) bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
   }, [messages, thinking, expanded])
 
-  // Capped so a long "Keep going" sweep doesn't make every round-trip
-  // slower/pricier by resending the whole transcript — safe because
-  // discussedProjectIdsRef (not history) is what keeps a long sweep from
-  // re-recommending something already settled.
-  const MAX_HISTORY_TURNS = 16
-  const getApiHistory = (fromMessages: Message[]) =>
-    fromMessages
-      .slice(-MAX_HISTORY_TURNS)
-      .map(m => ({ role: m.kind === 'you' ? 'user' as const : 'model' as const, content: m.content }))
-
-  // Runs one turn against the API and appends the guide's reply. Takes the
-  // conversation to send explicitly (rather than reading `messages`) so
-  // regenerate can re-run the same user turn against history that no
-  // longer includes the reply being replaced.
-  const runTurn = async (message: string, historyBase: Message[]) => {
-    setThinking(true)
-
-    // Snapshot what's sent, so the response can only propose an action
-    // against a project the model was actually told about.
-    const sentSummaries = summaries
-    const knownProjectIds = new Set(sentSummaries.map(p => p.id))
-    const knownProjectsById = new Map(sentSummaries.map(p => [p.id, p]))
-
-    try {
-      const token = (await supabase.auth.getSession()).data.session?.access_token
-      const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/brainstorm`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-        body: JSON.stringify({
-          step: 'portfolio-chat',
-          message,
-          history: getApiHistory(historyBase),
-          feeling,
-          projects: sentSummaries,
-          alreadyDiscussed: Array.from(discussedProjectIdsRef.current),
-        }),
-      })
-
-      let data: Record<string, unknown>
-      try { data = await res.json() } catch {
-        setMessages(prev => [...prev, { kind: 'guide', content: 'Lost my train of thought there — try that again?' }])
-        return
-      }
-      if (!res.ok) {
-        console.error('[FocusChat] request failed:', res.status, (data as any)?.error)
-        setMessages(prev => [...prev, { kind: 'guide', content: "Couldn't reach you there — try again?" }])
-        return
-      }
-
-      const rawActions = Array.isArray(data.actions) ? data.actions : []
-      const action = parsePortfolioAction(rawActions[0], knownProjectIds)
-      const taskOp = parsePortfolioTaskOp(data.taskOp, knownProjectsById)
-      // Marked "discussed" only once the user actually applies the
-      // proposal (see the onResolve handlers below) — not here on mere
-      // receipt, so a dismissed suggestion can still resurface later.
-
-      setMessages(prev => [...prev, {
-        kind: 'guide',
-        content: (data.reply as string) || 'Lost my train of thought there — try that again?',
-        action,
-        actionResolved: false,
-        actionDismissed: false,
-        taskOp,
-        taskOpResolved: false,
-        taskOpDismissed: false,
-      }])
-    } catch (err) {
-      console.error('[FocusChat] network error:', err)
-      setMessages(prev => [...prev, { kind: 'guide', content: "Couldn't reach you there — try again?" }])
-    } finally {
-      setThinking(false)
-    }
-  }
-
-  // Takes an explicit message so both the typed-input send and the
-  // one-tap "Keep going" chip (below) share the same request/parse path —
-  // the chip exists so clearing a backlog of several stale projects is a
-  // string of taps, not re-typing "what else" after every single one.
-  const sendMessage = async (message: string) => {
-    if (!message || thinking) return
-    const nextMessages: Message[] = [...messages, { kind: 'you', content: message }]
-    setMessages(nextMessages)
-    await runTurn(message, nextMessages)
-  }
+  const sendMessage = (message: string) => useFocusChatStore.getState().sendMessage(message, portfolioSummaries, feeling)
 
   const handleSend = () => {
     const message = input.trim()
@@ -176,41 +68,20 @@ export function FocusChat() {
     sendMessage(message)
   }
 
-  // Redo the last exchange — drops the guide's last reply and re-asks with
-  // the same user message, so a reply that missed the mark doesn't force
-  // dismissing every card and retyping the whole thing.
-  const regenerate = () => {
-    if (thinking || messages.length === 0) return
-    const last = messages[messages.length - 1]
-    if (last.kind !== 'guide') return
-    const priorUserMsg = [...messages].reverse().find(m => m.kind === 'you')
-    if (!priorUserMsg) return
-    const historyBase = messages.slice(0, -1)
-    setMessages(historyBase)
-    runTurn(priorUserMsg.content, historyBase)
-  }
+  const regenerate = () => useFocusChatStore.getState().regenerate(portfolioSummaries, feeling)
 
   // Loads a previously-sent message back into the input for editing, and
   // drops it (and whatever the guide said in response) from the thread —
   // the only escape from a misunderstood message used to be dismissing its
   // cards and typing the whole thing again from scratch.
   const editMessage = (index: number) => {
-    const msg = messages[index]
-    if (msg.kind !== 'you' || thinking) return
-    setInput(msg.content)
-    setMessages(messages.slice(0, index))
+    const content = useFocusChatStore.getState().editMessage(index)
+    if (content !== null) setInput(content)
   }
 
   const lastUserIndex = messages.reduce((acc, m, i) => (m.kind === 'you' ? i : acc), -1)
 
-  // Flips one flag on a guide message. discussedProjectId (only passed by
-  // the action card) is a real decision made about the project — a taskOp
-  // resolving is just a data fix, so it must not suppress recommending
-  // that project again.
-  const markGuideFlag = (index: number, key: 'taskOpResolved' | 'taskOpDismissed' | 'actionResolved' | 'actionDismissed', discussedProjectId?: string) => {
-    if (discussedProjectId) discussedProjectIdsRef.current.add(discussedProjectId)
-    setMessages(prev => prev.map((m, idx) => (idx === index && m.kind === 'guide') ? { ...m, [key]: true } : m))
-  }
+  const markGuideFlag = useFocusChatStore(s => s.markGuideFlag)
 
   // Blocks start_session on an unresolved same-project taskOp from ANY
   // turn, not just this message — the fix and the "start it" request can
@@ -235,26 +106,20 @@ export function FocusChat() {
     !(lastMessage.action && lastMessage.actionResolved) &&
     !(lastMessage.taskOp && lastMessage.taskOpResolved)
 
-  // Only gate the collapsed pill on live count — once the user has opened
-  // the panel, a confirmed action (e.g. burying a project) can legitimately
-  // drop the count below 2 mid-conversation, and yanking the whole panel
-  // out from under them would lose the transcript and the "Done" state of
-  // the action they just confirmed.
-  if (!expanded && summaries.length < 2) return null
-
-  if (!expanded) {
-    return <FocusChatPill openingLine={openingLine} onOpen={openChat} />
-  }
+  // Nothing to render when the thread isn't open — TodaysAnswerCard is the
+  // only entry point now (its "today's answer" line, chips, and "or steer
+  // it" field all call useFocusChatStore directly).
+  if (!expanded) return null
 
   return (
     <div className="glass-card-strong rounded-2xl p-5 sm:p-6 mb-6">
       <div className="flex items-center gap-2 mb-4">
         <span className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.75 }}>Focus</span>
         <div className="h-px flex-grow" style={{ background: 'rgba(255,255,255,0.1)' }} />
-        <button onClick={() => setExpanded(false)} className="text-[11px] font-medium" style={{ color: 'var(--brand-text-secondary)', opacity: 0.4 }}>Close</button>
+        <button onClick={close} className="text-[11px] font-medium" style={{ color: 'var(--brand-text-secondary)', opacity: 0.4 }}>Close</button>
       </div>
 
-      <div ref={threadRef} className="space-y-4">
+      <div className="space-y-4">
         <AnimatePresence initial={false}>
           {messages.map((msg, i) => (
             <motion.div key={i} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
