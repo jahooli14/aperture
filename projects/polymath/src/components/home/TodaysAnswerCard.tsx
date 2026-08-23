@@ -28,9 +28,10 @@ import { useSessionContextStore } from '../../stores/useSessionContextStore'
 import { useFocusChatStore } from '../../stores/useFocusChatStore'
 import { useProjectIdeasStore, type ProjectIdea } from '../../stores/useProjectIdeasStore'
 import { useStartProjectSession } from '../../hooks/useStartProjectSession'
-import { getTheme, iconForType } from '../../lib/projectTheme'
 import { toPortfolioSummaries, buildOpeningLine } from './focusChatOps'
 import { formatRelativeTime, KeepGoingEmpty } from './KeepGoingEmpty'
+import { ProjectIdeasHome } from './ProjectIdeasHome'
+import { FocusChat } from './FocusChat'
 import { api } from '../../lib/apiClient'
 import { haptic } from '../../utils/haptics'
 import { useToast } from '../ui/toast'
@@ -80,6 +81,7 @@ export function TodaysAnswerCard() {
   const chips = useProjectIdeasStore(s => s.ideas)
   const [resolvingChipId, setResolvingChipId] = useState<string | null>(null)
   const [steerText, setSteerText] = useState('')
+  const [showDeck, setShowDeck] = useState(false)
 
   useEffect(() => {
     if (!focusProject) { setPlan(null); return }
@@ -112,14 +114,21 @@ export function TodaysAnswerCard() {
     void useProjectIdeasStore.getState().load()
   }
 
+  // True once a real conversation exists — the panel switches from
+  // chips-to-tap into the thread itself at that point, using this same
+  // input to keep talking rather than opening a second card underneath
+  // with its own header and its own copy of this exact field.
+  const hasThread = useFocusChatStore(s => s.messages.length > 0)
+
   // Free-text steer hands straight to the existing Focus chat thread
   // rather than a second resolution mechanism — real conversation, the
-  // same one that already knows how to propose, start, or reshape.
+  // same one that already knows how to propose, start, or reshape. Stays
+  // open after sending (this IS the reply box for whatever it asks next),
+  // not collapsed back to a chip list.
   const submitSteer = () => {
     const text = steerText.trim()
     if (!text) return
     setSteerText('')
-    setEngaged(false)
     useFocusChatStore.getState().sendMessage(text, summaries, feeling)
   }
 
@@ -219,10 +228,13 @@ export function TodaysAnswerCard() {
             chipsLoading={chipsLoading}
             resolvingChipId={resolvingChipId}
             onResolveChip={resolveChip}
+            hasThread={hasThread}
             steerText={steerText}
             onSteerTextChange={setSteerText}
             onSubmitSteer={submitSteer}
-            onClose={() => setEngaged(false)}
+            onClose={() => { setEngaged(false); setShowDeck(false); useFocusChatStore.getState().close() }}
+            showDeck={showDeck}
+            onToggleDeck={() => setShowDeck(v => !v)}
           />
         )}
       </div>
@@ -230,8 +242,6 @@ export function TodaysAnswerCard() {
   }
 
   const handleStartSession = () => start({ prefetched: plan })
-  const TypeIcon = iconForType(focusProject.type)
-  const theme = getTheme(focusProject.type || 'other', focusProject.title)
 
   const headline = plan?.task_title || focusProject.metadata?.session_headline
   const pitch = plan?.task_description || focusProject.metadata?.session_pitch
@@ -283,19 +293,6 @@ export function TodaysAnswerCard() {
               {dormancyLabel}
             </span>
           )}
-          <div className="relative flex-shrink-0 mt-0.5">
-            <span
-              aria-hidden
-              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none rounded-full"
-              style={{
-                width: '48px',
-                height: '48px',
-                background: `radial-gradient(circle, rgba(${theme.rgb}, 0.42) 0%, rgba(${theme.rgb}, 0.16) 45%, transparent 75%)`,
-                filter: 'blur(5px)',
-              }}
-            />
-            <TypeIcon className="relative h-[18px] w-[18px]" style={{ color: 'rgba(255, 255, 255, 0.88)' }} strokeWidth={1.75} />
-          </div>
         </div>
         <span
           className="text-[10px] uppercase tracking-[0.32em] font-semibold mb-3 inline-block"
@@ -350,10 +347,13 @@ export function TodaysAnswerCard() {
             chipsLoading={chipsLoading}
             resolvingChipId={resolvingChipId}
             onResolveChip={resolveChip}
+            hasThread={hasThread}
             steerText={steerText}
             onSteerTextChange={setSteerText}
             onSubmitSteer={submitSteer}
-            onClose={() => setEngaged(false)}
+            onClose={() => { setEngaged(false); setShowDeck(false); useFocusChatStore.getState().close() }}
+            showDeck={showDeck}
+            onToggleDeck={() => setShowDeck(v => !v)}
           />
         )}
       </div>
@@ -387,20 +387,26 @@ function SteerPanel({
   chipsLoading,
   resolvingChipId,
   onResolveChip,
+  hasThread,
   steerText,
   onSteerTextChange,
   onSubmitSteer,
   onClose,
+  showDeck,
+  onToggleDeck,
 }: {
   chips: ProjectIdea[]
   chipsLoaded: boolean
   chipsLoading: boolean
   resolvingChipId: string | null
   onResolveChip: (idea: ProjectIdea) => void
+  hasThread: boolean
   steerText: string
   onSteerTextChange: (v: string) => void
   onSubmitSteer: () => void
   onClose: () => void
+  showDeck: boolean
+  onToggleDeck: () => void
 }) {
   return (
     <motion.div
@@ -412,46 +418,62 @@ function SteerPanel({
       style={{ borderTop: '1px solid rgba(255,255,255,0.09)' }}
     >
       <div className="flex items-center justify-between mb-3">
-        <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.7 }}>already noticed</span>
+        <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.7 }}>
+          {hasThread ? 'focus' : 'already noticed'}
+        </span>
         <button onClick={onClose} className="text-[11px] font-medium" style={{ color: 'var(--brand-text-secondary)', opacity: 0.4 }}>Close</button>
       </div>
 
-      {chipsLoading && (
-        <p className="text-xs mb-3" style={{ color: 'var(--brand-text-secondary)', opacity: 0.4 }}>Reading your captures…</p>
-      )}
+      {/* Once a real conversation exists, it replaces the chips entirely —
+          this IS the thread now, rendered in place rather than as a
+          second card underneath with its own header and its own copy of
+          the input below. */}
+      {hasThread ? (
+        <div className="mb-3">
+          <FocusChat onEditMessage={onSteerTextChange} />
+        </div>
+      ) : (
+        <>
+          {chipsLoading && (
+            <p className="text-xs mb-3" style={{ color: 'var(--brand-text-secondary)', opacity: 0.4 }}>Reading your captures…</p>
+          )}
 
-      {!chipsLoading && chipsLoaded && chips.length === 0 && (
-        <p className="text-xs mb-3" style={{ color: 'var(--brand-text-secondary)', opacity: 0.4 }}>Nothing waiting yet — say what you're after below.</p>
-      )}
+          {!chipsLoading && chipsLoaded && chips.length === 0 && (
+            <p className="text-xs mb-3" style={{ color: 'var(--brand-text-secondary)', opacity: 0.4 }}>Nothing waiting yet — say what you're after below.</p>
+          )}
 
-      <AnimatePresence initial={false}>
-        {chips.map(idea => (
-          <motion.button
-            key={idea.id}
-            initial={{ opacity: 0, y: 4 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, height: 0, marginBottom: 0 }}
-            onClick={() => onResolveChip(idea)}
-            disabled={!!resolvingChipId}
-            className="w-full flex items-center gap-2.5 px-4 py-3 rounded-xl mb-2 text-left transition-opacity disabled:opacity-40"
-            style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(var(--brand-primary-rgb),0.2)' }}
-          >
-            <div className="flex-1 min-w-0">
-              <span className="block text-[15px] font-medium line-clamp-1" style={{ color: 'var(--brand-text-primary)' }}>{idea.title}</span>
-              <span className="text-[11px] opacity-60 line-clamp-1" style={{ color: 'var(--brand-text-secondary)' }}>
-                {resolvingChipId === idea.id ? 'Starting…' : (idea.evidence?.[0]?.label || idea.why_now)}
-              </span>
-            </div>
-            <ChevronRight className="h-3.5 w-3.5 opacity-30 flex-shrink-0" style={{ color: 'var(--brand-text-secondary)' }} />
-          </motion.button>
-        ))}
-      </AnimatePresence>
+          <AnimatePresence initial={false}>
+            {chips.map(idea => (
+              <motion.button
+                key={idea.id}
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+                onClick={() => onResolveChip(idea)}
+                disabled={!!resolvingChipId}
+                className="w-full flex items-center gap-2.5 px-4 py-3 rounded-xl mb-2 text-left transition-opacity disabled:opacity-40"
+                style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(var(--brand-primary-rgb),0.2)' }}
+              >
+                <div className="flex-1 min-w-0">
+                  <span className="block text-[15px] font-medium line-clamp-1" style={{ color: 'var(--brand-text-primary)' }}>{idea.title}</span>
+                  <span className="text-[11px] opacity-60 line-clamp-1" style={{ color: 'var(--brand-text-secondary)' }}>
+                    {resolvingChipId === idea.id ? 'Starting…' : (idea.evidence?.[0]?.label || idea.why_now)}
+                  </span>
+                </div>
+                <ChevronRight className="h-3.5 w-3.5 opacity-30 flex-shrink-0" style={{ color: 'var(--brand-text-secondary)' }} />
+              </motion.button>
+            ))}
+          </AnimatePresence>
+        </>
+      )}
 
       <div className="mt-3">
-        <span className="block mb-2 text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--brand-text-secondary)', opacity: 0.4 }}>or steer it</span>
+        {!hasThread && (
+          <span className="block mb-2 text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--brand-text-secondary)', opacity: 0.4 }}>or steer it</span>
+        )}
         <div className="flex items-center gap-2">
           <input
-            placeholder="What's actually got you right now?"
+            placeholder={hasThread ? 'Reply…' : "What's actually got you right now?"}
             value={steerText}
             onChange={e => onSteerTextChange(e.target.value)}
             onFocus={handleInputFocus}
@@ -475,6 +497,30 @@ function SteerPanel({
           </button>
         </div>
       </div>
+
+      {/* The full deck — evidence, mode visuals, hour scope, reject with a
+          reason — lives here now instead of as its own "try something new"
+          section further down the page, which just put a second suggest-
+          a-project pill next to this card's own. One entry point; this is
+          its "go deeper" door, collapsed until asked for. Hidden mid-
+          conversation — one thing to look at while you're talking, not
+          a browsing door left dangling under it. */}
+      {!hasThread && (
+        <div className="mt-4 pt-3" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+          <button
+            onClick={onToggleDeck}
+            className="text-[11px] font-medium"
+            style={{ color: 'var(--brand-text-secondary)', opacity: 0.4 }}
+          >
+            {showDeck ? 'hide the full deck' : 'or browse the full deck →'}
+          </button>
+          {showDeck && (
+            <div className="mt-3">
+              <ProjectIdeasHome />
+            </div>
+          )}
+        </div>
+      )}
     </motion.div>
   )
 }

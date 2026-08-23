@@ -2,18 +2,18 @@
  * ProjectMiniCard — compact two-up card used in the home's project rows.
  *
  * Two variants drive the home's atmospheric stack:
- *   • glass — recent / active. Filled glass surface with accent dot + soft
- *     inner corner vignette in the project's accent colour.
+ *   • glass — recent / active. Filled glass surface.
  *   • ghost — soon / queued. Outline-only. Same anatomy, quieter material —
  *     reads as "further away" without anyone labelling it.
  *
  * Section identity on the home now lives in material, not in headings.
- * The card carries its own framing (accent dot, type icon, mode line).
+ * The card carries its own framing (title + mode line) — no per-type
+ * icon badge; the title and meta line already say what this is without
+ * a decorative glyph repeating it.
  */
 
 import { useNavigate } from 'react-router-dom'
 import { Play } from 'lucide-react'
-import { getTheme, iconForType } from '../../lib/projectTheme'
 import { haptic } from '../../utils/haptics'
 import { useStartProjectSession } from '../../hooks/useStartProjectSession'
 import type { Project } from '../../types'
@@ -34,9 +34,7 @@ export function ProjectMiniCard({
   variant = 'glass',
 }: ProjectMiniCardProps) {
   const navigate = useNavigate()
-  const theme = getTheme(project.type || 'other', project.title)
   const { start, loading } = useStartProjectSession(project.id)
-  const TypeIcon = iconForType(project.type ?? undefined)
 
   const isGhost = variant === 'ghost'
 
@@ -86,29 +84,6 @@ export function ProjectMiniCard({
       )}
 
       <div className="relative z-10 flex flex-col gap-1.5 h-full min-h-[92px]">
-        {/* Top row: type icon sits inside a soft project-coloured halo.
-            The area glows, not the icon — feels like ambient identity
-            instead of a coloured pin. */}
-        <div className="flex items-center justify-end">
-          <div className="relative">
-            <span
-              aria-hidden
-              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none rounded-full"
-              style={{
-                width: '40px',
-                height: '40px',
-                background: `radial-gradient(circle, rgba(${theme.rgb}, 0.38) 0%, rgba(${theme.rgb}, 0.14) 45%, transparent 75%)`,
-                filter: 'blur(4px)',
-              }}
-            />
-            <TypeIcon
-              className="relative h-4 w-4"
-              style={{ color: 'rgba(255, 255, 255, 0.85)' }}
-              strokeWidth={1.75}
-            />
-          </div>
-        </div>
-
         {/* Title — canonical .card-title (serif, full primary). Ghost
             variant used to fade to 0.82 opacity which dropped contrast
             below readable on the outline surface; both variants now share
