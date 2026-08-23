@@ -70,7 +70,7 @@ export function ProjectMiniCard({
     <button
       type="button"
       onClick={() => { haptic.light(); navigate(`/projects/${project.id}`) }}
-      className="group relative w-full text-left transition-all hover:-translate-y-0.5 active:scale-[0.99] overflow-hidden"
+      className="group relative w-full h-full text-left transition-all hover:-translate-y-0.5 active:scale-[0.99] overflow-hidden"
       style={{
         ...surface,
         borderRadius: '18px',

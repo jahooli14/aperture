@@ -11,7 +11,41 @@
 
 import { create } from 'zustand'
 import { supabase } from '../lib/supabase'
-import { parsePortfolioAction, parsePortfolioTaskOp, type PortfolioProjectSummary, type Message } from '../components/home/focusChatOps'
+import { parsePortfolioAction, parsePortfolioTaskOp, parsePortfolioNewProject, type PortfolioProjectSummary, type Message } from '../components/home/focusChatOps'
+import { useMemoryStore } from './useMemoryStore'
+import { useProjectIdeasStore } from './useProjectIdeasStore'
+
+/** What the chat is given about the user beyond the project list.
+ *
+ *  Without this the model could only see project titles and completion
+ *  percentages, so the only observation available to it was "you're at
+ *  90%, want to start?" — which is why every reply sounded the same and
+ *  none of them sounded like it knew anything. */
+function buildCorpus() {
+  const memories = useMemoryStore.getState().memories ?? []
+  const pendingIdeas = useProjectIdeasStore.getState().ideas ?? []
+
+  return {
+    // Recent captures, newest first. Title + a short excerpt is enough for
+    // the model to notice a recurring pull without shipping the whole
+    // corpus on every turn.
+    recentCaptures: memories.slice(0, 12).map(m => ({
+      title: m.title,
+      date: m.created_at,
+      excerpt: (m.body || '').slice(0, 180),
+      themes: m.themes ?? undefined,
+    })),
+    // Already evidence-backed new-project material, generated from the
+    // full corpus by the ideas pipeline. Gives "something new" a real,
+    // grounded answer instead of forcing a reach for an existing project.
+    pendingIdeas: pendingIdeas.map(i => ({
+      id: i.id,
+      title: i.title,
+      pitch: i.pitch,
+      whyNow: i.why_now,
+    })),
+  }
+}
 
 interface FocusChatState {
   expanded: boolean
@@ -21,6 +55,11 @@ interface FocusChatState {
   // backend so a long "Keep going" sweep doesn't re-recommend something
   // already settled, regardless of the capped history sent per turn.
   discussedProjectIds: Set<string>
+  // Turned DOWN this session. Separate from discussed because the failure
+  // mode is different: re-proposing something the user just rejected (and
+  // the live transcript showed it doing exactly that, twice, after
+  // apologising) reads as not listening at all.
+  rejectedProjectIds: Set<string>
 
   open: (openingLine: string) => void
   close: () => void
@@ -33,7 +72,11 @@ interface FocusChatState {
   sendMessage: (message: string, summaries: PortfolioProjectSummary[], feeling: string | null) => Promise<void>
   regenerate: (summaries: PortfolioProjectSummary[], feeling: string | null) => Promise<void>
   editMessage: (index: number) => string | null
-  markGuideFlag: (index: number, key: 'taskOpResolved' | 'taskOpDismissed' | 'actionResolved' | 'actionDismissed', discussedProjectId?: string) => void
+  markGuideFlag: (
+    index: number,
+    key: 'taskOpResolved' | 'taskOpDismissed' | 'actionResolved' | 'actionDismissed' | 'newProjectResolved' | 'newProjectDismissed',
+    opts?: { discussedProjectId?: string; rejectedProjectId?: string },
+  ) => void
 }
 
 const MAX_HISTORY_TURNS = 16
@@ -46,6 +89,7 @@ async function runTurn(
   summaries: PortfolioProjectSummary[],
   feeling: string | null,
   discussedProjectIds: Set<string>,
+  rejectedProjectIds: Set<string>,
 ) {
   const knownProjectIds = new Set(summaries.map(p => p.id))
   const knownProjectsById = new Map(summaries.map(p => [p.id, p]))
@@ -62,6 +106,8 @@ async function runTurn(
         feeling,
         projects: summaries,
         alreadyDiscussed: Array.from(discussedProjectIds),
+        rejectedProjectIds: Array.from(rejectedProjectIds),
+        corpus: buildCorpus(),
       }),
     })
 
@@ -77,16 +123,23 @@ async function runTurn(
     const rawActions = Array.isArray(data.actions) ? data.actions : []
     const action = parsePortfolioAction(rawActions[0], knownProjectIds)
     const taskOp = parsePortfolioTaskOp(data.taskOp, knownProjectsById)
+    const newProject = parsePortfolioNewProject(data.newProject)
 
     return {
       kind: 'guide' as const,
       content: (data.reply as string) || 'Lost my train of thought there — try that again?',
-      action,
+      // One proposal per turn: if the model somehow returns both, the new
+      // project wins — it's the move that only exists when the user has
+      // explicitly asked for something that isn't already in the list.
+      action: newProject ? null : action,
       actionResolved: false,
       actionDismissed: false,
       taskOp,
       taskOpResolved: false,
       taskOpDismissed: false,
+      newProject,
+      newProjectResolved: false,
+      newProjectDismissed: false,
     }
   } catch (err) {
     console.error('[useFocusChatStore] network error:', err)
@@ -99,6 +152,7 @@ export const useFocusChatStore = create<FocusChatState>((set, get) => ({
   messages: [],
   thinking: false,
   discussedProjectIds: new Set(),
+  rejectedProjectIds: new Set(),
 
   // Seeds the thread with the given opening line only if it's still empty —
   // repeat calls (e.g. re-opening after closing) never stomp a live
@@ -109,13 +163,13 @@ export const useFocusChatStore = create<FocusChatState>((set, get) => ({
 
   close: () => set({ expanded: false }),
 
-  reset: () => set({ expanded: false, messages: [], thinking: false, discussedProjectIds: new Set() }),
+  reset: () => set({ expanded: false, messages: [], thinking: false, discussedProjectIds: new Set(), rejectedProjectIds: new Set() }),
 
   sendMessage: async (message, summaries, feeling) => {
     if (!message || get().thinking) return
     const nextMessages: Message[] = [...get().messages, { kind: 'you', content: message }]
     set({ messages: nextMessages, expanded: true, thinking: true })
-    const reply = await runTurn(message, nextMessages, summaries, feeling, get().discussedProjectIds)
+    const reply = await runTurn(message, nextMessages, summaries, feeling, get().discussedProjectIds, get().rejectedProjectIds)
     set(s => ({ messages: [...s.messages, reply], thinking: false }))
   },
 
@@ -128,7 +182,7 @@ export const useFocusChatStore = create<FocusChatState>((set, get) => ({
     if (!priorUserMsg) return
     const historyBase = messages.slice(0, -1)
     set({ messages: historyBase, thinking: true })
-    const reply = await runTurn(priorUserMsg.content, historyBase, summaries, feeling, get().discussedProjectIds)
+    const reply = await runTurn(priorUserMsg.content, historyBase, summaries, feeling, get().discussedProjectIds, get().rejectedProjectIds)
     set(s => ({ messages: [...s.messages, reply], thinking: false }))
   },
 
@@ -142,8 +196,9 @@ export const useFocusChatStore = create<FocusChatState>((set, get) => ({
     return msg.content
   },
 
-  markGuideFlag: (index, key, discussedProjectId) => {
-    if (discussedProjectId) get().discussedProjectIds.add(discussedProjectId)
+  markGuideFlag: (index, key, opts) => {
+    if (opts?.discussedProjectId) get().discussedProjectIds.add(opts.discussedProjectId)
+    if (opts?.rejectedProjectId) get().rejectedProjectIds.add(opts.rejectedProjectId)
     set(s => ({ messages: s.messages.map((m, idx) => (idx === index && m.kind === 'guide') ? { ...m, [key]: true } : m) }))
   },
 }))
