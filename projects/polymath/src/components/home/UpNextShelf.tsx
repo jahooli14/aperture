@@ -84,7 +84,7 @@ export function UpNextShelf() {
       >
         <AnimatePresence initial={false}>
           {displayed.map((project, i) => {
-            const theme = getTheme(project.type || 'other', project.title)
+            const theme = getTheme(project.type || 'other', project.title, project.metadata?.tags)
             const position = i + 1
             return (
               <Reorder.Item

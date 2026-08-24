@@ -58,7 +58,7 @@ A labelled editorial stack, separated by hairline seams:
 1. **Masthead** — "Aperture." wordmark + search + (after 21:30) bedtime icon.
 2. **Today's answer** — `TodaysAnswerCard`, the single output box. One statement, one action ("Start session" → focus overlay), one quiet redirect ("or steer it"). The redirect panel owns BOTH the Focus chat thread and the full idea deck — these used to be separate stacked cards (`KeepGoingCard` + `FocusChat` + `ProjectIdeasHome`) and were merged. `FeelingPill` sits above it feeding session context.
 3. **Everything else** — `EverythingElseMini`, one swipeable row: still-warm projects then queued ones. Replaced the old separate "still warm" / "the queue" grids.
-4. **Worth a look** — `ReviewRotation`. Two or three forgotten projects, reviewed and acted on **in place** (still mine / pick it up / park it) — no navigation. Ordered by shared label with the starred project, so a resurfaced one reads as a building block. Invisible once the batch is clear. See Project review below.
+4. **Worth a look** — `ReviewRotation`. Forgotten projects reviewed and acted on **in place** (pick it up / still mine / park it) — no navigation. **One card at a time**, the rest stacked behind it; an earlier cut showed all three at once, which put nine buttons on home and broke "guide, not menu". Ordered by shared label with the starred project, so a resurfaced one reads as a building block. Invisible once the batch is clear. See Project review below.
 5. **Now consuming** — `ConsumingWidget`. Active list items on top; Saved reads + New reads dropdowns underneath.
 6. **Thought of the day** — `ThoughtOfTheDay`, an editorial pull-quote from a past memory.
 
@@ -109,7 +109,9 @@ Active, partly-shaped, dormant, and abandoned are different states. Long-dormant
 - Every action stamps `metadata.last_reviewed_at`, which sets a `REVIEW_COOLDOWN_DAYS` (21d) rest before the project is eligible again. That's what makes it rotate.
 - **Ordering is what makes it useful:** projects sharing a label with the starred project come first (building blocks for what's already in motion), then longest-untouched. Excluded: the priority project, anything pinned to Up Next, unshaped captures, completed/graveyard.
 - Reasons are **cited or plain** — "Also music, like The Album." when there's a real shared label, otherwise "Untouched 4 months." Never an invented causal story about what recent notes "mean" (the narrative `why_now` anti-pattern).
-- Selection logic is pure (`selectReviewCandidates`) and unit-tested; the IO wrapper (`getReviewQueue`) just fetches and delegates.
+- Selection logic is pure (`selectReviewCandidates`) and unit-tested; the IO wrapper (`getReviewQueue`) just fetches and delegates. Pure view helpers live in `reviewRotationOps.ts` — the `.tsx` imports the API client, which reaches Supabase's build-time constants and so can't be imported under vitest.
+
+**Labels drive colour** (`getTheme` in `projectTheme.ts`). Colour resolves label → legacy `type` → hashed title. A label with its own palette entry (music, art, writing…) uses it; any other label is hashed on the *label*, so every woodwork project comes out the same colour and the page reads as grouped by craft instead of as confetti. Every project card passes `metadata.tags` now. The review card also dims with dormancy (`dormancyFade`, floors at 0.62 — atmosphere, never an accessibility problem).
 
 ### Identity layer
 

@@ -36,7 +36,8 @@ export function ProjectMiniCard({
 }: ProjectMiniCardProps) {
   const navigate = useNavigate()
   const { start, loading } = useStartProjectSession(project.id)
-  const theme = getTheme(project.type || 'other', project.title)
+  const theme = getTheme(project.type || 'other', project.title, project.metadata?.tags)
+  const primaryLabel = project.metadata?.tags?.[0]
 
   const isGhost = variant === 'ghost'
 
@@ -106,8 +107,23 @@ export function ProjectMiniCard({
           </span>
         )}
 
-        {/* Bottom row: refined play glyph in brand-primary, single tone. */}
-        <div className="mt-auto flex items-center justify-end pt-1">
+        {/* Bottom row: the project's first label on the left (it was dead
+            space, and a craft label is what makes the row scannable as
+            groups rather than as forty unrelated titles), play glyph right. */}
+        <div className="mt-auto flex items-center justify-between gap-2 pt-1">
+          {primaryLabel ? (
+            <span
+              className="text-[9px] uppercase tracking-[0.16em] font-semibold px-1.5 py-0.5 rounded-md truncate max-w-[60%]"
+              style={{
+                background: `rgba(${theme.rgb},0.12)`,
+                color: `rgba(${theme.rgb},0.9)`,
+              }}
+            >
+              {primaryLabel}
+            </span>
+          ) : (
+            <span aria-hidden />
+          )}
           <button
             type="button"
             onClick={(e) => { e.stopPropagation(); haptic.medium(); start() }}

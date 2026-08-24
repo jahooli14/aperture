@@ -48,7 +48,7 @@ export function ProjectCard({ project, prominent = false }: { project: Project, 
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const didLongPress = useRef(false)
 
-  const theme = getTheme(project.type ?? '', project.title)
+  const theme = getTheme(project.type ?? '', project.title, project.metadata?.tags)
 
   const handleTouchStart = () => {
     didLongPress.current = false

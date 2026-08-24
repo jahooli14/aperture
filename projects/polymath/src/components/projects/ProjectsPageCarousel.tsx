@@ -41,7 +41,7 @@ function ProjectCard({ project, prominent = false }: { project: Project, promine
   const progress = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0
 
 
-  const theme = getTheme(project.type || 'other', project.title)
+  const theme = getTheme(project.type || 'other', project.title, project.metadata?.tags)
 
   // Long-press reveal for the favourite + up-next buttons. The card is
   // a Link, so we have to suppress the click that follows a long press
