@@ -56,12 +56,13 @@ Polymath is a **creative harness**. The user opens it with willpower to spend on
 A labelled editorial stack, separated by hairline seams:
 
 1. **Masthead** — "Aperture." wordmark + search + (after 21:30) bedtime icon.
-2. **Your priority** — `KeepGoingCard` for the starred project. Pulls a Power Hour plan; "Start session" opens the focus overlay.
-3. **Still warm** — `RecentlyActiveMini`, 2-up glass cards of recently-touched projects.
-4. **The queue** — `UpNextMini`, 2-up ghost cards of projects waiting their turn.
-5. **Try something new** — `ProjectIdeasHome`. Collapsed by default to a quiet "suggest a project" pill. Clicking either reveals a queued idea (instant, baked overnight) or kicks the fast path (~10s).
-6. **Now consuming** — `ConsumingWidget`. Active list items on top; Saved reads + New reads dropdowns underneath.
-7. **Thought of the day** — `ThoughtOfTheDay`, an editorial pull-quote from a past memory.
+2. **Today's answer** — `TodaysAnswerCard`, the single output box. One statement, one action ("Start session" → focus overlay), one quiet redirect ("or steer it"). The redirect panel owns BOTH the Focus chat thread and the full idea deck — these used to be separate stacked cards (`KeepGoingCard` + `FocusChat` + `ProjectIdeasHome`) and were merged. `FeelingPill` sits above it feeding session context.
+3. **Everything else** — `EverythingElseMini`, one swipeable row: still-warm projects then queued ones. Replaced the old separate "still warm" / "the queue" grids.
+4. **Worth a look** — `ReviewRotation`. Two or three forgotten projects, reviewed and acted on **in place** (still mine / pick it up / park it) — no navigation. Ordered by shared label with the starred project, so a resurfaced one reads as a building block. Invisible once the batch is clear. See Project review below.
+5. **Now consuming** — `ConsumingWidget`. Active list items on top; Saved reads + New reads dropdowns underneath.
+6. **Thought of the day** — `ThoughtOfTheDay`, an editorial pull-quote from a past memory.
+
+> "Guide, not menu" — one statement, one action, one quiet way to redirect. Never a question next to two competing buttons. Every section below the answer box is invisible when empty.
 
 ### "Suggest a project" — modes inside `ProjectIdeasHome`
 
@@ -92,6 +93,23 @@ Active, partly-shaped, dormant, and abandoned are different states. Long-dormant
 - **Cliché tech-Twitter projects** — newsletter, podcast, course, tracker app, "directory of," digital garden, second brain, year-of-X challenge, zine that "explores" interests.
 - **Admin disguised as build** — "create a file named X.json," "open settings," "research Y." A real next step uses a tool against a workpiece (cut, drill, flash, commit with named first content, drive, phone).
 - **Narrative why_now** — "the April note about X means Y can finally land" asserts a causal connection that isn't real. why_now must name a specific recent acceleration that genuinely unblocks something.
+
+### Project labels + review rotation
+
+**Labels, not containers.** Projects carry `metadata.tags: string[]` — a field that already existed and was already read by the idea generator (`gather.ts`, `seed-picker.ts`) and the resurface scorer, but had nothing writing to it. `api/_lib/project-tags.ts` fills it. A project can be both `music` and `woodwork`; that overlap is the point. `type` is legacy and is NOT a grouping axis — "creative" labels nothing when every project is creative.
+
+- Vocabulary is **derived from what the user already has**, not a fixed enum. Existing labels are handed to the model as "strongly prefer these" so it reuses rather than minting near-synonyms. Free-text tags rot into forty singletons that group nothing.
+- `normalizeTag` slugifies (lowercase, hyphenated, 2–24 chars) and drops anything that can't reduce to one. A malformed label is worse than a missing one — it becomes a filter matching exactly one project forever.
+- Max 3 labels per project. Backfill is **idempotent** (skips projects that already have labels), so it's safe to re-run and safe on cron. `projects?resource=backfill-tags` POST, plus a 40-project pass in the Vercel daily cron to catch newly-created projects.
+
+**The review rotation** (`api/_lib/project-review.ts` → `ReviewRotation` on home). A few priority projects live in the user's head fine; everything else goes out of sight and stops being able to spark the next thing. A flat list on another page doesn't fix that — nobody opens a list of forty things on purpose.
+
+- **Rotation, not a list.** 2–3 at a time (`REVIEW_BATCH_SIZE`), surfaced on home, one tap each.
+- **Acted on in place.** `still mine` / `pick it up` (→ active) / `park it` (→ dormant). Never navigates — the projects page is for *browsing*, the review finishes where it starts.
+- Every action stamps `metadata.last_reviewed_at`, which sets a `REVIEW_COOLDOWN_DAYS` (21d) rest before the project is eligible again. That's what makes it rotate.
+- **Ordering is what makes it useful:** projects sharing a label with the starred project come first (building blocks for what's already in motion), then longest-untouched. Excluded: the priority project, anything pinned to Up Next, unshaped captures, completed/graveyard.
+- Reasons are **cited or plain** — "Also music, like The Album." when there's a real shared label, otherwise "Untouched 4 months." Never an invented causal story about what recent notes "mean" (the narrative `why_now` anti-pattern).
+- Selection logic is pure (`selectReviewCandidates`) and unit-tested; the IO wrapper (`getReviewQueue`) just fetches and delegates.
 
 ### Identity layer
 
@@ -188,7 +206,7 @@ One workflow dispatches every Vercel cron endpoint. Branches on `github.event.sc
 >
 > **Fix Queue cron is disabled** — the route and API remain so existing drafts stay visible, but no new drafts are generated or executed.
 
-Besides the GitHub Actions table above, Vercel's own cron (`projects/polymath/vercel.json`, Hobby-tier limit of 1 cron) fires `/api/cron/jobs?job=daily` once a day at 21:30 UTC. That single request bundles several more Gemini-calling tasks: stuck-memory reprocessing, bedtime prompts, Power Hour plan, rotting-project detection, embedding maintenance, and (Sundays) capability extraction + drawer digest. It used to also re-run project evolution (same prompt/table as the 08:00 UTC `projects?resource=evolve` above) — removed, since it meant every active project got evolved twice a day.
+Besides the GitHub Actions table above, Vercel's own cron (`projects/polymath/vercel.json`, Hobby-tier limit of 1 cron) fires `/api/cron/jobs?job=daily` once a day at 21:30 UTC. That single request bundles several more Gemini-calling tasks: stuck-memory reprocessing, bedtime prompts, Power Hour plan, rotting-project detection, project labelling (untagged projects only, 40/run), embedding maintenance, and (Sundays) capability extraction + drawer digest. It used to also re-run project evolution (same prompt/table as the 08:00 UTC `projects?resource=evolve` above) — removed, since it meant every active project got evolved twice a day.
 
 Background sync calls (DataSynchronizer): `/api/memories?action=evolution`, `/api/projects?resource=bedtime`, `/api/reading?resource=rss` — these are triggered from the client on internal timers, not by cron, so they are not in the table above. Of those, only `bedtime` can call Gemini, and only if the Vercel daily cron hasn't already generated today's prompts.
 

@@ -21,13 +21,14 @@
  *                          merged into the single carousel the design
  *                          settled on, so priority/warm/queue reads as one
  *                          continuum instead of three separate lists.
- *   3. Worth a look       — ReviewNudge: teaser for the weekly drawer digest
- *                          (evolve proposals for stalled projects). The
- *                          digest itself, plus the full drawer + heat-warmed
- *                          picks, live on the Projects page — this is just
- *                          the pointer so home doesn't let dormant projects
- *                          go unreviewed indefinitely. Self-contained and
- *                          invisible when nothing's unread.
+ *   3. Worth a look       — ReviewRotation: two or three forgotten projects,
+ *                          reviewed and acted on IN PLACE (still mine / pick
+ *                          it up / park it). The projects page is for
+ *                          browsing; the review finishes where it starts.
+ *                          Ordered by shared label with the current priority
+ *                          project, so a resurfaced one reads as a building
+ *                          block rather than a random pick. Self-contained
+ *                          and invisible once the batch is clear.
  *   4. Now consuming     — ConsumingWidget (identity layer + reading drawers)
  *   5. Thought of the day — ThoughtOfTheDay (editorial pull-quote)
  *
@@ -48,7 +49,7 @@ import { SubtleBackground } from '../components/SubtleBackground'
 import { TodaysAnswerCard } from '../components/home/TodaysAnswerCard'
 import { FeelingPill } from '../components/home/FeelingPill'
 import { EverythingElseMini } from '../components/home/EverythingElseMini'
-import { ReviewNudge } from '../components/home/ReviewNudge'
+import { ReviewRotation } from '../components/home/ReviewRotation'
 import { ThoughtOfTheDay } from '../components/home/ThoughtOfTheDay'
 import { ConsumingWidget } from '../components/home/ConsumingWidget'
 import { DeferMount } from '../components/DeferMount'
@@ -248,12 +249,12 @@ export function HomePage() {
             </>
           )}
 
-          {/* Section 3 — Worth a look. Teaser for the weekly drawer digest.
-              Renders its own seam + header + banner and disappears
-              entirely when there's no unread digest, same contract as
-              "everything else" above. */}
+          {/* Section 3 — Worth a look. The review rotation: a few forgotten
+              projects, dealt with here rather than on another page. Renders
+              its own seam + header and disappears entirely once the batch is
+              clear, same contract as "everything else" above. */}
           <motion.div {...stackTransition(3)}>
-            <ReviewNudge />
+            <ReviewRotation />
           </motion.div>
 
           <div className="section-seam" aria-hidden />

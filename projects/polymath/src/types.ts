@@ -588,6 +588,7 @@ export interface ProjectMetadata {
   session_headline?: string // AI-generated headline for Power Hour card (cached)
   session_pitch?: string // AI-generated one-liner pitch for Power Hour card (cached)
   last_promoted?: string // ISO timestamp of last promotion to priority or Up Next — signal for The Moment
+  last_reviewed_at?: string // ISO timestamp of last pass through the home review rotation — sets the cooldown
   [key: string]: any // Allow arbitrary metadata
   // DEPRECATED: next_step field removed - use tasks?.find(t => !t.done)?.text instead
 }

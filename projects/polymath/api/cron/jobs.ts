@@ -24,6 +24,7 @@ import { maintainEmbeddings } from '../_lib/embeddings-maintenance.js'
 import { extractCapabilities } from '../_lib/capabilities-extraction.js'
 import { identifyRottingProjects } from '../_lib/project-maintenance.js'
 import { recomputeHeatForUser } from '../_lib/metabolism.js'
+import { backfillProjectTags } from '../_lib/project-tags.js'
 import webpush from 'web-push'
 
 // Configure web-push (globally or within the handler if needed per-request)
@@ -258,6 +259,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       } catch (error) {
         console.error('[cron/jobs/daily] Rotting projects identification failed:', error)
         results.tasks.rotting_projects = {
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        }
+      }
+
+      // 5b. Label any project that still has none. Idempotent — projects with
+      // labels are skipped — so this just catches whatever was created since
+      // yesterday and keeps the review rotation's shared-label matching sharp.
+      try {
+        console.log('[cron/jobs/daily] Labelling untagged projects...')
+        const tagResult = await backfillProjectTags(supabase, userId, { limit: 40 })
+        results.tasks.project_tags = { success: true, ...tagResult }
+        console.log(`[cron/jobs/daily] Tagged ${tagResult.tagged} project(s)`)
+      } catch (error) {
+        console.error('[cron/jobs/daily] Project tagging failed:', error)
+        results.tasks.project_tags = {
           success: false,
           error: error instanceof Error ? error.message : 'Unknown error'
         }
