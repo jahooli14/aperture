@@ -25,7 +25,7 @@
  * review, and it finishes where it started.
  */
 
-import { forwardRef, useEffect, useState } from 'react'
+import { forwardRef, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import { Check, ArrowRight } from 'lucide-react'
@@ -59,8 +59,12 @@ export function ReviewRotation() {
 
   const [queue, setQueue] = useState<ReviewCandidate[]>([])
   const [batchSize, setBatchSize] = useState(0)
-  const [busy, setBusy] = useState(false)
   const [showDone, setShowDone] = useState(false)
+  // Ids with a write in flight. A ref, not state: it guards re-entry without
+  // re-rendering, and must never gate the NEXT card's buttons — an in-flight
+  // write for the card you just dismissed is not a reason to freeze the one
+  // that replaced it.
+  const inFlight = useRef<Set<string>>(new Set())
 
   useEffect(() => {
     let cancelled = false
@@ -97,9 +101,9 @@ export function ReviewRotation() {
   if (!current && !showDone) return null
 
   const act = async (action: ReviewAction) => {
-    if (!current || busy) return
+    if (!current || inFlight.current.has(current.id)) return
     const acted = current
-    setBusy(true)
+    inFlight.current.add(acted.id)
     haptic.medium()
 
     // Advance immediately. The decision is the user's, not the server's —
@@ -118,7 +122,7 @@ export function ReviewRotation() {
       setShowDone(false)
       setQueue(prev => (prev.some(c => c.id === acted.id) ? prev : [acted, ...prev]))
     } finally {
-      setBusy(false)
+      inFlight.current.delete(acted.id)
     }
   }
 
@@ -131,7 +135,7 @@ export function ReviewRotation() {
         {/* Progress as pips rather than "1 of 3" — the batch is three things,
             not a task counter, and pips don't imply an obligation. */}
         {batchSize > 1 && (
-          <div className="flex items-center gap-1.5 flex-shrink-0" aria-label={`${reviewed} of ${batchSize} reviewed`}>
+          <div className="flex items-center gap-1.5 flex-shrink-0" aria-hidden>
             {Array.from({ length: batchSize }).map((_, i) => (
               <motion.span
                 key={i}
@@ -159,6 +163,16 @@ export function ReviewRotation() {
         </p>
       )}
 
+      {/* Cards swap in place, so without this the whole rotation is silent to
+          a screen reader. Polite: it's never urgent enough to interrupt. */}
+      <p className="sr-only" role="status" aria-live="polite">
+        {current
+          ? `Reviewing ${current.title}. ${reviewed + 1} of ${batchSize}. ${current.reason}`
+          : showDone
+            ? 'Review batch complete.'
+            : ''}
+      </p>
+
       {/* The stack. Height is driven by the front card; the ghosts behind are
           absolutely positioned so they can't push layout around as the queue
           drains. */}
@@ -169,7 +183,6 @@ export function ReviewRotation() {
               key={current.id}
               candidate={current}
               remaining={remaining}
-              busy={busy}
               reduceMotion={!!reduceMotion}
               onOpen={() => { haptic.light(); navigate(`/projects/${current.id}`) }}
               onAct={act}
@@ -210,14 +223,13 @@ export function ReviewRotation() {
 interface ReviewCardProps {
   candidate: ReviewCandidate
   remaining: number
-  busy: boolean
   reduceMotion: boolean
   onOpen: () => void
   onAct: (action: ReviewAction) => void
 }
 
 const ReviewCard = forwardRef<HTMLDivElement, ReviewCardProps>(function ReviewCard(
-  { candidate: c, remaining, busy, reduceMotion, onOpen, onAct },
+  { candidate: c, remaining, reduceMotion, onOpen, onAct },
   ref
 ) {
   // Labels first, legacy type never — a review card is exactly where "creative"
@@ -225,12 +237,20 @@ const ReviewCard = forwardRef<HTMLDivElement, ReviewCardProps>(function ReviewCa
   const theme = getTheme('', c.title, c.tags)
   const fade = dormancyFade(c.days_since_touched)
 
+  // pointerEvents on exit matters: AnimatePresence keeps the outgoing card
+  // mounted while it animates away, so without this its buttons stay tappable
+  // for a few hundred ms — and a tap there would act on the card that just
+  // replaced it, not the one under the finger.
   const enter = reduceMotion
-    ? { initial: { opacity: 0 }, animate: { opacity: 1 }, exit: { opacity: 0 } }
+    ? {
+        initial: { opacity: 0 },
+        animate: { opacity: 1, pointerEvents: 'auto' as const },
+        exit: { opacity: 0, pointerEvents: 'none' as const },
+      }
     : {
         initial: { opacity: 0, y: 18, scale: 0.96 },
-        animate: { opacity: 1, y: 0, scale: 1 },
-        exit: { opacity: 0, y: -14, scale: 0.97 },
+        animate: { opacity: 1, y: 0, scale: 1, pointerEvents: 'auto' as const },
+        exit: { opacity: 0, y: -14, scale: 0.97, pointerEvents: 'none' as const },
       }
 
   return (
@@ -328,12 +348,11 @@ const ReviewCard = forwardRef<HTMLDivElement, ReviewCardProps>(function ReviewCa
           {/* One hero action. The user opened the app with willpower to spend,
               so "pick it up" is the outcome worth encouraging; "still mine" is
               the quiet common answer and "park it" hides at the end. */}
-          <div className="flex items-center gap-2 mt-4">
+          <div className="flex flex-wrap items-center gap-2 mt-4">
             <button
               type="button"
-              disabled={busy}
               onClick={() => onAct('promote')}
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all active:scale-95 disabled:opacity-50"
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all active:scale-95"
               style={{
                 background: `rgba(${theme.rgb},0.18)`,
                 border: `1px solid rgba(${theme.rgb},0.42)`,
@@ -345,9 +364,8 @@ const ReviewCard = forwardRef<HTMLDivElement, ReviewCardProps>(function ReviewCa
             </button>
             <button
               type="button"
-              disabled={busy}
               onClick={() => onAct('keep')}
-              className="px-3 py-2 rounded-xl text-[11px] font-semibold uppercase tracking-wider transition-all active:scale-95 disabled:opacity-50"
+              className="px-3 py-2 rounded-xl text-[11px] font-semibold uppercase tracking-wider transition-all active:scale-95"
               style={{
                 background: 'transparent',
                 border: '1px solid rgba(255,255,255,0.12)',
@@ -358,9 +376,8 @@ const ReviewCard = forwardRef<HTMLDivElement, ReviewCardProps>(function ReviewCa
             </button>
             <button
               type="button"
-              disabled={busy}
               onClick={() => onAct('park')}
-              className="ml-auto text-[11px] font-medium opacity-45 hover:opacity-90 transition-opacity disabled:opacity-25"
+              className="ml-auto text-[11px] font-medium opacity-45 hover:opacity-90 transition-opacity"
               style={{ color: 'var(--brand-text-muted)' }}
             >
               Park it
