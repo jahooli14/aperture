@@ -113,6 +113,12 @@ jobs:
           if [ "$SCHEDULE" = "0 8 * * *" ] || [ "$FORCE" = "true" ]; then
             hit "/api/projects?resource=evolve" &
             hit "/api/utilities?resource=generate-project-ideas" &
+            # Execution rebuild (SPEC.md): today's spark, baked once overnight
+            # so it's instant and offline-available on first open. One morph
+            # proposal max per day, portfolio-wide (rate limit enforced
+            # server-side in morph.ts, not by this schedule).
+            hit "/api/sparks?resource=bake" &
+            hit "/api/proposals?resource=generate-morph" &
           fi
 
           # ── 09:00 UTC daily: Idea Engine review + email digest ────────
@@ -126,6 +132,10 @@ jobs:
           # ── Sunday 08:00 UTC: Polymath drawer digest ─────────────────
           if [ "$SCHEDULE" = "0 8 * * 0" ] || [ "$FORCE" = "true" ]; then
             hit "/api/projects?resource=generate-digest" &
+            # Joints must land before composites are generated from them,
+            # so this pair runs sequentially (no &).
+            hit "/api/proposals?resource=mine-joints"
+            hit "/api/proposals?resource=generate-composite"
           fi
 
           wait

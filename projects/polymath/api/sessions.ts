@@ -275,5 +275,44 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(200).json({ project: data })
   }
 
+  // ─── MIRROR ─────────────────────────────────────────────────────────
+  if (resource === 'mirror') {
+    if (req.method !== 'GET') return res.status(405).json({ error: 'GET required' })
+
+    const { aggregateMonthlyMirror, monthStart } = await import('./_lib/mirror.js')
+    const start = monthStart(new Date())
+
+    const [{ data: sessionsData }, { data: projectsData }] = await Promise.all([
+      supabase
+        .from('sessions')
+        .select('project_id, duration_minutes')
+        .eq('user_id', userId)
+        .gte('started_at', start.toISOString())
+        .not('project_id', 'is', null),
+      supabase.from('projects').select('id, title, state').eq('user_id', userId).neq('state', 'harvested'),
+    ])
+
+    const rows = aggregateMonthlyMirror(sessionsData ?? [], (projectsData ?? []) as any)
+    return res.status(200).json({ month: start.toISOString().slice(0, 7), rows })
+  }
+
+  // ─── BOOK ───────────────────────────────────────────────────────────
+  // "The book needs about two hours. When?" No calendar integration in
+  // v1 -- this just remembers the date so it can open pre-loaded that day.
+  if (resource === 'book') {
+    if (req.method !== 'POST') return res.status(405).json({ error: 'POST required' })
+    const { project_id, when } = req.body || {}
+    if (!project_id || !when) return res.status(400).json({ error: 'project_id and when required' })
+
+    const { error } = await supabase
+      .from('projects')
+      .update({ booked_session_at: when })
+      .eq('id', project_id)
+      .eq('user_id', userId)
+
+    if (error) return res.status(500).json({ error: error.message })
+    return res.status(200).json({ ok: true })
+  }
+
   return res.status(404).json({ error: `Unknown resource: ${resource}` })
 }

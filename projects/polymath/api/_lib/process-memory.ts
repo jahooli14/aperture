@@ -204,6 +204,24 @@ export async function processMemory(memoryId: string): Promise<void> {
       // Module not available — ignore
     }
 
+    // 6c. Fragments: attach this voicing to its best-matching project with a
+    // role (SPEC.md). Fire-and-forget, same discipline as heat bumping —
+    // a fragment failure must never block memory processing.
+    try {
+      const { attachFragmentFromMemory } = await import('./fragments.js')
+      attachFragmentFromMemory(supabase, userId, {
+        id: memoryId,
+        content: `${metadata.summary_title} ${metadata.insightful_body}`,
+        embedding,
+      })
+        .then(attached => {
+          if (attached > 0) logger.info({ memory_id: memoryId }, '🧩 Fragment attached to a project')
+        })
+        .catch(() => {}) // Non-critical
+    } catch {
+      // Module not available — ignore
+    }
+
     // 7. Project genesis detection — find theme clusters with no active project.
     // Non-AI: pure theme clustering, writes 'opportunity' rows into
     // synthesis_insights for the ItemInsightStrip to surface on reader/list pages.

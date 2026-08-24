@@ -9,6 +9,10 @@
  *
  * Voice throughout — the window and the close-out are both spoken, never
  * typed, per "you never write a to-do list."
+ *
+ * Styling follows theme.css's real tokens (--brand-primary-rgb,
+ * --brand-text-secondary, --glass-border-bold) rather than ad hoc CSS
+ * variables, matching TodaysAnswerCard's "Start session" button exactly.
  */
 
 import { useEffect, useRef, useState } from 'react'
@@ -26,16 +30,20 @@ function formatElapsed(seconds: number): string {
 /** Quick taps for the one thing the app can't know. Voice covers anything else. */
 const WINDOW_PRESETS = [20, 60, 120]
 
+const secondaryTextStyle = { color: 'var(--brand-text-secondary)', opacity: 0.7 }
+const borderStyle = { borderColor: 'var(--glass-border-bold)' }
+const primaryButtonStyle = {
+  background: 'rgba(var(--brand-primary-rgb), 0.12)',
+  border: '1px solid rgba(var(--brand-primary-rgb), 0.32)',
+  color: 'rgb(var(--brand-primary-rgb))',
+}
+
 function ReEntry({ project }: { project: Project }) {
   if (!project.last_closeout_text) {
-    return (
-      <p className="text-sm text-[var(--text-secondary,#9a9a9a)]">
-        First session on this one.
-      </p>
-    )
+    return <p className="text-sm" style={secondaryTextStyle}>First session on this one.</p>
   }
   return (
-    <p className="text-sm text-[var(--text-secondary,#9a9a9a)] italic">
+    <p className="text-sm italic" style={secondaryTextStyle}>
       "{project.last_closeout_text}"
     </p>
   )
@@ -46,11 +54,14 @@ function ShapeList({ shapes }: { shapes: SessionShape[] }) {
     <ul className="space-y-2 mt-4">
       {shapes.map((shape, i) => (
         <li key={i} className="flex items-start gap-2 text-sm">
-          <span className="mt-1 h-1.5 w-1.5 rounded-full bg-[var(--accent,#c9a876)] flex-shrink-0" />
+          <span
+            className="mt-1 h-1.5 w-1.5 rounded-full flex-shrink-0"
+            style={{ background: 'rgb(var(--brand-primary-rgb))' }}
+          />
           <span>
             {shape.text}
             {shape.partial && (
-              <span className="text-xs text-[var(--text-tertiary,#777)]"> — a first piece, not the whole thing</span>
+              <span className="text-xs" style={secondaryTextStyle}> — a first piece, not the whole thing</span>
             )}
           </span>
         </li>
@@ -64,7 +75,6 @@ type Phase = 'window' | 'running' | 'closeout' | 'done'
 export function SessionContract({ project, onDone }: { project: Project; onDone: () => void }) {
   const { active, starting, closing, error, startSession, closeSession } = useSessionStore()
   const [phase, setPhase] = useState<Phase>('window')
-  const [windowMinutes, setWindowMinutes] = useState<number | null>(null)
   const [elapsedSec, setElapsedSec] = useState(0)
   const [closeoutText, setCloseoutText] = useState('')
   const [mvsSeedMinutes, setMvsSeedMinutes] = useState<number | null>(null)
@@ -79,17 +89,12 @@ export function SessionContract({ project, onDone }: { project: Project; onDone:
   }, [phase])
 
   const handlePickWindow = async (minutes: number) => {
-    setWindowMinutes(minutes)
     await startSession(project.id, minutes)
     setElapsedSec(0)
     setPhase('running')
   }
 
   const handleStop = () => setPhase('closeout')
-
-  const handleCloseoutTranscript = async (text: string) => {
-    setCloseoutText(text)
-  }
 
   const handleSubmitCloseout = async () => {
     const result = await closeSession(closeoutText, mvsSeedMinutes ?? undefined)
@@ -100,7 +105,7 @@ export function SessionContract({ project, onDone }: { project: Project; onDone:
     return (
       <div className="glass-card p-6 text-center space-y-3">
         <p className="text-base">Logged.</p>
-        <button className="text-sm text-[var(--accent,#c9a876)] underline" onClick={onDone}>
+        <button className="text-sm underline" style={{ color: 'rgb(var(--brand-primary-rgb))' }} onClick={onDone}>
           Close
         </button>
       </div>
@@ -113,16 +118,15 @@ export function SessionContract({ project, onDone }: { project: Project; onDone:
         <p className="text-base">Where'd you get to?</p>
         {active?.askMvsSeed && (
           <div className="space-y-1">
-            <p className="text-sm text-[var(--text-secondary,#9a9a9a)]">
+            <p className="text-sm" style={secondaryTextStyle}>
               How long do you usually need to get going on this?
             </p>
             <div className="flex gap-2">
               {[10, 20, 40].map(m => (
                 <button
                   key={m}
-                  className={`px-3 py-1 rounded-full text-sm border ${
-                    mvsSeedMinutes === m ? 'bg-[var(--accent,#c9a876)] text-black' : 'border-[var(--border,#333)]'
-                  }`}
+                  className="px-3 py-1 rounded-full text-sm border"
+                  style={mvsSeedMinutes === m ? primaryButtonStyle : borderStyle}
                   onClick={() => setMvsSeedMinutes(m)}
                 >
                   {m}m
@@ -131,12 +135,13 @@ export function SessionContract({ project, onDone }: { project: Project; onDone:
             </div>
           </div>
         )}
-        <VoiceInput onTranscript={handleCloseoutTranscript} autoSubmit={false} maxDuration={30} />
+        <VoiceInput onTranscript={setCloseoutText} autoSubmit={false} maxDuration={30} />
         {closeoutText && (
-          <p className="text-sm text-[var(--text-secondary,#9a9a9a)] italic">"{closeoutText}"</p>
+          <p className="text-sm italic" style={secondaryTextStyle}>"{closeoutText}"</p>
         )}
         <button
-          className="w-full py-2 rounded-lg bg-[var(--accent,#c9a876)] text-black text-sm font-medium disabled:opacity-50"
+          className="w-full py-2 rounded-lg text-sm font-medium disabled:opacity-50"
+          style={primaryButtonStyle}
           disabled={closing || !closeoutText}
           onClick={handleSubmitCloseout}
         >
@@ -151,7 +156,7 @@ export function SessionContract({ project, onDone }: { project: Project; onDone:
     return (
       <div className="glass-card p-6 space-y-4">
         <div className="flex items-center justify-between">
-          <span className="text-sm text-[var(--text-secondary,#9a9a9a)]">{project.title}</span>
+          <span className="text-sm" style={secondaryTextStyle}>{project.title}</span>
           <span className="flex items-center gap-1 text-lg tabular-nums">
             <Clock size={16} />
             {formatElapsed(elapsedSec)}
@@ -159,7 +164,8 @@ export function SessionContract({ project, onDone }: { project: Project; onDone:
         </div>
         <ShapeList shapes={active.shapes} />
         <button
-          className="w-full py-2 rounded-lg border border-[var(--border,#333)] text-sm flex items-center justify-center gap-2"
+          className="w-full py-2 rounded-lg border text-sm flex items-center justify-center gap-2"
+          style={borderStyle}
           onClick={handleStop}
         >
           <Square size={14} /> Stop
@@ -174,13 +180,14 @@ export function SessionContract({ project, onDone }: { project: Project; onDone:
       <p className="text-base font-medium">{project.title}</p>
       <ReEntry project={project} />
       <div className="space-y-2">
-        <p className="text-sm text-[var(--text-secondary,#9a9a9a)]">How long have you got?</p>
+        <p className="text-sm" style={secondaryTextStyle}>How long have you got?</p>
         <div className="flex gap-2">
           {WINDOW_PRESETS.map(m => (
             <button
               key={m}
               disabled={starting}
-              className="px-4 py-2 rounded-full text-sm border border-[var(--border,#333)] hover:border-[var(--accent,#c9a876)] disabled:opacity-50"
+              className="px-4 py-2 rounded-full text-sm border disabled:opacity-50"
+              style={borderStyle}
               onClick={() => handlePickWindow(m)}
             >
               {m < 60 ? `${m}m` : `${m / 60}h`}

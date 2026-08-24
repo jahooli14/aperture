@@ -52,6 +52,7 @@ import { EverythingElseMini } from '../components/home/EverythingElseMini'
 import { ReviewRotation } from '../components/home/ReviewRotation'
 import { ThoughtOfTheDay } from '../components/home/ThoughtOfTheDay'
 import { ConsumingWidget } from '../components/home/ConsumingWidget'
+import { AttentionSlot } from '../components/session/AttentionSlot'
 import { DeferMount } from '../components/DeferMount'
 import { UnauthHome } from '../components/onboarding/UnauthHome'
 import { ease, stagger } from '../lib/motion'
@@ -185,6 +186,16 @@ export function HomePage() {
         <div className="home-atmosphere" aria-hidden />
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative" style={{ zIndex: 1 }}>
+
+          {/* Attention budget (SPEC.md, execution rebuild) — at most one of
+              a deferred close-out, the monthly mirror, a composite/morph
+              proposal, or today's spark. Renders nothing most opens.
+              Additive: sits above the untouched old surface below. */}
+          {isAuthenticated && (
+            <motion.div {...stackTransition(0)}>
+              <AttentionSlot />
+            </motion.div>
+          )}
 
           {/* Masthead: bedtime/search actions (right). The mode label lives
               with each section header below ("today's answer", "still warm")

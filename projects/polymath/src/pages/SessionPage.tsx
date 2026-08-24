@@ -12,6 +12,10 @@
  *
  * Also checks for a deferred close-out on mount — a session that ended
  * without a close-out gets asked about here, on next open, per SPEC.md.
+ *
+ * Styling uses theme.css's real tokens (--brand-primary-rgb,
+ * --brand-text-secondary, --glass-border-bold), matching SessionContract
+ * and AttentionSlot.
  */
 
 import { useEffect, useState } from 'react'
@@ -21,6 +25,14 @@ import { useSessionStore } from '../stores/useSessionStore'
 import { SessionContract } from '../components/session/SessionContract'
 import { VoiceInput } from '../components/VoiceInput'
 import type { Project } from '../types'
+
+const secondaryTextStyle = { color: 'var(--brand-text-secondary)', opacity: 0.7 }
+const borderStyle = { borderColor: 'var(--glass-border-bold)' }
+const primaryButtonStyle = {
+  background: 'rgba(var(--brand-primary-rgb), 0.12)',
+  border: '1px solid rgba(var(--brand-primary-rgb), 0.32)',
+  color: 'rgb(var(--brand-primary-rgb))',
+}
 
 function DeferredCloseoutPrompt() {
   const { pendingCloseout, closeoutForPending, dismissPendingCloseout, closing } = useSessionStore()
@@ -34,17 +46,19 @@ function DeferredCloseoutPrompt() {
         You did some time on {pendingCloseout.projects?.title ?? 'a project'} — where'd you get to?
       </p>
       <VoiceInput onTranscript={setText} maxDuration={30} />
-      {text && <p className="text-sm text-[var(--text-secondary,#9a9a9a)] italic">"{text}"</p>}
+      {text && <p className="text-sm italic" style={secondaryTextStyle}>"{text}"</p>}
       <div className="flex gap-2">
         <button
-          className="flex-1 py-2 rounded-lg bg-[var(--accent,#c9a876)] text-black text-sm font-medium disabled:opacity-50"
+          className="flex-1 py-2 rounded-lg text-sm font-medium disabled:opacity-50"
+          style={primaryButtonStyle}
           disabled={closing || !text}
           onClick={() => closeoutForPending(text)}
         >
           Save
         </button>
         <button
-          className="px-4 py-2 rounded-lg border border-[var(--border,#333)] text-sm"
+          className="px-4 py-2 rounded-lg border text-sm"
+          style={borderStyle}
           onClick={dismissPendingCloseout}
         >
           Skip
@@ -67,7 +81,7 @@ function DeclareLive({ projects, onDeclared }: { projects: Project[]; onDeclared
 
   if (projects.length === 0) {
     return (
-      <div className="glass-card p-6 text-sm text-[var(--text-secondary,#9a9a9a)]">
+      <div className="glass-card p-6 text-sm" style={secondaryTextStyle}>
         No projects yet. Capture one first.
       </div>
     )
@@ -82,7 +96,8 @@ function DeclareLive({ projects, onDeclared }: { projects: Project[]; onDeclared
             key={p.id}
             disabled={busy !== null}
             onClick={() => pick(p.id)}
-            className="w-full text-left px-4 py-3 rounded-lg border border-[var(--border,#333)] hover:border-[var(--accent,#c9a876)] disabled:opacity-50"
+            className="w-full text-left px-4 py-3 rounded-lg border disabled:opacity-50"
+            style={borderStyle}
           >
             {p.title}
           </button>
@@ -113,7 +128,7 @@ export function SessionPage() {
 
   return (
     <div className="max-w-md mx-auto px-4 py-8">
-      <button className="text-sm text-[var(--text-secondary,#9a9a9a)] mb-4" onClick={() => navigate('/')}>
+      <button className="text-sm mb-4" style={secondaryTextStyle} onClick={() => navigate('/')}>
         ← Home
       </button>
 
