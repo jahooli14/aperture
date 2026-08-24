@@ -16,7 +16,9 @@
  */
 
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useSessionStore } from '../../stores/useSessionStore'
+import { useProjectStore } from '../../stores/useProjectStore'
 import { VoiceInput } from '../VoiceInput'
 
 const secondaryTextStyle = { color: 'var(--brand-text-secondary)', opacity: 0.7 }
@@ -28,7 +30,7 @@ const primaryButtonStyle = {
 }
 const accentTextStyle = { color: 'rgb(var(--brand-primary-rgb))' }
 
-type SlotKind = 'closeout' | 'mirror' | 'reask' | 'composite' | 'morph' | 'spark' | null
+type SlotKind = 'closeout' | 'mirror' | 'reask' | 'composite' | 'morph' | 'spark' | 'different-thing' | null
 
 interface ReaskSuggestion {
   project_id: string
@@ -267,6 +269,41 @@ function ReaskSlot({ suggestion, onResolved }: { suggestion: ReaskSuggestion; on
   )
 }
 
+/**
+ * The different-thing quota's nudge (SPEC.md). Lowest priority by design —
+ * only ever shown when the spark generator had nothing (silence), and only
+ * from day 20 of the month (different-thing.ts). Encouragement, not a
+ * debt: no streak, no "you missed it" if the month runs out unused.
+ */
+function DifferentThingSlot({ onResolved }: { onResolved: () => void }) {
+  const navigate = useNavigate()
+  const projects = useProjectStore(s => s.projects)
+  const candidates = projects.filter(p => p.state !== 'harvested' && p.state !== 'live').slice(0, 4)
+
+  if (candidates.length === 0) return null
+
+  return (
+    <div className="glass-card p-6 space-y-3">
+      <p className="text-base">An hour on something you wouldn't usually do?</p>
+      <div className="space-y-2">
+        {candidates.map(p => (
+          <button
+            key={p.id}
+            className="w-full text-left px-4 py-2 rounded-lg border text-sm"
+            style={borderStyle}
+            onClick={() => navigate(`/session?project_id=${p.id}&source=different-thing`)}
+          >
+            {p.title}
+          </button>
+        ))}
+      </div>
+      <button className="text-sm underline" style={accentTextStyle} onClick={onResolved}>
+        Not today
+      </button>
+    </div>
+  )
+}
+
 export function AttentionSlot() {
   const { pendingCloseout, checkPendingCloseout, closeoutForPending } = useSessionStore()
   const [kind, setKind] = useState<SlotKind>(null)
@@ -322,6 +359,13 @@ export function AttentionSlot() {
       if (sparkResult?.spark) {
         setSpark(sparkResult.spark)
         setKind('spark')
+        return
+      }
+
+      const quota = await getJson<{ done: boolean; should_nudge: boolean }>('/api/sessions?resource=different-thing-status')
+      if (cancelled) return
+      if (quota?.should_nudge) {
+        setKind('different-thing')
       }
     }
 
@@ -392,6 +436,14 @@ export function AttentionSlot() {
     return (
       <div className="mb-4">
         <SparkSlot spark={spark} onResolved={() => setResolved(true)} />
+      </div>
+    )
+  }
+
+  if (kind === 'different-thing') {
+    return (
+      <div className="mb-4">
+        <DifferentThingSlot onResolved={() => setResolved(true)} />
       </div>
     )
   }

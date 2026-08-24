@@ -333,6 +333,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     })
   }
 
+  // ─── DIFFERENT-THING QUOTA ──────────────────────────────────────────
+  if (resource === 'different-thing-status') {
+    if (req.method !== 'GET') return res.status(405).json({ error: 'GET required' })
+
+    const { monthStart } = await import('./_lib/mirror.js')
+    const { isDifferentThingDoneThisMonth, shouldNudgeDifferentThing } = await import('./_lib/different-thing.js')
+    const start = monthStart(new Date())
+
+    const { data } = await supabase
+      .from('sessions')
+      .select('source, started_at')
+      .eq('user_id', userId)
+      .eq('source', 'different-thing')
+      .gte('started_at', start.toISOString())
+      .limit(1)
+
+    const done = isDifferentThingDoneThisMonth(data ?? [], new Date())
+    return res.status(200).json({ done, should_nudge: shouldNudgeDifferentThing(done) })
+  }
+
   // ─── HARVEST ────────────────────────────────────────────────────────
   // Manual kill, for a project the user explicitly lets go of. Never
   // deletes anything -- fragments and memories stay put, per SPEC.md's

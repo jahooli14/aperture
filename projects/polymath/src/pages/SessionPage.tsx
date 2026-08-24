@@ -19,7 +19,7 @@
  */
 
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useProjectStore } from '../stores/useProjectStore'
 import { useSessionStore } from '../stores/useSessionStore'
 import { SessionContract } from '../components/session/SessionContract'
@@ -109,9 +109,17 @@ function DeclareLive({ projects, onDeclared }: { projects: Project[]; onDeclared
 
 export function SessionPage() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const { projects, fetchProjects } = useProjectStore()
   const { pendingCloseout, checkPendingCloseout } = useSessionStore()
   const [liveProject, setLiveProject] = useState<Project | null | undefined>(undefined)
+
+  // The different-thing quota (SPEC.md) links here as /session?project_id=
+  // X&source=different-thing -- a deliberate override that runs a session
+  // without touching the live-project declaration, so a month's one
+  // different hour doesn't get mistaken for a change of direction.
+  const overrideProjectId = searchParams.get('project_id')
+  const overrideSource = searchParams.get('source') === 'different-thing' ? 'different-thing' : null
 
   useEffect(() => {
     fetchProjects()
@@ -119,6 +127,7 @@ export function SessionPage() {
   }, [])
 
   useEffect(() => {
+    if (overrideProjectId) return // override path resolves its own project below
     if (projects.length === 0 && liveProject === undefined) return
 
     // A project booked for today wins over the declared live project --
@@ -131,9 +140,23 @@ export function SessionPage() {
 
     const live = booked ?? projects.find(p => p.state === 'live') ?? null
     setLiveProject(live)
-  }, [projects])
+  }, [projects, overrideProjectId])
 
   const handleDeclared = () => fetchProjects()
+
+  if (overrideProjectId && overrideSource) {
+    const overrideProject = projects.find(p => p.id === overrideProjectId)
+    return (
+      <div className="max-w-md mx-auto px-4 py-8">
+        <button className="text-sm mb-4" style={secondaryTextStyle} onClick={() => navigate('/')}>
+          ← Home
+        </button>
+        {overrideProject ? (
+          <SessionContract project={overrideProject} source={overrideSource} onDone={() => navigate('/')} />
+        ) : null}
+      </div>
+    )
+  }
 
   return (
     <div className="max-w-md mx-auto px-4 py-8">

@@ -72,7 +72,18 @@ function ShapeList({ shapes }: { shapes: SessionShape[] }) {
 
 type Phase = 'window' | 'running' | 'closeout' | 'done'
 
-export function SessionContract({ project, onDone }: { project: Project; onDone: () => void }) {
+export function SessionContract({
+  project,
+  onDone,
+  source = 'live',
+}: {
+  project: Project
+  onDone: () => void
+  /** 'different-thing' for the monthly quota session -- doesn't touch the
+   *  live-project declaration, just tags the logged session so the mirror
+   *  and the quota check (different-thing.ts) can find it. */
+  source?: 'live' | 'different-thing'
+}) {
   const { active, starting, closing, error, startSession, closeSession } = useSessionStore()
   const [phase, setPhase] = useState<Phase>('window')
   const [elapsedSec, setElapsedSec] = useState(0)
@@ -89,7 +100,7 @@ export function SessionContract({ project, onDone }: { project: Project; onDone:
   }, [phase])
 
   const handlePickWindow = async (minutes: number) => {
-    await startSession(project.id, minutes)
+    await startSession(project.id, minutes, source)
     setElapsedSec(0)
     setPhase('running')
   }
