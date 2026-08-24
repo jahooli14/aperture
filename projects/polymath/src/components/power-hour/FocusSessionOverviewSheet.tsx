@@ -70,7 +70,7 @@ export function FocusSessionOverviewSheet() {
     // system screen. Falls back to the app's brand color if the project
     // hasn't loaded yet (shouldn't happen in practice, but tasks/duration
     // still render fine either way).
-    const theme = project ? getTheme(project.type || 'other', project.title) : null
+    const theme = project ? getTheme(project.type || 'other', project.title, project.metadata?.tags) : null
 
     return (
         <BottomSheet open onOpenChange={(open) => { if (!open) reset() }}>

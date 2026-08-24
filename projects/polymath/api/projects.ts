@@ -19,6 +19,8 @@ import { identifyRottingProjects, generateZebraReport, buryProject, resurrectPro
 import { updateItemConnections } from './_lib/connection-logic.js'
 import { invalidateProjectCache } from './_lib/power-hour-cache.js'
 import { recomputeHeatForUser, DRAWER_STATUSES, MUTATION_MODES, MODES_THAT_RETIRE_PARENT, type MutationMode } from './_lib/metabolism.js'
+import { backfillProjectTags } from './_lib/project-tags.js'
+import { getReviewQueue, actOnReview, REVIEW_BATCH_SIZE, type ReviewAction } from './_lib/project-review.js'
 
 // Validation schema for rating suggestions
 const RateRequestSchema = z.object({
@@ -917,6 +919,66 @@ Return JSON only:
       console.error('[digest-act] error:', error)
       return res.status(500).json({
         error: 'Failed to act on digest',
+        details: error instanceof Error ? error.message : String(error),
+      })
+    }
+  }
+
+  // The review rotation — a few forgotten projects at a time, surfaced on
+  // home and acted on there. The projects page stays a browsing surface;
+  // nobody opens a list of forty things on purpose.
+  if (resource === 'review-queue' && req.method === 'GET') {
+    try {
+      const limit = Math.min(Math.max(Number(req.query.limit) || REVIEW_BATCH_SIZE, 1), 10)
+      const { candidates, anchor } = await getReviewQueue(supabase, userId, limit)
+      return res.status(200).json({ candidates, anchor })
+    } catch (error) {
+      console.error('[review-queue] error:', error)
+      return res.status(500).json({
+        error: 'Failed to load review queue',
+        details: error instanceof Error ? error.message : String(error),
+      })
+    }
+  }
+
+  if (resource === 'review-act' && req.method === 'POST') {
+    try {
+      const { project_id, action } = req.body as { project_id?: string; action?: ReviewAction }
+      if (!project_id || !action) {
+        return res.status(400).json({ error: 'project_id and action required' })
+      }
+      if (!['keep', 'park', 'promote'].includes(action)) {
+        return res.status(400).json({ error: `Unknown action: ${action}` })
+      }
+      if (!UUID_REGEX.test(project_id)) {
+        return res.status(404).json({ error: 'Project not found' })
+      }
+      const result = await actOnReview(supabase, userId, project_id, action)
+      return res.status(200).json(result)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      if (message === 'Project not found') {
+        return res.status(404).json({ error: message })
+      }
+      console.error('[review-act] error:', error)
+      return res.status(500).json({ error: 'Failed to record review', details: message })
+    }
+  }
+
+  // Labels. Idempotent — only touches projects with none, so it's safe to
+  // re-run and safe on the daily cron to catch newly-created projects.
+  if (resource === 'backfill-tags' && req.method === 'POST') {
+    try {
+      const { force, limit } = (req.body || {}) as { force?: boolean; limit?: number }
+      const result = await backfillProjectTags(supabase, userId, {
+        force: !!force,
+        limit: Math.min(Math.max(Number(limit) || 100, 1), 500),
+      })
+      return res.status(200).json({ success: true, ...result })
+    } catch (error) {
+      console.error('[backfill-tags] error:', error)
+      return res.status(500).json({
+        error: 'Failed to backfill tags',
         details: error instanceof Error ? error.message : String(error),
       })
     }

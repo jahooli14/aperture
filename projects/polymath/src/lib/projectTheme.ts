@@ -42,22 +42,39 @@ export const PROJECT_COLORS: Record<string, string> = {
 export const PROJECT_TYPES = ['Writing', 'Tech', 'Art', 'Music', 'Business', 'Creative', 'Learning'] as const
 export type ProjectType = (typeof PROJECT_TYPES)[number]
 
-/**
- * Returns a theme object with border, bg, text, and raw rgb values
- * for a given project type and title. Uses a deterministic hash
- * fallback when the type is not in PROJECT_COLORS.
- */
-export function getTheme(type: string, title: string) {
-  const t = type?.toLowerCase().trim() || ''
-  let rgb = PROJECT_COLORS[t]
-  if (!rgb) {
-    const keys = Object.keys(PROJECT_COLORS).filter(k => k !== 'default')
-    let hash = 0
-    for (let i = 0; i < title.length; i++) {
-      hash = title.charCodeAt(i) + ((hash << 5) - hash)
-    }
-    rgb = PROJECT_COLORS[keys[Math.abs(hash) % keys.length]]
+/** Deterministic colour pick for a string with no entry in PROJECT_COLORS. */
+function hashPick(seed: string): string {
+  const keys = Object.keys(PROJECT_COLORS).filter(k => k !== 'default')
+  let hash = 0
+  for (let i = 0; i < seed.length; i++) {
+    hash = seed.charCodeAt(i) + ((hash << 5) - hash)
   }
+  return PROJECT_COLORS[keys[Math.abs(hash) % keys.length]]
+}
+
+/**
+ * Returns a theme object with border, bg, text, and raw rgb values.
+ *
+ * Colour resolves in order: label → legacy `type` → hashed title.
+ *
+ * Labels win because they're the only one of the three that says what the
+ * project actually IS — `type` defaults to "creative", which describes every
+ * project here and so colours nothing. A label with its own palette entry
+ * (music, art, writing…) uses it; any other label is hashed on the LABEL, not
+ * the title, so every woodwork project comes out the same colour and the home
+ * stack reads as grouped by craft rather than as confetti.
+ */
+export function getTheme(type: string, title: string, tags?: string[]) {
+  const labels = (tags || []).map(t => t?.toLowerCase().trim()).filter(Boolean)
+  const t = type?.toLowerCase().trim() || ''
+
+  let rgb =
+    labels.map(l => PROJECT_COLORS[l]).find(Boolean) ||
+    (labels[0] ? hashPick(labels[0]) : undefined) ||
+    PROJECT_COLORS[t]
+
+  if (!rgb) rgb = hashPick(title)
+
   return {
     border: `rgba(${rgb}, 0.25)`,
     borderColor: `rgba(${rgb}, 0.25)`,

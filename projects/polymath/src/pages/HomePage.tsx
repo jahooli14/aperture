@@ -21,8 +21,16 @@
  *                          merged into the single carousel the design
  *                          settled on, so priority/warm/queue reads as one
  *                          continuum instead of three separate lists.
- *   3. Now consuming     — ConsumingWidget (identity layer + reading drawers)
- *   4. Thought of the day — ThoughtOfTheDay (editorial pull-quote)
+ *   3. Worth a look       — ReviewRotation: two or three forgotten projects,
+ *                          reviewed and acted on IN PLACE (still mine / pick
+ *                          it up / park it). The projects page is for
+ *                          browsing; the review finishes where it starts.
+ *                          Ordered by shared label with the current priority
+ *                          project, so a resurfaced one reads as a building
+ *                          block rather than a random pick. Self-contained
+ *                          and invisible once the batch is clear.
+ *   4. Now consuming     — ConsumingWidget (identity layer + reading drawers)
+ *   5. Thought of the day — ThoughtOfTheDay (editorial pull-quote)
  *
  * Behind everything: a vanishingly subtle vertical wash (.home-atmosphere) —
  * warmer at the top, cooler at the bottom.
@@ -41,6 +49,7 @@ import { SubtleBackground } from '../components/SubtleBackground'
 import { TodaysAnswerCard } from '../components/home/TodaysAnswerCard'
 import { FeelingPill } from '../components/home/FeelingPill'
 import { EverythingElseMini } from '../components/home/EverythingElseMini'
+import { ReviewRotation } from '../components/home/ReviewRotation'
 import { ThoughtOfTheDay } from '../components/home/ThoughtOfTheDay'
 import { ConsumingWidget } from '../components/home/ConsumingWidget'
 import { DeferMount } from '../components/DeferMount'
@@ -240,16 +249,24 @@ export function HomePage() {
             </>
           )}
 
+          {/* Section 3 — Worth a look. The review rotation: a few forgotten
+              projects, dealt with here rather than on another page. Renders
+              its own seam + header and disappears entirely once the batch is
+              clear, same contract as "everything else" above. */}
+          <motion.div {...stackTransition(3)}>
+            <ReviewRotation />
+          </motion.div>
+
           <div className="section-seam" aria-hidden />
 
-          {/* Section 3 — Now consuming. Identity layer.
+          {/* Section 4 — Now consuming. Identity layer.
               Non-article lists in the top strip; Saved reads + New reads
               dropdowns hold articles from the reading queue and RSS feeds.
               Deferred: it fetches the reading queue + RSS on mount, so we
               hold it back until it's near the viewport rather than letting
               it compete with the first paint. */}
           <h2 className="section-header" style={{ margin: '0 0 10px' }}>now <span>consuming</span></h2>
-          <motion.div {...stackTransition(3)}>
+          <motion.div {...stackTransition(4)}>
             <DeferMount minHeight={120}>
               <ConsumingWidget />
             </DeferMount>
@@ -257,10 +274,10 @@ export function HomePage() {
 
           <div className="section-seam" aria-hidden />
 
-          {/* Section 4 — Thought of the day. Component renders its own
+          {/* Section 5 — Thought of the day. Component renders its own
               section-header internally. Deferred for the same reason — it
               fetches a batch of resurfaced memories on mount. */}
-          <motion.div {...stackTransition(4)}>
+          <motion.div {...stackTransition(5)}>
             <DeferMount minHeight={160}>
               <ThoughtOfTheDay />
             </DeferMount>
@@ -268,7 +285,7 @@ export function HomePage() {
 
           {/* Quiet exit to Settings — small, centred, low-contrast.
               Lives at the very bottom so it never competes with content. */}
-          <motion.div {...stackTransition(5)}>
+          <motion.div {...stackTransition(6)}>
             <div className="pt-10 pb-2 flex justify-center">
               <button
                 onClick={() => navigate('/settings')}
