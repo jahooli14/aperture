@@ -280,6 +280,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
       }
 
+      // 5c. Execution rebuild (SPEC.md): seed slots for any project that
+      // still has none. Same idempotent shape as the tag backfill above —
+      // a project with slots is skipped, so this only catches new ones.
+      try {
+        console.log('[cron/jobs/daily] Seeding project slots...')
+        const { backfillProjectSlots } = await import('../_lib/slot-seed.js')
+        const seeded = await backfillProjectSlots(supabase, userId)
+        results.tasks.project_slots = { success: true, seeded }
+        console.log(`[cron/jobs/daily] Seeded slots for ${seeded} project(s)`)
+      } catch (error) {
+        console.error('[cron/jobs/daily] Slot seeding failed:', error)
+        results.tasks.project_slots = {
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        }
+      }
+
       // 6. Maintenance (Embeddings & Capabilities)
       try {
         // Daily: Update embeddings for new/stale items (limit 20)

@@ -136,6 +136,8 @@ jobs:
             # so this pair runs sequentially (no &).
             hit "/api/proposals?resource=mine-joints"
             hit "/api/proposals?resource=generate-composite"
+            # Silent, no-confirmation harvest of drifted + stalled projects.
+            hit "/api/proposals?resource=drift-decay" &
           fi
 
           wait

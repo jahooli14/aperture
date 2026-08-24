@@ -216,11 +216,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   // ─── RETROACTIVE LOGGING ────────────────────────────────────────────
+  // Accepts either explicit {project_id, duration_minutes}, or free text
+  // ("did two hours on the decks last night") which gets parsed into both
+  // via retro-parser.ts. Free text is the real path from the mirror's
+  // "anything missing?" prompt -- a hardcoded duration on whichever
+  // project happens to be live would make the mirror lie in a different
+  // way than the gap it's meant to fix.
   if (resource === 'log-retro') {
     if (req.method !== 'POST') return res.status(405).json({ error: 'POST required' })
-    const { project_id, duration_minutes, closeout_text } = req.body || {}
+    let { project_id, duration_minutes, closeout_text } = req.body || {}
+    const freeText = typeof req.body?.text === 'string' ? req.body.text.trim() : ''
+
+    if ((!project_id || !duration_minutes) && freeText) {
+      const { parseRetroText } = await import('./_lib/retro-parser.js')
+      const parsed = await parseRetroText(supabase, userId, freeText)
+      if (!parsed) {
+        return res.status(200).json({ ok: false, reason: 'could not tell which project or how long' })
+      }
+      project_id = parsed.projectId
+      duration_minutes = parsed.durationMinutes
+      closeout_text = closeout_text || freeText
+    }
+
     if (!project_id || !duration_minutes) {
-      return res.status(400).json({ error: 'project_id and duration_minutes required' })
+      return res.status(400).json({ error: 'project_id and duration_minutes, or text, required' })
     }
 
     const durationMinutes = Math.max(1, Math.round(Number(duration_minutes)))
@@ -273,6 +292,65 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     return res.status(200).json({ project: data })
+  }
+
+  // ─── LIVE-PROJECT RE-ASK ────────────────────────────────────────────
+  // Evidence-driven, not on a timer (SPEC.md): if the last 3 logged
+  // sessions all landed on something other than the declared live
+  // project, ask once whether that's the real live project now. An
+  // accurate declaration is never interrupted -- this only fires when the
+  // user's actual behaviour has quietly diverged from what they said.
+  if (resource === 'live-reask') {
+    if (req.method !== 'GET') return res.status(405).json({ error: 'GET required' })
+
+    const { data: liveProject } = await supabase
+      .from('projects')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('state', 'live')
+      .maybeSingle()
+
+    if (!liveProject) return res.status(200).json({ suggestion: null })
+
+    const { data: recentSessions } = await supabase
+      .from('sessions')
+      .select('project_id, projects(title)')
+      .eq('user_id', userId)
+      .not('project_id', 'is', null)
+      .order('started_at', { ascending: false })
+      .limit(3)
+
+    if (!recentSessions || recentSessions.length < 3) return res.status(200).json({ suggestion: null })
+
+    const allElsewhere = recentSessions.every(s => s.project_id !== liveProject.id)
+    const sameOtherProject = new Set(recentSessions.map(s => s.project_id)).size === 1
+
+    if (!allElsewhere || !sameOtherProject) return res.status(200).json({ suggestion: null })
+
+    const other = recentSessions[0] as any
+    return res.status(200).json({
+      suggestion: { project_id: other.project_id, title: other.projects?.title ?? 'this' },
+    })
+  }
+
+  // ─── HARVEST ────────────────────────────────────────────────────────
+  // Manual kill, for a project the user explicitly lets go of. Never
+  // deletes anything -- fragments and memories stay put, per SPEC.md's
+  // "death is harvest." The automatic, silent version (drift + no recent
+  // capture) is drift-runner.ts, run weekly from proposals.ts's cron.
+  if (resource === 'harvest') {
+    if (req.method !== 'POST') return res.status(405).json({ error: 'POST required' })
+    const { project_id } = req.body || {}
+    if (!project_id) return res.status(400).json({ error: 'project_id required' })
+
+    const { error } = await supabase
+      .from('projects')
+      .update({ state: 'harvested' })
+      .eq('id', project_id)
+      .eq('user_id', userId)
+
+    if (error) return res.status(500).json({ error: error.message })
+    return res.status(200).json({ ok: true })
   }
 
   // ─── MIRROR ─────────────────────────────────────────────────────────

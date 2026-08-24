@@ -24,6 +24,7 @@ import { canMorphProject, anyProjectMorphedToday } from './_lib/morph.js'
 import { considerMorph } from './_lib/morph-generator.js'
 import { getStalledProjects, proposeComposite } from './_lib/composite-generator.js'
 import { mineJoints } from './_lib/joint-miner.js'
+import { runDriftDecay } from './_lib/drift-runner.js'
 
 function getCronUserId(req: VercelRequest): string | null {
   const authHeader = req.headers.authorization
@@ -102,6 +103,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     return res.status(200).json({ proposed: true, project_id: candidate.projectId })
+  }
+
+  // ─── DRIFT DECAY (cron) ─────────────────────────────────────────────
+  // High drift + silence -> let it go, quietly, no confirmation (SPEC.md).
+  // Never touches the live project, and never deletes fragments/memories.
+  if (resource === 'drift-decay') {
+    if (req.method !== 'POST') return res.status(405).json({ error: 'POST required' })
+    const userId = getCronUserId(req)
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' })
+
+    const result = await runDriftDecay(supabase, userId)
+    return res.status(200).json({ harvested: result.harvested.length, project_ids: result.harvested })
   }
 
   // ─── MINE JOINTS (cron) ─────────────────────────────────────────────

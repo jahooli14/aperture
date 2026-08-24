@@ -28,7 +28,12 @@ const primaryButtonStyle = {
 }
 const accentTextStyle = { color: 'rgb(var(--brand-primary-rgb))' }
 
-type SlotKind = 'closeout' | 'mirror' | 'composite' | 'morph' | 'spark' | null
+type SlotKind = 'closeout' | 'mirror' | 'reask' | 'composite' | 'morph' | 'spark' | null
+
+interface ReaskSuggestion {
+  project_id: string
+  title: string
+}
 
 interface MirrorRow {
   project_id: string
@@ -91,14 +96,14 @@ function MirrorSlot({ rows, onDismiss }: { rows: MirrorRow[]; onDismiss: () => v
     if (!missingText.trim()) return onDismiss()
     setSubmitting(true)
     try {
+      // Free text -- the server parses which project and how long via
+      // retro-parser.ts, so a correction like "did 2 hours on the decks
+      // last night" lands on the right project with the right duration,
+      // not a guessed one.
       await fetch('/api/sessions?resource=log-retro', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        // Parsing "did 2 hours on the decks" into project+duration is a
-        // follow-up refinement -- for now this logs against the live
-        // project so the correction isn't lost even if the plumbing to
-        // pick the right project isn't wired yet.
-        body: JSON.stringify({ project_id: rows.find(r => r.is_live)?.project_id, duration_minutes: 60, closeout_text: missingText }),
+        body: JSON.stringify({ text: missingText }),
       })
     } finally {
       setSubmitting(false)
@@ -223,10 +228,50 @@ function SparkSlot({ spark, onResolved }: { spark: Spark; onResolved: () => void
   )
 }
 
+function ReaskSlot({ suggestion, onResolved }: { suggestion: ReaskSuggestion; onResolved: () => void }) {
+  const { declareLive } = useSessionStore()
+  const [busy, setBusy] = useState(false)
+
+  const act = async (accept: boolean) => {
+    setBusy(true)
+    try {
+      if (accept) await declareLive(suggestion.project_id)
+    } finally {
+      setBusy(false)
+      onResolved()
+    }
+  }
+
+  return (
+    <div className="glass-card p-6 space-y-3">
+      <p className="text-base">You've been on {suggestion.title}. Make that the live one?</p>
+      <div className="flex gap-2">
+        <button
+          className="flex-1 py-2 rounded-lg text-sm font-medium disabled:opacity-50"
+          style={primaryButtonStyle}
+          disabled={busy}
+          onClick={() => act(true)}
+        >
+          Yes
+        </button>
+        <button
+          className="flex-1 py-2 rounded-lg border text-sm disabled:opacity-50"
+          style={borderStyle}
+          disabled={busy}
+          onClick={() => act(false)}
+        >
+          No, keep it as is
+        </button>
+      </div>
+    </div>
+  )
+}
+
 export function AttentionSlot() {
   const { pendingCloseout, checkPendingCloseout, closeoutForPending } = useSessionStore()
   const [kind, setKind] = useState<SlotKind>(null)
   const [mirrorRows, setMirrorRows] = useState<MirrorRow[]>([])
+  const [reask, setReask] = useState<ReaskSuggestion | null>(null)
   const [proposal, setProposal] = useState<Proposal | null>(null)
   const [spark, setSpark] = useState<Spark | null>(null)
   const [closeoutText, setCloseoutText] = useState('')
@@ -252,6 +297,14 @@ export function AttentionSlot() {
           markMirrorSeen()
           return
         }
+      }
+
+      const reaskResult = await getJson<{ suggestion: ReaskSuggestion | null }>('/api/sessions?resource=live-reask')
+      if (cancelled) return
+      if (reaskResult?.suggestion) {
+        setReask(reaskResult.suggestion)
+        setKind('reask')
+        return
       }
 
       const proposals = await getJson<{ proposals: Proposal[] }>('/api/proposals?resource=pending')
@@ -315,6 +368,14 @@ export function AttentionSlot() {
     return (
       <div className="mb-4">
         <MirrorSlot rows={mirrorRows} onDismiss={() => setResolved(true)} />
+      </div>
+    )
+  }
+
+  if (kind === 'reask' && reask) {
+    return (
+      <div className="mb-4">
+        <ReaskSlot suggestion={reask} onResolved={() => setResolved(true)} />
       </div>
     )
   }
