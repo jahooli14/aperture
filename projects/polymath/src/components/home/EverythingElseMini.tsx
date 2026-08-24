@@ -29,14 +29,21 @@ export function EverythingElseMini() {
   if (recent.length === 0 && upNext.length === 0) return null
 
   return (
-    <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 snap-x snap-mandatory scrollbar-hide">
+    // scroll-pl-4 matters: with `snap-mandatory`, the browser snaps the
+    // first card's start edge to the SCROLLPORT edge, which ignores
+    // padding-left — so the row's px-4 got eaten and card one sat flush
+    // against the screen. scroll-padding moves the snap line itself.
+    // items-stretch + h-full on the card (not just the wrapper) is what
+    // keeps a 2-line title and a 1-line title the same height; without it
+    // the wrapper stretched but the card inside stayed content-sized.
+    <div className="flex items-stretch gap-3 overflow-x-auto pb-2 -mx-4 px-4 scroll-pl-4 scroll-pr-4 snap-x snap-mandatory scrollbar-hide">
       {recent.map(p => (
-        <div key={p.id} className="flex-shrink-0 w-[70vw] max-w-[260px] snap-start">
+        <div key={p.id} className="flex-shrink-0 w-[70vw] max-w-[260px] snap-start flex">
           <ProjectMiniCard project={p} variant="glass" meta={relative(p.last_active || p.updated_at)} />
         </div>
       ))}
       {upNext.map(p => (
-        <div key={p.id} className="flex-shrink-0 w-[70vw] max-w-[260px] snap-start">
+        <div key={p.id} className="flex-shrink-0 w-[70vw] max-w-[260px] snap-start flex">
           <ProjectMiniCard
             project={p}
             variant="ghost"

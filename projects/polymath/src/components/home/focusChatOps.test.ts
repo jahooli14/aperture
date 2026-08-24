@@ -12,6 +12,7 @@ import {
   type PortfolioProjectSummary,
   parsePortfolioAction,
   parsePortfolioTaskOp,
+  parsePortfolioNewProject,
   isUpNextActionNoOp,
   isSetPriorityNoOp,
   buildOpeningLine,
@@ -181,5 +182,41 @@ describe('buildOpeningLine', () => {
 
   it('never throws on an empty list', () => {
     expect(() => buildOpeningLine([])).not.toThrow()
+  })
+})
+
+describe('parsePortfolioNewProject', () => {
+  it('accepts a well-formed proposal', () => {
+    const parsed = parsePortfolioNewProject({
+      title: 'Modular patch a week',
+      pitch: 'One finished patch every week. Done when there are four recordings.',
+      firstStep: 'Patch a drone and record two minutes of it',
+      reasoning: 'You keep coming back to synths in your notes',
+    })
+    expect(parsed?.title).toBe('Modular patch a week')
+    expect(parsed?.firstStep).toContain('Patch a drone')
+  })
+
+  it('rejects a proposal missing a title or pitch — both reach a real createProject call', () => {
+    expect(parsePortfolioNewProject({ pitch: 'no title here' })).toBeNull()
+    expect(parsePortfolioNewProject({ title: 'no pitch here' })).toBeNull()
+    expect(parsePortfolioNewProject({ title: '   ', pitch: '   ' })).toBeNull()
+  })
+
+  it('rejects non-objects rather than throwing', () => {
+    expect(parsePortfolioNewProject(null)).toBeNull()
+    expect(parsePortfolioNewProject('a string')).toBeNull()
+    expect(parsePortfolioNewProject(undefined)).toBeNull()
+  })
+
+  it('drops blank optional fields instead of passing empty strings through', () => {
+    const parsed = parsePortfolioNewProject({ title: 'T', pitch: 'P', firstStep: '  ', ideaId: '' })
+    expect(parsed?.firstStep).toBeUndefined()
+    expect(parsed?.ideaId).toBeUndefined()
+  })
+
+  it('keeps ideaId so an accepted queue idea can be cleared from the queue', () => {
+    const parsed = parsePortfolioNewProject({ title: 'T', pitch: 'P', ideaId: 'idea-123' })
+    expect(parsed?.ideaId).toBe('idea-123')
   })
 })

@@ -46,6 +46,43 @@ export interface PortfolioAction {
   minutesAvailable?: number
 }
 
+/** A brand-new project the chat wants to start, as opposed to an action on
+ *  one that already exists.
+ *
+ *  This exists because every PortfolioAction requires a projectId that's
+ *  already in the portfolio — so when the user asked for "something new,"
+ *  the model had no legal move that wasn't an existing project, and kept
+ *  mapping the request onto one. That read as not listening; it was
+ *  actually the action vocabulary being incomplete. */
+export interface PortfolioNewProject {
+  title: string
+  pitch: string
+  firstStep?: string
+  reasoning?: string
+  /** Set when this came out of the pending ideas queue rather than being
+   *  described fresh, so accepting it can also clear it from that queue
+   *  instead of leaving a near-duplicate behind. */
+  ideaId?: string
+}
+
+/** Same defensive posture as parsePortfolioAction — this reaches a real
+ *  createProject call once confirmed, so a malformed or empty proposal
+ *  must not get that far. */
+export function parsePortfolioNewProject(raw: unknown): PortfolioNewProject | null {
+  if (!raw || typeof raw !== 'object') return null
+  const a = raw as Record<string, unknown>
+  const title = typeof a.title === 'string' ? a.title.trim() : ''
+  const pitch = typeof a.pitch === 'string' ? a.pitch.trim() : ''
+  if (!title || !pitch) return null
+  return {
+    title,
+    pitch,
+    firstStep: typeof a.firstStep === 'string' && a.firstStep.trim() ? a.firstStep.trim() : undefined,
+    reasoning: typeof a.reasoning === 'string' ? a.reasoning : undefined,
+    ideaId: typeof a.ideaId === 'string' && a.ideaId ? a.ideaId : undefined,
+  }
+}
+
 export function daysSince(dateStr?: string): number {
   if (!dateStr) return 0
   const ms = Date.now() - new Date(dateStr).getTime()
@@ -187,6 +224,13 @@ export type Message =
       taskOp?: PortfolioTaskOp | null
       taskOpResolved?: boolean
       taskOpDismissed?: boolean
+      // Mutually exclusive with `action` in practice (the prompt allows
+      // exactly one proposal per turn), but tracked separately because it
+      // has no projectId to validate against and lands on a different
+      // mutation — creating a project rather than acting on one.
+      newProject?: PortfolioNewProject | null
+      newProjectResolved?: boolean
+      newProjectDismissed?: boolean
     }
   | { kind: 'you'; content: string }
 

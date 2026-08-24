@@ -26,6 +26,7 @@ import {
 } from '../../stores/useProjectStore'
 import { useSessionContextStore } from '../../stores/useSessionContextStore'
 import { useFocusChatStore } from '../../stores/useFocusChatStore'
+import { useHomeAnswerStore } from '../../stores/useHomeAnswerStore'
 import { useProjectIdeasStore, type ProjectIdea } from '../../stores/useProjectIdeasStore'
 import { useStartProjectSession, SESSION_DURATION_MINUTES } from '../../hooks/useStartProjectSession'
 import { toPortfolioSummaries, buildOpeningLine } from './focusChatOps'
@@ -37,6 +38,10 @@ import { haptic } from '../../utils/haptics'
 import { useToast } from '../ui/toast'
 import { handleInputFocus } from '../../utils/keyboard'
 
+// One string for the resting field and the engaged one, so tapping in
+// doesn't swap the question out from under you mid-thought.
+const STEER_PROMPT = "Say what you're actually after…"
+
 export function TodaysAnswerCard() {
   const navigate = useNavigate()
   const { addToast } = useToast()
@@ -47,10 +52,13 @@ export function TodaysAnswerCard() {
   const recentProject = useMostRecentNonPriorityProject()
   const feeling = useSessionContextStore(s => s.feeling)
 
-  // A chip tap creates a project and becomes the new answer in place —
-  // same box, new content — rather than starting a session invisibly out
-  // from under the card.
-  const [overrideProjectId, setOverrideProjectId] = useState<string | null>(null)
+  // A chip tap — or confirming a new-project proposal from inside the
+  // Focus chat thread — creates a project and becomes the new answer in
+  // place, same box, new content, rather than starting a session
+  // invisibly out from under the card. Lives in a shared store because
+  // the chat's confirm card sits three components below this one
+  // (Card → SteerPanel → FocusChat → FocusChatNewProjectCard).
+  const overrideProjectId = useHomeAnswerStore(s => s.overrideProjectId)
   const focusProject = useMemo(
     () => (overrideProjectId && allProjects.find(p => p.id === overrideProjectId)) || priorityProject || recentProject || null,
     [overrideProjectId, allProjects, priorityProject, recentProject],
@@ -65,7 +73,7 @@ export function TodaysAnswerCard() {
   useEffect(() => {
     if (prevPriorityIdRef.current !== priorityProjectId) {
       prevPriorityIdRef.current = priorityProjectId
-      setOverrideProjectId(null)
+      useHomeAnswerStore.getState().clearOverride()
     }
   }, [priorityProjectId])
 
@@ -161,7 +169,7 @@ export function TodaysAnswerCard() {
     try {
       const created = await createProjectFromIdea(idea, createProject)
       setEngaged(false)
-      setOverrideProjectId(created.id)
+      useHomeAnswerStore.getState().setOverride(created.id)
       addToast({
         title: 'Saved to projects',
         description: `"${idea.title}" is now today's answer.`,
@@ -301,8 +309,12 @@ export function TodaysAnswerCard() {
           {formatRelativeTime(focusProject.last_active || focusProject.updated_at)}
         </span>
 
+        {/* The readout below carries no border — it's a passive surface,
+            not something you can act on. Every 1px rectangle at the same
+            weight is what made the page read as a stack of outlined
+            boxes; fill alone separates it from the card behind it. */}
         {answer ? (
-          <div className="p-3 rounded-xl mb-4" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+          <div className="p-3 rounded-xl mb-4" style={{ background: 'rgba(255,255,255,0.045)' }}>
             <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-[var(--brand-text-secondary)] opacity-40 mb-1">
               {headline ? "today's answer" : "what's next"}
             </p>
@@ -370,19 +382,28 @@ export function TodaysAnswerCard() {
   )
 }
 
-/** Resting-state redirect entry: one 2-word label, no icon, matches the
- *  established "or steer it" language from the design pass this was built
- *  from — no sentence explaining what it does. */
+/** Resting-state redirect entry. Deciding what to work on IS the point of
+ *  this card, so the way in has to look like somewhere you can talk —
+ *  a real field with a real prompt, not a dim text link with a chevron
+ *  (which is what it was, and read as a footnote to the answer above it). */
 function SteerRow({ onOpen }: { onOpen: () => void }) {
   return (
-    <button
-      onClick={onOpen}
-      className="w-full mt-5 pt-4 flex items-center justify-between text-left"
-      style={{ borderTop: '1px solid rgba(255,255,255,0.09)' }}
-    >
-      <span className="text-[13px] font-medium" style={{ color: 'var(--brand-text-secondary)', opacity: 0.4 }}>or steer it</span>
-      <ChevronRight className="h-3.5 w-3.5 opacity-30" style={{ color: 'var(--brand-text-secondary)' }} />
-    </button>
+    <div className="mt-5 pt-4" style={{ borderTop: '1px solid rgba(255,255,255,0.09)' }}>
+      <button
+        onClick={onOpen}
+        className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-left transition-all active:scale-[0.995]"
+        style={{
+          background: 'rgba(255,255,255,0.05)',
+          border: '1px solid rgba(var(--brand-primary-rgb),0.28)',
+          boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.07), 0 0 24px -10px rgba(var(--brand-primary-rgb),0.4)',
+        }}
+      >
+        <span className="flex-1 text-[15px]" style={{ color: 'var(--brand-text-secondary)', opacity: 0.5 }}>
+          {STEER_PROMPT}
+        </span>
+        <ArrowUp className="h-4 w-4 flex-shrink-0" strokeWidth={2.5} style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.5 }} />
+      </button>
+    </div>
   )
 }
 
@@ -494,7 +515,7 @@ function SteerPanel({
         )}
         <div className="flex items-center gap-2">
           <input
-            placeholder={hasThread ? 'Reply…' : "What's actually got you right now?"}
+            placeholder={hasThread ? 'Reply…' : STEER_PROMPT}
             value={steerText}
             onChange={e => onSteerTextChange(e.target.value)}
             onFocus={handleInputFocus}

@@ -30,6 +30,7 @@ import { useFocusChatStore } from '../../stores/useFocusChatStore'
 import { toPortfolioSummaries } from './focusChatOps'
 import { FocusChatActionCard } from './FocusChatActionCard'
 import { FocusChatTaskOpCard } from './FocusChatTaskOpCard'
+import { FocusChatNewProjectCard } from './FocusChatNewProjectCard'
 import { UserBubble, RegenerateRow } from '../chat/ChatPrimitives'
 import { ThinkingIndicator } from '../chat/ThinkingIndicator'
 
@@ -83,15 +84,17 @@ export function FocusChat({ onEditMessage }: { onEditMessage: (content: string) 
   const lastMessage = messages[messages.length - 1]
   const lastTurnSettled = !!lastMessage && lastMessage.kind === 'guide' &&
     (!lastMessage.action || lastMessage.actionResolved || lastMessage.actionDismissed) &&
-    (!lastMessage.taskOp || lastMessage.taskOpResolved || lastMessage.taskOpDismissed)
+    (!lastMessage.taskOp || lastMessage.taskOpResolved || lastMessage.taskOpDismissed) &&
+    (!lastMessage.newProject || lastMessage.newProjectResolved || lastMessage.newProjectDismissed)
   const canKeepGoing = !thinking && messages.length > 1 && lastTurnSettled
-  // Regenerating after a real mutation already landed (action/taskOp
-  // resolved, not just dismissed) would only replace the text underneath
-  // an applied change, not undo it — confusing, so it's withheld exactly
-  // then. A merely-dismissed proposal is fair game to redo.
+  // Regenerating after a real mutation already landed (action/taskOp/new
+  // project resolved, not just dismissed) would only replace the text
+  // underneath an applied change, not undo it — confusing, so it's
+  // withheld exactly then. A merely-dismissed proposal is fair game to redo.
   const canRegenerate = !thinking && lastMessage?.kind === 'guide' &&
     !(lastMessage.action && lastMessage.actionResolved) &&
-    !(lastMessage.taskOp && lastMessage.taskOpResolved)
+    !(lastMessage.taskOp && lastMessage.taskOpResolved) &&
+    !(lastMessage.newProject && lastMessage.newProjectResolved)
 
   if (messages.length === 0) return null
 
@@ -108,7 +111,7 @@ export function FocusChat({ onEditMessage }: { onEditMessage: (content: string) 
                     caption floating on the card's bare background. */}
                 <p
                   className="text-[15px] leading-[1.65] whitespace-pre-wrap text-[var(--brand-text-secondary)] rounded-2xl rounded-bl-md px-4 py-3"
-                  style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}
+                  style={{ background: 'rgba(255,255,255,0.045)' }}
                 >
                   {msg.content}
                 </p>
@@ -127,8 +130,23 @@ export function FocusChat({ onEditMessage }: { onEditMessage: (content: string) 
                     resolved={msg.actionResolved}
                     dismissed={msg.actionDismissed}
                     blockedByPendingTaskOp={hasPendingTaskOpFor(msg.action.projectId)}
-                    onResolve={() => markGuideFlag(i, 'actionResolved', msg.action?.projectId)}
-                    onDismiss={() => markGuideFlag(i, 'actionDismissed')}
+                    onResolve={() => markGuideFlag(i, 'actionResolved', { discussedProjectId: msg.action?.projectId })}
+                    // Recording the rejection is what stops the next turn
+                    // re-proposing the very thing just turned down.
+                    onDismiss={() => markGuideFlag(i, 'actionDismissed', { rejectedProjectId: msg.action?.projectId })}
+                  />
+                )}
+                {msg.newProject && (
+                  <FocusChatNewProjectCard
+                    proposal={msg.newProject}
+                    resolved={msg.newProjectResolved}
+                    dismissed={msg.newProjectDismissed}
+                    onResolve={() => markGuideFlag(i, 'newProjectResolved')}
+                    // Same reasoning as the action card's rejectedProjectId —
+                    // without this the model has no way to know this specific
+                    // idea was turned down (dismissing isn't a chat message)
+                    // and can propose the identical one again next turn.
+                    onDismiss={() => markGuideFlag(i, 'newProjectDismissed', { rejectedNewProjectTitle: msg.newProject?.title })}
                   />
                 )}
                 {i === messages.length - 1 && canRegenerate && (
