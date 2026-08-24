@@ -14,6 +14,7 @@ import { Check } from 'lucide-react'
 import { api } from '../../lib/apiClient'
 import { useProjectStore } from '../../stores/useProjectStore'
 import { useProjectIdeasStore } from '../../stores/useProjectIdeasStore'
+import { useHomeAnswerStore } from '../../stores/useHomeAnswerStore'
 import { useToast } from '../ui/toast'
 import { ConfirmButton, DismissButton, ResolvedBadge, DismissedRow, ProposalCard } from '../chat/ChatPrimitives'
 import { type PortfolioNewProject } from './focusChatOps'
@@ -66,9 +67,14 @@ export function FocusChatNewProjectCard({ proposal, resolved, dismissed, onResol
         useProjectIdeasStore.getState().removeIdea(proposal.ideaId)
       }
 
+      // Same override the chip-tap path uses — without this the box above
+      // the thread would keep showing whatever it was showing before this
+      // conversation, with no visible link to the project just created.
+      useHomeAnswerStore.getState().setOverride(created.id)
+
       addToast({
         title: 'Project created',
-        description: `"${proposal.title}" is at the top of your projects.`,
+        description: `"${proposal.title}" is now today's answer.`,
         variant: 'success',
         action: { label: 'Open it', onClick: () => navigate(`/projects/${created.id}`) },
       })

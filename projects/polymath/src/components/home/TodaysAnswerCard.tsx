@@ -26,6 +26,7 @@ import {
 } from '../../stores/useProjectStore'
 import { useSessionContextStore } from '../../stores/useSessionContextStore'
 import { useFocusChatStore } from '../../stores/useFocusChatStore'
+import { useHomeAnswerStore } from '../../stores/useHomeAnswerStore'
 import { useProjectIdeasStore, type ProjectIdea } from '../../stores/useProjectIdeasStore'
 import { useStartProjectSession, SESSION_DURATION_MINUTES } from '../../hooks/useStartProjectSession'
 import { toPortfolioSummaries, buildOpeningLine } from './focusChatOps'
@@ -51,10 +52,13 @@ export function TodaysAnswerCard() {
   const recentProject = useMostRecentNonPriorityProject()
   const feeling = useSessionContextStore(s => s.feeling)
 
-  // A chip tap creates a project and becomes the new answer in place —
-  // same box, new content — rather than starting a session invisibly out
-  // from under the card.
-  const [overrideProjectId, setOverrideProjectId] = useState<string | null>(null)
+  // A chip tap — or confirming a new-project proposal from inside the
+  // Focus chat thread — creates a project and becomes the new answer in
+  // place, same box, new content, rather than starting a session
+  // invisibly out from under the card. Lives in a shared store because
+  // the chat's confirm card sits three components below this one
+  // (Card → SteerPanel → FocusChat → FocusChatNewProjectCard).
+  const overrideProjectId = useHomeAnswerStore(s => s.overrideProjectId)
   const focusProject = useMemo(
     () => (overrideProjectId && allProjects.find(p => p.id === overrideProjectId)) || priorityProject || recentProject || null,
     [overrideProjectId, allProjects, priorityProject, recentProject],
@@ -69,7 +73,7 @@ export function TodaysAnswerCard() {
   useEffect(() => {
     if (prevPriorityIdRef.current !== priorityProjectId) {
       prevPriorityIdRef.current = priorityProjectId
-      setOverrideProjectId(null)
+      useHomeAnswerStore.getState().clearOverride()
     }
   }, [priorityProjectId])
 
@@ -165,7 +169,7 @@ export function TodaysAnswerCard() {
     try {
       const created = await createProjectFromIdea(idea, createProject)
       setEngaged(false)
-      setOverrideProjectId(created.id)
+      useHomeAnswerStore.getState().setOverride(created.id)
       addToast({
         title: 'Saved to projects',
         description: `"${idea.title}" is now today's answer.`,
