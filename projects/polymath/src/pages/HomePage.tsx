@@ -36,6 +36,7 @@ import { useMemoryStore } from '../stores/useMemoryStore'
 import { useContextEngineStore } from '../stores/useContextEngineStore'
 import { useJourneyStore } from '../stores/useJourneyStore'
 import { useAuthContext } from '../contexts/AuthContext'
+import { useKeyboardVisible } from '../hooks/useKeyboardVisible'
 import { SubtleBackground } from '../components/SubtleBackground'
 import { TodaysAnswerCard } from '../components/home/TodaysAnswerCard'
 import { FeelingPill } from '../components/home/FeelingPill'
@@ -45,10 +46,11 @@ import { ConsumingWidget } from '../components/home/ConsumingWidget'
 import { DeferMount } from '../components/DeferMount'
 import { UnauthHome } from '../components/onboarding/UnauthHome'
 import { ease, stagger } from '../lib/motion'
-import { AlertCircle, Search, Moon, Settings } from 'lucide-react'
+import { AlertCircle, Search, Moon, Settings, ChevronDown } from 'lucide-react'
 
 export function HomePage() {
   const { isAuthenticated } = useAuthContext()
+  const isKeyboardVisible = useKeyboardVisible()
   const navigate = useNavigate()
   const fetchProjects = useProjectStore(s => s.fetchProjects)
   const projects = useProjectStore(s => s.projects)
@@ -279,6 +281,42 @@ export function HomePage() {
             </div>
           </motion.div>
 
+        </div>
+
+        {/* Pairs with the top box's own "or steer it" language: that card
+            is the shape-a-session half of the screen; the ⊕ fixed at the
+            bottom is the other half — capture, always on, no card needed.
+            Purely a label pointing at a button that already works, so it's
+            decorative (aria-hidden, no pointer events) and sits well clear
+            of the FAB's own halo (safe-area + ~5.7rem at most) rather than
+            trying to touch it. Hidden with the keyboard, same as the FAB
+            it's labelling. */}
+        <div
+          className="fixed left-1/2 -translate-x-1/2 z-40 pointer-events-none flex flex-col items-center gap-1 transition-opacity duration-200"
+          style={{
+            bottom: 'calc(var(--safe-area-inset-bottom, 20px) + 7.25rem)',
+            opacity: isKeyboardVisible ? 0 : 1,
+          }}
+          aria-hidden
+        >
+          <span
+            className="text-[10px] uppercase tracking-[0.24em] font-semibold px-3 py-1 rounded-full"
+            style={{
+              color: 'var(--brand-text-secondary)',
+              opacity: 0.55,
+              background: 'rgba(15,24,41,0.55)',
+              backdropFilter: 'blur(8px)',
+              WebkitBackdropFilter: 'blur(8px)',
+            }}
+          >
+            or capture something new
+          </span>
+          <motion.div
+            animate={{ y: [0, 3, 0] }}
+            transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
+          >
+            <ChevronDown className="h-3.5 w-3.5" style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.6 }} />
+          </motion.div>
         </div>
       </div>
     </motion.div>
