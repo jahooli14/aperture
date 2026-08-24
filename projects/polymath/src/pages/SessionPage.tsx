@@ -120,7 +120,16 @@ export function SessionPage() {
 
   useEffect(() => {
     if (projects.length === 0 && liveProject === undefined) return
-    const live = projects.find(p => p.state === 'live') ?? null
+
+    // A project booked for today wins over the declared live project --
+    // that's the whole point of booking (SPEC.md): "the app stores the
+    // intended date and time, and on that day opens pre-loaded with the
+    // project, warm, first item ready." Booking a big block only pays off
+    // if the app actually honours it without asking again.
+    const today = new Date().toISOString().slice(0, 10)
+    const booked = projects.find(p => p.booked_session_at?.slice(0, 10) === today && p.state !== 'harvested')
+
+    const live = booked ?? projects.find(p => p.state === 'live') ?? null
     setLiveProject(live)
   }, [projects])
 
