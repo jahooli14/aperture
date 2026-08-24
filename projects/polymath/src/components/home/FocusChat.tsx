@@ -142,7 +142,11 @@ export function FocusChat({ onEditMessage }: { onEditMessage: (content: string) 
                     resolved={msg.newProjectResolved}
                     dismissed={msg.newProjectDismissed}
                     onResolve={() => markGuideFlag(i, 'newProjectResolved')}
-                    onDismiss={() => markGuideFlag(i, 'newProjectDismissed')}
+                    // Same reasoning as the action card's rejectedProjectId —
+                    // without this the model has no way to know this specific
+                    // idea was turned down (dismissing isn't a chat message)
+                    // and can propose the identical one again next turn.
+                    onDismiss={() => markGuideFlag(i, 'newProjectDismissed', { rejectedNewProjectTitle: msg.newProject?.title })}
                   />
                 )}
                 {i === messages.length - 1 && canRegenerate && (

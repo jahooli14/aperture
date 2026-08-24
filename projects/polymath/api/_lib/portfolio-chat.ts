@@ -100,6 +100,12 @@ export async function handlePortfolioChat(
      *  separate from alreadyDiscussed because the failure is worse:
      *  re-offering something just rejected reads as not listening. */
     rejectedProjectIds?: string[]
+    /** Titles of `newProject` proposals the user has dismissed this
+     *  session. Dismissing isn't a chat message, so without this the model
+     *  has no way to see a new-project idea was turned down and can
+     *  propose the identical one again next turn — the newProject
+     *  equivalent of rejectedProjectIds. */
+    rejectedNewProjectTitles?: string[]
     corpus?: PortfolioCorpus
   },
   _userId: string
@@ -109,7 +115,7 @@ export async function handlePortfolioChat(
   taskOp: PortfolioTaskOpPayload | null
   newProject: PortfolioNewProjectPayload | null
 }> {
-  const { message, history = [], feeling, projects = [], alreadyDiscussed = [], rejectedProjectIds = [], corpus = {} } = body
+  const { message, history = [], feeling, projects = [], alreadyDiscussed = [], rejectedProjectIds = [], rejectedNewProjectTitles = [], corpus = {} } = body
 
   if (!message) {
     throw Object.assign(new Error('message is required'), { status: 400 })
@@ -178,6 +184,7 @@ ${projectBlock}
 ${captureBlock ? `\nWHAT THEY'VE BEEN CAPTURING LATELY (their own voice notes — this is what you actually know about them, use it):\n${captureBlock}\n` : ''}${ideaBlock ? `\nNEW PROJECT IDEAS ALREADY WAITING FOR THEM (built from their captures — these are real options when they want something new, not filler):\n${ideaBlock}\n` : ''}${feeling ? `\nHOW THEY'RE FEELING RIGHT NOW: ${feeling}` : ''}
 ${discussedTitles.length > 0 ? `\nALREADY COVERED THIS SESSION — don't re-recommend these unless they explicitly ask to revisit one: ${discussedTitles.map(t => `"${t}"`).join(', ')}` : ''}
 ${rejectedTitles.length > 0 ? `\nTHEY TURNED THESE DOWN THIS SESSION — do NOT offer any of them again, in any form, for any reason: ${rejectedTitles.map(t => `"${t}"`).join(', ')}` : ''}
+${rejectedNewProjectTitles.length > 0 ? `\nTHEY TURNED DOWN THESE NEW PROJECT IDEAS THIS SESSION — do NOT propose any of them again, in any form, for any reason, even reworded: ${rejectedNewProjectTitles.map(t => `"${t}"`).join(', ')}` : ''}
 
 ═══════════════════════════════════════════════════════════════════
 YOUR JOBS — IN ORDER
