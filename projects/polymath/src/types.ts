@@ -536,6 +536,15 @@ export interface Project {
   abandoned_reason?: 'time' | 'energy' | 'interest' | 'external' | 'wrong_goal'
   post_mortem?: any
   would_restart?: boolean
+
+  // Execution rebuild (SPEC.md) — supersedes is_priority as the source of
+  // truth for what's being worked on. is_priority stays for the old home
+  // surface until it's retired.
+  state?: 'live' | 'on-deck' | 'mull' | 'harvested'
+  mvs_minutes?: number | null // minimum viable session, learned from real sessions
+  last_closeout_text?: string | null // re-entry playback for the next session
+  last_session_ended_at?: string | null
+  slots?: Array<{ name: string; filled: boolean; filled_by_fragment_id?: string | null }>
 }
 
 export type ProjectStatus = 'upcoming' | 'active' | 'dormant' | 'completed' | 'on-hold' | 'maintaining' | 'archived' | 'abandoned' | 'graveyard'

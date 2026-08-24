@@ -448,8 +448,12 @@ than ten good ones earn.
 `ReviewRotation`, `ProjectIdeasHome`, `FocusChat`, `ThoughtOfTheDay`, `FeelingPill`.
 Their jobs are absorbed by the session contract and the spark channel.
 
-**Retired** — Fix Queue (cron already off), bedtime prompts, Power Hour, cognitive
-replay, the Context Engine sidebar.
+**Retired** — Fix Queue (cron already off), Power Hour, cognitive replay, the Context
+Engine sidebar.
+
+**Kept as-is, outside this rebuild** — bedtime prompts. Different job (priming
+overnight thinking before sleep, not daytime execution) and the owner still wants it.
+Leave `BedtimeFloatingIcon`, `BedtimePage`, and the bedtime cron path untouched.
 
 **Kept and reused** — capture and transcription, embeddings, project labels, lists and
 reading (the identity layer, and the bridge for outside-reach sparks), the offline stack,
@@ -465,6 +469,10 @@ the review rotation becomes the live-project re-ask.
 1. **Session contract** — first-run declaration, window, 1–3 list, timer up, close-out
    (including the deferred close-out at next open). Offline-first. Nothing else works
    without `last_stopped_at`, and this alone has to be worth opening the app for.
+   **Migration:** all existing projects default to `state = 'mull'`. `is_priority`
+   is not auto-mapped to `live` — the user makes a fresh declaration on first run,
+   per "the app never picks it." Old projects don't need to feel pre-sorted; the
+   whole point is a clean re-entry into the new model.
 2. **Retroactive logging + the mirror** — early, because it's the only honest scoreboard
    and it needs months of data before it says anything.
 3. **Session shapes + MVS** — derivation, seeding question, measured replacement, booking
