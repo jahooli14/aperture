@@ -102,7 +102,7 @@ function MirrorSlot({ rows, onDismiss }: { rows: MirrorRow[]; onDismiss: () => v
       // retro-parser.ts, so a correction like "did 2 hours on the decks
       // last night" lands on the right project with the right duration,
       // not a guessed one.
-      await fetch('/api/sessions?resource=log-retro', {
+      await fetch('/api/utilities?resource=log-retro', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: missingText }),
@@ -154,7 +154,7 @@ function ProposalSlot({ proposal, onResolved }: { proposal: Proposal; onResolved
   const act = async (action: 'accept' | 'reject') => {
     setBusy(true)
     try {
-      await fetch(`/api/proposals?resource=${action}`, {
+      await fetch(`/api/utilities?resource=${action}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ proposal_id: proposal.id }),
@@ -201,7 +201,7 @@ function SparkSlot({ spark, onResolved }: { spark: Spark; onResolved: () => void
     if (!text.trim()) return
     setSubmitting(true)
     try {
-      await fetch('/api/sparks?resource=respond', {
+      await fetch('/api/utilities?resource=respond', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ spark_id: spark.id, response_text: text }),
@@ -326,7 +326,7 @@ export function AttentionSlot() {
       }
 
       if (!mirrorSeenThisMonth()) {
-        const mirror = await getJson<{ rows: MirrorRow[] }>('/api/sessions?resource=mirror')
+        const mirror = await getJson<{ rows: MirrorRow[] }>('/api/utilities?resource=mirror')
         if (cancelled) return
         if (mirror && mirror.rows.length > 0) {
           setMirrorRows(mirror.rows)
@@ -336,7 +336,7 @@ export function AttentionSlot() {
         }
       }
 
-      const reaskResult = await getJson<{ suggestion: ReaskSuggestion | null }>('/api/sessions?resource=live-reask')
+      const reaskResult = await getJson<{ suggestion: ReaskSuggestion | null }>('/api/utilities?resource=live-reask')
       if (cancelled) return
       if (reaskResult?.suggestion) {
         setReask(reaskResult.suggestion)
@@ -344,7 +344,7 @@ export function AttentionSlot() {
         return
       }
 
-      const proposals = await getJson<{ proposals: Proposal[] }>('/api/proposals?resource=pending')
+      const proposals = await getJson<{ proposals: Proposal[] }>('/api/utilities?resource=pending')
       if (cancelled) return
       if (proposals && proposals.proposals.length > 0) {
         const composite = proposals.proposals.find(p => p.kind === 'composite')
@@ -354,7 +354,7 @@ export function AttentionSlot() {
         return
       }
 
-      const sparkResult = await getJson<{ spark: Spark | null }>('/api/sparks?resource=today')
+      const sparkResult = await getJson<{ spark: Spark | null }>('/api/utilities?resource=today')
       if (cancelled) return
       if (sparkResult?.spark) {
         setSpark(sparkResult.spark)
@@ -362,7 +362,7 @@ export function AttentionSlot() {
         return
       }
 
-      const quota = await getJson<{ done: boolean; should_nudge: boolean }>('/api/sessions?resource=different-thing-status')
+      const quota = await getJson<{ done: boolean; should_nudge: boolean }>('/api/utilities?resource=different-thing-status')
       if (cancelled) return
       if (quota?.should_nudge) {
         setKind('different-thing')
