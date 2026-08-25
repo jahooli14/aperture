@@ -22,6 +22,7 @@ This file is the **single source of truth** for working on this repo. If somethi
 | **Idea Engine** | `projects/polymath/api/_lib/idea-engine-v2/` | Active | Evolutionary ideation system — emails a curated daily digest of frontier-of-human-knowledge ideas. Not part of Polymath's product surface (don't conflate with Polymath's home feed). TypeScript, lives inside the polymath API — see Cron section below. |
 | **Golf Masters** | `projects/golf-masters/` | Active | Masters pool tracker with live ESPN scores |
 | **Heart Recovery** | `projects/heart-recovery/` | Active | Day-by-day post-heart-attack (stent/PCI) recovery guide — single user, no backend, localStorage only |
+| **Relay** | `projects/relay/` | Active | Write a story with friends, a line at a time. PWA + web push. Up to 10 writers per story. |
 | **Fix Queue** | `projects/polymath/` (feature) | **Needs review** — owner doesn't actively use this; code may still be running. Don't extend without checking. |
 
 > **Sonically Sound** ships from outside this repo.
@@ -126,6 +127,61 @@ Lists + reading queue + recent highlights are framing inputs. Same project surfa
 1. **List-item / reading reaction tags** — one tap per item: "inspired me" / "felt off" / "made me want to make X." Sharpens the identity signal beyond "added to list."
 2. **Post-Keep-Going capture** — after a focus session ends, prompt "what did you do? what's next?" A 30-second voice note feeds project freshness + cooldowns.
 
+## Relay
+
+Line-by-line collaborative stories. Started as a WhatsApp thread with Ben, moved
+to Signal, now its own PWA. One person writes a line, the next person writes the
+next one.
+
+**The notification is the product.** Signal's notifications are why the thread
+survived. If Relay's "your turn" push is worse than Signal's, it dies. Every
+other feature is downstream of that working.
+
+### Shape
+
+- **Turn modes.** `rotation` is a strict queue (right for two people). `open`
+  lets anyone but the last writer go (right for a group, where a strict queue
+  stalls the moment someone's on holiday). Any member can **skip** a stalled
+  turn — a rotation that can wedge is worse than no rotation.
+- **Whose turn it is** is resolved by a database trigger in the same transaction
+  as the line that changes it, never recomputed in the client. Pure helpers in
+  `api/_lib/turns.ts` are unit-tested and shared with the UI.
+- **Two views of the same thread.** `thread` shows who wrote what and when.
+  `read` drops attribution and runs the lines together as prose — that's the
+  reason to leave a chat app.
+- **Chapters** are marked by the writer on the line that opens one. The story
+  already did this in prose ("Chapter 2.", "III: When in Rome"); this makes it
+  navigable.
+- **No AI writes or suggests lines.** Ever. The whole point is that it's the two
+  of you. Derived stats only — counts, gaps, chapters, all from the lines
+  themselves. Never an invented story about what a gap "means".
+
+### Setup
+
+Relay shares a Supabase project with another Aperture app — it lives in its own
+`relay` schema rather than needing a free-tier slot of its own.
+
+1. Run `projects/relay/supabase/migrations/0001_relay.sql`.
+2. Supabase dashboard → **Settings → API → Exposed schemas** → add `relay`.
+   PostgREST can't see the tables otherwise.
+3. `npx web-push generate-vapid-keys`, then set `VAPID_PUBLIC_KEY`,
+   `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` in Vercel. Without them the app works
+   but notifications are off.
+4. Seed the existing story:
+   `npm run seed -- --dan=you@example.com --ben=ben@example.com`
+   Add `--start=YYYY-MM-DD` to spread the line timestamps across the real run of
+   the thread; without it every line is stamped at insert time.
+
+Auth is Supabase magic link — no passwords. Env vars: `.env.example` in the
+project folder (it's force-added past the root `.gitignore`).
+
+### iOS caveat
+
+Web push on iPhone only works once the PWA is installed to the home screen
+(Share → Add to Home Screen, iOS 16.4+). A Safari tab gets nothing, and Safari
+can silently drop the subscription. `NotificationToggle` detects this and says
+so rather than failing quietly.
+
 ## Commands
 
 Each project is its own npm workspace — `cd projects/<name>` first, then:
@@ -133,10 +189,10 @@ Each project is its own npm workspace — `cd projects/<name>` first, then:
 ```bash
 npm run dev                  # all JS projects
 npm run build                # all JS projects (run before pushing)
-npm test                     # polymath, wizard-of-oz (vitest)
+npm test                     # polymath, wizard-of-oz, relay (vitest)
 npm test -- <pattern>        # run a single test file
 npm run lint                 # polymath (eslint src/ api/), analogue (eslint .)
-npm run type-check           # polymath only (tsc --noEmit)
+npm run type-check           # polymath, relay (tsc)
 ```
 
 `projects/polymath/` also wraps as an Android app via Capacitor — see `build-android.sh`.

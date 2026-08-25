@@ -1,0 +1,69 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --paper: 251 248 243;
+  --card: 255 253 250;
+  --ink: 26 24 21;
+  --muted: 107 101 92;
+  --rule: 229 223 212;
+  --accent: 181 118 42;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: 22 21 15;
+    --card: 31 29 24;
+    --ink: 238 233 224;
+    --muted: 154 147 135;
+    --rule: 56 52 45;
+    --accent: 214 156 79;
+  }
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-paper text-ink font-sans antialiased;
+    /* Home-screen PWAs sit under the notch and over the home indicator. */
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom)
+      env(safe-area-inset-left);
+  }
+
+  /* The story is meant to be read, so it gets real book typography. */
+  .prose-story p {
+    @apply font-story text-[1.0625rem] leading-[1.7];
+  }
+}
+
+@layer components {
+  .surface {
+    @apply bg-card border border-rule rounded-xl;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm
+      font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed;
+  }
+
+  .btn-primary {
+    @apply btn bg-ink text-paper hover:opacity-90;
+  }
+
+  .btn-quiet {
+    @apply btn border border-rule text-ink hover:bg-paper;
+  }
+
+  .field {
+    @apply w-full rounded-lg border border-rule bg-card px-3.5 py-2.5 text-[16px]
+      text-ink placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-accent/40;
+  }
+
+  .label {
+    @apply block text-xs font-medium uppercase tracking-wider text-muted mb-1.5;
+  }
+}
