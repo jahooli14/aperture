@@ -167,13 +167,21 @@ Relay shares a Supabase project with another Aperture app — it lives in its ow
 3. `npx web-push generate-vapid-keys`, then set `VAPID_PUBLIC_KEY`,
    `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` in Vercel. Without them the app works
    but notifications are off.
-4. Seed the existing story:
-   `npm run seed -- --dan=you@example.com --ben=ben@example.com`
-   Add `--start=YYYY-MM-DD` to spread the line timestamps across the real run of
-   the thread; without it every line is stamped at insert time.
+4. Seed the existing story, either way round:
+   - **No terminal:** paste `supabase/seed-pasco.sql` into the SQL editor after
+     both writers have signed in once. Three variables at the top to edit.
+   - **Terminal:** `npm run seed -- --dan=you@example.com --ben=ben@example.com`,
+     plus `--start=YYYY-MM-DD` to spread the line timestamps.
+   Both are idempotent and both leave the turn with whoever is genuinely up.
+   Regenerate the SQL from the transcript with
+   `npx tsx scripts/make-seed-sql.ts` — never hand-edit it.
 
 Auth is Supabase magic link — no passwords. Env vars: `.env.example` in the
 project folder (it's force-added past the root `.gitignore`).
+
+Both SQL files are checked against a real Postgres 16 with a Supabase-shaped
+shim (auth.users, auth.uid, the three roles, supabase_realtime): migration,
+seed, turn trigger, 10-writer cap, invite redemption and the RLS policies.
 
 ### iOS caveat
 
