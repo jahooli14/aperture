@@ -52,10 +52,11 @@ import { EverythingElseMini } from '../components/home/EverythingElseMini'
 import { ReviewRotation } from '../components/home/ReviewRotation'
 import { ThoughtOfTheDay } from '../components/home/ThoughtOfTheDay'
 import { ConsumingWidget } from '../components/home/ConsumingWidget'
+import { AttentionSlot } from '../components/session/AttentionSlot'
 import { DeferMount } from '../components/DeferMount'
 import { UnauthHome } from '../components/onboarding/UnauthHome'
 import { ease, stagger } from '../lib/motion'
-import { AlertCircle, Search, Moon, Settings, ChevronDown } from 'lucide-react'
+import { AlertCircle, Search, Moon, Settings, ChevronDown, Timer } from 'lucide-react'
 
 export function HomePage() {
   const { isAuthenticated } = useAuthContext()
@@ -186,6 +187,16 @@ export function HomePage() {
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative" style={{ zIndex: 1 }}>
 
+          {/* Attention budget (SPEC.md, execution rebuild) — at most one of
+              a deferred close-out, the monthly mirror, a composite/morph
+              proposal, or today's spark. Renders nothing most opens.
+              Additive: sits above the untouched old surface below. */}
+          {isAuthenticated && (
+            <motion.div {...stackTransition(0)}>
+              <AttentionSlot />
+            </motion.div>
+          )}
+
           {/* Masthead: bedtime/search actions (right). The mode label lives
               with each section header below ("today's answer", "still warm")
               so the page reads as one editorial stack. No streak counter —
@@ -217,6 +228,19 @@ export function HomePage() {
                   title="Search everything"
                 >
                   <Search className="h-5 w-5" />
+                </button>
+                {/* Entry point for the new execution session contract
+                    (SPEC.md). Additive on purpose — this sits alongside
+                    the old Today's Answer / Power Hour flow rather than
+                    replacing it, until the session contract is validated
+                    and the home rebuild becomes its own piece of work. */}
+                <button
+                  onClick={() => navigate('/session')}
+                  aria-label="Start a session"
+                  className="masthead-action press-spring"
+                  title="Start a session"
+                >
+                  <Timer className="h-5 w-5" />
                 </button>
               </div>
             </header>

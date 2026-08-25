@@ -984,6 +984,20 @@ Return JSON only:
     }
   }
 
+  if (resource === 'backfill-slots' && req.method === 'POST') {
+    try {
+      const { backfillProjectSlots } = await import('./_lib/slot-seed.js')
+      const seeded = await backfillProjectSlots(supabase, userId)
+      return res.status(200).json({ success: true, seeded })
+    } catch (error) {
+      console.error('[backfill-slots] error:', error)
+      return res.status(500).json({
+        error: 'Failed to backfill slots',
+        details: error instanceof Error ? error.message : String(error),
+      })
+    }
+  }
+
   if (resource === 'complete-with-retro' && req.method === 'POST') {
     try {
       const { project_id, answers } = req.body as {
@@ -1576,6 +1590,17 @@ Return JSON only:
             }
           } catch (catErr) {
             console.warn('[projects] Catalyst inference failed (non-fatal):', catErr)
+          }
+
+          try {
+            const { seedSlotsForProject } = await import('./_lib/slot-seed.js')
+            await seedSlotsForProject(supabase, userId, {
+              id: project.id,
+              title: project.title,
+              description: project.description ?? null,
+            })
+          } catch (slotErr) {
+            console.warn('[projects] Slot seeding failed (non-fatal):', slotErr)
           }
         } catch (err) {
           console.error('[projects] Background scaffolding error:', err)

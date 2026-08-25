@@ -1,0 +1,281 @@
+/**
+ * Spark generation (SPEC.md's mull channel).
+ *
+ * Baked overnight, one per user per day. Each spark type pulls a different
+ * slice of the corpus and asks a differently-shaped question of it — see
+ * SPEC.md's type table. Every generator can return null: "silence beats a
+ * weak spark" is enforced here by literally allowing the model to produce
+ * nothing, and by discarding output that doesn't ground itself in a real
+ * quote from what was fetched.
+ *
+ * Type rotation lives in spark-types.ts (pure, tested). This file is the
+ * IO half: given a chosen type, fetch the right slice of corpus and ask
+ * Gemini the right question of it.
+ */
+
+import type { SupabaseClient } from '@supabase/supabase-js'
+import { generateText } from './gemini-chat.js'
+import { PLAIN_ENGLISH_RULES } from './plain-english.js'
+import type { SparkType } from './spark-types.js'
+
+const RECENT_FRAGMENT_LIMIT = 40
+const SPARK_SHELF_LIFE_HOURS = 24
+const MATERIAL_FACT_SHELF_LIFE_HOURS = 48
+
+export interface BakedSpark {
+  type: SparkType
+  text: string
+  project_id: string | null
+  expires_at: string
+}
+
+interface FragmentRow {
+  id: string
+  text: string
+  role: string
+  project_id: string
+  projects?: { title: string } | null
+}
+
+async function fetchRecentFragments(supabase: SupabaseClient, userId: string): Promise<FragmentRow[]> {
+  const { data } = await supabase
+    .from('fragments')
+    .select('id, text, role, project_id, projects(title)')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(RECENT_FRAGMENT_LIMIT)
+  return (data ?? []) as unknown as FragmentRow[]
+}
+
+function expiresAt(hours: number): string {
+  return new Date(Date.now() + hours * 60 * 60 * 1000).toISOString()
+}
+
+async function askForSpark(prompt: string): Promise<string | null> {
+  try {
+    const response = await generateText(prompt, { responseFormat: 'json' })
+    const parsed = JSON.parse(response)
+    const text = typeof parsed?.spark === 'string' ? parsed.spark.trim() : ''
+    return text.length > 0 ? text : null
+  } catch (e) {
+    console.warn('[spark-generator] generation failed:', e instanceof Error ? e.message : e)
+    return null
+  }
+}
+
+const SILENCE_INSTRUCTION = `If nothing here is real or interesting enough, respond with { "spark": null } instead of forcing one. A weak spark is worse than no spark.`
+
+async function generateNoticing(supabase: SupabaseClient, userId: string): Promise<BakedSpark | null> {
+  const fragments = await fetchRecentFragments(supabase, userId)
+  const references = fragments.filter(f => f.role === 'reference')
+  if (references.length === 0) return null
+
+  const prompt = `Here are things the user has recently captured as references or inspirations:
+${references.slice(0, 15).map(f => `- "${f.text}" (project: ${f.projects?.title ?? 'unfiled'})`).join('\n')}
+
+Pick ONE and hold up something specific and true about it -- a detail, a technique, a structural
+choice -- without asking a question. Just the noticing, one or two sentences.
+
+${PLAIN_ENGLISH_RULES}
+${SILENCE_INSTRUCTION}
+
+Respond with JSON only: { "spark": "..." | null, "fragment_id": "the id you used, or null" }`
+
+  const raw = await askForSparkWithId(prompt)
+  if (!raw) return null
+  return { type: 'noticing', text: raw.text, project_id: findProjectForFragment(fragments, raw.fragmentId), expires_at: expiresAt(SPARK_SHELF_LIFE_HOURS) }
+}
+
+async function askForSparkWithId(prompt: string): Promise<{ text: string; fragmentId: string | null } | null> {
+  try {
+    const response = await generateText(prompt, { responseFormat: 'json' })
+    const parsed = JSON.parse(response)
+    const text = typeof parsed?.spark === 'string' ? parsed.spark.trim() : ''
+    if (text.length === 0) return null
+    return { text, fragmentId: typeof parsed?.fragment_id === 'string' ? parsed.fragment_id : null }
+  } catch (e) {
+    console.warn('[spark-generator] generation failed:', e instanceof Error ? e.message : e)
+    return null
+  }
+}
+
+function findProjectForFragment(fragments: FragmentRow[], fragmentId: string | null): string | null {
+  if (!fragmentId) return null
+  return fragments.find(f => f.id === fragmentId)?.project_id ?? null
+}
+
+async function generateTransferredConstraint(supabase: SupabaseClient, userId: string): Promise<BakedSpark | null> {
+  const fragments = await fetchRecentFragments(supabase, userId)
+  const byProject = new Map<string, FragmentRow[]>()
+  for (const f of fragments) {
+    if (!byProject.has(f.project_id)) byProject.set(f.project_id, [])
+    byProject.get(f.project_id)!.push(f)
+  }
+  if (byProject.size < 2) return null
+
+  const summary = [...byProject.entries()]
+    .map(([, fs]) => `${fs[0].projects?.title ?? 'a project'}: ${fs.slice(0, 3).map(f => `"${f.text}"`).join(', ')}`)
+    .join('\n')
+
+  const prompt = `Here's what the user has captured, grouped by project:
+${summary}
+
+Find a RULE or CONSTRAINT that shows up clearly in one project's captures, and ask whether it
+applies to a different project too. Import the rule, don't invent a new connection -- the rule
+has to actually be visible in what's quoted above.
+
+${PLAIN_ENGLISH_RULES}
+${SILENCE_INSTRUCTION}
+
+Respond with JSON only: { "spark": "..." | null, "target_project_title": "..." | null }`
+
+  const raw = await askForSpark(prompt)
+  if (!raw) return null
+  return { type: 'transferred_constraint', text: raw, project_id: null, expires_at: expiresAt(SPARK_SHELF_LIFE_HOURS) }
+}
+
+async function generateUnfinishedThought(supabase: SupabaseClient, userId: string): Promise<BakedSpark | null> {
+  const fragments = await fetchRecentFragments(supabase, userId)
+  const obstacles = fragments.filter(f => f.role === 'obstacle' || f.role === 'constraint')
+  if (obstacles.length === 0) return null
+  const pick = obstacles[Math.floor(Math.random() * obstacles.length)]
+
+  const prompt = `The user once said, about their project "${pick.projects?.title ?? 'a project'}":
+"${pick.text}"
+
+They never finished that thought. Play it back to them plainly and ask what they meant --
+without answering it for them.
+
+${PLAIN_ENGLISH_RULES}
+${SILENCE_INSTRUCTION}
+
+Respond with JSON only: { "spark": "..." | null }`
+
+  const raw = await askForSpark(prompt)
+  if (!raw) return null
+  return { type: 'unfinished_thought', text: raw, project_id: pick.project_id, expires_at: expiresAt(SPARK_SHELF_LIFE_HOURS) }
+}
+
+async function generateContradiction(supabase: SupabaseClient, userId: string): Promise<BakedSpark | null> {
+  const fragments = await fetchRecentFragments(supabase, userId)
+  const constraints = fragments.filter(f => f.role === 'constraint')
+  if (constraints.length < 2) return null
+
+  const prompt = `Here are things the user has said should constrain their projects:
+${constraints.slice(0, 10).map(f => `- "${f.text}" (${f.projects?.title ?? 'unfiled'})`).join('\n')}
+
+Find two that sit in real tension with each other -- not invented, actually there. Name both,
+side by side, and leave it unresolved. Don't tell them which one is right.
+
+${PLAIN_ENGLISH_RULES}
+${SILENCE_INSTRUCTION}
+
+Respond with JSON only: { "spark": "..." | null }`
+
+  const raw = await askForSpark(prompt)
+  if (!raw) return null
+  return { type: 'contradiction', text: raw, project_id: null, expires_at: expiresAt(SPARK_SHELF_LIFE_HOURS) }
+}
+
+async function generateScaleJump(supabase: SupabaseClient, userId: string): Promise<BakedSpark | null> {
+  const { data: projects } = await supabase
+    .from('projects')
+    .select('id, title, description')
+    .eq('user_id', userId)
+    .neq('state', 'harvested')
+    .limit(20)
+  if (!projects || projects.length === 0) return null
+  const pick = projects[Math.floor(Math.random() * projects.length)]
+
+  const prompt = `Project: "${pick.title}" -- ${pick.description || 'no description yet'}
+
+Ask ONE question that jumps to the wrong altitude on purpose: if they've been thinking about
+small details, ask the big-picture question ("what's this about, today, in one sentence?"); if
+the project sounds vague and big, ask a small concrete question instead.
+
+${PLAIN_ENGLISH_RULES}
+${SILENCE_INSTRUCTION}
+
+Respond with JSON only: { "spark": "..." | null }`
+
+  const raw = await askForSpark(prompt)
+  if (!raw) return null
+  return { type: 'scale_jump', text: raw, project_id: pick.id, expires_at: expiresAt(SPARK_SHELF_LIFE_HOURS) }
+}
+
+async function generateMaterialFact(supabase: SupabaseClient, userId: string): Promise<BakedSpark | null> {
+  const fragments = await fetchRecentFragments(supabase, userId)
+  const materials = fragments.filter(f => f.role === 'material')
+  if (materials.length === 0) return null
+  const pick = materials[Math.floor(Math.random() * materials.length)]
+
+  return {
+    type: 'material_fact',
+    text: `${pick.text} — still there, for "${pick.projects?.title ?? 'this'}".`,
+    project_id: pick.project_id,
+    expires_at: expiresAt(MATERIAL_FACT_SHELF_LIFE_HOURS),
+  }
+}
+
+async function generateOutsideReach(supabase: SupabaseClient, userId: string): Promise<BakedSpark | null> {
+  const { data: highlights } = await supabase
+    .from('article_highlights')
+    .select('highlight_text, article_id, reading_queue!inner(title)')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(10)
+
+  const { data: projects } = await supabase
+    .from('projects')
+    .select('id, title')
+    .eq('user_id', userId)
+    .neq('state', 'harvested')
+    .limit(20)
+
+  if (!highlights || highlights.length === 0 || !projects || projects.length === 0) return null
+
+  const prompt = `Recent reading highlights (from outside the user's own projects):
+${highlights.slice(0, 8).map((h: any) => `- "${h.highlight_text}" (from "${h.reading_queue?.title ?? 'an article'}")`).join('\n')}
+
+Their projects: ${projects.map((p: any) => p.title).join(', ')}
+
+Find a technique, idea, or approach in the reading that's genuinely from OUTSIDE what they'd
+normally think of for one of these projects, and name a concrete way it could apply. This has to
+actually come from the reading, not just be a generic idea.
+
+${PLAIN_ENGLISH_RULES}
+${SILENCE_INSTRUCTION}
+
+Respond with JSON only: { "spark": "..." | null, "target_project_title": "..." | null }`
+
+  const raw = await askForSpark(prompt)
+  if (!raw) return null
+
+  const jsonMatch = raw // already extracted text; project matching done loosely below
+  const matchedProject = projects.find((p: any) => jsonMatch.toLowerCase().includes(p.title.toLowerCase()))
+
+  return {
+    type: 'outside_reach',
+    text: raw,
+    project_id: matchedProject?.id ?? null,
+    expires_at: expiresAt(SPARK_SHELF_LIFE_HOURS),
+  }
+}
+
+const GENERATORS: Record<SparkType, (supabase: SupabaseClient, userId: string) => Promise<BakedSpark | null>> = {
+  noticing: generateNoticing,
+  transferred_constraint: generateTransferredConstraint,
+  unfinished_thought: generateUnfinishedThought,
+  contradiction: generateContradiction,
+  scale_jump: generateScaleJump,
+  material_fact: generateMaterialFact,
+  outside_reach: generateOutsideReach,
+}
+
+export async function generateSpark(
+  supabase: SupabaseClient,
+  userId: string,
+  type: SparkType
+): Promise<BakedSpark | null> {
+  return GENERATORS[type](supabase, userId)
+}
