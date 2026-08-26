@@ -149,6 +149,11 @@ other feature is downstream of that working.
 - **Two views of the same thread.** `thread` shows who wrote what and when.
   `read` drops attribution and runs the lines together as prose — that's the
   reason to leave a chat app.
+- **The exchange has to be visible without reading it.** In `thread`, turns sit
+  on alternating sides with a rule and a faint wash in the writer's colour, so
+  the back-and-forth reads at a glance — the thing chat apps got right and a
+  flat list loses. Names are the fallback, not the signal. Line numbers stay in
+  a fixed gutter regardless of indent, because the index cites them.
 - **Chapters** are marked by the writer on the line that opens one. The story
   already did this in prose ("Chapter 2.", "III: When in Rome"); this makes it
   navigable.

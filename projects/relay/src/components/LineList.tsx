@@ -79,11 +79,20 @@ export function LineList({
   }
 
   return (
-    <ol className="flex flex-col gap-5 py-5">
-      {lines.map((line) => {
+    <ol className="flex flex-col gap-4 py-5">
+      {lines.map((line, index) => {
         const turnOrder = orderByUser.get(line.author_id) ?? 0
         const colour = authorColour(turnOrder)
         const mine = line.author_id === currentUserId
+
+        // Whose turn this is decides which side of the page it sits on. Two
+        // writers land on alternating sides, so the exchange is visible
+        // before you've read a word.
+        const onSecondSide = turnOrder % 2 === 1
+
+        // In open mode the same person can go twice; don't repeat their name.
+        const previous = lines[index - 1]
+        const opensRun = !previous || previous.author_id !== line.author_id || Boolean(line.chapter_title)
 
         return (
           <li key={line.id}>
@@ -103,15 +112,23 @@ export function LineList({
               <span className="line-num" style={{ color: colour }}>
                 {line.position}
               </span>
-              <div className="min-w-0">
-                <div className="flex items-baseline gap-2 pb-1">
-                  <span className="line-who" style={{ color: colour }}>
-                    {mine ? 'You' : line.display_name}
-                  </span>
-                  <span className="text-[0.68rem] text-faint">
-                    {line.pending ? 'Sending…' : timeAgo(line.created_at)}
-                  </span>
-                </div>
+              <div
+                className={`turn turn-tint${onSecondSide ? ' turn-b' : ''}`}
+                style={{
+                  borderColor: colour,
+                  background: `color-mix(in srgb, ${colour} 6%, transparent)`,
+                }}
+              >
+                {opensRun && (
+                  <div className="flex items-baseline gap-2 pb-0.5 pt-0.5">
+                    <span className="line-who" style={{ color: colour }}>
+                      {mine ? 'You' : line.display_name}
+                    </span>
+                    <span className="text-[0.66rem] text-faint">
+                      {line.pending ? 'Sending…' : timeAgo(line.created_at)}
+                    </span>
+                  </div>
+                )}
                 <div className="prose-story">
                   <p>{line.body}</p>
                 </div>
