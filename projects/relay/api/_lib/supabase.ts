@@ -7,6 +7,15 @@
  */
 import { createClient } from '@supabase/supabase-js'
 
+/**
+ * The dashboard shows several Supabase URLs and it is easy to copy the wrong
+ * one. Anything but the bare project URL fails as "Invalid path specified in
+ * request URL", which says nothing useful — so normalise it here instead.
+ */
+export function normaliseSupabaseUrl(raw: string): string {
+  return raw.trim().replace(/\/+$/, '').replace(/\/(rest|auth|storage|realtime)\/v\d+$/, '')
+}
+
 function create() {
   const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY
@@ -15,7 +24,7 @@ function create() {
     throw new Error('Missing Supabase environment variables (SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY)')
   }
 
-  return createClient(url, key, {
+  return createClient(normaliseSupabaseUrl(url), key, {
     db: { schema: 'relay' },
     auth: { persistSession: false, autoRefreshToken: false },
   })
