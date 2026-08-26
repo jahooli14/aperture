@@ -8,7 +8,8 @@ import { useNavigate } from 'react-router-dom'
 import { Check } from 'lucide-react'
 import { api } from '../../lib/apiClient'
 import { useProjectStore } from '../../stores/useProjectStore'
-import { useStartProjectSession } from '../../hooks/useStartProjectSession'
+import { useHomeAnswerStore } from '../../stores/useHomeAnswerStore'
+import { useSessionStore } from '../../stores/useSessionStore'
 import { useToast } from '../ui/toast'
 import { setChatHandoff } from '../../lib/chatHandoff'
 import { ConfirmButton, DismissButton, ResolvedBadge, DismissedRow, ProposalCard } from '../chat/ChatPrimitives'
@@ -21,9 +22,9 @@ export function FocusChatActionCard({ action, resolved, dismissed, blockedByPend
   /** True when ANY turn this session still has an unresolved taskOp
    *  correcting this same project's next step (not just this message —
    *  the correction and the "start it" request can land in separate
-   *  turns). start_session pulls tasks straight from the database
-   *  (api/power-hour), so starting before that fix lands would launch a
-   *  session built from the stale text the user just corrected. */
+   *  turns). The session's re-entry line and preview are read from the
+   *  project, so starting before that fix lands would open on the stale
+   *  text the user just corrected. */
   blockedByPendingTaskOp?: boolean
   onResolve: () => void
   onDismiss: () => void
@@ -32,15 +33,12 @@ export function FocusChatActionCard({ action, resolved, dismissed, blockedByPend
   const { setPriority, setUpNext, replaceUpNext, fetchProjects } = useProjectStore()
   const targetProject = useProjectStore(s => s.allProjects.find(p => p.id === action.projectId))
   const currentUpNextPosition = targetProject?.up_next_position ?? null
-  const { start, loading: starting } = useStartProjectSession(action.projectId)
+  const requestStart = useHomeAnswerStore(s => s.requestStart)
+  const setWindowMinutes = useSessionStore(s => s.setWindowMinutes)
   const { addToast } = useToast()
   const [applying, setApplying] = useState(false)
   const { label, verb } = describeAction(action.type)
   const isBlocked = action.type === 'start_session' && !!blockedByPendingTaskOp
-  // start_session can take several seconds (a real plan generation, not a
-  // toggle) — without a label change the button just goes inert with no
-  // sign anything's happening, which reads as broken rather than working.
-  const isPlanning = action.type === 'start_session' && (applying || starting)
 
   // Focus chat and the per-project Guide are separate conversations —
   // without this, landing on the project after Focus chat just talked
@@ -64,19 +62,21 @@ export function FocusChatActionCard({ action, resolved, dismissed, blockedByPend
 
       switch (action.type) {
         case 'start_session': {
-          // start() catches its own errors and shows its own toast rather
-          // than throwing — check the returned success flag so a failed
-          // session doesn't still flip this card to "Done". Pass through
-          // the time budget the chat gathered, if any, so the plan is
-          // sized to right-now instead of a generic default.
+          // Talking to it is the third way into a session, and it runs the
+          // same engine as ▶ and the star: point the answer box at the
+          // project and open the contract there. No plan generation, so
+          // this is instant -- nothing to wait on.
           setChatHandoff(action.projectId, handoffSummary)
-          const started = await start({ durationMinutes: action.minutesAvailable })
-          if (!started) return
+          // The chat already asked how long you've got; don't ask twice.
+          if (action.minutesAvailable) setWindowMinutes(action.minutesAvailable)
+          requestStart(action.projectId)
           break
         }
         case 'set_priority':
           // setPriority is a toggle — only call it if this isn't already
-          // the priority, otherwise it would unstar it instead.
+          // the priority, otherwise it would unstar it instead. The star
+          // and `state: 'live'` are one concept now, so this is also what
+          // declares the live project.
           if (!isSetPriorityNoOp(!!targetProject?.is_priority, action.type)) await setPriority(action.projectId)
           break
         case 'remove_up_next':
@@ -163,7 +163,7 @@ export function FocusChatActionCard({ action, resolved, dismissed, blockedByPend
       ) : (
         <div className="flex items-center gap-1 flex-shrink-0">
           <DismissButton onClick={onDismiss} />
-          <ConfirmButton onClick={apply} disabled={applying || starting || isBlocked} busy={isPlanning} busyLabel="Planning…">
+          <ConfirmButton onClick={apply} disabled={applying || isBlocked}>
             <Check className="h-3.5 w-3.5" /> {verb}
           </ConfirmButton>
         </div>

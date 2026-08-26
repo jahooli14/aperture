@@ -329,7 +329,9 @@ export const useProjectStore = create<ProjectState>()(
             await queueOperation('create_project', { ...data, tempId, id: uuidv4() })
             await useOfflineStore.getState().updateQueueSize()
             logger.debug('[ProjectStore] Queued create_project after network failure')
-            return
+            // The optimistic row is real to the caller — sync reconciles the
+            // id later. Returning undefined here broke the declared type.
+            return newProject
           }
           logger.error('[ProjectStore] Failed to create project:', error)
           // Rollback
@@ -492,12 +494,21 @@ export const useProjectStore = create<ProjectState>()(
         // Optimistic update. When promoting to priority, also demote all
         // other priorities locally (cap=1, server auto-demotes too) and
         // clear up_next_position on the new priority (mutually exclusive).
+        // `state` moves with `is_priority` -- the star and the live project
+        // are one concept (see api/projects.ts set-priority). Mirroring it
+        // optimistically keeps the home card from flickering back to the old
+        // project between the tap and the server round-trip.
         const updatedAllProjects = previousAllProjects.map(p => {
           if (p.id === id) {
-            return { ...p, is_priority: nextValue, ...(nextValue ? { up_next_position: null } : {}) }
+            return {
+              ...p,
+              is_priority: nextValue,
+              state: (nextValue ? 'live' : 'mull') as Project['state'],
+              ...(nextValue ? { up_next_position: null } : {}),
+            }
           }
           if (nextValue && p.is_priority) {
-            return { ...p, is_priority: false }
+            return { ...p, is_priority: false, state: 'on-deck' as Project['state'] }
           }
           return p
         })

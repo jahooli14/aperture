@@ -13,8 +13,35 @@ import { create } from 'zustand'
 
 export interface SessionShape {
   text: string
-  source: 'closeout' | 'slot' | 'decomposition' | 'start'
+  source: 'closeout' | 'slot' | 'decomposition' | 'start' | 'ignition'
   partial: boolean
+}
+
+/** The windows the card offers. Not a gate -- a control on the card. */
+export const WINDOW_PRESETS = [20, 60, 120] as const
+
+const WINDOW_KEY = 'aperture-window-minutes'
+
+/** Remembered for the browser session only: "how long have you got" is a
+ *  fact about right now, not a preference, so it must not persist to
+ *  tomorrow. */
+export function loadWindowMinutes(): number | null {
+  try {
+    const raw = sessionStorage.getItem(WINDOW_KEY)
+    const n = raw ? parseInt(raw, 10) : NaN
+    return Number.isFinite(n) && n > 0 ? n : null
+  } catch {
+    return null
+  }
+}
+
+export function saveWindowMinutes(minutes: number | null) {
+  try {
+    if (minutes == null) sessionStorage.removeItem(WINDOW_KEY)
+    else sessionStorage.setItem(WINDOW_KEY, String(minutes))
+  } catch {
+    // Storage unavailable -- the chips still work for this render.
+  }
 }
 
 export interface ActiveSession {
@@ -35,6 +62,13 @@ export interface PendingCloseout {
 }
 
 interface SessionState {
+  /** How long you've got, this browser session. Lives in the store rather
+   *  than in the card's local state because three surfaces set it: the
+   *  chips on the answer card, and the Focus chat when it has already
+   *  asked. A card-local useState would silently ignore the other two. */
+  windowMinutes: number | null
+  setWindowMinutes: (minutes: number | null) => void
+
   active: ActiveSession | null
   starting: boolean
   closing: boolean
@@ -63,6 +97,12 @@ async function postJson<T>(url: string, body: unknown): Promise<T> {
 }
 
 export const useSessionStore = create<SessionState>((set, get) => ({
+  windowMinutes: loadWindowMinutes(),
+  setWindowMinutes: (minutes) => {
+    saveWindowMinutes(minutes)
+    set({ windowMinutes: minutes })
+  },
+
   active: null,
   starting: false,
   closing: false,

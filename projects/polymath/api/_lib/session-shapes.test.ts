@@ -19,7 +19,9 @@ describe('deriveSessionShapes', () => {
       mvsMinutes: null,
       windowMinutes: 60,
     })
-    expect(shapes[0]).toEqual({
+    // Ignition first (Power Hour's surviving idea), then the real move.
+    expect(shapes[0].source).toBe('ignition')
+    expect(shapes[1]).toEqual({
       text: 'fix the transition out of track two.',
       source: 'closeout',
       partial: false,
@@ -33,7 +35,7 @@ describe('deriveSessionShapes', () => {
       mvsMinutes: null,
       windowMinutes: 60,
     })
-    expect(shapes[0].text).toBe('Ran out of time before the bridge section.')
+    expect(shapes[1].text).toBe('Ran out of time before the bridge section.')
   })
 
   it('fills remaining slots (up to 3) from empty slots', () => {
@@ -47,10 +49,11 @@ describe('deriveSessionShapes', () => {
       mvsMinutes: null,
       windowMinutes: 60,
     })
+    // Ignition + close-out + first empty slot, capped at 3.
     expect(shapes).toHaveLength(3)
-    expect(shapes[0].source).toBe('closeout')
-    expect(shapes[1]).toEqual({ text: 'Find or decide: first track', source: 'slot', partial: false })
-    expect(shapes[2]).toEqual({ text: 'Find or decide: deadline', source: 'slot', partial: false })
+    expect(shapes[0].source).toBe('ignition')
+    expect(shapes[1].source).toBe('closeout')
+    expect(shapes[2]).toEqual({ text: 'Find or decide: first track', source: 'slot', partial: false })
   })
 
   it('never returns more than 3 items', () => {
@@ -75,10 +78,11 @@ describe('deriveSessionShapes', () => {
       mvsMinutes: 120,
       windowMinutes: 20,
     })
-    expect(shapes).toHaveLength(1)
-    expect(shapes[0].partial).toBe(true)
-    expect(shapes[0].source).toBe('decomposition')
-    expect(shapes[0].text).toContain('redraft chapter 4.')
+    expect(shapes).toHaveLength(2)
+    expect(shapes[0].source).toBe('ignition')
+    expect(shapes[1].partial).toBe(true)
+    expect(shapes[1].source).toBe('decomposition')
+    expect(shapes[1].text).toContain('redraft chapter 4.')
   })
 
   it('does not decompose when the window meets or exceeds MVS', () => {
@@ -88,7 +92,7 @@ describe('deriveSessionShapes', () => {
       mvsMinutes: 60,
       windowMinutes: 60,
     })
-    expect(shapes[0].partial).toBe(false)
+    expect(shapes.every(sh => !sh.partial)).toBe(true)
   })
 
   it('does not decompose when MVS is unseeded', () => {
@@ -98,7 +102,7 @@ describe('deriveSessionShapes', () => {
       mvsMinutes: null,
       windowMinutes: 15,
     })
-    expect(shapes[0].partial).toBe(false)
+    expect(shapes.every(sh => !sh.partial)).toBe(true)
   })
 
   it('treats blank close-out text as absent', () => {
@@ -108,7 +112,8 @@ describe('deriveSessionShapes', () => {
       mvsMinutes: null,
       windowMinutes: 30,
     })
-    expect(shapes[0].source).toBe('slot')
+    expect(shapes[0].source).toBe('ignition')
+    expect(shapes[1].source).toBe('slot')
   })
 })
 

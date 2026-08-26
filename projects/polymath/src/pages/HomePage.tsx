@@ -270,8 +270,10 @@ export function HomePage() {
               gate on exactly the same "stalled" condition the rotation was
               approximating with time-since-touched). Two mechanisms
               competing to resurface the same projects is what made the page
-              read as unrelated sections. The rotation's API and component
-              are untouched, so this is one line to put back. */}
+              read as unrelated sections. The rotation's component and its
+              API resources are now deleted rather than left dormant —
+              a second resurfacing mechanism sitting unused is exactly the
+              fragmentation this rebuild is clearing out. */}
 
           <div className="section-seam" aria-hidden />
 

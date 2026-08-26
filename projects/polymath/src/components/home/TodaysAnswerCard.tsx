@@ -43,12 +43,12 @@ import { useSessionContextStore } from '../../stores/useSessionContextStore'
 import { useFocusChatStore } from '../../stores/useFocusChatStore'
 import { useHomeAnswerStore } from '../../stores/useHomeAnswerStore'
 import { useProjectIdeasStore, type ProjectIdea } from '../../stores/useProjectIdeasStore'
-import { SESSION_DURATION_MINUTES } from '../../hooks/useStartProjectSession'
 import { toPortfolioSummaries, buildOpeningLine } from './focusChatOps'
 import { formatRelativeTime, KeepGoingEmpty } from './KeepGoingEmpty'
 import { ProjectIdeasHome } from './ProjectIdeasHome'
 import { FocusChat } from './FocusChat'
 import { SessionContract } from '../session/SessionContract'
+import { WINDOW_PRESETS, useSessionStore } from '../../stores/useSessionStore'
 import { FeelingPill } from './FeelingPill'
 import { createProjectFromIdea } from '../../lib/createProjectFromIdea'
 import { haptic } from '../../utils/haptics'
@@ -133,13 +133,46 @@ export function TodaysAnswerCard() {
   // started, so the whole flow (window → shapes → timer → close-out)
   // happens in the one box rather than on a second screen.
   const [contractOpen, setContractOpen] = useState(false)
+  // How long you've got. A control ON the card, never a gate in front of it
+  // -- most opens aren't sessions (capture, browse, logging a close-out),
+  // and asking those a time question first blocks them for nothing. Picking
+  // one here means Start session goes straight to the timer instead of
+  // asking again.
+  const windowMinutes = useSessionStore(s => s.windowMinutes)
+  const setWindowMinutes = useSessionStore(s => s.setWindowMinutes)
+
+  // "Work on this one, now" arriving from elsewhere on the page — the ▶ on
+  // a mini card, or the chat answering with start_session. Those surfaces
+  // used to each run their own Power Hour flow; now they point this box at
+  // the project and open the one contract, so there is exactly one session
+  // engine in the app.
+  const startRequestId = useHomeAnswerStore(s => s.startRequestId)
+
+  const pickWindow = (m: number) => {
+    haptic.light()
+    setWindowMinutes(windowMinutes === m ? null : m)
+  }
+
+  useEffect(() => {
+    if (!startRequestId) return
+    // requestStart sets the override in the same call, so focusProject is
+    // already this project by the time we get here; the guard is for the
+    // one frame where the project list hasn't caught up.
+    if (focusProject?.id !== startRequestId) return
+    useHomeAnswerStore.getState().clearStartRequest()
+    setContractOpen(true)
+    // The request usually comes from a card further down the page, so put
+    // the session back in front of the user rather than leaving it opened
+    // off-screen above them.
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }, [startRequestId, focusProject?.id])
 
   useEffect(() => {
     if (!focusProject) { setPlan(null); return }
     let cancelled = false
     ;(async () => {
       try {
-        const res = await fetch(`/api/power-hour?projectId=${focusProject.id}&duration=${SESSION_DURATION_MINUTES}`)
+        const res = await fetch(`/api/power-hour?projectId=${focusProject.id}&duration=60`)
         if (!res.ok || cancelled) return
         const data = await res.json()
         if (data.tasks?.[0] && !cancelled) setPlan(data.tasks[0])
@@ -282,9 +315,8 @@ export function TodaysAnswerCard() {
   }
 
   // Execution rebuild: opens the contract in place. The old Power Hour
-  // handoff (`start({ prefetched: plan })`) is kept as the fallback for a
-  // project that has never had a session, so the button never dead-ends
-  // while `last_closeout_text` is still null across the whole portfolio.
+  // overlay it used to hand off to is gone -- there is one session engine
+  // now, and this is the way in.
   const handleStartSession = () => {
     haptic.medium()
     setContractOpen(true)
@@ -340,6 +372,7 @@ export function TodaysAnswerCard() {
         <SessionContract
           project={focusProject}
           surface="bare"
+          presetWindowMinutes={windowMinutes}
           onDone={() => {
             setContractOpen(false)
             // Pull the project back down so the card's re-entry line shows
@@ -433,6 +466,27 @@ export function TodaysAnswerCard() {
             No plan yet — start and we'll work out the first move together.
           </p>
         )}
+
+        <div className="flex items-center gap-2 mb-3" onClick={e => e.stopPropagation()}>
+          <span className="text-[10px] uppercase tracking-[0.2em]" style={{ color: 'var(--brand-text-secondary)', opacity: 0.4 }}>
+            got
+          </span>
+          {WINDOW_PRESETS.map(m => {
+            const active = windowMinutes === m
+            return (
+              <button
+                key={m}
+                onClick={() => pickWindow(m)}
+                className="px-2.5 py-1 rounded-full text-[11px] font-medium transition-all active:scale-[0.97]"
+                style={active
+                  ? { background: 'rgba(var(--brand-primary-rgb),0.16)', border: '1px solid rgba(var(--brand-primary-rgb),0.45)', color: 'rgb(var(--brand-primary-rgb))' }
+                  : { background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.10)', color: 'var(--brand-text-secondary)' }}
+              >
+                {m < 60 ? `${m}m` : `${m / 60}h`}
+              </button>
+            )
+          })}
+        </div>
 
         <button
           onClick={(e) => { e.stopPropagation(); handleStartSession() }}
