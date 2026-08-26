@@ -1,5 +1,12 @@
 import { useEffect, useState } from 'react'
-import { disablePush, enablePush, isPushSupported, isSubscribed, needsHomeScreenInstall } from '../lib/push'
+import {
+  disablePush,
+  enablePush,
+  isPushSupported,
+  isSubscribed,
+  needsHomeScreenInstall,
+  sendTestPush,
+} from '../lib/push'
 
 /**
  * The most important control in the app. If this doesn't work people drift
@@ -10,6 +17,7 @@ export function NotificationToggle() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [checked, setChecked] = useState(false)
+  const [tested, setTested] = useState(false)
 
   useEffect(() => {
     isSubscribed()
@@ -80,6 +88,26 @@ export function NotificationToggle() {
           />
         </button>
       </div>
+      {on && (
+        <button
+          type="button"
+          className="btn-quiet mt-3 w-full"
+          disabled={busy}
+          onClick={async () => {
+            setError(null)
+            try {
+              await sendTestPush()
+              setTested(true)
+              setTimeout(() => setTested(false), 4000)
+            } catch (e) {
+              setError(e instanceof Error ? e.message : 'Could not send a test')
+            }
+          }}
+        >
+          {tested ? 'Sent — check your lock screen' : 'Send a test notification'}
+        </button>
+      )}
+
       {error && <p className="mt-2 text-sm text-red-700 dark:text-red-400">{error}</p>}
     </div>
   )

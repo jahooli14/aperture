@@ -2,24 +2,95 @@
 @tailwind components;
 @tailwind utilities;
 
+/**
+ * Relay reads like a shared manuscript, not a chat app.
+ *
+ * Source Serif 4 carries the story — it has a real optical-size axis, so
+ * running text and headings are drawn differently rather than just scaled.
+ * The interface itself stays on the system sans and out of the way.
+ */
+
 :root {
-  --paper: 251 248 243;
-  --card: 255 253 250;
-  --ink: 26 24 21;
-  --muted: 107 101 92;
-  --rule: 229 223 212;
-  --accent: 181 118 42;
+  --ground: 252 250 246;
+  --surface: 255 255 255;
+  --sunk: 243 239 231;
+  --ink: 25 23 19;
+  --body: 61 56 49;
+  --muted: 110 101 88;
+  --faint: 156 146 132;
+  --rule: 230 223 210;
+  --accent: 162 96 28;
+  --accent-ink: 255 255 255;
+  --highlight: 246 226 187;
+
+  --author-0: #A96A18;
+  --author-1: #2F7A70;
+  --author-2: #8A527E;
+  --author-3: #5C7C2E;
+  --author-4: #456684;
+  --author-5: #A9522C;
+  --author-6: #5A5FA8;
+  --author-7: #77702C;
+  --author-8: #A94E63;
+  --author-9: #2A6E92;
+
+  color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
-    --paper: 22 21 15;
-    --card: 31 29 24;
-    --ink: 238 233 224;
-    --muted: 154 147 135;
-    --rule: 56 52 45;
-    --accent: 214 156 79;
+  :root:not([data-theme='light']) {
+    --ground: 20 19 15;
+    --surface: 28 26 21;
+    --sunk: 16 15 12;
+    --ink: 239 234 224;
+    --body: 216 209 196;
+    --muted: 154 145 132;
+    --faint: 111 103 92;
+    --rule: 51 48 42;
+    --accent: 217 160 91;
+    --accent-ink: 26 23 18;
+    --highlight: 61 48 26;
+
+    --author-0: #E0A65C;
+    --author-1: #5FBFB2;
+    --author-2: #C892BC;
+    --author-3: #9CC469;
+    --author-4: #8FB4D6;
+    --author-5: #E08C63;
+    --author-6: #9AA0E0;
+    --author-7: #C4BA6A;
+    --author-8: #E0879B;
+    --author-9: #6FB6DC;
+
+    color-scheme: dark;
   }
+}
+
+:root[data-theme='dark'] {
+  --ground: 20 19 15;
+  --surface: 28 26 21;
+  --sunk: 16 15 12;
+  --ink: 239 234 224;
+  --body: 216 209 196;
+  --muted: 154 145 132;
+  --faint: 111 103 92;
+  --rule: 51 48 42;
+  --accent: 217 160 91;
+  --accent-ink: 26 23 18;
+  --highlight: 61 48 26;
+
+  --author-0: #E0A65C;
+  --author-1: #5FBFB2;
+  --author-2: #C892BC;
+  --author-3: #9CC469;
+  --author-4: #8FB4D6;
+  --author-5: #E08C63;
+  --author-6: #9AA0E0;
+  --author-7: #C4BA6A;
+  --author-8: #E0879B;
+  --author-9: #6FB6DC;
+
+  color-scheme: dark;
 }
 
 @layer base {
@@ -28,42 +99,241 @@
   }
 
   body {
-    @apply bg-paper text-ink font-sans antialiased;
-    /* Home-screen PWAs sit under the notch and over the home indicator. */
+    @apply bg-paper text-ink antialiased;
+    font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    font-size: 16px;
+    line-height: 1.5;
     padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom)
       env(safe-area-inset-left);
   }
 
-  /* The story is meant to be read, so it gets real book typography. */
-  .prose-story p {
-    @apply font-story text-[1.0625rem] leading-[1.7];
+  ::selection {
+    background: rgb(var(--highlight));
   }
 }
 
 @layer components {
+  /* ---------------------------------------------------------- story text */
+
+  .prose-story {
+    font-family: 'Source Serif 4 Variable', 'Iowan Old Style', Georgia, serif;
+    font-optical-sizing: auto;
+    color: rgb(var(--body));
+    font-size: 1.0625rem;
+    line-height: 1.72;
+    letter-spacing: 0.003em;
+  }
+
+  .prose-story p {
+    margin: 0;
+    text-wrap: pretty;
+  }
+
+  .display {
+    font-family: 'Source Serif 4 Variable', Georgia, serif;
+    font-optical-sizing: auto;
+    color: rgb(var(--ink));
+    letter-spacing: -0.011em;
+    text-wrap: balance;
+  }
+
+  /* ------------------------------------------------------- the manuscript */
+
+  /* A line number in the margin, tinted to whoever wrote it. Turns the thread
+     into something you can point at — which is what the index cites. */
+  .line-row {
+    display: grid;
+    grid-template-columns: 1.9rem minmax(0, 1fr);
+    gap: 0.85rem;
+    scroll-margin-top: 5.5rem;
+  }
+
+  .line-num {
+    font-size: 0.7rem;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+    padding-top: 0.42rem;
+    user-select: none;
+    letter-spacing: 0.02em;
+  }
+
+  .line-who {
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.11em;
+    font-weight: 600;
+    color: rgb(var(--faint));
+  }
+
+  /* Briefly marks a line jumped to from the index. */
+  @keyframes settle {
+    from { background: rgb(var(--highlight)); }
+    to { background: transparent; }
+  }
+  .line-row.landed .prose-story {
+    animation: settle 2.4s ease-out;
+    border-radius: 4px;
+  }
+
+  .chapter-open {
+    display: grid;
+    gap: 0.55rem;
+    justify-items: center;
+    padding: 2.6rem 0 1.9rem;
+    text-align: center;
+  }
+
+  .chapter-rule {
+    width: 2.2rem;
+    height: 1px;
+    background: rgb(var(--rule));
+  }
+
+  .chapter-name {
+    font-family: 'Source Serif 4 Variable', Georgia, serif;
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: rgb(var(--ink));
+  }
+
+  /* Read mode: no attribution, book measure, an opening capital per chapter. */
+  .reading {
+    font-size: 1.11rem;
+    line-height: 1.78;
+  }
+
+  .reading > p + p {
+    margin-top: 0.85rem;
+    text-indent: 1.3rem;
+  }
+
+  .dropcap::first-letter {
+    float: left;
+    font-size: 3.05rem;
+    line-height: 0.86;
+    font-weight: 600;
+    padding: 0.16rem 0.5rem 0 0;
+    color: rgb(var(--accent));
+  }
+
+  /* ------------------------------------------------------------- controls */
+
   .surface {
-    @apply bg-card border border-rule rounded-xl;
+    @apply rounded-xl border;
+    background: rgb(var(--surface));
+    border-color: rgb(var(--rule));
   }
 
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm
-      font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed;
+    @apply inline-flex items-center justify-center gap-2 rounded-lg text-sm font-medium;
+    min-height: 2.75rem;
+    padding: 0 1.05rem;
+    transition: opacity 0.15s, background 0.15s;
+  }
+  .btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
   }
 
   .btn-primary {
-    @apply btn bg-ink text-paper hover:opacity-90;
+    @apply btn;
+    background: rgb(var(--ink));
+    color: rgb(var(--ground));
   }
+  .btn-primary:hover:not(:disabled) { opacity: 0.88; }
+
+  .btn-accent {
+    @apply btn;
+    background: rgb(var(--accent));
+    color: rgb(var(--accent-ink));
+  }
+  .btn-accent:hover:not(:disabled) { opacity: 0.9; }
 
   .btn-quiet {
-    @apply btn border border-rule text-ink hover:bg-paper;
+    @apply btn border;
+    border-color: rgb(var(--rule));
+    color: rgb(var(--ink));
+  }
+  .btn-quiet:hover:not(:disabled) { background: rgb(var(--sunk)); }
+
+  /* Thread / Read. A segmented control, because they're two views of one thing. */
+  .segmented {
+    display: inline-flex;
+    padding: 2px;
+    border-radius: 8px;
+    background: rgb(var(--sunk));
+    border: 1px solid rgb(var(--rule));
+  }
+
+  .segmented button {
+    font-size: 0.76rem;
+    font-weight: 600;
+    padding: 0.34rem 0.66rem;
+    border-radius: 6px;
+    color: rgb(var(--muted));
+    transition: background 0.15s, color 0.15s;
+  }
+
+  .segmented button[aria-pressed='true'] {
+    background: rgb(var(--surface));
+    color: rgb(var(--ink));
+    box-shadow: 0 1px 2px rgb(0 0 0 / 0.07);
   }
 
   .field {
-    @apply w-full rounded-lg border border-rule bg-card px-3.5 py-2.5 text-[16px]
-      text-ink placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-accent/40;
+    @apply w-full rounded-lg border px-3.5 py-3;
+    background: rgb(var(--surface));
+    border-color: rgb(var(--rule));
+    color: rgb(var(--ink));
+    font-size: 16px;
+  }
+  .field::placeholder { color: rgb(var(--faint)); }
+  .field:focus {
+    outline: none;
+    border-color: rgb(var(--accent));
+    box-shadow: 0 0 0 3px rgb(var(--accent) / 0.16);
   }
 
   .label {
-    @apply block text-xs font-medium uppercase tracking-wider text-muted mb-1.5;
+    @apply mb-1.5 block text-xs font-semibold uppercase;
+    letter-spacing: 0.1em;
+    color: rgb(var(--muted));
+  }
+
+  .sheet {
+    background: rgb(var(--surface));
+    border: 1px solid rgb(var(--rule));
+    border-radius: 18px 18px 0 0;
+    max-height: 86dvh;
+    box-shadow: 0 -8px 40px -12px rgb(0 0 0 / 0.28);
+  }
+  @media (min-width: 640px) {
+    .sheet { border-radius: 18px; }
+  }
+
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.64rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 0.2rem 0.5rem;
+    border-radius: 99px;
+    white-space: nowrap;
+  }
+
+  :focus-visible {
+    outline: 2px solid rgb(var(--accent));
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
   }
 }

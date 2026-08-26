@@ -155,13 +155,35 @@ other feature is downstream of that working.
 - **No AI writes or suggests lines.** Ever. The whole point is that it's the two
   of you. Derived stats only — counts, gaps, chapters, all from the lines
   themselves. Never an invented story about what a gap "means".
+- **The index** (`api/story-index.ts`) is the one place Gemini is used, and it
+  reads rather than writes: people, places, and what keeps coming back, each
+  pointing at the line numbers it came from. Tapping a number jumps there.
+  - **Grounding is the whole design.** `api/_lib/index/ground.ts` checks every
+    entry against the text: the cited line must exist, and the name must
+    actually appear in one of the lines cited for it. Anything that fails is
+    dropped, so an invented character can't reach the sheet. Pure and unit
+    tested — never bypass it.
+  - Notes are one plain sentence, and a note that slips into critic voice is
+    dropped while the entry stands on its citations (`plain-english.ts`).
+  - Built on demand, never automatically. Cached in `relay.story_index` with
+    `up_to_position`, which is how the sheet knows it's behind.
+  - `GEMINI_KEY` in Vercel. Without it everything else still works — the sheet
+    just says so.
+- **Sending is optimistic.** The line appears and the turn moves the moment you
+  hit send; a failure pulls the placeholder back out and the composer restores
+  your text, so a dropped connection never loses a line.
+- **Push heals itself.** `ensurePushHealthy()` runs on sign-in: if permission is
+  still granted but the subscription has gone (Safari drops them silently), it
+  re-subscribes and re-saves. Settings has a test-notification button, because
+  "did that actually work?" is otherwise unanswerable.
 
 ### Setup
 
 Relay shares a Supabase project with another Aperture app — it lives in its own
 `relay` schema rather than needing a free-tier slot of its own.
 
-1. Run `projects/relay/supabase/migrations/0001_relay.sql`.
+1. Run the migrations in `projects/relay/supabase/migrations/` in order
+   (`0001_relay.sql`, then `0002_story_index.sql`).
 2. Supabase dashboard → **Settings → API → Exposed schemas** → add `relay`.
    PostgREST can't see the tables otherwise.
 3. `npx web-push generate-vapid-keys`, then set `VAPID_PUBLIC_KEY`,

@@ -34,7 +34,7 @@ export default function StoriesPage() {
     <div className="min-h-dvh">
       <header className="sticky top-0 z-20 border-b border-rule bg-paper/90 backdrop-blur">
         <div className="mx-auto flex max-w-reading items-center justify-between px-4 py-3">
-          <h1 className="font-story text-2xl">Relay</h1>
+          <h1 className="display text-2xl font-semibold">Relay</h1>
           <Link to="/settings" className="text-sm text-muted hover:text-ink">
             {profile?.display_name ?? 'Settings'}
           </Link>
@@ -70,7 +70,7 @@ export default function StoriesPage() {
 
         {stories?.length === 0 && !creating && (
           <div className="surface p-6 text-center">
-            <p className="font-story text-lg">Nothing on the go.</p>
+            <p className="display text-lg font-semibold">Nothing on the go.</p>
             <p className="mt-1 text-sm text-muted">
               Start one and invite a friend, or join theirs with a code.
             </p>
@@ -80,18 +80,21 @@ export default function StoriesPage() {
         <ul className="space-y-3">
           {stories?.map((story) => (
             <li key={story.id}>
-              <Link to={`/story/${story.id}`} className="surface block p-4 hover:border-accent/50">
+              <Link to={`/story/${story.id}`} className="surface block p-4 transition-colors hover:border-accent/60">
                 <div className="flex items-start justify-between gap-3">
-                  <h2 className="font-story text-lg leading-snug">{story.title}</h2>
+                  <h2 className="display text-[1.15rem] font-semibold leading-snug">{story.title}</h2>
                   {story.can_write && (
-                    <span className="shrink-0 rounded-full bg-accent px-2.5 py-1 text-xs font-medium text-white">
+                    <span
+                      className="pill shrink-0"
+                      style={{ background: 'rgb(var(--accent))', color: 'rgb(var(--accent-ink))' }}
+                    >
                       Your turn
                     </span>
                   )}
                 </div>
 
                 {story.last_line ? (
-                  <p className="mt-2 line-clamp-2 font-story text-sm text-muted">
+                  <p className="prose-story mt-2 line-clamp-3 text-[0.95rem]" style={{ color: 'rgb(var(--muted))' }}>
                     {story.last_line.body}
                   </p>
                 ) : (

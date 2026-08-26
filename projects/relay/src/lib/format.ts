@@ -1,13 +1,15 @@
 /** Author colours, initials and the small bits of date wording. */
 
-// One per possible writer, so ten people still read as ten distinct voices.
-const AUTHOR_COLOURS = [
-  '#B5762A', '#3E7C74', '#8A5A7A', '#5F7A3E', '#4A6072',
-  '#A85438', '#5A5F97', '#7A7038', '#A65464', '#2F6E8F',
-]
+/**
+ * One colour per writer, resolved through CSS variables so each theme gets a
+ * value that stays legible on its own ground — a teal that reads on paper is
+ * too dark on a black screen.
+ */
+const AUTHOR_SLOTS = 10
 
 export function authorColour(turnOrder: number): string {
-  return AUTHOR_COLOURS[((turnOrder % AUTHOR_COLOURS.length) + AUTHOR_COLOURS.length) % AUTHOR_COLOURS.length]
+  const slot = ((turnOrder % AUTHOR_SLOTS) + AUTHOR_SLOTS) % AUTHOR_SLOTS
+  return `var(--author-${slot})`
 }
 
 export function initials(name: string): string {

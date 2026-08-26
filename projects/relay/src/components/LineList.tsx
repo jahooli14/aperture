@@ -1,13 +1,15 @@
-import { Avatar } from './Avatar'
 import { authorColour, timeAgo } from '../lib/format'
 import type { Line, Member } from '../lib/types'
 
 /**
- * Two ways to look at the same thing.
+ * Two views of the same thing.
  *
- * `thread` is who said what and when — the view you write in.
- * `read` drops all attribution and runs the lines together as prose. That's
- * the whole reason to leave a chat app: seeing the story rather than the chat.
+ * `thread` is the manuscript: every line numbered in the margin and tinted to
+ * whoever wrote it. The numbers are what the index points at, and they make
+ * the thing feel like a document rather than a chat.
+ *
+ * `read` drops all attribution and lets it run as prose. That is the reason
+ * to leave a chat app.
  */
 export type ViewMode = 'thread' | 'read'
 
@@ -16,60 +18,104 @@ export function LineList({
   members,
   mode,
   currentUserId,
+  landedOn,
 }: {
   lines: Line[]
   members: Member[]
   mode: ViewMode
   currentUserId: string
+  /** Line jumped to from the index — briefly marked so it can be found. */
+  landedOn?: number | null
 }) {
   const orderByUser = new Map(members.map((m) => [m.user_id, m.turn_order]))
 
   if (lines.length === 0) {
     return (
-      <p className="px-1 py-10 text-center font-story text-muted">
+      <p className="prose-story py-16 text-center italic" style={{ color: 'rgb(var(--faint))' }}>
         Nothing written yet. The first line is the hardest.
       </p>
     )
   }
 
   if (mode === 'read') {
+    // Paragraphs have to be siblings for the spacing and first-line indent to
+    // apply, so lines are grouped into chapters and each chapter is one block
+    // of prose rather than a stack of separately wrapped lines.
+    const chapters: { title: string | null; lines: Line[] }[] = []
+    for (const line of lines) {
+      if (line.chapter_title || chapters.length === 0) {
+        chapters.push({ title: line.chapter_title, lines: [line] })
+      } else {
+        chapters[chapters.length - 1].lines.push(line)
+      }
+    }
+
     return (
-      <div className="prose-story space-y-4 px-1 py-4">
-        {lines.map((line) => (
-          <div key={line.id} id={`line-${line.position}`}>
-            {line.chapter_title && (
-              <h2 className="pb-2 pt-6 text-center font-story text-xl">{line.chapter_title}</h2>
+      <div className="py-6">
+        {chapters.map((chapter, chapterIndex) => (
+          <section key={chapter.lines[0].id}>
+            {chapter.title && (
+              <div className="chapter-open">
+                <span className="chapter-rule" />
+                <h2 className="chapter-name">{chapter.title}</h2>
+                <span className="chapter-rule" />
+              </div>
             )}
-            <p>{line.body}</p>
-          </div>
+            <div className="prose-story reading">
+              {chapter.lines.map((line, index) => (
+                <p
+                  key={line.id}
+                  id={`line-${line.position}`}
+                  className={index === 0 && (chapter.title || chapterIndex === 0) ? 'dropcap' : undefined}
+                >
+                  {line.body}
+                </p>
+              ))}
+            </div>
+          </section>
         ))}
       </div>
     )
   }
 
   return (
-    <ol className="space-y-5 px-1 py-4">
+    <ol className="flex flex-col gap-5 py-5">
       {lines.map((line) => {
         const turnOrder = orderByUser.get(line.author_id) ?? 0
+        const colour = authorColour(turnOrder)
+        const mine = line.author_id === currentUserId
+
         return (
-          <li key={line.id} id={`line-${line.position}`}>
+          <li key={line.id}>
             {line.chapter_title && (
-              <h2 className="mb-4 mt-8 border-y border-rule py-3 text-center font-story text-xl">
-                {line.chapter_title}
-              </h2>
+              <div className="chapter-open">
+                <span className="chapter-rule" />
+                <h2 className="chapter-name">{line.chapter_title}</h2>
+                <span className="chapter-rule" />
+              </div>
             )}
-            <div className="flex items-center gap-2 pb-1.5">
-              <Avatar name={line.display_name} turnOrder={turnOrder} size={20} />
-              <span className="text-xs font-medium">
-                {line.author_id === currentUserId ? 'You' : line.display_name}
-              </span>
-              <span className="text-xs text-muted">{timeAgo(line.created_at)}</span>
-            </div>
+
             <div
-              className="prose-story border-l-2 pl-3.5"
-              style={{ borderColor: authorColour(turnOrder) }}
+              id={`line-${line.position}`}
+              className={`line-row${landedOn === line.position ? ' landed' : ''}`}
+              style={line.pending ? { opacity: 0.55 } : undefined}
             >
-              <p>{line.body}</p>
+              <span className="line-num" style={{ color: colour }}>
+                {line.position}
+              </span>
+              <div className="min-w-0">
+                <div className="flex items-baseline gap-2 pb-1">
+                  <span className="line-who" style={{ color: colour }}>
+                    {mine ? 'You' : line.display_name}
+                  </span>
+                  <span className="text-[0.68rem] text-faint">
+                    {line.pending ? 'Sending…' : timeAgo(line.created_at)}
+                  </span>
+                </div>
+                <div className="prose-story">
+                  <p>{line.body}</p>
+                </div>
+              </div>
             </div>
           </li>
         )
