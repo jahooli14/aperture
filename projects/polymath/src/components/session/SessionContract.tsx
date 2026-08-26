@@ -76,6 +76,7 @@ export function SessionContract({
   project,
   onDone,
   source = 'live',
+  surface = 'card',
 }: {
   project: Project
   onDone: () => void
@@ -83,7 +84,14 @@ export function SessionContract({
    *  live-project declaration, just tags the logged session so the mirror
    *  and the quota check (different-thing.ts) can find it. */
   source?: 'live' | 'different-thing'
+  /** 'card' draws its own glass surface (standalone /session route).
+   *  'bare' lets the parent own the surface -- used on home so the session
+   *  keeps the answer box's hero gradient instead of visibly demoting
+   *  itself to a flat panel at the moment you commit to working. */
+  surface?: 'card' | 'bare'
 }) {
+  // In 'bare' mode the parent supplies padding and background.
+  const shell = (extra: string) => (surface === 'bare' ? extra : `glass-card p-6 ${extra}`)
   const { active, starting, closing, error, startSession, closeSession } = useSessionStore()
   const [phase, setPhase] = useState<Phase>('window')
   const [elapsedSec, setElapsedSec] = useState(0)
@@ -114,7 +122,7 @@ export function SessionContract({
 
   if (phase === 'done') {
     return (
-      <div className="glass-card p-6 text-center space-y-3">
+      <div className={shell("text-center space-y-3")}>
         <p className="text-base">Logged.</p>
         <button className="text-sm underline" style={{ color: 'rgb(var(--brand-primary-rgb))' }} onClick={onDone}>
           Close
@@ -125,7 +133,7 @@ export function SessionContract({
 
   if (phase === 'closeout') {
     return (
-      <div className="glass-card p-6 space-y-4">
+      <div className={shell("space-y-4")}>
         <p className="text-base">Where'd you get to?</p>
         {active?.askMvsSeed && (
           <div className="space-y-1">
@@ -165,7 +173,7 @@ export function SessionContract({
 
   if (phase === 'running' && active) {
     return (
-      <div className="glass-card p-6 space-y-4">
+      <div className={shell("space-y-4")}>
         <div className="flex items-center justify-between">
           <span className="text-sm" style={secondaryTextStyle}>{project.title}</span>
           <span className="flex items-center gap-1 text-lg tabular-nums">
@@ -187,7 +195,7 @@ export function SessionContract({
 
   // phase === 'window'
   return (
-    <div className="glass-card p-6 space-y-4">
+    <div className={shell("space-y-4")}>
       <p className="text-base font-medium">{project.title}</p>
       <ReEntry project={project} />
       <div className="space-y-2">

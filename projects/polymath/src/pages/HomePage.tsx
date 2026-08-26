@@ -7,30 +7,32 @@
  *
  * Section order:
  *   1. Today's answer    — TodaysAnswerCard: one statement, one action, one
- *                          redirect. The redirect panel owns both the
- *                          Focus chat thread AND the full idea deck
- *                          (evidence, modes, hour scope, reject-with-
- *                          reason) — both used to be separate pieces on
- *                          this page (FocusChat as its own stacked card
- *                          with a duplicate input field; the deck as its
- *                          own "try something new" section) and are
- *                          reached from inside the card now instead.
- *   2. Everything else   — EverythingElseMini: one swipeable row, still
+ *                          redirect. Since the execution rebuild (SPEC.md)
+ *                          this card IS the session contract — the live
+ *                          project, the last close-out played back in your
+ *                          own words, and a Start session that runs the
+ *                          window → shapes → timer → close-out flow inside
+ *                          this same box. The redirect panel still owns the
+ *                          Focus chat thread and the full idea deck.
+ *   2. The attention slot — AttentionSlot: at most ONE of a deferred
+ *                          close-out, the monthly mirror, the live-project
+ *                          re-ask, a morph/composite proposal, today's
+ *                          spark, or the different-thing nudge. Silent on
+ *                          most opens. Never a competing hero.
+ *   3. Everything else   — EverythingElseMini: one swipeable row, still
  *                          warm projects then queued ones. Used to be two
  *                          stacked 2-up grids ("still warm" / "the queue");
  *                          merged into the single carousel the design
  *                          settled on, so priority/warm/queue reads as one
  *                          continuum instead of three separate lists.
- *   3. Worth a look       — ReviewRotation: two or three forgotten projects,
- *                          reviewed and acted on IN PLACE (still mine / pick
- *                          it up / park it). The projects page is for
- *                          browsing; the review finishes where it starts.
- *                          Ordered by shared label with the current priority
- *                          project, so a resurfaced one reads as a building
- *                          block rather than a random pick. Self-contained
- *                          and invisible once the batch is clear.
  *   4. Now consuming     — ConsumingWidget (identity layer + reading drawers)
- *   5. Thought of the day — ThoughtOfTheDay (editorial pull-quote)
+ *
+ * Removed by the execution rebuild: "worth a look" (ReviewRotation) and
+ * "thought of the day" (ThoughtOfTheDay). Both were resurfacing mechanisms
+ * that the mull channel now does with evidence and a way to answer back, and
+ * running them alongside it is what made this page read as a stack of
+ * unrelated sections rather than one harness. Both components still exist
+ * and are one line each to restore.
  *
  * Behind everything: a vanishingly subtle vertical wash (.home-atmosphere) —
  * warmer at the top, cooler at the bottom.
@@ -44,23 +46,18 @@ import { useMemoryStore } from '../stores/useMemoryStore'
 import { useContextEngineStore } from '../stores/useContextEngineStore'
 import { useJourneyStore } from '../stores/useJourneyStore'
 import { useAuthContext } from '../contexts/AuthContext'
-import { useKeyboardVisible } from '../hooks/useKeyboardVisible'
 import { SubtleBackground } from '../components/SubtleBackground'
 import { TodaysAnswerCard } from '../components/home/TodaysAnswerCard'
-import { FeelingPill } from '../components/home/FeelingPill'
 import { EverythingElseMini } from '../components/home/EverythingElseMini'
-import { ReviewRotation } from '../components/home/ReviewRotation'
-import { ThoughtOfTheDay } from '../components/home/ThoughtOfTheDay'
 import { ConsumingWidget } from '../components/home/ConsumingWidget'
 import { AttentionSlot } from '../components/session/AttentionSlot'
 import { DeferMount } from '../components/DeferMount'
 import { UnauthHome } from '../components/onboarding/UnauthHome'
 import { ease, stagger } from '../lib/motion'
-import { AlertCircle, Search, Moon, Settings, ChevronDown, Timer } from 'lucide-react'
+import { AlertCircle, Search, Moon, Settings } from 'lucide-react'
 
 export function HomePage() {
   const { isAuthenticated } = useAuthContext()
-  const isKeyboardVisible = useKeyboardVisible()
   const navigate = useNavigate()
   const fetchProjects = useProjectStore(s => s.fetchProjects)
   const projects = useProjectStore(s => s.projects)
@@ -187,16 +184,6 @@ export function HomePage() {
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative" style={{ zIndex: 1 }}>
 
-          {/* Attention budget (SPEC.md, execution rebuild) — at most one of
-              a deferred close-out, the monthly mirror, a composite/morph
-              proposal, or today's spark. Renders nothing most opens.
-              Additive: sits above the untouched old surface below. */}
-          {isAuthenticated && (
-            <motion.div {...stackTransition(0)}>
-              <AttentionSlot />
-            </motion.div>
-          )}
-
           {/* Masthead: bedtime/search actions (right). The mode label lives
               with each section header below ("today's answer", "still warm")
               so the page reads as one editorial stack. No streak counter —
@@ -229,19 +216,6 @@ export function HomePage() {
                 >
                   <Search className="h-5 w-5" />
                 </button>
-                {/* Entry point for the new execution session contract
-                    (SPEC.md). Additive on purpose — this sits alongside
-                    the old Today's Answer / Power Hour flow rather than
-                    replacing it, until the session contract is validated
-                    and the home rebuild becomes its own piece of work. */}
-                <button
-                  onClick={() => navigate('/session')}
-                  aria-label="Start a session"
-                  className="masthead-action press-spring"
-                  title="Start a session"
-                >
-                  <Timer className="h-5 w-5" />
-                </button>
               </div>
             </header>
           </motion.div>
@@ -255,8 +229,20 @@ export function HomePage() {
               — that used to produce two stacked glass cards with duplicate
               headers and duplicate input fields. */}
           <motion.div {...stackTransition(1)}>
-            <FeelingPill />
             <TodaysAnswerCard />
+          </motion.div>
+
+          {/* The attention budget (SPEC.md) — at most ONE of: a deferred
+              close-out, the monthly mirror, the live-project re-ask, a
+              composite/morph proposal, today's spark, or the different-thing
+              nudge. Renders nothing on most opens.
+
+              It sits directly under the answer box, not above the masthead
+              where the first cut put it (which read as broken chrome), and
+              never as a competing hero — the answer box is the one thing
+              you act on; this is the one thing the app gets to say back. */}
+          <motion.div {...stackTransition(2)}>
+            <AttentionSlot />
           </motion.div>
 
           {/* Section 2 — Everything else. Still warm projects then queued
@@ -273,17 +259,18 @@ export function HomePage() {
             </>
           )}
 
-          {/* Section 3 — Worth a look. The review rotation: a few forgotten
-              projects, dealt with here rather than on another page. Renders
-              its own seam + header and disappears entirely once the batch is
-              clear, same contract as "everything else" above. */}
-          <motion.div {...stackTransition(3)}>
-            <ReviewRotation />
-          </motion.div>
+          {/* "Worth a look" (ReviewRotation) removed by the execution
+              rebuild — resurfacing a forgotten project is the mull
+              channel's job now (sparks, and the composite proposals that
+              gate on exactly the same "stalled" condition the rotation was
+              approximating with time-since-touched). Two mechanisms
+              competing to resurface the same projects is what made the page
+              read as unrelated sections. The rotation's API and component
+              are untouched, so this is one line to put back. */}
 
           <div className="section-seam" aria-hidden />
 
-          {/* Section 4 — Now consuming. Identity layer.
+          {/* Section 3 — Now consuming. Identity layer.
               Non-article lists in the top strip; Saved reads + New reads
               dropdowns hold articles from the reading queue and RSS feeds.
               Deferred: it fetches the reading queue + RSS on mount, so we
@@ -296,16 +283,12 @@ export function HomePage() {
             </DeferMount>
           </motion.div>
 
-          <div className="section-seam" aria-hidden />
-
-          {/* Section 5 — Thought of the day. Component renders its own
-              section-header internally. Deferred for the same reason — it
-              fetches a batch of resurfaced memories on mount. */}
-          <motion.div {...stackTransition(5)}>
-            <DeferMount minHeight={160}>
-              <ThoughtOfTheDay />
-            </DeferMount>
-          </motion.div>
+          {/* "Thought of the day" (ThoughtOfTheDay) removed by the
+              execution rebuild — an editorial pull-quote from a past
+              memory is a spark, and the spark channel does it with
+              evidence, a type rotation, and a way to answer back by voice.
+              Keeping both meant two unconnected quotes-from-your-past on
+              one page. Component untouched if it's wanted back. */}
 
           {/* Quiet exit to Settings — small, centred, low-contrast.
               Lives at the very bottom so it never competes with content. */}
@@ -324,41 +307,18 @@ export function HomePage() {
 
         </div>
 
-        {/* Pairs with the top box's own "or steer it" language: that card
-            is the shape-a-session half of the screen; the ⊕ fixed at the
-            bottom is the other half — capture, always on, no card needed.
-            Purely a label pointing at a button that already works, so it's
-            decorative (aria-hidden, no pointer events) and sits well clear
-            of the FAB's own halo (safe-area + ~5.7rem at most) rather than
-            trying to touch it. Hidden with the keyboard, same as the FAB
-            it's labelling. */}
-        <div
-          className="fixed left-1/2 -translate-x-1/2 z-40 pointer-events-none flex flex-col items-center gap-1 transition-opacity duration-200"
-          style={{
-            bottom: 'calc(var(--safe-area-inset-bottom, 20px) + 7.25rem)',
-            opacity: isKeyboardVisible ? 0 : 1,
-          }}
-          aria-hidden
-        >
-          <span
-            className="text-[10px] uppercase tracking-[0.24em] font-semibold px-3 py-1 rounded-full"
-            style={{
-              color: 'var(--brand-text-secondary)',
-              opacity: 0.55,
-              background: 'rgba(15,24,41,0.55)',
-              backdropFilter: 'blur(8px)',
-              WebkitBackdropFilter: 'blur(8px)',
-            }}
-          >
-            or capture something new
-          </span>
-          <motion.div
-            animate={{ y: [0, 3, 0] }}
-            transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
-          >
-            <ChevronDown className="h-3.5 w-3.5" style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.6 }} />
-          </motion.div>
-        </div>
+        {/* The floating "or capture something new" caption + chevron that
+            used to sit here is gone. It was position:fixed at ~85% of the
+            viewport height, so at rest it landed on top of whatever content
+            happened to be there — a section header, a project card, the
+            review card — on every screen and at every scroll position. A
+            translucent pill laid over live text is a large part of what made
+            this page read as cluttered.
+
+            Nothing is lost: the ⊕ in the nav below is a glowing primary
+            button in the centre of the bar, and the answer box's own
+            "Say what you're actually after…" field already carries the
+            capture-vs-steer pairing this caption was spelling out. */}
       </div>
     </motion.div>
   )
