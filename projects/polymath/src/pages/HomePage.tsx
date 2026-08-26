@@ -26,13 +26,17 @@
  *                          settled on, so priority/warm/queue reads as one
  *                          continuum instead of three separate lists.
  *   4. Now consuming     — ConsumingWidget (identity layer + reading drawers)
+ *   5. Thought of the day — ThoughtOfTheDay (editorial pull-quote, the
+ *                          page's closer). Distinct from a spark: a spark
+ *                          asks and wants an answer; this shows and asks
+ *                          nothing.
  *
- * Removed by the execution rebuild: "worth a look" (ReviewRotation) and
- * "thought of the day" (ThoughtOfTheDay). Both were resurfacing mechanisms
- * that the mull channel now does with evidence and a way to answer back, and
- * running them alongside it is what made this page read as a stack of
- * unrelated sections rather than one harness. Both components still exist
- * and are one line each to restore.
+ * Removed by the execution rebuild: "worth a look" (ReviewRotation). Its
+ * three-button triage (still mine / pick it up / park it) was a menu, and
+ * "park it" asks you to confirm a kill — which drift-decay now does quietly
+ * on its own. The half of its job that IS still needed (offering a
+ * long-forgotten project back into play) belongs in the attention slot, not
+ * in a section of its own. Component untouched.
  *
  * Behind everything: a vanishingly subtle vertical wash (.home-atmosphere) —
  * warmer at the top, cooler at the bottom.
@@ -50,6 +54,7 @@ import { SubtleBackground } from '../components/SubtleBackground'
 import { TodaysAnswerCard } from '../components/home/TodaysAnswerCard'
 import { EverythingElseMini } from '../components/home/EverythingElseMini'
 import { ConsumingWidget } from '../components/home/ConsumingWidget'
+import { ThoughtOfTheDay } from '../components/home/ThoughtOfTheDay'
 import { AttentionSlot } from '../components/session/AttentionSlot'
 import { DeferMount } from '../components/DeferMount'
 import { UnauthHome } from '../components/onboarding/UnauthHome'
@@ -283,12 +288,21 @@ export function HomePage() {
             </DeferMount>
           </motion.div>
 
-          {/* "Thought of the day" (ThoughtOfTheDay) removed by the
-              execution rebuild — an editorial pull-quote from a past
-              memory is a spark, and the spark channel does it with
-              evidence, a type rotation, and a way to answer back by voice.
-              Keeping both meant two unconnected quotes-from-your-past on
-              one page. Component untouched if it's wanted back. */}
+          <div className="section-seam" aria-hidden />
+
+          {/* Section 4 — Thought of the day. An earlier cut of the rebuild
+              removed this as "the spark channel already does quotes from
+              your past", which was wrong: a spark ASKS you something and
+              wants a voice answer back, this just shows you something you
+              said and asks nothing. Different job, and it's the page's
+              closer rather than a competing interruption. Component renders
+              its own section-header internally; deferred because it fetches
+              a batch of resurfaced memories on mount. */}
+          <motion.div {...stackTransition(5)}>
+            <DeferMount minHeight={160}>
+              <ThoughtOfTheDay />
+            </DeferMount>
+          </motion.div>
 
           {/* Quiet exit to Settings — small, centred, low-contrast.
               Lives at the very bottom so it never competes with content. */}
