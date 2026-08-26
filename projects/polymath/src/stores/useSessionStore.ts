@@ -73,7 +73,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     set({ starting: true, error: null })
     try {
       const data = await postJson<{ session: any; shapes: SessionShape[]; ask_mvs_seed: boolean }>(
-        '/api/sessions?resource=start',
+        '/api/utilities?resource=start',
         { project_id: projectId, window_minutes: windowMinutes, source }
       )
       set({
@@ -98,7 +98,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     set({ closing: true, error: null })
     try {
       const result = await postJson<{ ok: boolean; moved: boolean | null; duration_minutes: number }>(
-        '/api/sessions?resource=close',
+        '/api/utilities?resource=close',
         { session_id: active.id, closeout_text: closeoutText, mvs_seed_minutes: mvsSeedMinutes }
       )
       set({ active: null, closing: false })
@@ -111,7 +111,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
 
   checkPendingCloseout: async () => {
     try {
-      const res = await fetch('/api/sessions?resource=pending-closeout')
+      const res = await fetch('/api/utilities?resource=pending-closeout')
       if (!res.ok) return
       const data = await res.json()
       set({ pendingCloseout: data.pending ?? null })
@@ -125,7 +125,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     if (!pending) return
     set({ closing: true, error: null })
     try {
-      await postJson('/api/sessions?resource=close', { session_id: pending.id, closeout_text: closeoutText })
+      await postJson('/api/utilities?resource=close', { session_id: pending.id, closeout_text: closeoutText })
       set({ pendingCloseout: null, closing: false })
     } catch (e) {
       set({ closing: false, error: e instanceof Error ? e.message : 'Could not save the close-out.' })
@@ -135,6 +135,6 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   dismissPendingCloseout: () => set({ pendingCloseout: null }),
 
   declareLive: async (projectId) => {
-    await postJson('/api/sessions?resource=declare-live', { project_id: projectId })
+    await postJson('/api/utilities?resource=declare-live', { project_id: projectId })
   },
 }))

@@ -117,8 +117,8 @@ jobs:
             # so it's instant and offline-available on first open. One morph
             # proposal max per day, portfolio-wide (rate limit enforced
             # server-side in morph.ts, not by this schedule).
-            hit "/api/sparks?resource=bake" &
-            hit "/api/proposals?resource=generate-morph" &
+            hit "/api/utilities?resource=bake" &
+            hit "/api/utilities?resource=generate-morph" &
           fi
 
           # ── 09:00 UTC daily: Idea Engine review + email digest ────────
@@ -134,10 +134,10 @@ jobs:
             hit "/api/projects?resource=generate-digest" &
             # Joints must land before composites are generated from them,
             # so this pair runs sequentially (no &).
-            hit "/api/proposals?resource=mine-joints"
-            hit "/api/proposals?resource=generate-composite"
+            hit "/api/utilities?resource=mine-joints"
+            hit "/api/utilities?resource=generate-composite"
             # Silent, no-confirmation harvest of drifted + stalled projects.
-            hit "/api/proposals?resource=drift-decay" &
+            hit "/api/utilities?resource=drift-decay" &
           fi
 
           wait
