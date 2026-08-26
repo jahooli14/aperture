@@ -176,7 +176,12 @@ Relay shares a Supabase project with another Aperture app — it lives in its ow
    Regenerate the SQL from the transcript with
    `npx tsx scripts/make-seed-sql.ts` — never hand-edit it.
 
-Auth is Supabase magic link — no passwords. Env vars: `.env.example` in the
+Auth is a six-digit emailed code — no passwords, no magic link. Email
+templates are **per Supabase project**, and the shared one renders
+`{{ .Token }}` only (Pupils signs in the same way), so a link-based flow would
+send Relay's users a code with nowhere to type it. Codes also need no redirect
+allow-list, and phones offer to autofill them. Don't edit that template to add
+a link — it would change Pupils' email too. Env vars: `.env.example` in the
 project folder (it's force-added past the root `.gitignore`).
 
 Both SQL files are checked against a real Postgres 16 with a Supabase-shaped
