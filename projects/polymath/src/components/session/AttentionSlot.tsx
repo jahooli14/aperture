@@ -199,6 +199,53 @@ function ProposalSlot({ proposal, onResolved }: { proposal: Proposal; onResolved
   )
 }
 
+/**
+ * The 'forgotten' spark is the last branch of the stale router (see
+ * api/_lib/forgotten.ts). It's the one spark type whose useful answer isn't
+ * words -- it's putting the project back in play -- so it gets an action
+ * instead of a microphone. Still one statement, one action, one quiet out.
+ */
+function ForgottenSlot({ spark, onResolved }: { spark: Spark; onResolved: () => void }) {
+  const { declareLive } = useSessionStore()
+  const [busy, setBusy] = useState(false)
+
+  const makeLive = async () => {
+    if (!spark.project_id) return onResolved()
+    setBusy(true)
+    try {
+      await declareLive(spark.project_id)
+      await useProjectStore.getState().fetchProjects()
+    } finally {
+      setBusy(false)
+      onResolved()
+    }
+  }
+
+  return (
+    <div className="glass-card p-6 space-y-3">
+      <p className="text-base">{spark.text}</p>
+      <div className="flex gap-2">
+        <button
+          className="flex-1 py-2 rounded-lg text-sm font-medium disabled:opacity-50"
+          style={primaryButtonStyle}
+          disabled={busy || !spark.project_id}
+          onClick={makeLive}
+        >
+          Make it live
+        </button>
+        <button
+          className="px-4 py-2 rounded-lg border text-sm disabled:opacity-50"
+          style={borderStyle}
+          disabled={busy}
+          onClick={onResolved}
+        >
+          Not now
+        </button>
+      </div>
+    </div>
+  )
+}
+
 function SparkSlot({ spark, onResolved }: { spark: Spark; onResolved: () => void }) {
   const [text, setText] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -468,7 +515,11 @@ export function AttentionSlot() {
   if (kind === 'spark' && spark) {
     return (
       <div className="mb-4">
-        <SparkSlot spark={spark} onResolved={() => setResolved(true)} />
+        {spark.type === 'forgotten' ? (
+          <ForgottenSlot spark={spark} onResolved={() => setResolved(true)} />
+        ) : (
+          <SparkSlot spark={spark} onResolved={() => setResolved(true)} />
+        )}
       </div>
     )
   }
