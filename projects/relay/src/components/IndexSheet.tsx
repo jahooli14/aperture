@@ -58,7 +58,9 @@ export function IndexSheet({
 
         {state && !state.available && (
           <p className="text-sm text-muted">
-            The index needs a Gemini key on the server. Everything else works without it.
+            The server can't see a Gemini key. If you've just added one in Vercel, redeploy —
+            environment variables only reach the running app on a new deployment. Everything
+            else works without it.
           </p>
         )}
 

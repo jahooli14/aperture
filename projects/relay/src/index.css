@@ -141,11 +141,36 @@
 
   /* A line number in the margin, tinted to whoever wrote it. Turns the thread
      into something you can point at — which is what the index cites. */
+  /* The gutter stays put so line numbers form one scannable column — the
+     index cites them. Everything to its right belongs to a turn. */
   .line-row {
     display: grid;
-    grid-template-columns: 1.9rem minmax(0, 1fr);
-    gap: 0.85rem;
+    grid-template-columns: 1.55rem minmax(0, 1fr);
+    gap: 0.6rem;
     scroll-margin-top: 5.5rem;
+  }
+
+  /* A turn: a rule in the writer's colour, and an indent that alternates.
+     Between them the page reads as a back-and-forth at a glance, without
+     having to read a single name — which is the thing a chat app got right
+     and a flat list loses. */
+  .turn {
+    border-left: 2px solid;
+    padding-left: 0.8rem;
+    transition: margin-left 0.18s ease;
+  }
+
+  .turn-b {
+    margin-left: 1.15rem;
+  }
+
+  /* A faint wash keyed to the writer, so the alternation still reads on a
+     glance-and-scroll even where the indent is subtle. */
+  .turn-tint {
+    border-radius: 0 6px 6px 0;
+    padding-right: 0.6rem;
+    padding-top: 0.1rem;
+    padding-bottom: 0.35rem;
   }
 
   .line-num {
