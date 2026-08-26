@@ -26,6 +26,12 @@ export const SPARK_TYPES = [
   'scale_jump',
   'material_fact',
   'outside_reach',
+  // The last branch of the stale router -- see forgotten.ts. It sits in the
+  // normal rotation rather than getting its own priority tier, because its
+  // generator declines (returns null) unless the corpus has gone completely
+  // silent about a project, and morph/composite proposals already outrank
+  // the whole spark tier in the attention budget.
+  'forgotten',
 ] as const
 
 export type SparkType = typeof SPARK_TYPES[number]

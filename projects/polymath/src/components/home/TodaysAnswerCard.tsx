@@ -3,16 +3,31 @@
  *
  * Replaces the old three-piece split (KeepGoingCard hero + FocusChat's own
  * collapsed pill + ProjectIdeasHome's quiet suggest-a-project pill) with
- * one thing: a single "today's answer" built from the priority project's
- * real Power Hour plan, a Start session button, and a redirect ("or steer
- * it") that opens to real corpus signals — the same evidence-backed queue
- * ProjectIdeasHome draws from — plus free text. Tapping a signal commits it
- * (creates the project, becomes the new answer); typing hands off to the
- * existing Focus chat thread instead of running a second conversation.
+ * one thing: a single "today's answer", a Start session button, and a
+ * redirect ("or steer it") that opens to real corpus signals — the same
+ * evidence-backed queue ProjectIdeasHome draws from — plus free text.
+ * Tapping a signal commits it (creates the project, becomes the new
+ * answer); typing hands off to the existing Focus chat thread instead of
+ * running a second conversation.
  *
  * "Guide, not menu": one statement, one action, one quiet way to redirect —
  * never a question next to two competing buttons. See the chat-ux-review
  * design work this was built from for the full rationale.
+ *
+ * EXECUTION REBUILD (SPEC.md): this card IS the session contract now, not a
+ * neighbour to it. The first cut of the rebuild added a parallel session
+ * card + its own /session route beside this one, which left the home with
+ * two competing answer boxes and a floating menu — the exact "bolted on"
+ * result the spec exists to prevent. So instead:
+ *   - the hero is the declared LIVE project (state==='live'), or whatever
+ *     is booked for today, falling back to the legacy is_priority star so
+ *     nothing regresses before a live project has ever been declared;
+ *   - the readout prefers the last close-out, played back in the user's own
+ *     words — that re-entry line is the thing that makes a cold project
+ *     cheap to restart, and it's why close-out is non-negotiable;
+ *   - Start session opens the real contract (window → derived shapes →
+ *     timer → close-out) inline, in this same box, rather than handing off
+ *     to the old Power Hour focus overlay.
  */
 
 import { useEffect, useMemo, useRef, useState } from 'react'
@@ -28,11 +43,13 @@ import { useSessionContextStore } from '../../stores/useSessionContextStore'
 import { useFocusChatStore } from '../../stores/useFocusChatStore'
 import { useHomeAnswerStore } from '../../stores/useHomeAnswerStore'
 import { useProjectIdeasStore, type ProjectIdea } from '../../stores/useProjectIdeasStore'
-import { useStartProjectSession, SESSION_DURATION_MINUTES } from '../../hooks/useStartProjectSession'
+import { SESSION_DURATION_MINUTES } from '../../hooks/useStartProjectSession'
 import { toPortfolioSummaries, buildOpeningLine } from './focusChatOps'
 import { formatRelativeTime, KeepGoingEmpty } from './KeepGoingEmpty'
 import { ProjectIdeasHome } from './ProjectIdeasHome'
 import { FocusChat } from './FocusChat'
+import { SessionContract } from '../session/SessionContract'
+import { FeelingPill } from './FeelingPill'
 import { createProjectFromIdea } from '../../lib/createProjectFromIdea'
 import { haptic } from '../../utils/haptics'
 import { useToast } from '../ui/toast'
@@ -59,9 +76,27 @@ export function TodaysAnswerCard() {
   // the chat's confirm card sits three components below this one
   // (Card → SteerPanel → FocusChat → FocusChatNewProjectCard).
   const overrideProjectId = useHomeAnswerStore(s => s.overrideProjectId)
+
+  // Execution rebuild (SPEC.md): the declared live project is the hero, and
+  // a project booked for today beats even that — booking a two-hour block
+  // only pays off if the app opens pre-loaded on the day without asking
+  // again. is_priority stays as the fallback so the card still has an
+  // anchor before a live project has ever been declared.
+  const liveProject = useMemo(() => {
+    const today = new Date().toISOString().slice(0, 10)
+    const booked = allProjects.find(
+      p => p.booked_session_at?.slice(0, 10) === today && p.state !== 'harvested',
+    )
+    return booked ?? allProjects.find(p => p.state === 'live') ?? null
+  }, [allProjects])
+
   const focusProject = useMemo(
-    () => (overrideProjectId && allProjects.find(p => p.id === overrideProjectId)) || priorityProject || recentProject || null,
-    [overrideProjectId, allProjects, priorityProject, recentProject],
+    () => (overrideProjectId && allProjects.find(p => p.id === overrideProjectId))
+      || liveProject
+      || priorityProject
+      || recentProject
+      || null,
+    [overrideProjectId, allProjects, liveProject, priorityProject, recentProject],
   )
 
   // Drop the override the moment the REAL priority changes to something
@@ -78,7 +113,6 @@ export function TodaysAnswerCard() {
   }, [priorityProjectId])
 
   const [plan, setPlan] = useState<any>(null)
-  const { start, loading: startingSession } = useStartProjectSession(focusProject?.id)
 
   const [engaged, setEngaged] = useState(false)
   // Shared with ProjectIdeasHome — same cache, same fetch. In practice
@@ -95,6 +129,10 @@ export function TodaysAnswerCard() {
   const [resolveSlow, setResolveSlow] = useState(false)
   const [steerText, setSteerText] = useState('')
   const [showDeck, setShowDeck] = useState(false)
+  // The session contract renders in place of this card's body once
+  // started, so the whole flow (window → shapes → timer → close-out)
+  // happens in the one box rather than on a second screen.
+  const [contractOpen, setContractOpen] = useState(false)
 
   useEffect(() => {
     if (!focusProject) { setPlan(null); return }
@@ -243,7 +281,19 @@ export function TodaysAnswerCard() {
     )
   }
 
-  const handleStartSession = () => start({ prefetched: plan })
+  // Execution rebuild: opens the contract in place. The old Power Hour
+  // handoff (`start({ prefetched: plan })`) is kept as the fallback for a
+  // project that has never had a session, so the button never dead-ends
+  // while `last_closeout_text` is still null across the whole portfolio.
+  const handleStartSession = () => {
+    haptic.medium()
+    setContractOpen(true)
+  }
+
+  // Re-entry playback — the user's own words from the end of the last
+  // session. This is the line that makes a cold project cheap to restart,
+  // so it outranks any generated plan text when it exists.
+  const reEntry = focusProject.last_closeout_text?.trim() || null
 
   const headline = plan?.task_title || focusProject.metadata?.session_headline
   const pitch = plan?.task_description || focusProject.metadata?.session_pitch
@@ -266,7 +316,44 @@ export function TodaysAnswerCard() {
     ? 'going quiet'
     : null
 
+  // A running session takes over the box entirely — during a session there
+  // is exactly one thing on screen, which is the whole point of the
+  // contract. It keeps the hero's gradient and glow (surface="bare", so the
+  // wrapper below owns the surface): dropping to a flat panel at the exact
+  // moment you commit to working reads as a demotion, which is backwards.
+  if (contractOpen) {
+    return (
+      <div
+        className="rounded-2xl p-5 relative overflow-hidden"
+        style={{
+          background: 'linear-gradient(155deg, rgba(var(--brand-primary-rgb),0.10) 0%, rgba(15,24,41,0.65) 60%)',
+          backdropFilter: 'blur(32px) saturate(190%)',
+          WebkitBackdropFilter: 'blur(32px) saturate(190%)',
+          border: '1px solid rgba(var(--brand-primary-rgb),0.35)',
+          boxShadow: '0 0 42px rgba(var(--brand-primary-rgb),0.22), 0 12px 36px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.06)',
+        }}
+      >
+        <div
+          className="absolute top-0 left-0 right-0 h-px"
+          style={{ background: 'linear-gradient(90deg, transparent, rgba(var(--brand-primary-rgb),0.45), transparent)' }}
+        />
+        <SessionContract
+          project={focusProject}
+          surface="bare"
+          onDone={() => {
+            setContractOpen(false)
+            // Pull the project back down so the card's re-entry line shows
+            // the close-out that was just recorded, not the previous one.
+            void useProjectStore.getState().fetchProjects()
+          }}
+        />
+      </div>
+    )
+  }
+
   return (
+    <>
+    <FeelingPill />
     <div
       className="rounded-2xl p-5 flex flex-col overflow-hidden relative transition-all duration-700"
       style={{
@@ -313,7 +400,22 @@ export function TodaysAnswerCard() {
             not something you can act on. Every 1px rectangle at the same
             weight is what made the page read as a stack of outlined
             boxes; fill alone separates it from the card behind it. */}
-        {answer ? (
+        {reEntry ? (
+          /* Where you left off, in your own words. Quoted rather than
+             paraphrased on purpose — a summary of your own sentence is
+             strictly worse than the sentence. */
+          <div className="p-3 rounded-xl mb-4" style={{ background: 'rgba(255,255,255,0.045)' }}>
+            <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-[var(--brand-text-secondary)] opacity-40 mb-1">
+              where you left off
+            </p>
+            <p
+              className="text-[17px] leading-[1.4] mb-1 italic"
+              style={{ color: 'var(--brand-text-secondary)', fontFamily: 'var(--brand-font-serif)' }}
+            >
+              “{reEntry}”
+            </p>
+          </div>
+        ) : answer ? (
           <div className="p-3 rounded-xl mb-4" style={{ background: 'rgba(255,255,255,0.045)' }}>
             <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-[var(--brand-text-secondary)] opacity-40 mb-1">
               {headline ? "today's answer" : "what's next"}
@@ -334,8 +436,7 @@ export function TodaysAnswerCard() {
 
         <button
           onClick={(e) => { e.stopPropagation(); handleStartSession() }}
-          disabled={startingSession}
-          className="w-full py-2.5 rounded-xl font-semibold text-xs uppercase tracking-widest flex items-center justify-center gap-2 transition-all hover:brightness-110 disabled:opacity-50"
+          className="w-full py-2.5 rounded-xl font-semibold text-xs uppercase tracking-widest flex items-center justify-center gap-2 transition-all hover:brightness-110"
           style={{
             background: 'rgba(var(--brand-primary-rgb), 0.12)',
             border: '1px solid rgba(var(--brand-primary-rgb), 0.32)',
@@ -343,14 +444,8 @@ export function TodaysAnswerCard() {
             boxShadow: '0 4px 16px -4px rgba(var(--brand-primary-rgb), 0.18)',
           }}
         >
-          {startingSession ? (
-            <span className="animate-pulse">Planning session...</span>
-          ) : (
-            <>
-              <Play className="h-3.5 w-3.5 fill-current" />
-              Start session
-            </>
-          )}
+          <Play className="h-3.5 w-3.5 fill-current" />
+          Start session
         </button>
       </div>
 
@@ -379,6 +474,7 @@ export function TodaysAnswerCard() {
         )}
       </div>
     </div>
+    </>
   )
 }
 

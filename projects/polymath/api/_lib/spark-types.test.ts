@@ -38,7 +38,10 @@ describe('highestWeightSparkType', () => {
     // Give every OTHER type an equally poor track record too, so this
     // isolates the floor rather than being won by an unseen type's
     // neutral default weight.
-    const badHistoryFor = (type: 'contradiction' | 'material_fact' | 'scale_jump' | 'transferred_constraint' | 'unfinished_thought') =>
+    // Every non-outside_reach candidate needs a poor track record here,
+    // otherwise an unseen type wins on its neutral 0.5 default (0.25 + 0.5 =
+    // 0.75) rather than the floor being what's under test.
+    const badHistoryFor = (type: 'contradiction' | 'material_fact' | 'scale_jump' | 'transferred_constraint' | 'unfinished_thought' | 'forgotten') =>
       Array(10).fill({ type, answered: false })
 
     const history = [
@@ -49,6 +52,7 @@ describe('highestWeightSparkType', () => {
       ...badHistoryFor('scale_jump'),
       ...badHistoryFor('transferred_constraint'),
       ...badHistoryFor('unfinished_thought'),
+      ...badHistoryFor('forgotten'),
     ]
     const picked = highestWeightSparkType(history)
     // outside_reach's floor (0.5) beats everyone else's unfloor'd 0.25 rate-adjusted weight.

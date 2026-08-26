@@ -17,6 +17,12 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { generateText } from './gemini-chat.js'
 import { PLAIN_ENGLISH_RULES } from './plain-english.js'
 import type { SparkType } from './spark-types.js'
+import {
+  selectForgottenProject,
+  forgottenSparkText,
+  FORGOTTEN_SILENCE_DAYS,
+  FORGOTTEN_COOLDOWN_DAYS,
+} from './forgotten.js'
 
 const RECENT_FRAGMENT_LIMIT = 40
 const SPARK_SHELF_LIFE_HOURS = 24
@@ -262,6 +268,69 @@ Respond with JSON only: { "spark": "..." | null, "target_project_title": "..." |
   }
 }
 
+/**
+ * The last branch of the stale router (see forgotten.ts for the full
+ * rationale). Deterministic -- no Gemini call -- because the useful output
+ * here is a plain fact, not a generated sentence, and because it must be
+ * able to decline cheaply: most nights it returns null and the rotation
+ * picks another type.
+ *
+ * The routing filter is the important part: a project the corpus has been
+ * talking about belongs to the morph path, and asking a vague "still want
+ * this?" about it instead of proposing something concrete would be strictly
+ * worse than staying quiet.
+ */
+async function generateForgotten(supabase: SupabaseClient, userId: string): Promise<BakedSpark | null> {
+  const { data: projects } = await supabase
+    .from('projects')
+    .select('id, title, state, last_active, last_session_ended_at, created_at')
+    .eq('user_id', userId)
+    .neq('state', 'harvested')
+    .limit(200)
+
+  if (!projects || projects.length === 0) return null
+
+  const silenceCutoff = new Date(Date.now() - FORGOTTEN_SILENCE_DAYS * 86400000).toISOString()
+  const { data: recentFragments } = await supabase
+    .from('fragments')
+    .select('project_id')
+    .eq('user_id', userId)
+    .gte('created_at', silenceCutoff)
+
+  const cooldownCutoff = new Date(Date.now() - FORGOTTEN_COOLDOWN_DAYS * 86400000).toISOString()
+  const { data: recentOffers } = await supabase
+    .from('sparks')
+    .select('project_id')
+    .eq('user_id', userId)
+    .eq('type', 'forgotten')
+    .gte('created_at', cooldownCutoff)
+    .not('project_id', 'is', null)
+
+  const picked = selectForgottenProject({
+    projects: projects.map((p: any) => ({
+      id: p.id,
+      title: p.title,
+      state: p.state,
+      // Most recent real signal of activity on the project.
+      last_touched_at: [p.last_session_ended_at, p.last_active, p.created_at]
+        .filter(Boolean)
+        .sort()
+        .pop() ?? null,
+    })),
+    projectIdsWithRecentFragments: (recentFragments ?? []).map((f: any) => f.project_id),
+    recentlyOfferedProjectIds: (recentOffers ?? []).map((s: any) => s.project_id),
+  })
+
+  if (!picked) return null
+
+  return {
+    type: 'forgotten',
+    text: forgottenSparkText(picked.project.title, picked.daysUntouched),
+    project_id: picked.project.id,
+    expires_at: expiresAt(SPARK_SHELF_LIFE_HOURS),
+  }
+}
+
 const GENERATORS: Record<SparkType, (supabase: SupabaseClient, userId: string) => Promise<BakedSpark | null>> = {
   noticing: generateNoticing,
   transferred_constraint: generateTransferredConstraint,
@@ -270,6 +339,7 @@ const GENERATORS: Record<SparkType, (supabase: SupabaseClient, userId: string) =
   scale_jump: generateScaleJump,
   material_fact: generateMaterialFact,
   outside_reach: generateOutsideReach,
+  forgotten: generateForgotten,
 }
 
 export async function generateSpark(
