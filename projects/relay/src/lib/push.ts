@@ -64,6 +64,52 @@ export async function enablePush(): Promise<void> {
   if (!saved.ok) throw new Error('Could not save your notification settings')
 }
 
+/**
+ * Quietly repairs this device's registration on app open.
+ *
+ * Safari in particular drops a push subscription without telling anyone, which
+ * looks exactly like the app silently deciding to stop notifying you. If
+ * permission is still granted we re-subscribe and re-save, so the failure
+ * heals itself instead of being discovered a fortnight later.
+ */
+export async function ensurePushHealthy(): Promise<void> {
+  try {
+    if (!isPushSupported() || needsHomeScreenInstall()) return
+    if (Notification.permission !== 'granted') return
+
+    const keyResponse = await fetch('/api/push')
+    if (!keyResponse.ok) return
+    const { publicKey } = await keyResponse.json()
+
+    const registration = await navigator.serviceWorker.ready
+    const subscription =
+      (await registration.pushManager.getSubscription()) ??
+      (await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(publicKey) as BufferSource,
+      }))
+
+    const json = subscription.toJSON()
+    // The server upserts on endpoint, so re-sending an unchanged one is free.
+    await fetch('/api/push', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ endpoint: json.endpoint, keys: json.keys }),
+    })
+  } catch {
+    // Never let this break app start — it is a repair, not a requirement.
+  }
+}
+
+/** Fires a push at this account, to prove the chain works end to end. */
+export async function sendTestPush(): Promise<void> {
+  const response = await fetch('/api/push?resource=test', { method: 'POST' })
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({}))
+    throw new Error(payload.error || 'Could not send a test notification')
+  }
+}
+
 export async function disablePush(): Promise<void> {
   if (!isPushSupported()) return
   const registration = await navigator.serviceWorker.ready

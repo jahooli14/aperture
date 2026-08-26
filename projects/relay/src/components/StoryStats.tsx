@@ -18,10 +18,10 @@ export function StoryStats({
   const busiest = stats.authors[0]?.lines ?? 1
 
   return (
-    <div className="fixed inset-0 z-40 flex items-end justify-center bg-black/40 sm:items-center">
-      <div className="max-h-[85dvh] w-full max-w-reading overflow-y-auto rounded-t-2xl border border-rule bg-card p-5 sm:rounded-2xl">
+    <div className="fixed inset-0 z-40 flex items-end justify-center bg-black/45 sm:items-center">
+      <div className="sheet w-full max-w-reading overflow-y-auto p-5">
         <div className="mb-5 flex items-start justify-between gap-3">
-          <h2 className="font-story text-xl">The story so far</h2>
+          <h2 className="display text-xl font-semibold">The story so far</h2>
           <button className="btn-quiet" onClick={onClose}>
             Done
           </button>
@@ -97,7 +97,7 @@ function Figure({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-lg border border-rule p-3">
       <dt className="text-xs uppercase tracking-wider text-muted">{label}</dt>
-      <dd className="mt-1 font-story text-xl">{value}</dd>
+      <dd className="mt-1 display text-xl font-semibold">{value}</dd>
     </div>
   )
 }

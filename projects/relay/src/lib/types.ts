@@ -37,6 +37,8 @@ export interface Line {
   created_at: string
   chapter_title: string | null
   display_name: string
+  /** Shown immediately on send, before the server has confirmed it. */
+  pending?: boolean
 }
 
 export interface StoryStats {
@@ -65,4 +67,26 @@ export interface StoryDetail {
   stats: StoryStats
   whose_turn: string | null
   can_write: boolean
+}
+
+export interface IndexEntry {
+  name: string
+  note: string
+  lines: number[]
+}
+
+export interface StoryIndex {
+  people: IndexEntry[]
+  places: IndexEntry[]
+  threads: IndexEntry[]
+}
+
+export interface StoryIndexResponse {
+  index: StoryIndex | null
+  generated_at: string | null
+  up_to_position: number
+  last_position: number
+  behind_by: number
+  available: boolean
+  enough_lines: boolean
 }

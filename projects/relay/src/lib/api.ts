@@ -1,5 +1,5 @@
 /** Typed wrapper over the /api routes. Auth is attached by setupAuthFetch. */
-import type { Line, Profile, StoryDetail, StorySummary, TurnMode } from './types'
+import type { Line, Profile, StoryDetail, StoryIndexResponse, StorySummary, TurnMode } from './types'
 
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, {
@@ -69,6 +69,11 @@ export const api = {
       method: 'PATCH',
       body: JSON.stringify({ notify }),
     }),
+
+  getIndex: (storyId: string) => request<StoryIndexResponse>(`/api/story-index?story=${storyId}`),
+
+  buildIndex: (storyId: string) =>
+    request<StoryIndexResponse>(`/api/story-index?story=${storyId}`, { method: 'POST' }),
 
   leaveStory: (storyId: string) =>
     request<{ removed: string }>(`/api/members?story=${storyId}`, { method: 'DELETE' }),

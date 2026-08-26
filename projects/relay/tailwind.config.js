@@ -4,18 +4,20 @@ export default {
   theme: {
     extend: {
       colors: {
-        paper: 'rgb(var(--paper) / <alpha-value>)',
-        card: 'rgb(var(--card) / <alpha-value>)',
+        paper: 'rgb(var(--ground) / <alpha-value>)',
+        card: 'rgb(var(--surface) / <alpha-value>)',
+        sunk: 'rgb(var(--sunk) / <alpha-value>)',
         ink: 'rgb(var(--ink) / <alpha-value>)',
+        body: 'rgb(var(--body) / <alpha-value>)',
         muted: 'rgb(var(--muted) / <alpha-value>)',
+        faint: 'rgb(var(--faint) / <alpha-value>)',
         rule: 'rgb(var(--rule) / <alpha-value>)',
         accent: 'rgb(var(--accent) / <alpha-value>)',
       },
       fontFamily: {
-        story: ['Iowan Old Style', 'Palatino Linotype', 'Palatino', 'Georgia', 'serif'],
-        sans: ['ui-sans-serif', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'sans-serif'],
+        story: ["'Source Serif 4 Variable'", 'Iowan Old Style', 'Georgia', 'serif'],
       },
-      maxWidth: { reading: '34rem' },
+      maxWidth: { reading: '33rem' },
     },
   },
   plugins: [],

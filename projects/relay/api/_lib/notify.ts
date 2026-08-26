@@ -65,12 +65,31 @@ export async function notifyStory(
 
   if (recipients.length === 0) return { sent: 0, removed: 0 }
 
+  return sendToUsers(supabase, recipients, opts.payload)
+}
+
+/** Sends to one person, on every device they've turned notifications on for. */
+export async function notifyUser(
+  supabase: RelayClient,
+  userId: string,
+  payload: PushPayload
+): Promise<{ sent: number; removed: number }> {
+  if (!pushConfigured()) return { sent: 0, removed: 0 }
+  configure()
+  return sendToUsers(supabase, [userId], payload)
+}
+
+async function sendToUsers(
+  supabase: RelayClient,
+  userIds: string[],
+  payload: PushPayload | ((userId: string) => PushPayload)
+): Promise<{ sent: number; removed: number }> {
   const { data: subscriptions } = await supabase
     .from('push_subscriptions')
     .select('endpoint, p256dh, auth, user_id')
-    .in('user_id', recipients)
+    .in('user_id', userIds)
 
-  const resolve = typeof opts.payload === 'function' ? opts.payload : () => opts.payload as PushPayload
+  const resolve = typeof payload === 'function' ? payload : () => payload
   const dead: string[] = []
   let sent = 0
 
@@ -79,11 +98,16 @@ export async function notifyStory(
       try {
         await webpush.sendNotification(
           { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
-          JSON.stringify(resolve(sub.user_id))
+          JSON.stringify(resolve(sub.user_id)),
+          // A "your turn" push is worth waking the phone for, and worth the
+          // push service holding briefly if the device is offline.
+          { urgency: 'high', TTL: 60 * 60 * 12 }
         )
         sent += 1
       } catch (e) {
         const status = (e as { statusCode?: number }).statusCode
+        // The push service has retired this endpoint — stop retrying it
+        // forever, and let the client notice and re-subscribe.
         if (status === 404 || status === 410) dead.push(sub.endpoint)
         else console.error('[relay/push] send failed:', status, e)
       }

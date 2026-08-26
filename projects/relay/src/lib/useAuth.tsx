@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 import type { Session } from '@supabase/supabase-js'
 import { supabase } from './supabase'
 import { api } from './api'
+import { ensurePushHealthy } from './push'
 import type { Profile } from './types'
 
 interface AuthValue {
@@ -31,6 +32,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     })
     return () => listener.subscription.unsubscribe()
   }, [])
+
+  // Repair this device's push registration whenever someone is signed in.
+  useEffect(() => {
+    if (!session) return
+    void ensurePushHealthy()
+  }, [session])
 
   useEffect(() => {
     if (!session) return

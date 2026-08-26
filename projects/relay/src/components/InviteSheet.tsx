@@ -47,11 +47,11 @@ export function InviteSheet({
   }
 
   return (
-    <div className="fixed inset-0 z-40 flex items-end justify-center bg-black/40 sm:items-center">
-      <div className="w-full max-w-reading rounded-t-2xl border border-rule bg-card p-5 sm:rounded-2xl">
+    <div className="fixed inset-0 z-40 flex items-end justify-center bg-black/45 sm:items-center">
+      <div className="sheet w-full max-w-reading overflow-y-auto p-5">
         <div className="mb-4 flex items-start justify-between gap-3">
           <div>
-            <h2 className="font-story text-xl">Writers</h2>
+            <h2 className="display text-xl font-semibold">Writers</h2>
             <p className="text-sm text-muted">
               {members.length} of {story.max_members}
             </p>

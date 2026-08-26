@@ -9,7 +9,8 @@ import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { getSupabaseClient } from './_lib/supabase.js'
 import { getUserId } from './_lib/auth.js'
 import { fail, handleErrors } from './_lib/http.js'
-import { pushConfigured } from './_lib/notify.js'
+import { notifyUser, pushConfigured } from './_lib/notify.js'
+import { firstParam } from './_lib/http.js'
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'GET') {
@@ -26,6 +27,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const supabase = getSupabaseClient()
 
   return handleErrors(res, async () => {
+    // Proves the whole chain works — server, push service, phone — without
+    // needing the other person to write a line.
+    if (req.method === 'POST' && firstParam(req, 'resource') === 'test') {
+      const { sent } = await notifyUser(supabase, userId, {
+        title: 'Relay',
+        body: 'Notifications are working. This is what a turn will look like.',
+        url: '/',
+        tag: 'relay-test',
+      })
+      if (sent === 0) {
+        return fail(res, 409, 'No device is registered yet. Turn notifications on first.')
+      }
+      return res.status(200).json({ sent })
+    }
+
     if (req.method === 'POST') {
       const { endpoint, keys } = req.body ?? {}
       if (typeof endpoint !== 'string' || !keys?.p256dh || !keys?.auth) {
