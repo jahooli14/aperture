@@ -17,5 +17,13 @@ if [[ -z "$VERCEL_GIT_PREVIOUS_SHA" ]]; then exit 1; fi
 # If the previous SHA isn't in this clone, proceed with build
 git rev-parse "$VERCEL_GIT_PREVIOUS_SHA" >/dev/null 2>&1 || exit 1
 
+# Redeploying the commit that is already live. Nothing in git has changed, so
+# the diff below would always skip it — but a redeploy of the same commit is
+# only ever asked for deliberately, and it is how an environment variable
+# change is picked up. Always build.
+CURRENT=$(git rev-parse HEAD)
+PREVIOUS=$(git rev-parse "$VERCEL_GIT_PREVIOUS_SHA")
+if [[ "$CURRENT" == "$PREVIOUS" ]]; then exit 1; fi
+
 # Build only if this project's files changed
 git diff --quiet "$VERCEL_GIT_PREVIOUS_SHA" HEAD -- "$ROOT/$PROJECT_DIR" || exit 1
