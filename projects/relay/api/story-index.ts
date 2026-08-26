@@ -17,6 +17,18 @@ import { isEmptyIndex, type SourceLine, type StoryIndex } from './_lib/index/gro
 
 const MIN_LINES = 6
 
+/**
+ * PostgREST reports a table it can't see either as a missing relation (42P01)
+ * or as a schema-cache miss (PGRST205). Both mean the same thing here: the
+ * migration hasn't been run. Worth naming precisely, because "something went
+ * wrong" sends you looking at the API key instead.
+ */
+function isMissingTable(error: { code?: string; message?: string } | null): boolean {
+  if (!error) return false
+  return error.code === '42P01' || error.code === 'PGRST205' ||
+    /story_index/.test(error.message ?? '') && /does not exist|schema cache/i.test(error.message ?? '')
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const userId = await getUserId(req)
   if (!userId) return fail(res, 401, 'Sign in first')
@@ -42,11 +54,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const lastPosition = latest?.[0]?.position ?? 0
 
     if (req.method === 'GET') {
-      const { data: cached } = await supabase
+      const { data: cached, error: cacheError } = await supabase
         .from('story_index')
         .select('payload, up_to_position, generated_at')
         .eq('story_id', storyId)
         .maybeSingle()
+
+      const storageReady = !isMissingTable(cacheError)
+      if (cacheError && storageReady) throw cacheError
 
       return res.status(200).json({
         index: (cached?.payload as StoryIndex) ?? null,
@@ -57,6 +72,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         behind_by: Math.max(0, lastPosition - (cached?.up_to_position ?? 0)),
         available: geminiConfigured(),
         enough_lines: lastPosition >= MIN_LINES,
+        // Told apart so the sheet can say which of the two setup steps is
+        // missing, rather than leaving you to guess between them.
+        storage_ready: storageReady,
       })
     }
 
@@ -90,6 +108,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       },
       { onConflict: 'story_id' }
     )
+    if (isMissingTable(saveError)) {
+      return fail(res, 503, 'The index has nowhere to live yet — run migration 0002_story_index.sql')
+    }
     if (saveError) throw saveError
 
     return res.status(200).json({
@@ -100,6 +121,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       behind_by: 0,
       available: true,
       enough_lines: true,
+      storage_ready: true,
     })
   })
 }

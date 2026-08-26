@@ -89,4 +89,5 @@ export interface StoryIndexResponse {
   behind_by: number
   available: boolean
   enough_lines: boolean
+  storage_ready: boolean
 }

@@ -56,21 +56,27 @@ export function IndexSheet({
 
         {error && <p className="mb-4 text-sm text-red-700 dark:text-red-400">{error}</p>}
 
-        {state && !state.available && (
-          <p className="text-sm text-muted">
-            The server can't see a Gemini key. If you've just added one in Vercel, redeploy —
-            environment variables only reach the running app on a new deployment. Everything
-            else works without it.
-          </p>
+        {state && !state.storage_ready && (
+          <Blocked
+            what="The index has nowhere to live yet."
+            fix="Run 0002_story_index.sql in the Supabase SQL editor. It's one table."
+          />
         )}
 
-        {state && state.available && !state.enough_lines && (
+        {state && state.storage_ready && !state.available && (
+          <Blocked
+            what="The server can't see a Gemini key."
+            fix="If you've just added GEMINI_KEY in Vercel, redeploy — environment variables only reach the running app on a new deployment. Check it's enabled for Production too."
+          />
+        )}
+
+        {state && state.storage_ready && state.available && !state.enough_lines && (
           <p className="text-sm text-muted">
             Write a few more lines first — there isn't enough here to index yet.
           </p>
         )}
 
-        {state && state.available && state.enough_lines && !index && (
+        {state && state.storage_ready && state.available && state.enough_lines && !index && (
           <div>
             <p className="mb-4 text-sm text-muted">
               Nothing built yet. It'll pull out the people, the places, and anything that keeps
@@ -108,6 +114,15 @@ export function IndexSheet({
           </div>
         )}
       </div>
+    </div>
+  )
+}
+
+function Blocked({ what, fix }: { what: string; fix: string }) {
+  return (
+    <div className="rounded-lg border border-rule bg-sunk p-4">
+      <p className="text-sm font-medium text-ink">{what}</p>
+      <p className="mt-1 text-sm text-muted">{fix}</p>
     </div>
   )
 }
