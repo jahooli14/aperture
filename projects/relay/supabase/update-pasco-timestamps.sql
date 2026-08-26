@@ -1,63 +1,38 @@
--- Seed the existing Pasco story into Relay.
+-- Corrects an already-seeded Pasco story's timestamps to the real ones.
 --
--- Paste this into the Supabase SQL editor and run it. No terminal needed.
+-- Only needed if the story was seeded before every line had a real sentAt —
+-- that seed spread the lines evenly across a guessed date range. This
+-- matches each line by its position and sets created_at to when it was
+-- genuinely written, then fixes the story and story_members rows to match.
 --
--- Before you run it, both writers must have signed in to Relay at least once
--- (magic link) so their accounts exist — this looks them up by email.
---
--- Every line below carries the real time it was written, transcribed from
--- the original WhatsApp export and Signal screenshots.
---
--- Safe to run twice: if the story already has lines, it does nothing.
+-- Paste into the Supabase SQL editor and run it. Safe to run more than once.
 
-do $seed$
+do $fix$
 declare
-  -- ================== EDIT THESE TWO LINES ==================
   dan_email text := 'you@example.com';
   ben_email text := 'ben@example.com';
-  -- ============================================================
 
-  dan_id     uuid;
-  ben_id     uuid;
-  story      uuid;
-  have_lines int;
+  dan_id uuid;
+  ben_id uuid;
+  story  uuid;
+  fixed  int;
 begin
   select id into dan_id from auth.users where lower(email) = lower(btrim(dan_email));
   select id into ben_id from auth.users where lower(email) = lower(btrim(ben_email));
 
-  if dan_id is null then
-    raise exception 'No account for %. Sign in to Relay with that address first.', dan_email;
+  if dan_id is null or ben_id is null then
+    raise exception 'Could not find both accounts — check the emails above.';
   end if;
-  if ben_id is null then
-    raise exception 'No account for %. Get them to sign in to Relay first.', ben_email;
-  end if;
-
-  insert into relay.profiles (user_id, display_name) values
-    (dan_id, 'Dan'), (ben_id, 'Ben')
-    on conflict (user_id) do nothing;
 
   select id into story from relay.stories
     where title = $ln$Pasco$ln$ and created_by = dan_id;
 
   if story is null then
-    insert into relay.stories (title, blurb, created_by, turn_mode, next_author_id, created_at)
-      values ($ln$Pasco$ln$, $ln$A line each, no plan. Started in WhatsApp, moved to Signal, now here.$ln$, dan_id, 'rotation', dan_id, $ln$2025-08-25T10:29:00+01:00$ln$)
-      returning id into story;
-    raise notice 'Created the story.';
+    raise exception 'No "%" story found for that account. Run the seed first.', $ln$Pasco$ln$;
   end if;
 
-  insert into relay.story_members (story_id, user_id, role, turn_order) values
-    (story, dan_id, 'owner', 0), (story, ben_id, 'writer', 1)
-    on conflict (story_id, user_id) do nothing;
-
-  select count(*) into have_lines from relay.lines where story_id = story;
-  if have_lines > 0 then
-    raise notice 'Story already has % lines — nothing to add.', have_lines;
-    return;
-  end if;
-
-  insert into relay.lines (story_id, author_id, position, body, chapter_title, created_at)
-  select story, seed.author_id, seed.position, seed.body, seed.chapter_title, seed.sent_at
+  update relay.lines as l
+     set created_at = seed.sent_at
     from (values
     (dan_id, 1, $ln$Pasco knew he was in trouble when he realised he'd never eaten a peanut before.$ln$, null, timestamptz $ln$2025-08-25T10:29:00+01:00$ln$),
     (ben_id, 2, $ln$He had always preferred skittles to M&Ms. BLTs to PBJs.$ln$, null, timestamptz $ln$2025-08-25T22:12:00+01:00$ln$),
@@ -123,15 +98,16 @@ begin
     (ben_id, 62, $ln$Livia had the talent to be in the right place at the right time. Cliff never forgot how she saved his life once.$ln$, null, timestamptz $ln$2026-08-15T18:56:00+01:00$ln$),
     (dan_id, 63, $ln$this was in the depths of Aussie winter when the sun plays a far more minor role than you'd expect. The threat? A cattle rustler looking for some business. Livia's answer? Not today, matey$ln$, null, timestamptz $ln$2026-08-15T19:13:00+01:00$ln$),
     (ben_id, 64, $ln$After a potentially lucrative business deal turned sour, the rustler got desperate. He torched Cliff's house in the depths of the night, hoping to take over his ranch.$ln$, null, timestamptz $ln$2026-08-19T15:03:00+01:00$ln$)
-    ) as seed(author_id, position, body, chapter_title, sent_at);
+    ) as seed(author_id, position, body, chapter_title, sent_at)
+   where l.story_id = story
+     and l.position = seed.position;
+  get diagnostics fixed = row_count;
 
-  -- The insert trigger left the turn where the last line put it. The story
-  -- alternates, so after Ben's line it is Dan's go.
   update relay.stories
-     set next_author_id = dan_id,
-         last_line_at   = $ln$2026-08-19T15:03:00+01:00$ln$
+     set created_at   = $ln$2025-08-25T10:29:00+01:00$ln$,
+         last_line_at = $ln$2026-08-19T15:03:00+01:00$ln$
    where id = story;
 
-  raise notice 'Added % lines, % to %. It is Dan''s turn.',
-    64, $ln$2025-08-25$ln$, $ln$2026-08-19$ln$;
-end $seed$;
+  raise notice 'Corrected % line timestamps, % to %.',
+    fixed, $ln$2025-08-25$ln$, $ln$2026-08-19$ln$;
+end $fix$;
