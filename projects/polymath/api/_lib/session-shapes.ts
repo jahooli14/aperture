@@ -34,9 +34,28 @@ export interface ShapeInput {
 
 export interface SessionShape {
   text: string
-  source: 'closeout' | 'slot' | 'decomposition' | 'start'
+  source: 'closeout' | 'slot' | 'decomposition' | 'start' | 'ignition'
   /** True when this shape is a deliberately partial piece of a bigger move. */
   partial: boolean
+}
+
+/**
+ * Power Hour's one genuinely good idea, kept after retiring the overlay
+ * itself: a session has a SHAPE, not just a list. It opens with an ignition
+ * move small enough that starting is easier than deliberating, then the
+ * real work.
+ *
+ * The old version generated ignition tasks with a model call. It doesn't
+ * need one -- the useful property is that the first move is trivially
+ * physical, and that's a constant, not a generation problem.
+ */
+function ignitionShape(windowMinutes: number | null): SessionShape {
+  // In a genuinely short window the ignition move IS the session, so don't
+  // spend a third of it on a warm-up.
+  const text = windowMinutes != null && windowMinutes <= 20
+    ? 'Open it and read the last thing you did.'
+    : 'Open it. Get whatever you need in front of you.'
+  return { text, source: 'ignition', partial: false }
 }
 
 const MAX_ITEMS = 3
@@ -95,10 +114,12 @@ export function deriveSessionShapes(input: ShapeInput): SessionShape[] {
     input.windowMinutes < input.mvsMinutes
 
   if (needsDecomposition) {
-    return [decompose(shapes[0])]
+    return [ignitionShape(input.windowMinutes), decompose(shapes[0])]
   }
 
-  return shapes.slice(0, MAX_ITEMS)
+  // Ignition first, then the real moves. Capped so the list never becomes a
+  // chore sheet -- three items including the warm-up.
+  return [ignitionShape(input.windowMinutes), ...shapes].slice(0, MAX_ITEMS)
 }
 
 /**

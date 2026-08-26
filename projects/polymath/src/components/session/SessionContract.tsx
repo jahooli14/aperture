@@ -18,7 +18,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Clock, Square } from 'lucide-react'
 import { VoiceInput } from '../VoiceInput'
-import { useSessionStore, type SessionShape } from '../../stores/useSessionStore'
+import { useSessionStore, WINDOW_PRESETS, type SessionShape } from '../../stores/useSessionStore'
 import type { Project } from '../../types'
 
 function formatElapsed(seconds: number): string {
@@ -26,9 +26,6 @@ function formatElapsed(seconds: number): string {
   const s = seconds % 60
   return `${m}:${s.toString().padStart(2, '0')}`
 }
-
-/** Quick taps for the one thing the app can't know. Voice covers anything else. */
-const WINDOW_PRESETS = [20, 60, 120]
 
 const secondaryTextStyle = { color: 'var(--brand-text-secondary)', opacity: 0.7 }
 const borderStyle = { borderColor: 'var(--glass-border-bold)' }
@@ -77,6 +74,7 @@ export function SessionContract({
   onDone,
   source = 'live',
   surface = 'card',
+  presetWindowMinutes = null,
 }: {
   project: Project
   onDone: () => void
@@ -89,6 +87,11 @@ export function SessionContract({
    *  keeps the answer box's hero gradient instead of visibly demoting
    *  itself to a flat panel at the moment you commit to working. */
   surface?: 'card' | 'bare'
+  /** A window the parent already collected (the time chips on home). When
+   *  set, the contract skips its own "how long have you got?" phase and
+   *  goes straight to running -- the question is a control on the card
+   *  above, never a gate in front of it. */
+  presetWindowMinutes?: number | null
 }) {
   // In 'bare' mode the parent supplies padding and background.
   const shell = (extra: string) => (surface === 'bare' ? extra : `glass-card p-6 ${extra}`)
@@ -106,6 +109,22 @@ export function SessionContract({
       if (tickRef.current) window.clearInterval(tickRef.current)
     }
   }, [phase])
+
+  // A preset means the window was already chosen upstream, so asking again
+  // would be the app making the user answer the same question twice. Guarded
+  // by a ref rather than phase alone so a re-render mid-start can't fire a
+  // second startSession for the same window.
+  const autoStartedRef = useRef(false)
+  useEffect(() => {
+    if (presetWindowMinutes == null) return
+    if (autoStartedRef.current) return
+    autoStartedRef.current = true
+    void (async () => {
+      await startSession(project.id, presetWindowMinutes, source)
+      setElapsedSec(0)
+      setPhase('running')
+    })()
+  }, [presetWindowMinutes, project.id, source, startSession])
 
   const handlePickWindow = async (minutes: number) => {
     await startSession(project.id, minutes, source)
@@ -189,6 +208,18 @@ export function SessionContract({
         >
           <Square size={14} /> Stop
         </button>
+      </div>
+    )
+  }
+
+  // phase === 'window' with a preset in flight: the question is already
+  // answered, so don't flash it on screen while the session starts.
+  if (presetWindowMinutes != null && !error) {
+    return (
+      <div className={shell("space-y-3")}>
+        <p className="text-base font-medium">{project.title}</p>
+        <ReEntry project={project} />
+        <p className="text-sm" style={secondaryTextStyle}>Starting…</p>
       </div>
     )
   }

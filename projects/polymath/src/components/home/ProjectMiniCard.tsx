@@ -16,7 +16,7 @@ import { useNavigate } from 'react-router-dom'
 import { Play } from 'lucide-react'
 import { getTheme } from '../../lib/projectTheme'
 import { haptic } from '../../utils/haptics'
-import { useStartProjectSession } from '../../hooks/useStartProjectSession'
+import { useHomeAnswerStore } from '../../stores/useHomeAnswerStore'
 import type { Project } from '../../types'
 
 export type MiniCardVariant = 'glass' | 'ghost'
@@ -35,7 +35,7 @@ export function ProjectMiniCard({
   variant = 'glass',
 }: ProjectMiniCardProps) {
   const navigate = useNavigate()
-  const { start, loading } = useStartProjectSession(project.id)
+  const requestStart = useHomeAnswerStore(s => s.requestStart)
   const theme = getTheme(project.type || 'other', project.title, project.metadata?.tags)
   const primaryLabel = project.metadata?.tags?.[0]
 
@@ -126,8 +126,11 @@ export function ProjectMiniCard({
           )}
           <button
             type="button"
-            onClick={(e) => { e.stopPropagation(); haptic.medium(); start() }}
-            disabled={loading}
+            // ▶ doesn't run its own session flow any more -- it points the
+            // answer box at this project and opens the one contract there.
+            // Same engine as the star and the chat, so a session looks the
+            // same however you got to it.
+            onClick={(e) => { e.stopPropagation(); haptic.medium(); requestStart(project.id) }}
             aria-label={`Start session for ${project.title}`}
             className="h-7 w-7 rounded-full flex items-center justify-center transition-transform hover:scale-110 active:scale-95 disabled:opacity-60"
             style={{
@@ -136,14 +139,7 @@ export function ProjectMiniCard({
               color: 'rgb(var(--brand-primary-rgb))',
             }}
           >
-            {loading ? (
-              <span
-                className="block w-2 h-2 rounded-full animate-pulse"
-                style={{ background: 'rgb(var(--brand-primary-rgb))' }}
-              />
-            ) : (
-              <Play className="h-3 w-3 fill-current" style={{ marginLeft: '1px' }} />
-            )}
+            <Play className="h-3 w-3 fill-current" style={{ marginLeft: '1px' }} />
           </button>
         </div>
       </div>

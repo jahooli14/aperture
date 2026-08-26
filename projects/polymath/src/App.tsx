@@ -11,7 +11,6 @@ import { PinOverlay } from './components/PinOverlay'
 import { AutoSuggestionProvider } from './contexts/AutoSuggestionContext'
 import { ScrollToTop } from './components/ScrollToTop'
 import { AnimatedPage } from './components/AnimatedPage'
-import { useFocusStore } from './stores/useFocusStore'
 import { Loader2 } from 'lucide-react'
 import { App as CapacitorApp } from '@capacitor/app'
 import { StatusBar, Style } from '@capacitor/status-bar'
@@ -34,7 +33,6 @@ const ExtractionSummary = lazy(lazyRetry(() => import('./components/memories/Ext
 const SteeringCard = lazy(lazyRetry(() => import('./components/memories/SteeringCard').then(m => ({ default: m.SteeringCard }))))
 const FirstConnectionCelebration = lazy(lazyRetry(() => import('./components/home/FirstConnectionCelebration').then(m => ({ default: m.FirstConnectionCelebration }))))
 const ContextSidebar = lazy(lazyRetry(() => import('./components/context/ContextSidebar').then(m => ({ default: m.ContextSidebar }))))
-const FocusSession = lazy(lazyRetry(() => import('./components/power-hour/FocusSession').then(m => ({ default: m.FocusSession }))))
 
 // Lazy load pages with retry logic for chunk loading failures after deployments
 const HomePage = lazy(lazyRetry(() => import('./pages/HomePage').then(m => ({ default: m.HomePage }))))
@@ -143,19 +141,6 @@ function RouteTracker() {
     dataSynchronizer.setCurrentRoute(location.pathname)
   }, [location.pathname])
   return null
-}
-
-// Focus overlay gate — only mounts (and downloads) the FocusSession chunk once a
-// session is actually running. Mirrors FocusSession's own `status === 'idle'`
-// null-return, so behaviour is unchanged while keeping it out of startup.
-function FocusSessionGate() {
-  const status = useFocusStore((s) => s.status)
-  if (status === 'idle') return null
-  return (
-    <Suspense fallback={null}>
-      <FocusSession />
-    </Suspense>
-  )
 }
 
 // Warm the chunks for the main nav destinations once the browser is idle, so
@@ -403,11 +388,6 @@ export default function App() {
               {/* Pin Overlay - Split Screen */}
               <ErrorBoundary fallback={null}>
                 <PinOverlay />
-              </ErrorBoundary>
-
-              {/* Focus Session Overlay (Zen Mode) */}
-              <ErrorBoundary fallback={null}>
-                <FocusSessionGate />
               </ErrorBoundary>
 
               {/* Debug Panel - Shows console logs on screen */}

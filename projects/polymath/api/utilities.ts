@@ -2061,9 +2061,19 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
 
     // The single-live-project trigger (019-execution-sessions.sql) demotes
     // any previous live project atomically -- this update doesn't need to.
+    // Demote the previous star/live in the same gesture, then promote --
+    // is_priority and state move together (see projects.ts set-priority for
+    // why these are one concept, not two).
+    await supabase
+      .from('projects')
+      .update({ is_priority: false, state: 'on-deck' })
+      .eq('user_id', userId)
+      .eq('is_priority', true)
+      .neq('id', project_id)
+
     const { data, error } = await supabase
       .from('projects')
-      .update({ state: 'live' })
+      .update({ state: 'live', is_priority: true, up_next_position: null })
       .eq('id', project_id)
       .eq('user_id', userId)
       .select()

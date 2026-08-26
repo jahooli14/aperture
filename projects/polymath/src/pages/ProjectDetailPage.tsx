@@ -7,7 +7,8 @@ import { useEffect, useState, useRef, useMemo, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Loader2, MoreVertical, Check, X, GripVertical, Zap, Target, Star, Sprout, Pin, PinOff, Skull, ArrowLeft } from 'lucide-react'
 import { useProjectStore } from '../stores/useProjectStore'
-import { useFocusStore } from '../stores/useFocusStore'
+import { useSessionStore } from '../stores/useSessionStore'
+import { SessionContract } from '../components/session/SessionContract'
 import { ProjectNotes } from '../components/projects/ProjectNotes'
 import { ProjectPath } from '../components/projects/ProjectPath'
 import type { Task } from '../components/projects/TaskList'
@@ -121,8 +122,8 @@ export function ProjectDetailPage() {
   // this is true, FocusSession's floating sheet renders nothing (see
   // isOnThisProjectsPage there) so the pending session shows inline here
   // instead — same state, one place it's presented.
-  const focusSession = useFocusStore()
-  const pendingSessionHere = focusSession.status === 'focusing' && focusSession.phase === 'overview' && focusSession.projectId === id
+  const windowMinutes = useSessionStore(s => s.windowMinutes)
+  const [sessionOpen, setSessionOpen] = useState(false)
   const { setContext, clearContext } = useContextEngineStore()
   const { pinnedItem, pinItem, unpinItem } = usePin()
 
@@ -823,50 +824,30 @@ export function ProjectDetailPage() {
                 />
               )}
 
-              {/* Pending focus session — planned elsewhere (Focus chat,
-                  the priority card) but not started yet. Landing here
-                  instead of straight into the full-screen session is the
-                  point: you can look around the actual project first. */}
-              {pendingSessionHere && (
-                <div className="p-6 rounded-2xl relative overflow-hidden" style={{ background: 'rgba(var(--brand-primary-rgb),0.06)', border: '1px solid rgba(var(--brand-primary-rgb),0.12)' }}>
-                  <div className="flex items-center gap-2 mb-3">
-                    <Zap className="h-3.5 w-3.5 fill-current" style={{ color: 'rgb(var(--brand-primary-rgb))' }} />
-                    <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.7 }}>
-                      Session ready{focusSession.plannedDurationMinutes ? ` · ${focusSession.plannedDurationMinutes} min` : ''}
-                    </span>
-                  </div>
-
-                  <ul className="space-y-1.5 mb-5">
-                    {focusSession.tasks.slice(0, 4).map(task => (
-                      <li key={task.id} className="text-[14px] text-[var(--brand-text-secondary)] leading-snug flex items-start gap-2">
-                        <span className="w-1 h-1 rounded-full bg-[var(--brand-text-muted)] mt-2 flex-shrink-0" />
-                        {task.text}
-                      </li>
-                    ))}
-                    {focusSession.tasks.length > 4 && (
-                      <li className="text-[12px] text-[var(--brand-text-muted)] opacity-60 pl-3">
-                        +{focusSession.tasks.length - 4} more
-                      </li>
-                    )}
-                  </ul>
-
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => focusSession.beginTasks()}
-                      className="px-5 py-2.5 rounded-xl text-[12px] font-semibold transition-all active:scale-95 flex items-center gap-2"
-                      style={{ background: 'rgba(var(--brand-primary-rgb),0.12)', border: '1px solid rgba(var(--brand-primary-rgb),0.2)', color: 'rgb(var(--brand-primary-rgb))' }}
-                    >
-                      <Check className="h-3.5 w-3.5" /> Begin
-                    </button>
-                    <button
-                      onClick={() => focusSession.reset()}
-                      className="px-3 py-2.5 rounded-xl text-[12px] font-medium transition-colors hover:bg-white/[0.05]"
-                      style={{ color: 'var(--brand-text-muted)' }}
-                    >
-                      Not now
-                    </button>
-                  </div>
-                </div>
+              {/* The one session engine, run in place. This page used to
+                  show a "session ready" card belonging to the old Power
+                  Hour overlay — a second session flow with its own plan,
+                  its own timer and its own summary. There's one now: the
+                  same contract the home runs, opened here so you can look
+                  around the project first and then start without leaving. */}
+              {sessionOpen ? (
+                <SessionContract
+                  project={project}
+                  presetWindowMinutes={windowMinutes}
+                  onDone={() => { setSessionOpen(false); void fetchProjects() }}
+                />
+              ) : (
+                <button
+                  onClick={() => { setSessionOpen(true) }}
+                  className="w-full py-3 rounded-2xl text-[12px] font-semibold uppercase tracking-widest flex items-center justify-center gap-2 transition-all active:scale-[0.99]"
+                  style={{
+                    background: 'rgba(var(--brand-primary-rgb),0.10)',
+                    border: '1px solid rgba(var(--brand-primary-rgb),0.28)',
+                    color: 'rgb(var(--brand-primary-rgb))',
+                  }}
+                >
+                  <Zap className="h-3.5 w-3.5 fill-current" /> Start session
+                </button>
               )}
 
               {/* Finish Line */}
@@ -993,7 +974,7 @@ export function ProjectDetailPage() {
 
                 <ProjectPath
                   tasks={project.metadata?.tasks || []}
-                  highlightedTasks={pendingSessionHere ? focusSession.tasks.map(t => ({ task_title: t.text })) : []}
+                  highlightedTasks={[]}
                   projectId={project.id}
                   onUpdate={async (tasks) => {
                     if (!project) return

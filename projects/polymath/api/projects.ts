@@ -20,7 +20,6 @@ import { updateItemConnections } from './_lib/connection-logic.js'
 import { invalidateProjectCache } from './_lib/power-hour-cache.js'
 import { recomputeHeatForUser, DRAWER_STATUSES, MUTATION_MODES, MODES_THAT_RETIRE_PARENT, type MutationMode } from './_lib/metabolism.js'
 import { backfillProjectTags } from './_lib/project-tags.js'
-import { getReviewQueue, actOnReview, REVIEW_BATCH_SIZE, type ReviewAction } from './_lib/project-review.js'
 
 // Validation schema for rating suggestions
 const RateRequestSchema = z.object({
@@ -212,7 +211,7 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
       if (nextValue) {
         const { error: demoteError } = await supabase
           .from('projects')
-          .update({ is_priority: false })
+          .update({ is_priority: false, state: 'on-deck' })
           .eq('user_id', userId)
           .eq('is_priority', true)
           .neq('id', project_id)
@@ -227,7 +226,12 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
       // Toggle priority on the target project. If promoting, also stamp
       // metadata.last_promoted so The Moment can learn from user intent,
       // and clear up_next_position (priority and Up Next are mutually exclusive).
-      let updatePayload: any = { is_priority: nextValue }
+      // The star IS the live project. These were two separate concepts for
+      // one idea -- is_priority (read in ~15 files, set from the projects
+      // page star) and state='live' (the execution rebuild's pointer). Two
+      // pointers meant starring a project silently stopped moving the home
+      // card once a live project existed. They move together now, always.
+      let updatePayload: any = { is_priority: nextValue, state: nextValue ? 'live' : 'mull' }
       if (nextValue) {
         const { data: full } = await supabase
           .from('projects')
@@ -924,46 +928,6 @@ Return JSON only:
     }
   }
 
-  // The review rotation — a few forgotten projects at a time, surfaced on
-  // home and acted on there. The projects page stays a browsing surface;
-  // nobody opens a list of forty things on purpose.
-  if (resource === 'review-queue' && req.method === 'GET') {
-    try {
-      const limit = Math.min(Math.max(Number(req.query.limit) || REVIEW_BATCH_SIZE, 1), 10)
-      const { candidates, anchor } = await getReviewQueue(supabase, userId, limit)
-      return res.status(200).json({ candidates, anchor })
-    } catch (error) {
-      console.error('[review-queue] error:', error)
-      return res.status(500).json({
-        error: 'Failed to load review queue',
-        details: error instanceof Error ? error.message : String(error),
-      })
-    }
-  }
-
-  if (resource === 'review-act' && req.method === 'POST') {
-    try {
-      const { project_id, action } = req.body as { project_id?: string; action?: ReviewAction }
-      if (!project_id || !action) {
-        return res.status(400).json({ error: 'project_id and action required' })
-      }
-      if (!['keep', 'park', 'promote'].includes(action)) {
-        return res.status(400).json({ error: `Unknown action: ${action}` })
-      }
-      if (!UUID_REGEX.test(project_id)) {
-        return res.status(404).json({ error: 'Project not found' })
-      }
-      const result = await actOnReview(supabase, userId, project_id, action)
-      return res.status(200).json(result)
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error)
-      if (message === 'Project not found') {
-        return res.status(404).json({ error: message })
-      }
-      console.error('[review-act] error:', error)
-      return res.status(500).json({ error: 'Failed to record review', details: message })
-    }
-  }
 
   // Labels. Idempotent — only touches projects with none, so it's safe to
   // re-run and safe on the daily cron to catch newly-created projects.
