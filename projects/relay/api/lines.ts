@@ -1,8 +1,10 @@
 /**
  * Lines — the story itself.
  *
- * GET  /api/lines?story=X[&from=1&limit=500]  -> lines in order, plus the total
- * POST /api/lines?story=X                     -> add the next line
+ * GET   /api/lines?story=X[&from=1&limit=500]      -> lines in order, plus the total
+ * POST  /api/lines?story=X                          -> add the next line
+ * POST  /api/lines?story=X&resource=mark            -> mark a line, or unmark it
+ * PATCH /api/lines?story=X&line=Y                   -> fix a typo, briefly
  */
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { getSupabaseClient } from './_lib/supabase.js'
@@ -11,6 +13,7 @@ import { cleanText, fail, firstParam, handleErrors } from './_lib/http.js'
 import { loadProfiles, loadStory } from './_lib/stories.js'
 import { canWrite, whoseTurn } from './_lib/turns.js'
 import { notifyStory } from './_lib/notify.js'
+import { editLine, toggleMark } from './_lib/line-actions.js'
 
 const MAX_PAGE = 500
 
@@ -30,8 +33,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return fail(res, 403, "You're not in this story")
     }
 
-    if (req.method === 'GET') return listLines(req, res, supabase, storyId, loaded.members)
+    if (req.method === 'GET') return listLines(req, res, supabase, storyId, loaded.members, userId)
+    if (req.method === 'POST' && firstParam(req, 'resource') === 'mark') {
+      return toggleMark(req, res, supabase, userId, storyId)
+    }
     if (req.method === 'POST') return addLine(req, res, supabase, userId, storyId, loaded)
+    if (req.method === 'PATCH') return editLine(req, res, supabase, userId, storyId)
     return fail(res, 405, 'Method not allowed')
   })
 }
@@ -44,14 +51,15 @@ async function listLines(
   res: VercelResponse,
   supabase: Client,
   storyId: string,
-  members: Loaded['members']
+  members: Loaded['members'],
+  userId: string
 ) {
   const from = Number(firstParam(req, 'from') ?? 1)
   const limit = Math.min(Number(firstParam(req, 'limit') ?? MAX_PAGE), MAX_PAGE)
 
   const { data, error } = await supabase
     .from('lines')
-    .select('id, author_id, body, position, created_at, chapter_title')
+    .select('id, author_id, body, position, created_at, chapter_title, edited_at')
     .eq('story_id', storyId)
     .gte('position', Number.isFinite(from) ? from : 1)
     .order('position')
@@ -65,8 +73,25 @@ async function listLines(
 
   const names = await loadProfiles(supabase, members.map((m) => m.user_id))
 
+  const { data: marks } = await supabase
+    .from('line_marks')
+    .select('line_id, user_id')
+    .in('line_id', (data ?? []).map((line) => line.id))
+
+  const markCount = new Map<string, number>()
+  const mine = new Set<string>()
+  for (const mark of marks ?? []) {
+    markCount.set(mark.line_id, (markCount.get(mark.line_id) ?? 0) + 1)
+    if (mark.user_id === userId) mine.add(mark.line_id)
+  }
+
   return res.status(200).json({
-    lines: (data ?? []).map((line) => ({ ...line, display_name: names[line.author_id] ?? 'Writer' })),
+    lines: (data ?? []).map((line) => ({
+      ...line,
+      display_name: names[line.author_id] ?? 'Writer',
+      marks: markCount.get(line.id) ?? 0,
+      marked_by_me: mine.has(line.id),
+    })),
     total: count ?? 0,
   })
 }
@@ -120,7 +145,7 @@ async function addLine(
     const { data, error } = await supabase
       .from('lines')
       .insert({ story_id: storyId, author_id: userId, body, chapter_title: chapterTitle })
-      .select('id, author_id, body, position, created_at, chapter_title')
+      .select('id, author_id, body, position, created_at, chapter_title, edited_at')
       .single()
 
     if (!error) {

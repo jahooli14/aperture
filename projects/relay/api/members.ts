@@ -4,7 +4,7 @@
  * POST   /api/members?story=X&resource=invite -> mint an invite code (owner)
  * GET    /api/members?resource=preview&code=C -> what you'd be joining
  * POST   /api/members?resource=join           -> redeem a code
- * PATCH  /api/members?story=X                 -> turn your own notifications on/off
+ * PATCH  /api/members?story=X                 -> your notifications, or how far you've read
  * DELETE /api/members?story=X[&user=U]        -> leave, or remove someone (owner)
  */
 import type { VercelRequest, VercelResponse } from '@vercel/node'
@@ -28,7 +28,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method === 'POST' && resource === 'invite') {
       return createInvite(req, res, supabase, userId, storyId)
     }
-    if (req.method === 'PATCH') return setNotify(req, res, supabase, userId, storyId)
+    if (req.method === 'PATCH') return setMemberPreferences(req, res, supabase, userId, storyId)
     if (req.method === 'DELETE') return removeMember(req, res, supabase, userId, storyId)
     return fail(res, 405, 'Method not allowed')
   })
@@ -110,23 +110,35 @@ async function joinStory(req: VercelRequest, res: VercelResponse, supabase: Clie
   return res.status(200).json({ story_id: data })
 }
 
-async function setNotify(
+async function setMemberPreferences(
   req: VercelRequest,
   res: VercelResponse,
   supabase: Client,
   userId: string,
   storyId: string
 ) {
-  if (typeof req.body?.notify !== 'boolean') return fail(res, 400, 'notify must be true or false')
+  const updates: Record<string, unknown> = {}
 
-  const { error } = await supabase
+  if (typeof req.body?.notify === 'boolean') updates.notify = req.body.notify
+
+  // Kept server-side rather than in the browser so where you got to follows
+  // you from the phone to the laptop.
+  if (typeof req.body?.last_read_position === 'number') {
+    updates.last_read_position = Math.max(0, Math.floor(req.body.last_read_position))
+  }
+
+  if (Object.keys(updates).length === 0) return fail(res, 400, 'Nothing to update')
+
+  const { data, error } = await supabase
     .from('story_members')
-    .update({ notify: req.body.notify })
+    .update(updates)
     .eq('story_id', storyId)
     .eq('user_id', userId)
+    .select('notify, last_read_position')
+    .single()
   if (error) throw error
 
-  return res.status(200).json({ notify: req.body.notify })
+  return res.status(200).json(data)
 }
 
 async function removeMember(

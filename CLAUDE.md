@@ -181,6 +181,28 @@ other feature is downstream of that working.
   still granted but the subscription has gone (Safari drops them silently), it
   re-subscribes and re-saves. Settings has a test-notification button, because
   "did that actually work?" is otherwise unanswerable.
+- **One nudge when a turn goes cold** (`api/cron/nudge.ts`, Vercel cron, daily).
+  The only other push fires as a line is written — miss it and there is silence
+  forever, which is how a thread dies. After `NUDGE_AFTER_DAYS` (3) the person
+  who owes a line gets one reminder carrying the line they're following, then a
+  `QUIET_PERIOD_DAYS` (4) rest. Stamped whether or not a push lands, so someone
+  with notifications off isn't retried daily. The `relay.stale_turns` view
+  answers "whose turn, how stale" in one place; solo stories are excluded.
+- **Nothing written is lost.** A send that fails offline is queued in this
+  browser (`lib/outbox.ts`) and retried on `online`; drafts save as you type,
+  per story, and you can write when it *isn't* your turn — ideas don't wait for
+  permission. Your own newest line stays editable for five minutes, and only
+  while it is still the newest, since editing a line someone already answered
+  rewrites what they were replying to.
+- **Reading.** Long silences are named where they fall (`gapLabel`, from the
+  timestamps only). How far you've read lives on `story_members`, so it follows
+  you between devices. Search filters and marks hits. Names the index knows get
+  a dotted underline in `thread` only — `read` stays pure prose.
+- **Marks, not chat.** One tap says a line landed. No push, no reply, no thread.
+- **The book** (`PrintPage`, `/story/:id/print`). Title page, chapters on fresh
+  sheets, indented paragraphs, a colophon with who wrote what — printed through
+  the browser, so Share → Print → Save as PDF on a phone. No attribution in the
+  body: it's the thing you'd hand someone.
 
 ### Setup
 
@@ -188,7 +210,7 @@ Relay shares a Supabase project with another Aperture app — it lives in its ow
 `relay` schema rather than needing a free-tier slot of its own.
 
 1. Run the migrations in `projects/relay/supabase/migrations/` in order
-   (`0001_relay.sql`, then `0002_story_index.sql`).
+   (`0001_relay.sql`, `0002_story_index.sql`, `0003_nudges_marks_reading.sql`).
 2. Supabase dashboard → **Settings → API → Exposed schemas** → add `relay`.
    PostgREST can't see the tables otherwise.
 3. `npx web-push generate-vapid-keys`, then set `VAPID_PUBLIC_KEY`,

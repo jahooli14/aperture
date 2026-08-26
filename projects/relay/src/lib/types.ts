@@ -7,6 +7,7 @@ export interface Profile {
 }
 
 export interface Member {
+  last_read_position?: number
   user_id: string
   role: 'owner' | 'writer'
   turn_order: number
@@ -37,6 +38,9 @@ export interface Line {
   created_at: string
   chapter_title: string | null
   display_name: string
+  edited_at?: string | null
+  marks?: number
+  marked_by_me?: boolean
   /** Shown immediately on send, before the server has confirmed it. */
   pending?: boolean
 }

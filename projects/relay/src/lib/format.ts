@@ -52,3 +52,31 @@ export function duration(days: number): string {
   if (months < 24) return `${months} months`
   return `${Math.round(days / 365)} years`
 }
+
+const GAP_THRESHOLD_DAYS = 3
+
+/**
+ * How long the story sat still between two lines, when that gap is long
+ * enough to be part of it. Silence is a real feature of a story written over
+ * months, so the thread says so — plainly, and only from the timestamps.
+ * Returns null for anything under a few days.
+ */
+export function gapLabel(previousIso: string, iso: string): string | null {
+  const elapsed = Date.parse(iso) - Date.parse(previousIso)
+  if (!Number.isFinite(elapsed) || elapsed <= 0) return null
+
+  const days = Math.floor(elapsed / 86_400_000)
+  if (days < GAP_THRESHOLD_DAYS) return null
+
+  if (days < 14) return `${days} days later`
+  if (days < 60) {
+    const weeks = Math.round(days / 7)
+    return `${weeks} weeks later`
+  }
+  if (days < 365) {
+    const months = Math.round(days / 30.4)
+    return `${months} month${months === 1 ? '' : 's'} later`
+  }
+  const years = Math.round(days / 365)
+  return `${years} year${years === 1 ? '' : 's'} later`
+}
