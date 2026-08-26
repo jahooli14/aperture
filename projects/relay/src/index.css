@@ -200,6 +200,60 @@
     border-radius: 4px;
   }
 
+  /* A long silence is part of a story written over months, so the thread
+     says so — from the timestamps, never from a guess about what it meant. */
+  .gap-marker {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    padding: 1.1rem 0 0.55rem;
+  }
+
+  .gap-rule {
+    flex: 1;
+    height: 1px;
+    background: rgb(var(--rule));
+  }
+
+  .gap-label {
+    font-size: 0.66rem;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: rgb(var(--faint));
+    white-space: nowrap;
+  }
+
+  .line-mark {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.28rem;
+    font-size: 0.7rem;
+    color: rgb(var(--faint));
+    padding: 0.15rem 0;
+    transition: color 0.15s;
+  }
+  .line-mark:hover { color: rgb(var(--accent)); }
+  .line-mark[aria-pressed='true'] { color: rgb(var(--accent)); }
+  .line-mark.is-static { cursor: default; }
+
+  .search-hit {
+    background: rgb(var(--highlight));
+    color: rgb(var(--ink));
+    border-radius: 2px;
+    padding: 0 0.1em;
+  }
+
+  /* A name the index knows. Underlined faintly so it reads as prose first. */
+  .named {
+    font: inherit;
+    color: inherit;
+    text-decoration: underline;
+    text-decoration-style: dotted;
+    text-underline-offset: 0.18em;
+    text-decoration-color: rgb(var(--faint));
+  }
+  .named:hover { text-decoration-color: rgb(var(--accent)); }
+
   .chapter-open {
     display: grid;
     gap: 0.55rem;
@@ -325,6 +379,18 @@
     color: rgb(var(--muted));
   }
 
+  /* Offered only when there is genuinely something new since you last read. */
+  .resume {
+    display: block;
+    width: 100%;
+    background: rgb(var(--sunk));
+    border-bottom: 1px solid rgb(var(--rule));
+    color: rgb(var(--accent));
+    font-size: 0.78rem;
+    font-weight: 600;
+    padding: 0.55rem 1rem;
+  }
+
   .sheet {
     background: rgb(var(--surface));
     border: 1px solid rgb(var(--rule));
@@ -333,7 +399,19 @@
     box-shadow: 0 -8px 40px -12px rgb(0 0 0 / 0.28);
   }
   @media (min-width: 640px) {
-    .sheet { border-radius: 18px; }
+    /* Offered only when there is genuinely something new since you last read. */
+  .resume {
+    display: block;
+    width: 100%;
+    background: rgb(var(--sunk));
+    border-bottom: 1px solid rgb(var(--rule));
+    color: rgb(var(--accent));
+    font-size: 0.78rem;
+    font-weight: 600;
+    padding: 0.55rem 1rem;
+  }
+
+  .sheet { border-radius: 18px; }
   }
 
   .pill {
@@ -361,4 +439,84 @@
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* ------------------------------------------------------------------ print
+ *
+ * The chapbook. Set for paper: a real title page, chapters that start on a
+ * fresh sheet, indented paragraphs, and none of the app around it.
+ */
+.book {
+  font-family: 'Source Serif 4 Variable', Georgia, serif;
+  font-optical-sizing: auto;
+  color: rgb(var(--ink));
+  background: rgb(var(--ground));
+  max-width: 34rem;
+  margin: 0 auto;
+  padding: 0 1.5rem 4rem;
+}
+
+.book .title-page {
+  min-height: 62vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  text-align: center;
+  gap: 1rem;
+}
+.book .title-page h1 {
+  font-size: clamp(2.2rem, 8vw, 3rem);
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  margin: 0;
+  text-wrap: balance;
+}
+.book .blurb { color: rgb(var(--muted)); font-style: italic; margin: 0; }
+.book .byline { margin: 0; font-size: 1.05rem; }
+.book .dates { margin: 0; color: rgb(var(--faint)); font-variant-numeric: tabular-nums; }
+
+.book .chapter { margin-top: 2.5rem; }
+.book .chapter h2 {
+  text-align: center;
+  font-size: 1.3rem;
+  font-weight: 600;
+  margin: 0 0 1.6rem;
+}
+.book .chapter p {
+  margin: 0;
+  font-size: 1.05rem;
+  line-height: 1.75;
+  text-indent: 1.3rem;
+  text-wrap: pretty;
+}
+.book .chapter p.opening { text-indent: 0; }
+
+.book .colophon {
+  margin-top: 3.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid rgb(var(--rule));
+  color: rgb(var(--muted));
+  font-size: 0.92rem;
+}
+.book .colophon h2 { font-size: 1.05rem; color: rgb(var(--ink)); margin: 0 0 0.7rem; }
+.book .colophon p { margin: 0 0 0.6rem; }
+.book .colophon ul { margin: 0; padding-left: 1.1rem; }
+
+@media print {
+  .no-print { display: none !important; }
+
+  @page { margin: 18mm 16mm; }
+
+  .book {
+    max-width: none;
+    padding: 0;
+    color: #000;
+    background: #fff;
+  }
+  .book .title-page { min-height: 0; padding: 25vh 0 0; break-after: page; }
+  .book .chapter { margin-top: 0; break-before: page; }
+  .book .chapter:first-of-type { break-before: auto; }
+  .book .chapter h2 { break-after: avoid; }
+  .book .chapter p { font-size: 11pt; line-height: 1.55; orphans: 2; widows: 2; }
+  .book .colophon { break-before: page; color: #333; }
 }

@@ -5,6 +5,7 @@ import StoriesPage from './pages/StoriesPage'
 import StoryPage from './pages/StoryPage'
 import JoinPage from './pages/JoinPage'
 import SettingsPage from './pages/SettingsPage'
+import PrintPage from './pages/PrintPage'
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { session, loading } = useAuth()
@@ -37,6 +38,14 @@ export default function App() {
           element={
             <RequireAuth>
               <StoryPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/story/:id/print"
+          element={
+            <RequireAuth>
+              <PrintPage />
             </RequireAuth>
           }
         />

@@ -1,56 +1,61 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { clearDraft, readDraft, saveDraft } from '../lib/outbox'
 
 /**
  * Writing the next line.
  *
- * The line you're following sits above the box, greyed out — you're
- * continuing a sentence someone else started, not replying to a message.
- * That framing is most of the difference between this and a chat app.
+ * The line you're following sits above the box, greyed out — you're continuing
+ * a sentence someone else started, not replying to a message.
+ *
+ * You can type when it isn't your turn. Ideas don't wait for permission, and a
+ * half-formed line kept until your go is better than one lost because the app
+ * wouldn't let you start it.
  */
 export function Composer({
+  storyId,
   canWrite,
   waitingOn,
   previousLine,
+  queuedBody,
   onSubmit,
 }: {
+  storyId: string
   canWrite: boolean
   waitingOn: string | null
   previousLine: { body: string; display_name: string } | null
+  /** A line that failed to send and is waiting for the connection to return. */
+  queuedBody?: string | null
   onSubmit: (body: string, chapterTitle?: string) => Promise<void>
 }) {
-  const [body, setBody] = useState('')
+  const [body, setBody] = useState(() => readDraft(storyId))
   const [chapterTitle, setChapterTitle] = useState('')
   const [newChapter, setNewChapter] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const textarea = useRef<HTMLTextAreaElement>(null)
 
-  if (!canWrite) {
-    return (
-      <p className="px-4 py-4 text-center text-sm text-muted">
-        {waitingOn ? (
-          <>
-            Waiting on <span className="font-medium text-ink">{waitingOn}</span>.
-          </>
-        ) : (
-          'You wrote the last line — someone else goes next.'
-        )}
-      </p>
-    )
-  }
+  // Keep what's typed, per story, as it's typed.
+  useEffect(() => {
+    saveDraft(storyId, body)
+  }, [storyId, body])
 
-  /**
-   * The box empties the moment you hit send — waiting on a round trip to clear
-   * it is what makes an app feel slow. If the send fails the text comes
-   * straight back, so a line is never lost to a dropped connection.
-   */
+  // Grow with the writing rather than making people scroll a small box.
+  useEffect(() => {
+    const el = textarea.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = `${Math.min(el.scrollHeight, 220)}px`
+  }, [body])
+
   async function submit(event: FormEvent) {
     event.preventDefault()
     const draft = body.trim()
-    if (!draft) return
+    if (!draft || !canWrite) return
 
     const draftChapter = newChapter ? chapterTitle.trim() || undefined : undefined
     setBody('')
     setChapterTitle('')
     setNewChapter(false)
+    clearDraft(storyId)
     setError(null)
 
     try {
@@ -69,6 +74,12 @@ export function Composer({
 
   return (
     <form onSubmit={submit} className="px-4 pb-3 pt-2.5">
+      {queuedBody && (
+        <p className="mb-2 rounded-lg border border-rule bg-sunk px-3 py-2 text-xs text-muted">
+          One line is waiting to send. It'll go as soon as you're back online.
+        </p>
+      )}
+
       {previousLine && !newChapter && (
         <p
           className="prose-story mb-2 line-clamp-1 border-l-2 pl-3 text-[0.9rem] italic"
@@ -89,10 +100,11 @@ export function Composer({
       )}
 
       <textarea
+        ref={textarea}
         className="field prose-story resize-none"
         rows={2}
         maxLength={2000}
-        placeholder={previousLine ? 'Carry it on…' : 'The first line…'}
+        placeholder={canWrite ? (previousLine ? 'Carry it on…' : 'The first line…') : 'Get one ready…'}
         value={body}
         onChange={(event) => setBody(event.target.value)}
       />
@@ -100,21 +112,35 @@ export function Composer({
       {error && <p className="mt-2 text-sm text-red-700 dark:text-red-400">{error}</p>}
 
       <div className="mt-2 flex items-center justify-between gap-3">
-        <label className="flex cursor-pointer items-center gap-2 text-xs text-muted">
-          <input
-            type="checkbox"
-            checked={newChapter}
-            onChange={(event) => setNewChapter(event.target.checked)}
-          />
-          New chapter
-        </label>
+        {canWrite ? (
+          <label className="flex cursor-pointer items-center gap-2 text-xs text-muted">
+            <input
+              type="checkbox"
+              checked={newChapter}
+              onChange={(event) => setNewChapter(event.target.checked)}
+            />
+            New chapter
+          </label>
+        ) : (
+          <span className="text-xs text-muted">
+            {waitingOn ? (
+              <>
+                With <span className="font-medium text-ink">{waitingOn}</span>
+                {body.trim() ? ' — saved for your go' : ''}
+              </>
+            ) : (
+              'You wrote the last line'
+            )}
+          </span>
+        )}
+
         <div className="flex items-center gap-3">
           {words > 0 && (
             <span className="text-xs tabular-nums text-faint">
               {words} {words === 1 ? 'word' : 'words'}
             </span>
           )}
-          <button type="submit" className="btn-accent" disabled={!body.trim()}>
+          <button type="submit" className="btn-accent" disabled={!canWrite || !body.trim()}>
             Add line
           </button>
         </div>

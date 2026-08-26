@@ -47,6 +47,24 @@ export const api = {
       body: JSON.stringify({ body, chapter_title: chapterTitle || null }),
     }),
 
+  editLine: (storyId: string, lineId: string, body: string) =>
+    request<{ line: Line }>(`/api/lines?story=${storyId}&line=${lineId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ body }),
+    }),
+
+  markLine: (storyId: string, lineId: string) =>
+    request<{ marked: boolean; marks: number }>(`/api/lines?story=${storyId}&resource=mark`, {
+      method: 'POST',
+      body: JSON.stringify({ line_id: lineId }),
+    }),
+
+  setReadPosition: (storyId: string, position: number) =>
+    request<{ last_read_position: number }>(`/api/members?story=${storyId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ last_read_position: position }),
+    }),
+
   createInvite: (storyId: string, maxUses = 1) =>
     request<{ invite: { code: string; expires_at: string; max_uses: number } }>(
       `/api/members?story=${storyId}&resource=invite`,

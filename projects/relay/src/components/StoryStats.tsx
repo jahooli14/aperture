@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { Avatar } from './Avatar'
 import { duration } from '../lib/format'
 import type { Member, StoryStats as Stats } from '../lib/types'
@@ -6,11 +7,13 @@ import type { Member, StoryStats as Stats } from '../lib/types'
 export function StoryStats({
   stats,
   members,
+  printHref,
   onJumpToChapter,
   onClose,
 }: {
   stats: Stats
   members: Member[]
+  printHref: string
   onJumpToChapter: (position: number) => void
   onClose: () => void
 }) {
@@ -69,6 +72,10 @@ export function StoryStats({
             </ul>
           </section>
         )}
+
+        <Link to={printHref} className="btn-quiet mb-6 w-full">
+          Make a book of it
+        </Link>
 
         {stats.chapters.length > 0 && (
           <section>
