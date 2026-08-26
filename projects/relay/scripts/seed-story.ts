@@ -5,13 +5,12 @@
  *   npm run seed -- --dan=you@example.com --ben=ben@example.com
  *
  * Optional:
- *   --start=2025-01-14   spread the lines evenly between that date and today
  *   --title="Pasco"      override the story title
  *
- * Without --start every line is stamped with the time it was inserted, which
- * is honest but makes "the story so far" read as though it all happened at
- * once. With it, timestamps are evenly spaced across the range — approximate,
- * anchored to a real date you supply, and only ever used for the stats.
+ * Every line in pasco-story.ts carries its real sentAt — transcribed from the
+ * original WhatsApp export and Signal screenshots — so "the story so far"
+ * reflects when it actually happened, gaps included, rather than an evenly
+ * spread guess.
  *
  * Safe to run twice: it finds an existing story by title and skips it if the
  * lines are already in.
@@ -33,7 +32,6 @@ function arg(name: string): string | undefined {
 const danEmail = arg('dan') ?? process.env.RELAY_DAN_EMAIL
 const benEmail = arg('ben') ?? process.env.RELAY_BEN_EMAIL
 const title = arg('title') ?? PASCO_TITLE
-const startDate = arg('start')
 
 if (!danEmail || !benEmail) {
   console.error('Both writers are needed: npm run seed -- --dan=you@example.com --ben=ben@example.com')
@@ -81,18 +79,6 @@ async function upsertProfile(userId: string, displayName: string) {
   if (error) throw error
 }
 
-/** Evenly spaced timestamps between --start and now, or null to use insert time. */
-function timestamps(count: number): (string | null)[] {
-  if (!startDate) return Array(count).fill(null)
-
-  const start = Date.parse(`${startDate}T19:00:00.000Z`)
-  if (Number.isNaN(start)) throw new Error(`--start must be a date like 2025-01-14, got "${startDate}"`)
-
-  const end = Date.now()
-  const step = (end - start) / Math.max(count - 1, 1)
-  return Array.from({ length: count }, (_, index) => new Date(start + step * index).toISOString())
-}
-
 async function main() {
   console.log(`Seeding "${title}"…`)
 
@@ -107,6 +93,7 @@ async function main() {
     .maybeSingle()
 
   let storyId = existing?.id as string | undefined
+  const firstLineAt = PASCO_STORY[0].sentAt
 
   if (!storyId) {
     const { data, error } = await supabase
@@ -117,6 +104,7 @@ async function main() {
         created_by: danId,
         turn_mode: 'rotation',
         next_author_id: danId,
+        created_at: firstLineAt,
       })
       .select('id')
       .single()
@@ -150,7 +138,6 @@ async function main() {
   }
 
   const authorIds: Record<SeedLine['author'], string> = { dan: danId, ben: benId }
-  const stamps = timestamps(PASCO_STORY.length)
 
   const rows = PASCO_STORY.map((line, index) => ({
     story_id: storyId,
@@ -158,20 +145,21 @@ async function main() {
     position: index + 1,
     body: line.body,
     chapter_title: line.chapter ?? null,
-    ...(stamps[index] ? { created_at: stamps[index] } : {}),
+    created_at: line.sentAt,
   }))
 
   const { error } = await supabase.from('lines').insert(rows)
   if (error) throw error
 
-  // The insert trigger left the turn wherever the last line put it. The story
-  // alternates, so after Ben's line it is Dan's go.
-  const lastAuthor = PASCO_STORY[PASCO_STORY.length - 1].author
-  const nextAuthor = lastAuthor === 'dan' ? benId : danId
-  await supabase.from('stories').update({ next_author_id: nextAuthor }).eq('id', storyId)
+  const lastLine = PASCO_STORY[PASCO_STORY.length - 1]
+  const nextAuthor = lastLine.author === 'dan' ? benId : danId
+  await supabase
+    .from('stories')
+    .update({ next_author_id: nextAuthor, last_line_at: lastLine.sentAt })
+    .eq('id', storyId)
 
-  console.log(`  added ${rows.length} lines`)
-  console.log(`Done. It's ${lastAuthor === 'dan' ? 'Ben' : 'Dan'}'s turn.`)
+  console.log(`  added ${rows.length} lines, ${firstLineAt.slice(0, 10)} to ${lastLine.sentAt.slice(0, 10)}`)
+  console.log(`Done. It's ${lastLine.author === 'dan' ? 'Ben' : 'Dan'}'s turn.`)
 }
 
 main().catch((error) => {

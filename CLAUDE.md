@@ -218,12 +218,20 @@ Relay shares a Supabase project with another Aperture app — it lives in its ow
    but notifications are off.
 4. Seed the existing story, either way round:
    - **No terminal:** paste `supabase/seed-pasco.sql` into the SQL editor after
-     both writers have signed in once. Three variables at the top to edit.
-   - **Terminal:** `npm run seed -- --dan=you@example.com --ben=ben@example.com`,
-     plus `--start=YYYY-MM-DD` to spread the line timestamps.
+     both writers have signed in once. Two variables at the top to edit.
+   - **Terminal:** `npm run seed -- --dan=you@example.com --ben=ben@example.com`.
    Both are idempotent and both leave the turn with whoever is genuinely up.
-   Regenerate the SQL from the transcript with
-   `npx tsx scripts/make-seed-sql.ts` — never hand-edit it.
+   Every line in `scripts/pasco-story.ts` carries a real `sentAt` — transcribed
+   from the original WhatsApp export and Signal screenshots, not spread evenly
+   across a guessed range — so "the story so far" reflects the real gaps,
+   including the five months the story sat still over a wedding. One line (7)
+   is deliberately misattributed by a naive transcript read: Ben retyped it at
+   Dan's request to fix a typo Dan's WhatsApp couldn't edit, and Dan's own
+   "your move still, edits don't count" settles whose turn it actually was.
+   If a story was seeded before `sentAt` existed, `supabase/update-pasco-timestamps.sql`
+   corrects it in place, matched by line position — safe to run more than once.
+   Regenerate both SQL files from the transcript with
+   `npx tsx scripts/make-seed-sql.ts` — never hand-edit them.
 
 Auth is a six-digit emailed code — no passwords, no magic link. Email
 templates are **per Supabase project**, and the shared one renders
