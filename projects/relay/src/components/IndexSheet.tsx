@@ -66,7 +66,11 @@ export function IndexSheet({
         {state && state.storage_ready && !state.available && (
           <Blocked
             what="The server can't see a Gemini key."
-            fix="If you've just added GEMINI_KEY in Vercel, redeploy — environment variables only reach the running app on a new deployment. Check it's enabled for Production too."
+            fix={
+              state.key_env_names && state.key_env_names.length > 0
+                ? `The deployment does have ${state.key_env_names.join(', ')}, but the value is empty. Re-enter it in Vercel and redeploy.`
+                : 'This deployment received no Gemini variable at all. Environment variables only reach the running app on a new deployment, so redeploy after adding GEMINI_KEY — and check it is enabled for Production.'
+            }
           />
         )}
 

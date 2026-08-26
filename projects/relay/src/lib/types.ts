@@ -90,4 +90,5 @@ export interface StoryIndexResponse {
   available: boolean
   enough_lines: boolean
   storage_ready: boolean
+  key_env_names?: string[]
 }

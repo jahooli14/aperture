@@ -12,7 +12,7 @@ import { getSupabaseClient } from './_lib/supabase.js'
 import { getUserId } from './_lib/auth.js'
 import { fail, firstParam, handleErrors } from './_lib/http.js'
 import { loadStory } from './_lib/stories.js'
-import { generateIndex, geminiConfigured } from './_lib/index/generate.js'
+import { generateIndex, geminiConfigured, geminiDiagnostics } from './_lib/index/generate.js'
 import { isEmptyIndex, type SourceLine, type StoryIndex } from './_lib/index/ground.js'
 
 const MIN_LINES = 6
@@ -75,6 +75,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         // Told apart so the sheet can say which of the two setup steps is
         // missing, rather than leaving you to guess between them.
         storage_ready: storageReady,
+        // Names only. Empty means the deployment never received the variable,
+        // which is a different problem from the key being wrong.
+        key_env_names: geminiDiagnostics().names,
       })
     }
 

@@ -14,7 +14,23 @@ import { groundIndex, type SourceLine, type StoryIndex } from './ground.js'
 const MAX_LINES = 400
 
 export function geminiConfigured(): boolean {
-  return Boolean(process.env.GEMINI_KEY || process.env.GEMINI_API_KEY)
+  return Boolean(apiKey())
+}
+
+function apiKey(): string | undefined {
+  return process.env.GEMINI_KEY?.trim() || process.env.GEMINI_API_KEY?.trim()
+}
+
+/**
+ * Which Gemini-ish variables the running function can actually see — names
+ * only, never values. "It's set in Vercel" and "the deployment has it" are
+ * different claims, and without this there's no way to tell them apart from
+ * the outside.
+ */
+export function geminiDiagnostics(): { names: string[]; looksUsable: boolean } {
+  const names = Object.keys(process.env).filter((name) => /GEMINI/i.test(name))
+  const key = apiKey()
+  return { names, looksUsable: Boolean(key && key.length > 20) }
 }
 
 const ENTRY_SCHEMA = {
@@ -76,11 +92,11 @@ ${numbered}`
  * or returns something unparseable — callers decide what to show.
  */
 export async function generateIndex(lines: SourceLine[]): Promise<StoryIndex> {
-  const apiKey = process.env.GEMINI_KEY || process.env.GEMINI_API_KEY
-  if (!apiKey) throw new Error('The index needs GEMINI_KEY set')
+  const key = apiKey()
+  if (!key) throw new Error('The index needs GEMINI_KEY set')
 
   const source = lines.slice(0, MAX_LINES)
-  const ai = new GoogleGenAI({ apiKey })
+  const ai = new GoogleGenAI({ apiKey: key })
 
   const response = await ai.models.generateContent({
     model: MODELS.INDEX,
