@@ -34,7 +34,7 @@ export interface ShapeInput {
 
 export interface SessionShape {
   text: string
-  source: 'closeout' | 'slot' | 'decomposition' | 'start' | 'ignition'
+  source: 'closeout' | 'slot' | 'decomposition' | 'start' | 'ignition' | 'shaped'
   /** True when this shape is a deliberately partial piece of a bigger move. */
   partial: boolean
 }

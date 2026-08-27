@@ -1665,6 +1665,20 @@ Return JSON only:
         }
       }
 
+      // Burying or completing a project has to release every pointer that
+      // could still surface it. Doing this at the write means no reader
+      // anywhere has to remember: a graveyarded project can't be the live
+      // one, can't be starred, can't sit in Up Next, can't be booked for
+      // today. Skipping it is what made "send to graveyard" look broken —
+      // the project vanished from the projects page and stayed put as
+      // today's answer on Home.
+      if (updates.status === 'graveyard' || updates.status === 'completed') {
+        updates.state = updates.status === 'completed' ? 'harvested' : 'mull'
+        updates.is_priority = false
+        updates.up_next_position = null
+        updates.booked_session_at = null
+      }
+
       const { data, error } = await supabase
         .from('projects')
         .update(updates)

@@ -45,7 +45,8 @@ import { MODELS } from './_lib/models.js'
 import { PLAIN_ENGLISH_RULES, CHAT_TURN_RULES } from './_lib/plain-english.js'
 import { DEFAULT_IDEA_BRIEF } from './_lib/project-ideas/default-prompt.js'
 import type { CoverageGrid } from '../src/types'
-import { deriveSessionShapes, needsMvsSeed, measuredMvs, type SlotInput } from './_lib/session-shapes.js'
+import { deriveSessionShapes, needsMvsSeed, measuredMvs, type SlotInput, type SessionShape } from './_lib/session-shapes.js'
+import { shapeSession, sanitizeItems } from './_lib/session-shaper.js'
 import { pickNextSparkType, type SparkHistoryEntry } from './_lib/spark-types.js'
 import { generateSpark } from './_lib/spark-generator.js'
 import { canMorphProject, anyProjectMorphedToday } from './_lib/morph.js'
@@ -65,6 +66,7 @@ function getCronUserId(req: VercelRequest): string | null {
 }
 
 const EXECUTION_SESSIONS_RESOURCES = new Set([
+  'shape',
   'start', 'close', 'pending-closeout', 'log-retro', 'declare-live',
   'live-reask', 'different-thing-status', 'harvest', 'mirror', 'book',
 ])
@@ -1807,6 +1809,10 @@ function randomUuid(): string {
 
 /** A deferred close-out older than this is left alone rather than asked about (SPEC.md). */
 const DEFER_MAX_AGE_DAYS = 7
+/** How long an unclosed session counts as "still going" rather than
+ *  "abandoned". Longer than any real window, short enough that a session
+ *  you walked away from is still asked about the same day. */
+const RUNNING_GRACE_HOURS = 3
 
 /**
  * A yes/no next to a timer would be the question-beside-two-buttons pattern
@@ -1846,6 +1852,32 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
   const resource = req.query.resource as string
 
   // ─── START ──────────────────────────────────────────────────────────
+  // ─── SHAPE (the two minutes of planning) ────────────────────────────
+  // No session row yet -- this is what you're agreeing to before the
+  // clock starts. Called once on arrival, then again for each "no, more
+  // like this" the user says at it.
+  if (resource === 'shape') {
+    if (req.method !== 'POST') return res.status(405).json({ error: 'POST required' })
+    const { project_id, window_minutes, instruction, current_items } = req.body || {}
+    if (!project_id) return res.status(400).json({ error: 'project_id required' })
+
+    try {
+      const result = await shapeSession(
+        supabase,
+        userId,
+        project_id,
+        typeof window_minutes === 'number' ? window_minutes : null,
+        typeof instruction === 'string' ? instruction : null,
+        Array.isArray(current_items) ? current_items.filter((x: unknown) => typeof x === 'string') : undefined,
+      )
+      return res.status(200).json(result)
+    } catch (e) {
+      const message = e instanceof Error ? e.message : 'Could not shape the session.'
+      console.error('[utilities/sessions] shape failed:', message)
+      return res.status(500).json({ error: message })
+    }
+  }
+
   if (resource === 'start') {
     if (req.method !== 'POST') return res.status(405).json({ error: 'POST required' })
     const { project_id, window_minutes, source } = req.body || {}
@@ -1871,12 +1903,18 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
       ? project.slots.map((s: any) => ({ name: s.name, filled: !!s.filled }))
       : []
 
-    const shapes = deriveSessionShapes({
-      lastClosingText: project.last_closeout_text ?? null,
-      slots,
-      mvsMinutes: project.mvs_minutes ?? null,
-      windowMinutes: typeof window_minutes === 'number' ? window_minutes : null,
-    })
+    // The planning phase agreed a list; start with it rather than
+    // re-deriving one behind the user's back. Derivation is only the
+    // fallback for a caller that skipped planning entirely.
+    const agreed = sanitizeItems(req.body?.items, 6)
+    const shapes: SessionShape[] = agreed.length > 0
+      ? agreed.map(text => ({ text, source: 'shaped' as const, partial: false }))
+      : deriveSessionShapes({
+          lastClosingText: project.last_closeout_text ?? null,
+          slots,
+          mvsMinutes: project.mvs_minutes ?? null,
+          windowMinutes: typeof window_minutes === 'number' ? window_minutes : null,
+        })
 
     const { data: session, error: insertErr } = await supabase
       .from('sessions')
@@ -1980,6 +2018,11 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
     if (req.method !== 'GET') return res.status(405).json({ error: 'GET required' })
 
     const cutoff = new Date(Date.now() - DEFER_MAX_AGE_DAYS * 24 * 60 * 60 * 1000).toISOString()
+    // A session that is still RUNNING also has ended_at NULL, so without
+    // an upper bound this asked "where'd you get to?" about the session
+    // the user had just started, on screen next to its own live timer.
+    // Nothing under three hours old is abandoned; it's in progress.
+    const stillRunning = new Date(Date.now() - RUNNING_GRACE_HOURS * 60 * 60 * 1000).toISOString()
 
     const { data, error } = await supabase
       .from('sessions')
@@ -1987,6 +2030,7 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
       .eq('user_id', userId)
       .is('ended_at', null)
       .gte('started_at', cutoff)
+      .lt('started_at', stillRunning)
       .order('started_at', { ascending: false })
       .limit(1)
 
