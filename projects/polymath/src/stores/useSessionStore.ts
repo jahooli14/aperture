@@ -13,7 +13,7 @@ import { create } from 'zustand'
 
 export interface SessionShape {
   text: string
-  source: 'closeout' | 'slot' | 'decomposition' | 'start' | 'ignition'
+  source: 'closeout' | 'slot' | 'decomposition' | 'start' | 'ignition' | 'shaped'
   partial: boolean
 }
 
@@ -61,6 +61,19 @@ export interface PendingCloseout {
   projects: { title: string } | null
 }
 
+/** The two minutes of planning, in seconds. Long enough to reshape a list
+ *  once or twice; short enough that shaping can't become the session. */
+export const PLANNING_SECONDS = 120
+
+export interface PlanDraft {
+  projectId: string
+  windowMinutes: number | null
+  items: string[]
+  /** 'derived' means the model was unreachable and this is the fallback
+   *  list -- worth saying out loud rather than passing off as a plan. */
+  source: 'ai' | 'derived'
+}
+
 interface SessionState {
   /** How long you've got, this browser session. Lives in the store rather
    *  than in the card's local state because three surfaces set it: the
@@ -75,7 +88,16 @@ interface SessionState {
   pendingCloseout: PendingCloseout | null
   error: string | null
 
-  startSession: (projectId: string, windowMinutes: number | null, source?: string) => Promise<void>
+  /** The plan being agreed right now, before the clock starts. */
+  plan: PlanDraft | null
+  shaping: boolean
+
+  shapePlan: (projectId: string, windowMinutes: number | null) => Promise<void>
+  reshapePlan: (instruction: string) => Promise<void>
+  dropPlanItem: (index: number) => void
+  clearPlan: () => void
+
+  startSession: (projectId: string, windowMinutes: number | null, source?: string, items?: string[]) => Promise<void>
   closeSession: (closeoutText: string, mvsSeedMinutes?: number) => Promise<{ moved: boolean | null; duration_minutes: number } | null>
   checkPendingCloseout: () => Promise<void>
   closeoutForPending: (closeoutText: string) => Promise<void>
@@ -104,17 +126,68 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   },
 
   active: null,
+  plan: null,
+  shaping: false,
   starting: false,
   closing: false,
   pendingCloseout: null,
   error: null,
 
-  startSession: async (projectId, windowMinutes, source = 'live') => {
+  shapePlan: async (projectId, windowMinutes) => {
+    set({ shaping: true, error: null })
+    try {
+      const data = await postJson<{ items: string[]; source: 'ai' | 'derived' }>(
+        '/api/utilities?resource=shape',
+        { project_id: projectId, window_minutes: windowMinutes }
+      )
+      set({ plan: { projectId, windowMinutes, items: data.items, source: data.source }, shaping: false })
+    } catch (e) {
+      // Raw transport errors ("Request failed: 404") are not something to
+      // read two minutes before you start. Log them, say the plain thing.
+      console.error('[session] shape failed:', e)
+      set({ shaping: false, error: 'Could not shape a list just now.' })
+    }
+  },
+
+  reshapePlan: async (instruction) => {
+    const plan = get().plan
+    if (!plan) return
+    set({ shaping: true, error: null })
+    try {
+      const data = await postJson<{ items: string[]; source: 'ai' | 'derived' }>(
+        '/api/utilities?resource=shape',
+        {
+          project_id: plan.projectId,
+          window_minutes: plan.windowMinutes,
+          instruction,
+          current_items: plan.items,
+        }
+      )
+      set({ plan: { ...plan, items: data.items, source: data.source }, shaping: false })
+    } catch (e) {
+      // Keep the list that's on screen -- a failed reshape must never
+      // leave the user staring at nothing two minutes before they start.
+      console.error('[session] reshape failed:', e)
+      set({ shaping: false, error: "Didn't catch that — the list is unchanged." })
+    }
+  },
+
+  // One tap is cheaper than a sentence when the only problem is that one
+  // item doesn't belong.
+  dropPlanItem: (index) => {
+    const plan = get().plan
+    if (!plan) return
+    set({ plan: { ...plan, items: plan.items.filter((_, i) => i !== index) } })
+  },
+
+  clearPlan: () => set({ plan: null }),
+
+  startSession: async (projectId, windowMinutes, source = 'live', items) => {
     set({ starting: true, error: null })
     try {
       const data = await postJson<{ session: any; shapes: SessionShape[]; ask_mvs_seed: boolean }>(
         '/api/utilities?resource=start',
-        { project_id: projectId, window_minutes: windowMinutes, source }
+        { project_id: projectId, window_minutes: windowMinutes, source, items }
       )
       set({
         active: {
@@ -125,6 +198,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
           shapes: data.shapes,
           askMvsSeed: data.ask_mvs_seed,
         },
+        plan: null,
         starting: false,
       })
     } catch (e) {

@@ -348,9 +348,22 @@ export const useProjectStore = create<ProjectState>()(
         const previousAllProjects = get().allProjects
         const { isOnline } = useOfflineStore.getState()
 
-        // Optimistic Update
+        // Optimistic Update. Burying or completing releases every
+        // execution pointer in the same breath, mirroring what the API
+        // does — otherwise Home keeps showing a graveyarded project as
+        // today's answer until the next fetch lands.
+        const released: Partial<Project> =
+          data.status === 'graveyard' || data.status === 'completed'
+            ? {
+                state: (data.status === 'completed' ? 'harvested' : 'mull') as Project['state'],
+                is_priority: false,
+                up_next_position: null,
+                booked_session_at: null,
+              }
+            : {}
+
         const updatedAllProjects = previousAllProjects.map(p =>
-          p.id === id ? { ...p, ...data, updated_at: new Date().toISOString() } : p
+          p.id === id ? { ...p, ...data, ...released, updated_at: new Date().toISOString() } : p
         )
 
         // Re-sort if status or priority changed

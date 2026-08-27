@@ -1,12 +1,18 @@
 /**
  * AttentionSlot — the attention budget (SPEC.md).
  *
- * Five things can want the screen on open: a deferred close-out, the
+ * Things that can want the screen on open: a deferred close-out, the
  * monthly mirror, the live-project re-ask, a composite proposal, a morph
- * proposal, and today's spark. Five surfaces competing is how "guide, not
+ * proposal, and today's spark. Competing surfaces are how "guide, not
  * menu" dies, so this renders AT MOST ONE, in fixed priority order, and
  * whatever loses is not queued behind the winner -- it waits for another
- * day or is dropped, never stacks into a notification tray.
+ * day or is dropped, never stacks into a notification tray. It renders
+ * NOTHING at all while a session is being planned or run.
+ *
+ * The monthly "something different" quota used to be the last slot here.
+ * It moved onto the answer card's chat row: it isn't a different kind of
+ * thing from steering, it's steering the app started, and giving it a
+ * third box with its own buttons made it compete with the answer.
  *
  * Mounted on HomePage directly beneath the answer box, because "on app
  * open" is what a spark is the reward for -- confining it to a separate
@@ -21,8 +27,7 @@
  * whole spec exists to avoid.
  */
 
-import { useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
 import { useSessionStore } from '../../stores/useSessionStore'
 import { useProjectStore } from '../../stores/useProjectStore'
 import { VoiceInput } from '../VoiceInput'
@@ -36,7 +41,7 @@ const primaryButtonStyle = {
 }
 const accentTextStyle = { color: 'rgb(var(--brand-primary-rgb))' }
 
-type SlotKind = 'closeout' | 'mirror' | 'reask' | 'composite' | 'morph' | 'spark' | 'different-thing' | null
+type SlotKind = 'closeout' | 'mirror' | 'reask' | 'composite' | 'morph' | 'spark' | null
 
 interface ReaskSuggestion {
   project_id: string
@@ -328,64 +333,12 @@ function ReaskSlot({ suggestion, onResolved }: { suggestion: ReaskSuggestion; on
  * from day 20 of the month (different-thing.ts). Encouragement, not a
  * debt: no streak, no "you missed it" if the month runs out unused.
  */
-function DifferentThingSlot({ onResolved }: { onResolved: () => void }) {
-  const navigate = useNavigate()
-  const projects = useProjectStore(s => s.projects)
-
-  // One suggestion, not a list. The first cut rendered four projects as
-  // tappable rows, which is precisely the menu SPEC.md bans — "never a
-  // question next to competing buttons". Picking the least-recently-touched
-  // eligible project makes it a genuine suggestion the app is willing to
-  // stand behind, and "something else" re-rolls rather than fanning out.
-  const candidates = useMemo(
-    () =>
-      projects
-        .filter(p => p.state !== 'harvested' && p.state !== 'live')
-        .sort((a, b) => {
-          const at = new Date(a.last_active || a.created_at || 0).getTime()
-          const bt = new Date(b.last_active || b.created_at || 0).getTime()
-          return at - bt
-        }),
-    [projects],
-  )
-  const [index, setIndex] = useState(0)
-  const suggestion = candidates[index] ?? null
-
-  if (!suggestion) return null
-
-  return (
-    <div className="glass-card p-6 space-y-3">
-      <p className="text-xs uppercase tracking-wide" style={{ ...secondaryTextStyle, opacity: 0.5 }}>
-        An hour on something different
-      </p>
-      <p className="text-base">{suggestion.title}</p>
-      <div className="flex gap-2">
-        <button
-          className="flex-1 py-2 rounded-lg text-sm font-medium"
-          style={primaryButtonStyle}
-          onClick={() => navigate(`/session?project_id=${suggestion.id}&source=different-thing`)}
-        >
-          Do that
-        </button>
-        {candidates.length > 1 && (
-          <button
-            className="px-4 py-2 rounded-lg border text-sm"
-            style={borderStyle}
-            onClick={() => setIndex(i => (i + 1) % candidates.length)}
-          >
-            Something else
-          </button>
-        )}
-      </div>
-      <button className="text-sm underline" style={accentTextStyle} onClick={onResolved}>
-        Not today
-      </button>
-    </div>
-  )
-}
-
 export function AttentionSlot() {
   const { pendingCloseout, checkPendingCloseout, closeoutForPending } = useSessionStore()
+  // During a session there is exactly one thing on screen. The budget is
+  // for what the app says on OPEN — interrupting the hour it just helped
+  // you start is the worst possible moment for any of it.
+  const sessionRunning = useSessionStore(s => s.active != null || s.plan != null)
   const [kind, setKind] = useState<SlotKind>(null)
   const [mirrorRows, setMirrorRows] = useState<MirrorRow[]>([])
   const [reask, setReask] = useState<ReaskSuggestion | null>(null)
@@ -442,11 +395,6 @@ export function AttentionSlot() {
         return
       }
 
-      const quota = await getJson<{ done: boolean; should_nudge: boolean }>('/api/utilities?resource=different-thing-status')
-      if (cancelled) return
-      if (quota?.should_nudge) {
-        setKind('different-thing')
-      }
     }
 
     resolve()
@@ -455,7 +403,7 @@ export function AttentionSlot() {
     }
   }, [])
 
-  if (resolved || !kind) return null
+  if (sessionRunning || resolved || !kind) return null
 
   if (kind === 'closeout' && pendingCloseout) {
     return (
@@ -520,14 +468,6 @@ export function AttentionSlot() {
         ) : (
           <SparkSlot spark={spark} onResolved={() => setResolved(true)} />
         )}
-      </div>
-    )
-  }
-
-  if (kind === 'different-thing') {
-    return (
-      <div className="mb-4">
-        <DifferentThingSlot onResolved={() => setResolved(true)} />
       </div>
     )
   }

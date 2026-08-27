@@ -50,6 +50,7 @@ import { FocusChat } from './FocusChat'
 import { SessionContract } from '../session/SessionContract'
 import { WINDOW_PRESETS, useSessionStore } from '../../stores/useSessionStore'
 import { FeelingPill } from './FeelingPill'
+import { useDifferentThingNudge } from './useDifferentThingNudge'
 import { createProjectFromIdea } from '../../lib/createProjectFromIdea'
 import { haptic } from '../../utils/haptics'
 import { useToast } from '../ui/toast'
@@ -84,14 +85,24 @@ export function TodaysAnswerCard() {
   // anchor before a live project has ever been declared.
   const liveProject = useMemo(() => {
     const today = new Date().toISOString().slice(0, 10)
-    const booked = allProjects.find(
+    // Same active-and-shaped filter every other project selector uses.
+    // Without it, sending the live project to the graveyard left it sitting
+    // here as today's answer forever — the graveyard looked broken because
+    // the one place it mattered wasn't checking status.
+    const eligible = allProjects.filter(
+      p => ['active', 'upcoming'].includes(p.status ?? '') && p.metadata?.is_shaped !== false,
+    )
+    const booked = eligible.find(
       p => p.booked_session_at?.slice(0, 10) === today && p.state !== 'harvested',
     )
-    return booked ?? allProjects.find(p => p.state === 'live') ?? null
+    return booked ?? eligible.find(p => p.state === 'live') ?? null
   }, [allProjects])
 
   const focusProject = useMemo(
-    () => (overrideProjectId && allProjects.find(p => p.id === overrideProjectId))
+    () => (overrideProjectId && allProjects.find(
+        p => p.id === overrideProjectId &&
+          ['active', 'upcoming'].includes(p.status ?? ''),
+      ))
       || liveProject
       || priorityProject
       || recentProject
@@ -192,10 +203,19 @@ export function TodaysAnswerCard() {
   // if that fetch already ran (usual case — ProjectIdeasHome mounts and
   // loads before anyone taps this), this is a no-op and chips are already
   // populated by the time the panel opens.
+  // The monthly quota nudge, when it's due. Rendered in the steer row and
+  // — if that's what the user tapped — said into the chat for them, so the
+  // conversation opens already about the thing the app raised rather than
+  // making them re-type the app's own suggestion.
+  const nudge = useDifferentThingNudge()
+
   const openSteer = () => {
     haptic.light()
     setEngaged(true)
     void useProjectIdeasStore.getState().load()
+    if (nudge.opener && useFocusChatStore.getState().messages.length === 0) {
+      useFocusChatStore.getState().sendMessage(nudge.opener, summaries, feeling)
+    }
   }
 
   // True once a real conversation exists — the panel switches from
@@ -291,7 +311,7 @@ export function TodaysAnswerCard() {
         <span className="text-[10px] font-bold uppercase tracking-[0.28em]" style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.7 }}>today's answer</span>
         <p className="mt-3 text-[17px] leading-[1.4]" style={{ color: 'var(--brand-text-secondary)', fontFamily: 'var(--brand-font-serif)' }}>{openingLine}</p>
         {!engaged ? (
-          <SteerRow onOpen={openSteer} />
+          <SteerRow onOpen={openSteer} nudge={nudge.text} />
         ) : (
           <SteerPanel
             chips={chips}
@@ -488,10 +508,20 @@ export function TodaysAnswerCard() {
           })}
         </div>
 
+        {/* The window is a gate, not a preference. The plan is sized to it,
+            so there is nothing honest to show until it's answered — and a
+            list built for "some amount of time" is the thing that made the
+            old session one vague item long. */}
         <button
           onClick={(e) => { e.stopPropagation(); handleStartSession() }}
-          className="w-full py-2.5 rounded-xl font-semibold text-xs uppercase tracking-widest flex items-center justify-center gap-2 transition-all hover:brightness-110"
-          style={{
+          disabled={windowMinutes == null}
+          className="w-full py-2.5 rounded-xl font-semibold text-xs uppercase tracking-widest flex items-center justify-center gap-2 transition-all hover:brightness-110 disabled:cursor-default disabled:hover:brightness-100"
+          style={windowMinutes == null ? {
+            background: 'rgba(255,255,255,0.03)',
+            border: '1px solid rgba(255,255,255,0.10)',
+            color: 'var(--brand-text-secondary)',
+            opacity: 0.5,
+          } : {
             background: 'rgba(var(--brand-primary-rgb), 0.12)',
             border: '1px solid rgba(var(--brand-primary-rgb), 0.32)',
             color: 'rgb(var(--brand-primary-rgb))',
@@ -499,7 +529,7 @@ export function TodaysAnswerCard() {
           }}
         >
           <Play className="h-3.5 w-3.5 fill-current" />
-          Start session
+          {windowMinutes == null ? 'Pick a time first' : 'Start session'}
         </button>
       </div>
 
@@ -507,7 +537,7 @@ export function TodaysAnswerCard() {
           also fire the card's navigate-to-project click above. */}
       <div onClick={(e) => e.stopPropagation()}>
         {!engaged ? (
-          <SteerRow onOpen={openSteer} />
+          <SteerRow onOpen={openSteer} nudge={nudge.text} />
         ) : (
           <SteerPanel
             chips={chips}
@@ -536,20 +566,31 @@ export function TodaysAnswerCard() {
  *  this card, so the way in has to look like somewhere you can talk —
  *  a real field with a real prompt, not a dim text link with a chevron
  *  (which is what it was, and read as a footnote to the answer above it). */
-function SteerRow({ onOpen }: { onOpen: () => void }) {
+function SteerRow({ onOpen, nudge }: { onOpen: () => void; nudge: string | null }) {
   return (
     <div className="mt-5 pt-4" style={{ borderTop: '1px solid rgba(255,255,255,0.09)' }}>
+      {/* The monthly "try something different" quota lives here rather than
+          in its own card. It used to be a third box on Home with three
+          buttons of its own, competing with the answer — but it isn't a
+          different KIND of thing from steering, it IS steering, just
+          initiated by the app. So it borrows this row for a month and
+          opens the same conversation. */}
       <button
         onClick={onOpen}
         className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-left transition-all active:scale-[0.995]"
         style={{
-          background: 'rgba(255,255,255,0.05)',
+          background: nudge ? 'rgba(var(--brand-primary-rgb),0.08)' : 'rgba(255,255,255,0.05)',
           border: '1px solid rgba(var(--brand-primary-rgb),0.28)',
           boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.07), 0 0 24px -10px rgba(var(--brand-primary-rgb),0.4)',
         }}
       >
-        <span className="flex-1 text-[15px]" style={{ color: 'var(--brand-text-secondary)', opacity: 0.5 }}>
-          {STEER_PROMPT}
+        <span
+          className="flex-1 text-[15px]"
+          style={nudge
+            ? { color: 'var(--brand-text-primary)', opacity: 0.9 }
+            : { color: 'var(--brand-text-secondary)', opacity: 0.5 }}
+        >
+          {nudge ?? STEER_PROMPT}
         </span>
         <ArrowUp className="h-4 w-4 flex-shrink-0" strokeWidth={2.5} style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.5 }} />
       </button>
