@@ -28,6 +28,15 @@ import { deriveSessionShapes, type SlotInput } from './session-shapes.js'
  * lying to you, and an hour with three is under-using the hour. These are
  * ceilings the model is told to hit, not suggestions.
  */
+/**
+ * Spares generated alongside the list. Swapping an item out has to be
+ * instant — a model round-trip per "not that one" would spend a quarter
+ * of the planning window on latency, and the whole point of the two
+ * minutes is that they're cheap. So the shape call over-generates and the
+ * extras sit on the bench.
+ */
+export const BENCH_SIZE = 3
+
 export function itemCountForWindow(windowMinutes: number | null): number {
   if (windowMinutes == null) return 4
   if (windowMinutes <= 20) return 3
@@ -59,6 +68,15 @@ export function isAdminItem(text: string): boolean {
  * long enough to need re-reading mid-session, and caps at the count the
  * window allows.
  */
+/**
+ * The sanitised pool split into what's on screen and what's held back.
+ * Deliberately a pure function of the pool, so the bench can never
+ * contain something already in the list.
+ */
+export function splitBench(pool: string[], count: number): { items: string[]; bench: string[] } {
+  return { items: pool.slice(0, count), bench: pool.slice(count) }
+}
+
 export function sanitizeItems(raw: unknown, count: number): string[] {
   if (!Array.isArray(raw)) return []
   const seen = new Set<string>()
@@ -109,8 +127,15 @@ throw out items they didn't complain about.
 `
     : ''
 
+  const total = count + BENCH_SIZE
+
   return `You are shaping one work session on a creative project. The user has ${windowText}
-and is about to start. Give them exactly ${count} things to do, in order.
+and is about to start.
+
+Give ${total} things to do. The FIRST ${count} are the session, in order. The
+last ${BENCH_SIZE} are spares — same quality, same project, but different
+angles, so that if one of the first ${count} doesn't suit today there's a real
+replacement ready. Don't mark them; just order them that way.
 
 Project: "${ctx.title}"${ctx.goal ? `\nWhat done looks like: ${ctx.goal}` : ''}
 ${ctx.lastCloseout ? `\nWhere they left off last time, in their words: "${ctx.lastCloseout}"` : '\nThey have not had a session on this yet.'}
@@ -129,8 +154,10 @@ Rules for the list:
   decide, list, consider, review, think about, set up, brainstorm, explore.
   If an item starts with one of those, it isn't a session item. Rewrite it
   as the thing you'd actually do.
-- Size the whole list to ${windowText}. It should be finishable, not
+- Size the first ${count} to ${windowText}. They should be finishable, not
   aspirational.
+- The ${BENCH_SIZE} spares should not need the first ${count} to have happened —
+  each one has to stand on its own as a swap for any of them.
 - One line each. No sub-bullets, no time estimates, no explanation.
 
 ${PLAIN_ENGLISH_RULES}
@@ -154,7 +181,7 @@ export async function shapeSession(
   windowMinutes: number | null,
   instruction?: string | null,
   currentItems?: string[],
-): Promise<{ items: string[]; source: 'ai' | 'derived' }> {
+): Promise<{ items: string[]; bench: string[]; source: 'ai' | 'derived' }> {
   // Column list matters: `goal` is NOT a column on projects (what done
   // looks like lives in metadata.end_goal). Asking for one that doesn't
   // exist fails the whole select, which is how this returned "Project not
@@ -206,10 +233,14 @@ export async function shapeSession(
       temperature: 0.8,
       maxTokens: 1200,
     })
-    const items = sanitizeItems(JSON.parse(response)?.items, count)
+    // Sanitise the whole pool first, THEN split — otherwise a dropped
+    // admin item in the first few would silently promote a spare into the
+    // list without anything taking its place on the bench.
+    const pool = sanitizeItems(JSON.parse(response)?.items, count + BENCH_SIZE)
+    const { items, bench } = splitBench(pool, count)
     // Two survivors isn't a session plan, it's a coin flip — fall through
     // to the derivation rather than showing a list that looks broken.
-    if (items.length >= 3) return { items, source: 'ai' }
+    if (items.length >= 3) return { items, bench, source: 'ai' }
   } catch (e) {
     console.error('[session-shaper] generation failed, falling back:', e)
   }
@@ -220,5 +251,5 @@ export async function shapeSession(
     mvsMinutes: null,
     windowMinutes,
   })
-  return { items: derived.map(s => s.text), source: 'derived' }
+  return { items: derived.map(s => s.text), bench: [], source: 'derived' }
 }

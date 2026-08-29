@@ -69,6 +69,9 @@ export interface PlanDraft {
   projectId: string
   windowMinutes: number | null
   items: string[]
+  /** Spares generated with the list. Swapping pulls from here so "not
+   *  that one" is instant instead of a model round-trip. */
+  bench: string[]
   /** 'derived' means the model was unreachable and this is the fallback
    *  list -- worth saying out loud rather than passing off as a plan. */
   source: 'ai' | 'derived'
@@ -94,7 +97,7 @@ interface SessionState {
 
   shapePlan: (projectId: string, windowMinutes: number | null) => Promise<void>
   reshapePlan: (instruction: string) => Promise<void>
-  dropPlanItem: (index: number) => void
+  swapPlanItem: (index: number) => void
   clearPlan: () => void
 
   startSession: (projectId: string, windowMinutes: number | null, source?: string, items?: string[]) => Promise<void>
@@ -136,11 +139,17 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   shapePlan: async (projectId, windowMinutes) => {
     set({ shaping: true, error: null })
     try {
-      const data = await postJson<{ items: string[]; source: 'ai' | 'derived' }>(
+      const data = await postJson<{ items: string[]; bench: string[]; source: 'ai' | 'derived' }>(
         '/api/utilities?resource=shape',
         { project_id: projectId, window_minutes: windowMinutes }
       )
-      set({ plan: { projectId, windowMinutes, items: data.items, source: data.source }, shaping: false })
+      set({
+        plan: {
+          projectId, windowMinutes,
+          items: data.items, bench: data.bench ?? [], source: data.source,
+        },
+        shaping: false,
+      })
     } catch (e) {
       // Raw transport errors ("Request failed: 404") are not something to
       // read two minutes before you start. Log them, say the plain thing.
@@ -154,7 +163,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     if (!plan) return
     set({ shaping: true, error: null })
     try {
-      const data = await postJson<{ items: string[]; source: 'ai' | 'derived' }>(
+      const data = await postJson<{ items: string[]; bench: string[]; source: 'ai' | 'derived' }>(
         '/api/utilities?resource=shape',
         {
           project_id: plan.projectId,
@@ -163,7 +172,10 @@ export const useSessionStore = create<SessionState>((set, get) => ({
           current_items: plan.items,
         }
       )
-      set({ plan: { ...plan, items: data.items, source: data.source }, shaping: false })
+      set({
+        plan: { ...plan, items: data.items, bench: data.bench ?? [], source: data.source },
+        shaping: false,
+      })
     } catch (e) {
       // Keep the list that's on screen -- a failed reshape must never
       // leave the user staring at nothing two minutes before they start.
@@ -173,11 +185,23 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   },
 
   // One tap is cheaper than a sentence when the only problem is that one
-  // item doesn't belong.
-  dropPlanItem: (index) => {
+  // item doesn't suit today. It SWAPS rather than deletes: a five-item
+  // hour that becomes a four-item hour because you rejected one line is
+  // the app quietly shrinking the session you asked for. The rejected
+  // item goes to the back of the bench, so tapping through is a carousel
+  // and nothing is lost by accident.
+  swapPlanItem: (index) => {
     const plan = get().plan
-    if (!plan) return
-    set({ plan: { ...plan, items: plan.items.filter((_, i) => i !== index) } })
+    if (!plan || plan.bench.length === 0) return
+    const [next, ...restOfBench] = plan.bench
+    const replaced = plan.items[index]
+    set({
+      plan: {
+        ...plan,
+        items: plan.items.map((t, i) => (i === index ? next : t)),
+        bench: [...restOfBench, replaced],
+      },
+    })
   },
 
   clearPlan: () => set({ plan: null }),

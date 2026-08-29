@@ -15,6 +15,12 @@ interface VoiceInputProps {
   autoSubmit?: boolean
   autoStart?: boolean // Auto-start recording when component mounts
   shouldStop?: boolean // Externally signal to stop recording
+  /** 'icon' collapses the resting state to a single mic button so voice can
+   *  live INSIDE a text field rather than above it as a second full-width
+   *  button competing with the screen's real action. Recording and
+   *  processing still take over the full block — you need the timer and the
+   *  transcript then. */
+  variant?: 'block' | 'icon'
 }
 
 export function VoiceInput({
@@ -23,7 +29,8 @@ export function VoiceInput({
   maxDuration = 30,
   autoSubmit = false,
   autoStart = false,
-  shouldStop = false
+  shouldStop = false,
+  variant = 'block'
 }: VoiceInputProps) {
   const {
     isRecording,
@@ -91,6 +98,8 @@ export function VoiceInput({
     const sec = total % 60
     return `${m}:${sec.toString().padStart(2, '0')}`
   }
+
+  if (!isSupported && variant === 'icon') return null
 
   if (!isSupported) {
     return (
@@ -160,6 +169,21 @@ export function VoiceInput({
         </div>
       )}
 
+      {/* Icon variant at rest: one mic button, sized to sit inside a field.
+          It swaps back to the full block the moment recording or
+          transcribing starts, because those states genuinely need the
+          timer and the transcript. */}
+      {variant === 'icon' && !isRecording && !isProcessing && !canRetry ? (
+        <button
+          type="button"
+          onClick={toggleRecording}
+          aria-label="Tap to talk"
+          className="p-1 transition-opacity hover:opacity-100"
+          style={{ color: 'var(--brand-text-secondary)', opacity: 0.65 }}
+        >
+          <Mic className="h-4 w-4" />
+        </button>
+      ) : (
       <Button
         type="button"
         onClick={canRetry ? retry : toggleRecording}
@@ -196,6 +220,7 @@ export function VoiceInput({
           </>
         )}
       </Button>
+      )}
 
       {/* Processing: a calm moving rule so the wait reads as deliberate work,
           not a frozen spinner. */}

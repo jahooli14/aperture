@@ -25,7 +25,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Clock, Square, ArrowUp, X, Check } from 'lucide-react'
+import { Clock, Square, ArrowUp, Shuffle, Check } from 'lucide-react'
 import { VoiceInput } from '../VoiceInput'
 import { useSessionStore, WINDOW_PRESETS, PLANNING_SECONDS } from '../../stores/useSessionStore'
 import { haptic } from '../../utils/haptics'
@@ -86,7 +86,7 @@ export function SessionContract({
   const shell = (extra: string) => (surface === 'bare' ? extra : `glass-card p-6 ${extra}`)
   const {
     active, plan, shaping, starting, closing, error,
-    shapePlan, reshapePlan, dropPlanItem, clearPlan, startSession, closeSession,
+    shapePlan, reshapePlan, swapPlanItem, clearPlan, startSession, closeSession,
   } = useSessionStore()
 
   const [phase, setPhase] = useState<Phase>(presetWindowMinutes != null ? 'planning' : 'window')
@@ -117,18 +117,25 @@ export function SessionContract({
     setPhase('running')
   }, [plan, project.id, windowMinutes, source, startSession])
 
-  // The planning clock starts on the first thing you DO to the list, not
-  // on arrival -- reading it isn't the part that needs a cap. Once it's
-  // ticking it flips itself into the work at zero, which is what makes
-  // shaping always-done rather than optional.
-  const touchPlan = () => setPlanLeft(v => (v == null ? PLANNING_SECONDS : v))
-
+  // The planning clock runs from the moment there's a list to react to.
+  //
+  // The first cut started it on your first interaction, which was wrong in
+  // exactly the way that matters: a clock that starts on a condition you
+  // can't see isn't a ritual, it's a trap. Reading the list and deciding
+  // it's fine IS the planning — so it counts, and you can see it counting.
+  //
+  // It pauses while a reshape is in flight or there's unsent text in the
+  // box: the cap exists to stop dithering, not to cut you off mid-sentence.
+  const planBusy = shaping || steer.trim().length > 0
   useEffect(() => {
-    if (phase !== 'planning' || planLeft == null) return
+    if (phase !== 'planning') return
+    if (!plan || plan.projectId !== project.id) return
+    if (planLeft == null) { setPlanLeft(PLANNING_SECONDS); return }
+    if (planBusy) return
     if (planLeft <= 0) { void beginWork(); return }
     const t = window.setTimeout(() => setPlanLeft(v => (v == null ? null : v - 1)), 1000)
     return () => window.clearTimeout(t)
-  }, [phase, planLeft, beginWork])
+  }, [phase, plan, project.id, planLeft, planBusy, beginWork])
 
   // ─── The session clock ─────────────────────────────────────────────
   useEffect(() => {
@@ -147,7 +154,6 @@ export function SessionContract({
     const text = steer.trim()
     if (!text || shaping) return
     setSteer('')
-    touchPlan()
     void reshapePlan(text)
   }
 
@@ -290,19 +296,57 @@ export function SessionContract({
   }
 
   // ─── planning ──────────────────────────────────────────────────────
+  // Two minutes, spent deciding, visibly. The layout has one job: make it
+  // obvious what you can change and how, without becoming a form.
+  //
+  //   the plan        — numbered, each row swappable in place
+  //   say what's off  — one input, for the cases a swap can't express
+  //   Start           — the only filled button on screen
+  //
+  // An earlier cut had nine tap targets here (five dim x glyphs, a big
+  // "Tap to talk", a text field, Start, Not now) with no hierarchy between
+  // them. That's the menu the whole spec exists to avoid, at the exact
+  // moment the user is trying to stop deciding.
   if (phase === 'planning') {
     const items = plan?.projectId === project.id ? plan.items : []
+    const canSwap = (plan?.bench.length ?? 0) > 0
+    const elapsedFrac = planLeft == null ? 0 : 1 - planLeft / PLANNING_SECONDS
+
     return (
       <div className={shell('space-y-4')}>
-        <div className="flex items-center justify-between gap-3">
-          <span className="text-sm" style={secondaryTextStyle}>
-            {project.title}{windowMinutes ? ` · ${windowMinutes < 60 ? `${windowMinutes}m` : `${windowMinutes / 60}h`}` : ''}
-          </span>
-          {planLeft != null && (
-            <span className="text-xs tabular-nums" style={secondaryTextStyle}>
-              shaping · {formatClock(planLeft)}
+        {/* The clock is the frame, not an ornament: a bar that drains, so
+            the two minutes are felt peripherally rather than watched. */}
+        <div className="space-y-2">
+          <div className="flex items-baseline justify-between gap-3">
+            <span className="text-sm font-medium">{project.title}</span>
+            <span className="text-xs tabular-nums flex items-center gap-1.5" style={secondaryTextStyle}>
+              {planLeft != null && (
+                <>
+                  {/* Three distinct states, said plainly. "shaping" for all
+                      of them was a lie in two of the three cases — nothing
+                      is being shaped while you're mid-sentence. */}
+                  <span style={planBusy ? { opacity: 0.45 } : undefined}>
+                    {shaping
+                      ? 'redoing the list…'
+                      : planBusy
+                        ? 'paused'
+                        : `${formatClock(planLeft)} to shape`}
+                  </span>
+                  <span style={{ opacity: 0.3 }}>·</span>
+                </>
+              )}
+              <span>{windowMinutes ? `${windowMinutes < 60 ? `${windowMinutes}m` : `${windowMinutes / 60}h`} session` : 'session'}</span>
             </span>
-          )}
+          </div>
+          <div className="h-0.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.07)' }}>
+            <div
+              className="h-full rounded-full transition-[width] duration-1000 ease-linear"
+              style={{
+                width: `${Math.min(elapsedFrac, 1) * 100}%`,
+                background: 'rgba(var(--brand-primary-rgb),0.55)',
+              }}
+            />
+          </div>
         </div>
 
         {shaping && items.length === 0 ? (
@@ -325,80 +369,96 @@ export function SessionContract({
             </button>
           </div>
         ) : (
-          <ol className="space-y-1">
+          <ol className="space-y-0.5" style={shaping ? { opacity: 0.45 } : undefined}>
             {items.map((text, i) => (
-              <li key={i} className="flex items-start gap-2.5 group">
-                <span
-                  className="mt-0.5 text-[11px] tabular-nums font-semibold flex-shrink-0 w-4"
-                  style={{ color: 'rgba(var(--brand-primary-rgb),0.8)' }}
-                >
-                  {i + 1}
-                </span>
-                <span className="text-sm leading-snug flex-1">{text}</span>
+              <li key={`${i}-${text}`}>
+                {/* The whole row is the swap target. A 13px glyph at 30%
+                    opacity was both invisible and a miss risk on a phone;
+                    the row is 44px of hit area and the icon is a label for
+                    it, not the control. */}
                 <button
-                  onClick={() => { haptic.light(); touchPlan(); dropPlanItem(i) }}
-                  aria-label={`Drop "${text}"`}
-                  className="mt-0.5 opacity-30 hover:opacity-90 transition-opacity flex-shrink-0"
-                  style={{ color: 'var(--brand-text-secondary)' }}
+                  onClick={() => { haptic.light(); swapPlanItem(i) }}
+                  disabled={!canSwap || shaping}
+                  className="w-full flex items-start gap-2.5 text-left py-2 px-2 -mx-2 rounded-lg transition-colors enabled:hover:bg-white/[0.04] disabled:cursor-default"
                 >
-                  <X size={13} />
+                  <span
+                    className="mt-0.5 text-[11px] tabular-nums font-semibold flex-shrink-0 w-4"
+                    style={{ color: 'rgba(var(--brand-primary-rgb),0.8)' }}
+                  >
+                    {i + 1}
+                  </span>
+                  <span className="text-sm leading-snug flex-1">{text}</span>
+                  {canSwap && (
+                    <Shuffle
+                      size={13}
+                      className="mt-0.5 flex-shrink-0"
+                      style={{ color: 'var(--brand-text-secondary)', opacity: 0.45 }}
+                    />
+                  )}
                 </button>
               </li>
             ))}
           </ol>
         )}
 
-        {plan?.source === 'derived' && items.length > 0 && (
-          <p className="text-xs" style={{ ...secondaryTextStyle, opacity: 0.5 }}>
-            Offline list — built from your last close-out, not shaped.
+        {items.length > 0 && (
+          <p className="text-xs" style={{ ...secondaryTextStyle, opacity: 0.45 }}>
+            {plan?.source === 'derived'
+              ? 'Offline list — built from your last close-out, not shaped.'
+              : canSwap
+                ? 'Tap any line to swap it. Say what\u2019s off to redo the lot.'
+                : 'Say what\u2019s off and it\u2019ll redo the list.'}
           </p>
         )}
 
-        {/* Say what's wrong with it. This is the whole reshape mechanism —
-            no menus, no editing in place. Voice first: talking at a list
-            is faster than typing at it, and this is the two minutes. */}
-        <div className="space-y-2">
-          <VoiceInput
-            onTranscript={t => { touchPlan(); void reshapePlan(t) }}
-            autoSubmit
-            maxDuration={15}
+        {/* One input, one register: what's wrong with this list. Voice and
+            text are the same channel, so the mic sits inside the field
+            rather than above it as a second full-width button competing
+            with Start. */}
+        <div
+          className="flex items-center gap-2 rounded-xl px-3 py-1.5 border"
+          style={borderStyle}
+        >
+          <input
+            value={steer}
+            onChange={e => setSteer(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') submitSteer() }}
+            placeholder="Too much for an hour…"
+            disabled={shaping}
+            className="flex-1 bg-transparent text-sm outline-none disabled:opacity-50 py-1.5"
+            style={{ color: 'var(--brand-text-primary)' }}
           />
-          <div
-            className="flex items-center gap-2 rounded-xl px-3 py-2 border"
-            style={borderStyle}
-            onFocus={touchPlan}
-          >
-            <input
-              value={steer}
-              onChange={e => setSteer(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter') submitSteer() }}
-              placeholder="No — more like…"
-              disabled={shaping}
-              className="flex-1 bg-transparent text-sm outline-none disabled:opacity-50"
-              style={{ color: 'var(--brand-text-primary)' }}
-            />
-            <button onClick={submitSteer} disabled={!steer.trim() || shaping} className="disabled:opacity-30">
+          {steer.trim() ? (
+            <button onClick={submitSteer} disabled={shaping} className="disabled:opacity-30 p-1">
               <ArrowUp size={16} style={{ color: 'rgb(var(--brand-primary-rgb))' }} />
             </button>
-          </div>
+          ) : (
+            <VoiceInput
+              onTranscript={t => { void reshapePlan(t) }}
+              autoSubmit
+              maxDuration={15}
+              variant="icon"
+            />
+          )}
         </div>
 
-        <button
-          className="w-full py-2.5 rounded-lg text-sm font-medium disabled:opacity-50"
-          style={primaryButtonStyle}
-          disabled={starting || shaping}
-          onClick={() => { haptic.medium(); void beginWork() }}
-        >
-          {starting ? 'Starting…' : items.length > 0 ? `Start — ${items.length} things` : 'Start anyway'}
-        </button>
-
-        <button
-          className="w-full text-xs underline"
-          style={secondaryTextStyle}
-          onClick={() => { clearPlan(); onDone() }}
-        >
-          Not now
-        </button>
+        <div className="space-y-2 pt-0.5">
+          <button
+            className="w-full py-2.5 rounded-lg text-sm font-semibold disabled:opacity-50"
+            style={primaryButtonStyle}
+            disabled={starting || shaping}
+            onClick={() => { haptic.medium(); void beginWork() }}
+          >
+            {starting ? 'Starting…' : items.length > 0 ? `Start \u2014 ${items.length} things` : 'Start anyway'}
+          </button>
+          <button
+            className="w-full text-xs"
+            style={{ ...secondaryTextStyle, opacity: 0.5 }}
+            onClick={() => { clearPlan(); onDone() }}
+          >
+            Not now
+          </button>
+        </div>
 
         {error && items.length > 0 && <p className="text-xs text-red-400">{error}</p>}
       </div>
