@@ -3,7 +3,9 @@ import {
   itemCountForWindow,
   isAdminItem,
   sanitizeItems,
+  splitBench,
   buildShapePrompt,
+  BENCH_SIZE,
 } from './session-shaper.js'
 
 describe('itemCountForWindow', () => {
@@ -82,6 +84,22 @@ describe('sanitizeItems', () => {
   })
 })
 
+describe('splitBench', () => {
+  it('puts the first N on screen and holds the rest back', () => {
+    expect(splitBench(['a', 'b', 'c', 'd', 'e'], 3))
+      .toEqual({ items: ['a', 'b', 'c'], bench: ['d', 'e'] })
+  })
+
+  it('never benches something already in the list', () => {
+    const { items, bench } = splitBench(['a', 'b', 'c', 'd'], 2)
+    expect(bench.some(x => items.includes(x))).toBe(false)
+  })
+
+  it('gives an empty bench rather than a short list when the pool is thin', () => {
+    expect(splitBench(['a', 'b'], 4)).toEqual({ items: ['a', 'b'], bench: [] })
+  })
+})
+
 describe('buildShapePrompt', () => {
   const base = {
     title: 'Graham song',
@@ -93,9 +111,14 @@ describe('buildShapePrompt', () => {
     slots: [],
   }
 
-  it('states the exact item count the window allows', () => {
-    expect(buildShapePrompt(base)).toContain('exactly 5 things')
-    expect(buildShapePrompt({ ...base, windowMinutes: 20 })).toContain('exactly 3 things')
+  it('asks for the window count plus a bench of spares', () => {
+    expect(buildShapePrompt(base)).toContain(`Give ${5 + BENCH_SIZE} things`)
+    expect(buildShapePrompt(base)).toContain('FIRST 5 are the session')
+    expect(buildShapePrompt({ ...base, windowMinutes: 20 })).toContain(`Give ${3 + BENCH_SIZE} things`)
+  })
+
+  it('tells the model the spares must stand alone as swaps', () => {
+    expect(buildShapePrompt(base)).toContain('stand on its own as a swap')
   })
 
   it('names the window in minutes so the list is sized to it', () => {
