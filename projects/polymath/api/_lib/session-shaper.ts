@@ -155,13 +155,21 @@ export async function shapeSession(
   instruction?: string | null,
   currentItems?: string[],
 ): Promise<{ items: string[]; source: 'ai' | 'derived' }> {
-  const { data: project } = await supabase
+  // Column list matters: `goal` is NOT a column on projects (what done
+  // looks like lives in metadata.end_goal). Asking for one that doesn't
+  // exist fails the whole select, which is how this returned "Project not
+  // found" for projects that plainly exist.
+  const { data: project, error } = await supabase
     .from('projects')
-    .select('title, description, goal, metadata, slots, last_closeout_text')
+    .select('title, description, metadata, slots, last_closeout_text')
     .eq('id', projectId)
     .eq('user_id', userId)
     .single()
 
+  if (error) {
+    console.error('[session-shaper] project fetch failed:', error)
+    throw new Error(error.message)
+  }
   if (!project) throw new Error('Project not found')
 
   const slots: SlotInput[] = Array.isArray(project.slots) ? project.slots : []
@@ -180,7 +188,7 @@ export async function shapeSession(
 
   const ctx: ShapeContext = {
     title: project.title,
-    goal: project.goal || project.description || null,
+    goal: project.metadata?.end_goal || project.description || null,
     windowMinutes,
     lastCloseout: project.last_closeout_text || null,
     openTasks,

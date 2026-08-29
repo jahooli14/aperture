@@ -308,9 +308,22 @@ export function SessionContract({
         {shaping && items.length === 0 ? (
           <p className="text-sm" style={secondaryTextStyle}>Working out what to do…</p>
         ) : items.length === 0 ? (
-          <p className="text-sm" style={secondaryTextStyle}>
-            Couldn't shape a list. Start anyway and say what you're doing at the end.
-          </p>
+          // One message, not two. The red error line below is suppressed in
+          // this state -- saying "couldn't shape a list" and "could not
+          // shape a list just now" one above the other reads as two
+          // separate things going wrong.
+          <div className="space-y-2">
+            <p className="text-sm" style={secondaryTextStyle}>
+              Couldn't shape a list. Start anyway and say what you did at the end.
+            </p>
+            <button
+              className="text-xs underline"
+              style={{ color: 'rgb(var(--brand-primary-rgb))' }}
+              onClick={() => { void shapePlan(project.id, windowMinutes) }}
+            >
+              Try again
+            </button>
+          </div>
         ) : (
           <ol className="space-y-1">
             {items.map((text, i) => (
@@ -387,7 +400,7 @@ export function SessionContract({
           Not now
         </button>
 
-        {error && <p className="text-xs text-red-400">{error}</p>}
+        {error && items.length > 0 && <p className="text-xs text-red-400">{error}</p>}
       </div>
     )
   }
