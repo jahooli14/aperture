@@ -203,6 +203,30 @@ other feature is downstream of that working.
   sheets, indented paragraphs, a colophon with who wrote what — printed through
   the browser, so Share → Print → Save as PDF on a phone. No attribution in the
   body: it's the thing you'd hand someone.
+- **Streaks and peak times**, in the So-far sheet. The streak is counted in UTC
+  calendar days — a shared number both writers see the same way, rather than
+  one that reads differently depending whose timezone is asking
+  (`api/_lib/streaks.ts`, folded into `summarise()` so it ships with the rest
+  of the stats). Peak times (`PeakTimes.tsx`) is a day × time-of-band heatmap
+  read in the *viewer's own* local clock instead — a display aid, not
+  something the streak or turn logic depends on, and it deliberately doesn't
+  need to agree with the streak's UTC framing.
+  - **The 6pm streak-loss nudge** is a genuinely different cron from the
+    turn-gone-cold one: it has to fire at each writer's own local 6pm, which
+    is a different UTC hour per person and per season (BST/GMT). Relay's one
+    Vercel Hobby cron slot is already spent on the daily nudge, so this one is
+    dispatched hourly from `.github/workflows/relay-cron.yml` — a separate
+    file from the shared `cron.yml`, on purpose: that workflow hardcodes one
+    `BASE` domain for every job it dispatches, and Relay deploys to a
+    different domain, so folding it in would mean threading a second domain
+    through code that was deliberately hardened against exactly that kind of
+    fragility. `api/cron/streak-check.ts` decides per writer, per firing,
+    whether it's currently their 6pm (needs `timezone` on `story_members`,
+    captured from the browser via `useTimezoneSync` and never assumed) and
+    whether they're actually the one who can currently write — nudging
+    someone who isn't eligible yet would just be noise. Fires once per writer
+    per local day (`last_streak_alert_sent_on`), and never claims a streak is
+    at risk if it isn't (`current < 1` skips it entirely).
 
 ### Setup
 
@@ -210,12 +234,14 @@ Relay shares a Supabase project with another Aperture app — it lives in its ow
 `relay` schema rather than needing a free-tier slot of its own.
 
 1. Run the migrations in `projects/relay/supabase/migrations/` in order
-   (`0001_relay.sql`, `0002_story_index.sql`, `0003_nudges_marks_reading.sql`).
+   (`0001_relay.sql` through `0004_streaks.sql`).
 2. Supabase dashboard → **Settings → API → Exposed schemas** → add `relay`.
    PostgREST can't see the tables otherwise.
 3. `npx web-push generate-vapid-keys`, then set `VAPID_PUBLIC_KEY`,
    `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` in Vercel. Without them the app works
-   but notifications are off.
+   but notifications are off. `CRON_SECRET` (any random string, matching
+   `RELAY_CRON_SECRET` in the repo's GitHub secrets) authorises both cron
+   endpoints.
 4. Seed the existing story, either way round:
    - **No terminal:** paste `supabase/seed-pasco.sql` into the SQL editor after
      both writers have signed in once. Two variables at the top to edit.
@@ -320,7 +346,9 @@ Conventional commits. PR metadata is short.
 
 ## Cron (`.github/workflows/cron.yml`)
 
-One workflow dispatches every Vercel cron endpoint. Branches on `github.event.schedule` (the cron string that fired) — never wall-clock time, because GitHub delays scheduled runs. `BASE` is hardcoded to `https://aper-ture.vercel.app`. `workflow_dispatch` with `force=true` runs everything.
+One workflow dispatches every Vercel cron endpoint for Polymath and Pupils. Branches on `github.event.schedule` (the cron string that fired) — never wall-clock time, because GitHub delays scheduled runs. `BASE` is hardcoded to `https://aper-ture.vercel.app`. `workflow_dispatch` with `force=true` runs everything.
+
+> Relay has its own separate `.github/workflows/relay-cron.yml` — it hardcodes a different `BASE` (Relay's own domain), so it's deliberately not folded into this file. See the Relay section above for what it does.
 
 | Schedule | Endpoints |
 |----------|-----------|

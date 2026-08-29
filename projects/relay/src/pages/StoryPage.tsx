@@ -10,7 +10,7 @@ import { StoryStats } from '../components/StoryStats'
 import { IndexSheet } from '../components/IndexSheet'
 import { StoryToolbar } from '../components/StoryToolbar'
 import { queueLine } from '../lib/outbox'
-import { useOutbox, useReadPosition } from '../lib/story-hooks'
+import { useOutbox, useReadPosition, useTimezoneSync } from '../lib/story-hooks'
 import type { IndexEntry, Line, StoryDetail } from '../lib/types'
 
 const VIEW_MODE_KEY = 'relay:view-mode'
@@ -85,6 +85,7 @@ export default function StoryPage() {
 
   const readPosition = detail?.members.find((m) => m.user_id === userId)?.last_read_position ?? 0
   useReadPosition(id, lines, readPosition)
+  useTimezoneSync(id)
 
   useEffect(() => {
     if (lines.length === 0 || hasScrolled.current) return
@@ -257,6 +258,7 @@ export default function StoryPage() {
         <StoryStats
           stats={stats}
           members={members}
+          lines={lines}
           printHref={`/story/${story.id}/print`}
           onJumpToChapter={jumpToLine}
           onClose={() => setSheet('none')}

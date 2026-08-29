@@ -65,6 +65,12 @@ export const api = {
       body: JSON.stringify({ last_read_position: position }),
     }),
 
+  setTimezone: (storyId: string, timezone: string) =>
+    request<{ timezone: string }>(`/api/members?story=${storyId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ timezone }),
+    }),
+
   createInvite: (storyId: string, maxUses = 1) =>
     request<{ invite: { code: string; expires_at: string; max_uses: number } }>(
       `/api/members?story=${storyId}&resource=invite`,

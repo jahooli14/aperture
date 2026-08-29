@@ -4,7 +4,7 @@
  * POST   /api/members?story=X&resource=invite -> mint an invite code (owner)
  * GET    /api/members?resource=preview&code=C -> what you'd be joining
  * POST   /api/members?resource=join           -> redeem a code
- * PATCH  /api/members?story=X                 -> your notifications, or how far you've read
+ * PATCH  /api/members?story=X                 -> notifications, read position, or your timezone
  * DELETE /api/members?story=X[&user=U]        -> leave, or remove someone (owner)
  */
 import type { VercelRequest, VercelResponse } from '@vercel/node'
@@ -125,6 +125,13 @@ async function setMemberPreferences(
   // you from the phone to the laptop.
   if (typeof req.body?.last_read_position === 'number') {
     updates.last_read_position = Math.max(0, Math.floor(req.body.last_read_position))
+  }
+
+  // For the 6pm streak nudge. Trusted as-is from Intl.DateTimeFormat — there
+  // is no server-side IANA zone list to validate against, and a bad value
+  // just means that one nudge silently never fires, not a crash.
+  if (typeof req.body?.timezone === 'string' && req.body.timezone.length <= 100) {
+    updates.timezone = req.body.timezone
   }
 
   if (Object.keys(updates).length === 0) return fail(res, 400, 'Nothing to update')
