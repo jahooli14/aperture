@@ -140,3 +140,79 @@ describe('buildShapePrompt', () => {
     expect(p.toLowerCase()).toContain('plain english')
   })
 })
+
+// A thin stand-in for the bits of the Supabase client shapeSession uses.
+// The point of these is the IO wrapper's decisions — which column list it
+// asks for, and what it does when a step fails — not the model call.
+function stubClient(opts: {
+  project?: Record<string, unknown> | null
+  projectError?: { message: string } | null
+  fragments?: { text: string }[]
+  onSelect?: (table: string, columns: string) => void
+}) {
+  return {
+    from(table: string) {
+      const chain: any = {
+        select(columns: string) {
+          opts.onSelect?.(table, columns)
+          return chain
+        },
+        eq: () => chain,
+        order: () => chain,
+        limit: () => Promise.resolve({ data: opts.fragments ?? [], error: null }),
+        single: () =>
+          Promise.resolve({
+            data: opts.projectError ? null : opts.project ?? null,
+            error: opts.projectError ?? null,
+          }),
+      }
+      return chain
+    },
+  } as any
+}
+
+describe('shapeSession', () => {
+  const project = {
+    title: 'Graham song',
+    description: 'a remix',
+    metadata: { end_goal: 'released', tasks: [{ text: 'mix it', done: false }] },
+    slots: [],
+    last_closeout_text: 'Next: fix the transition out of track two.',
+  }
+
+  it('only asks for columns that exist on projects', async () => {
+    // `goal` is not a column — asking for it failed the whole select and
+    // surfaced as "Project not found" for projects that plainly existed.
+    const seen: string[] = []
+    const { shapeSession } = await import('./session-shaper.js')
+    await shapeSession(
+      stubClient({ project, onSelect: (t, c) => { if (t === 'projects') seen.push(c) } }),
+      'u1', 'p1', 60,
+    )
+    const known = new Set([
+      'id', 'user_id', 'title', 'description', 'type', 'status', 'metadata',
+      'slots', 'last_closeout_text', 'mvs_minutes', 'state', 'last_active',
+    ])
+    expect(seen).toHaveLength(1)
+    for (const col of seen[0].split(',').map(c => c.trim())) {
+      expect(known.has(col), `unknown projects column: ${col}`).toBe(true)
+    }
+  })
+
+  it('falls back to the derived list when the model is unavailable', async () => {
+    // No GEMINI_API_KEY in the test env, so generateText throws — which is
+    // exactly the path that must still hand back a usable session.
+    const { shapeSession } = await import('./session-shaper.js')
+    const result = await shapeSession(stubClient({ project }), 'u1', 'p1', 60)
+    expect(result.source).toBe('derived')
+    expect(result.items.length).toBeGreaterThan(0)
+    expect(result.items.join(' ')).toContain('fix the transition out of track two.')
+  })
+
+  it('surfaces a database error instead of claiming the project is missing', async () => {
+    const { shapeSession } = await import('./session-shaper.js')
+    await expect(
+      shapeSession(stubClient({ projectError: { message: 'column does not exist' } }), 'u1', 'p1', 60),
+    ).rejects.toThrow('column does not exist')
+  })
+})
