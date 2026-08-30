@@ -87,6 +87,7 @@ export function SessionContract({
   const {
     active, plan, shaping, starting, closing, error,
     shapePlan, reshapePlan, swapPlanItem, clearPlan, startSession, closeSession,
+    answerPlanQuestion,
   } = useSessionStore()
 
   const [phase, setPhase] = useState<Phase>(presetWindowMinutes != null ? 'planning' : 'window')
@@ -110,7 +111,7 @@ export function SessionContract({
   }, [phase, project.id, windowMinutes, shapePlan])
 
   const beginWork = useCallback(async () => {
-    const items = plan?.items?.length ? plan.items : undefined
+    const items = plan?.items?.length ? plan.items.map(i => i.text) : undefined
     await startSession(project.id, windowMinutes, source, items)
     setElapsedSec(0)
     setTicked(new Set())
@@ -126,7 +127,10 @@ export function SessionContract({
   //
   // It pauses while a reshape is in flight or there's unsent text in the
   // box: the cap exists to stop dithering, not to cut you off mid-sentence.
-  const planBusy = shaping || steer.trim().length > 0
+  // Also paused while the app is the one asking. Flipping into a session
+  // because the two minutes ran out on a question you were still answering
+  // would be the app talking over itself.
+  const planBusy = shaping || steer.trim().length > 0 || !!plan?.needsInput
   useEffect(() => {
     if (phase !== 'planning') return
     if (!plan || plan.projectId !== project.id) return
@@ -150,11 +154,21 @@ export function SessionContract({
     setPhase('planning')
   }
 
+  // One input, two jobs, decided by which conversation is open: when the
+  // app has asked a question, what you say is the answer to it (and gets
+  // remembered); otherwise it's a complaint about the list.
+  const sendToPlan = (text: string) => {
+    const clean = text.trim()
+    if (!clean || shaping) return
+    if (plan?.needsInput) void answerPlanQuestion(clean)
+    else void reshapePlan(clean)
+  }
+
   const submitSteer = () => {
-    const text = steer.trim()
-    if (!text || shaping) return
+    if (!steer.trim() || shaping) return
+    const text = steer
     setSteer('')
-    void reshapePlan(text)
+    sendToPlan(text)
   }
 
   const handleStop = () => {
@@ -310,6 +324,7 @@ export function SessionContract({
   if (phase === 'planning') {
     const items = plan?.projectId === project.id ? plan.items : []
     const canSwap = (plan?.bench.length ?? 0) > 0
+    const needsInput = plan?.projectId === project.id ? plan.needsInput : null
     const elapsedFrac = planLeft == null ? 0 : 1 - planLeft / PLANNING_SECONDS
 
     return (
@@ -328,9 +343,11 @@ export function SessionContract({
                   <span style={planBusy ? { opacity: 0.45 } : undefined}>
                     {shaping
                       ? 'redoing the list…'
-                      : planBusy
-                        ? 'paused'
-                        : `${formatClock(planLeft)} to shape`}
+                      : plan?.needsInput
+                        ? 'over to you'
+                        : planBusy
+                          ? 'paused'
+                          : `${formatClock(planLeft)} to shape`}
                   </span>
                   <span style={{ opacity: 0.3 }}>·</span>
                 </>
@@ -370,8 +387,8 @@ export function SessionContract({
           </div>
         ) : (
           <ol className="space-y-0.5" style={shaping ? { opacity: 0.45 } : undefined}>
-            {items.map((text, i) => (
-              <li key={`${i}-${text}`}>
+            {items.map((item, i) => (
+              <li key={`${i}-${item.text}`}>
                 {/* The whole row is the swap target. A 13px glyph at 30%
                     opacity was both invisible and a miss risk on a phone;
                     the row is 44px of hit area and the icon is a label for
@@ -387,7 +404,22 @@ export function SessionContract({
                   >
                     {i + 1}
                   </span>
-                  <span className="text-sm leading-snug flex-1">{text}</span>
+                  <span className="flex-1 min-w-0">
+                    <span className="text-sm leading-snug block">{item.text}</span>
+                    {/* The receipt. Every line either points at something
+                        you actually said, or says nothing that needs a
+                        source. Seeing which is which at a glance is the
+                        difference between a list you can act on and one
+                        you have to fact-check first. */}
+                    {item.source && (
+                      <span
+                        className="text-[10.5px] leading-tight block mt-0.5"
+                        style={{ color: 'var(--brand-text-secondary)', opacity: 0.45 }}
+                      >
+                        {item.source}
+                      </span>
+                    )}
+                  </span>
                   {canSwap && (
                     <Shuffle
                       size={13}
@@ -401,7 +433,25 @@ export function SessionContract({
           </ol>
         )}
 
-        {items.length > 0 && (
+        {/* The app ran out of things it actually knows. It says so and asks,
+            rather than filling the gap with plausible invention -- one made
+            up line costs the whole list its credibility, because you then
+            have to check every other line yourself. The answer is saved to
+            the project, so it has to ask less next time. */}
+        {needsInput ? (
+          <div
+            className="rounded-xl px-3.5 py-3 space-y-1"
+            style={{
+              background: 'rgba(var(--brand-primary-rgb),0.06)',
+              border: '1px solid rgba(var(--brand-primary-rgb),0.20)',
+            }}
+          >
+            <p className="text-sm leading-snug">{needsInput}</p>
+            <p className="text-[11px]" style={{ ...secondaryTextStyle, opacity: 0.5 }}>
+              I'll only suggest things you've actually told me about.
+            </p>
+          </div>
+        ) : items.length > 0 ? (
           <p className="text-xs" style={{ ...secondaryTextStyle, opacity: 0.45 }}>
             {plan?.source === 'derived'
               ? 'Offline list — built from your last close-out, not shaped.'
@@ -409,7 +459,7 @@ export function SessionContract({
                 ? 'Tap any line to swap it. Say what\u2019s off to redo the lot.'
                 : 'Say what\u2019s off and it\u2019ll redo the list.'}
           </p>
-        )}
+        ) : null}
 
         {/* One input, one register: what's wrong with this list. Voice and
             text are the same channel, so the mic sits inside the field
@@ -423,7 +473,7 @@ export function SessionContract({
             value={steer}
             onChange={e => setSteer(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter') submitSteer() }}
-            placeholder="Too much for an hour…"
+            placeholder={needsInput ? 'Tell it what you\u2019re doing…' : 'Too much for an hour…'}
             disabled={shaping}
             className="flex-1 bg-transparent text-sm outline-none disabled:opacity-50 py-1.5"
             style={{ color: 'var(--brand-text-primary)' }}
@@ -434,9 +484,9 @@ export function SessionContract({
             </button>
           ) : (
             <VoiceInput
-              onTranscript={t => { void reshapePlan(t) }}
+              onTranscript={t => { void sendToPlan(t) }}
               autoSubmit
-              maxDuration={15}
+              maxDuration={30}
               variant="icon"
             />
           )}
@@ -449,7 +499,11 @@ export function SessionContract({
             disabled={starting || shaping}
             onClick={() => { haptic.medium(); void beginWork() }}
           >
-            {starting ? 'Starting…' : items.length > 0 ? `Start \u2014 ${items.length} things` : 'Start anyway'}
+            {starting
+              ? 'Starting…'
+              : items.length === 0
+                ? 'Start anyway'
+                : `Start \u2014 ${items.length} thing${items.length === 1 ? '' : 's'}`}
           </button>
           <button
             className="w-full text-xs"

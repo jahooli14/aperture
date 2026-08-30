@@ -5,6 +5,7 @@ import {
   sanitizeItems,
   splitBench,
   buildShapePrompt,
+  buildEvidence,
   BENCH_SIZE,
 } from './session-shaper.js'
 
@@ -105,62 +106,92 @@ describe('buildShapePrompt', () => {
     title: 'Graham song',
     goal: null,
     windowMinutes: 60,
-    lastCloseout: null,
-    openTasks: [],
-    fragments: [],
-    slots: [],
+    lastCloseout: null as string | null,
+    openTasks: [] as string[],
+    fragments: [] as { text: string; date: string | null }[],
+    slots: [] as { name: string; filled: boolean }[],
   }
+  const prompt = (ctx: typeof base) => buildShapePrompt(ctx, buildEvidence(ctx))
 
   it('asks for the window count plus a bench of spares', () => {
-    expect(buildShapePrompt(base)).toContain(`Give ${5 + BENCH_SIZE} things`)
-    expect(buildShapePrompt(base)).toContain('FIRST 5 are the session')
-    expect(buildShapePrompt({ ...base, windowMinutes: 20 })).toContain(`Give ${3 + BENCH_SIZE} things`)
+    expect(prompt(base)).toContain(`Give ${5 + BENCH_SIZE} things`)
+    expect(prompt(base)).toContain('FIRST 5 are the session')
+    expect(prompt({ ...base, windowMinutes: 20 })).toContain(`Give ${3 + BENCH_SIZE} things`)
   })
 
-  it('tells the model the spares must stand alone as swaps', () => {
-    expect(buildShapePrompt(base)).toContain('stand on its own as a swap')
+  it('tells the model the spares are ready to swap in', () => {
+    expect(prompt(base)).toContain('ready to swap in')
   })
 
   it('names the window in minutes so the list is sized to it', () => {
-    expect(buildShapePrompt({ ...base, windowMinutes: 120 })).toContain('120 minutes')
+    expect(prompt({ ...base, windowMinutes: 120 })).toContain('120 minutes')
   })
 
-  it('says plainly when there is no session history yet', () => {
-    expect(buildShapePrompt(base)).toContain('have not had a session')
+  it('says plainly when it knows nothing about the project', () => {
+    expect(prompt(base)).toContain('nothing yet')
+  })
+
+  it('hands the model a closed evidence list and says it is closed', () => {
+    const p = prompt({ ...base, lastCloseout: 'Next: fix the transition' })
+    expect(p).toContain('EVERYTHING KNOWN ABOUT THIS PROJECT')
+    expect(p).toContain('[e1] Next: fix the transition')
+    expect(p).toContain('Anything not in it, you do not know')
+  })
+
+  it('bans invented gear, and shows the exact failure that shipped', () => {
+    const p = prompt(base)
+    expect(p).toContain('never invent a detail')
+    expect(p).toContain('SM57')
+    expect(p).toContain('this project has no guitar')
+  })
+
+  it('tells the model fewer honest items is the right answer', () => {
+    expect(prompt(base)).toContain('Fewer honest items')
+  })
+
+  it('asks for citations in the response shape', () => {
+    expect(prompt(base)).toContain('"evidence"')
   })
 
   it('quotes the last close-out back when there is one', () => {
-    const p = buildShapePrompt({ ...base, lastCloseout: 'Next: fix the transition' })
+    const p = prompt({ ...base, lastCloseout: 'Next: fix the transition' })
     expect(p).toContain('fix the transition')
   })
 
   it('carries the reshape instruction and the list it applies to', () => {
-    const p = buildShapePrompt({
+    const p = prompt({
       ...base,
       instruction: 'too much admin',
       currentItems: ['Plan the mix', 'Cut the intro'],
-    })
+    } as any)
     expect(p).toContain('too much admin')
     expect(p).toContain('1. Plan the mix')
     expect(p).toContain("don't\nthrow out items they didn't complain about")
   })
 
   it('leaves the reshape block out entirely on a first pass', () => {
-    expect(buildShapePrompt(base)).not.toContain('The user says:')
+    expect(prompt(base)).not.toContain('The user says:')
   })
 
   it('bans the admin verbs in the prompt, not just in the checker', () => {
-    const p = buildShapePrompt(base)
+    const p = prompt(base)
     for (const v of ['research', 'decide', 'think about', 'brainstorm']) {
       expect(p).toContain(v)
     }
   })
 
   it('carries the plain-English rules and a concrete anti-example', () => {
-    const p = buildShapePrompt(base)
-    expect(p).toContain('Bad:')
-    expect(p).toContain('Good:')
+    const p = prompt(base)
+    expect(p).toContain('BAD:')
+    expect(p).toContain('GOOD:')
     expect(p.toLowerCase()).toContain('plain english')
+  })
+
+  it('no longer teaches invented specificity as the good example', () => {
+    // The old "Good" example was "Bounce the vocal at -3dB and listen back
+    // on the phone speaker" -- invented gear settings, presented as the
+    // target. The model did exactly as it was shown.
+    expect(prompt(base)).not.toContain('-3dB')
   })
 })
 
@@ -229,7 +260,7 @@ describe('shapeSession', () => {
     const result = await shapeSession(stubClient({ project }), 'u1', 'p1', 60)
     expect(result.source).toBe('derived')
     expect(result.items.length).toBeGreaterThan(0)
-    expect(result.items.join(' ')).toContain('fix the transition out of track two.')
+    expect(result.items.map(i => i.text).join(' ')).toContain('fix the transition out of track two.')
   })
 
   it('surfaces a database error instead of claiming the project is missing', async () => {

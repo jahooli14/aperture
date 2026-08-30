@@ -65,13 +65,25 @@ export interface PendingCloseout {
  *  once or twice; short enough that shaping can't become the session. */
 export const PLANNING_SECONDS = 120
 
+export interface PlanItem {
+  text: string
+  /** Where it came from ("from your last close-out"). Null when the item
+   *  asserts nothing that needs a source. Every item is either traceable
+   *  or trivially generic -- there is no third category, because that
+   *  third category is invention. */
+  source: string | null
+}
+
 export interface PlanDraft {
   projectId: string
   windowMinutes: number | null
-  items: string[]
+  items: PlanItem[]
   /** Spares generated with the list. Swapping pulls from here so "not
    *  that one" is instant instead of a model round-trip. */
-  bench: string[]
+  bench: PlanItem[]
+  /** Set when the app couldn't fill the session from what it actually
+   *  knows. It asks rather than padding the list out with guesses. */
+  needsInput: string | null
   /** 'derived' means the model was unreachable and this is the fallback
    *  list -- worth saying out loud rather than passing off as a plan. */
   source: 'ai' | 'derived'
@@ -101,11 +113,21 @@ interface SessionState {
   clearPlan: () => void
 
   startSession: (projectId: string, windowMinutes: number | null, source?: string, items?: string[]) => Promise<void>
+  /** Answers the app's "I don't know enough" question. Saves the answer to
+   *  the project so it's evidence next time, then re-shapes on it. */
+  answerPlanQuestion: (answer: string) => Promise<void>
   closeSession: (closeoutText: string, mvsSeedMinutes?: number) => Promise<{ moved: boolean | null; duration_minutes: number } | null>
   checkPendingCloseout: () => Promise<void>
   closeoutForPending: (closeoutText: string) => Promise<void>
   dismissPendingCloseout: () => void
   declareLive: (projectId: string) => Promise<void>
+}
+
+interface ShapeResponse {
+  items: PlanItem[]
+  bench: PlanItem[]
+  source: 'ai' | 'derived'
+  needs_input: string | null
 }
 
 async function postJson<T>(url: string, body: unknown): Promise<T> {
@@ -139,14 +161,15 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   shapePlan: async (projectId, windowMinutes) => {
     set({ shaping: true, error: null })
     try {
-      const data = await postJson<{ items: string[]; bench: string[]; source: 'ai' | 'derived' }>(
+      const data = await postJson<ShapeResponse>(
         '/api/utilities?resource=shape',
         { project_id: projectId, window_minutes: windowMinutes }
       )
       set({
         plan: {
           projectId, windowMinutes,
-          items: data.items, bench: data.bench ?? [], source: data.source,
+          items: data.items, bench: data.bench ?? [],
+          source: data.source, needsInput: data.needs_input ?? null,
         },
         shaping: false,
       })
@@ -163,17 +186,21 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     if (!plan) return
     set({ shaping: true, error: null })
     try {
-      const data = await postJson<{ items: string[]; bench: string[]; source: 'ai' | 'derived' }>(
+      const data = await postJson<ShapeResponse>(
         '/api/utilities?resource=shape',
         {
           project_id: plan.projectId,
           window_minutes: plan.windowMinutes,
           instruction,
-          current_items: plan.items,
+          current_items: plan.items.map(i => i.text),
         }
       )
       set({
-        plan: { ...plan, items: data.items, bench: data.bench ?? [], source: data.source },
+        plan: {
+          ...plan,
+          items: data.items, bench: data.bench ?? [],
+          source: data.source, needsInput: data.needs_input ?? null,
+        },
         shaping: false,
       })
     } catch (e) {
@@ -205,6 +232,26 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   },
 
   clearPlan: () => set({ plan: null }),
+
+  // The answer to "I don't know enough about this yet" is worth more than
+  // this one session: it's saved as a fragment, so the project is better
+  // known next time and the app has to ask less often.
+  answerPlanQuestion: async (answer) => {
+    const plan = get().plan
+    if (!plan || !answer.trim()) return
+    set({ shaping: true, error: null })
+    try {
+      await postJson('/api/utilities?resource=shape', {
+        project_id: plan.projectId,
+        window_minutes: plan.windowMinutes,
+        remember: answer.trim(),
+      })
+    } catch (e) {
+      console.error('[session] could not save the answer:', e)
+    }
+    set({ shaping: false })
+    await get().shapePlan(plan.projectId, plan.windowMinutes)
+  },
 
   startSession: async (projectId, windowMinutes, source = 'live', items) => {
     set({ starting: true, error: null })

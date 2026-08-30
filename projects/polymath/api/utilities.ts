@@ -1858,10 +1858,25 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
   // like this" the user says at it.
   if (resource === 'shape') {
     if (req.method !== 'POST') return res.status(405).json({ error: 'POST required' })
-    const { project_id, window_minutes, instruction, current_items } = req.body || {}
+    const { project_id, window_minutes, instruction, current_items, remember } = req.body || {}
     if (!project_id) return res.status(400).json({ error: 'project_id required' })
 
     try {
+      // "remember" is the user answering the app's own "I don't know
+      // enough about this yet". Storing it as a fragment is the point:
+      // the app had to ask because the corpus was thin, so the answer has
+      // to make the corpus less thin, not just unblock this one session.
+      if (typeof remember === 'string' && remember.trim()) {
+        const { error: fragErr } = await supabase.from('fragments').insert({
+          user_id: userId,
+          project_id,
+          role: 'reference',
+          text: remember.trim(),
+        })
+        if (fragErr) console.error('[utilities/sessions] could not save the answer:', fragErr)
+        return res.status(200).json({ ok: true })
+      }
+
       const result = await shapeSession(
         supabase,
         userId,
@@ -1870,7 +1885,12 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
         typeof instruction === 'string' ? instruction : null,
         Array.isArray(current_items) ? current_items.filter((x: unknown) => typeof x === 'string') : undefined,
       )
-      return res.status(200).json(result)
+      return res.status(200).json({
+        items: result.items,
+        bench: result.bench,
+        source: result.source,
+        needs_input: result.needsInput,
+      })
     } catch (e) {
       const message = e instanceof Error ? e.message : 'Could not shape the session.'
       console.error('[utilities/sessions] shape failed:', message)
