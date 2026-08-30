@@ -22,6 +22,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { generateText } from './gemini-chat.js'
 import { PLAIN_ENGLISH_RULES } from './plain-english.js'
 import { deriveSessionShapes, type SlotInput } from './session-shapes.js'
+import { filterGrounded, type Evidence, type GroundedItem, type RawItem } from './session-grounding.js'
 
 /**
  * "3-6 depending on time." A 20-minute window that lists six things is
@@ -73,27 +74,40 @@ export function isAdminItem(text: string): boolean {
  * Deliberately a pure function of the pool, so the bench can never
  * contain something already in the list.
  */
-export function splitBench(pool: string[], count: number): { items: string[]; bench: string[] } {
+export function splitBench<T>(pool: T[], count: number): { items: T[]; bench: T[] } {
   return { items: pool.slice(0, count), bench: pool.slice(count) }
 }
 
-export function sanitizeItems(raw: unknown, count: number): string[] {
+export function sanitizeRawItems(raw: unknown, count: number): RawItem[] {
   if (!Array.isArray(raw)) return []
   const seen = new Set<string>()
-  const out: string[] = []
+  const out: RawItem[] = []
   for (const entry of raw) {
-    if (typeof entry !== 'string') continue
-    const text = entry.trim().replace(/^[-*•]\s*/, '').replace(/^\d+[.)]\s*/, '').trim()
+    // Tolerate a bare string as well as the {text, evidence} shape -- an
+    // uncited item is still checkable, it just has to survive on having no
+    // specifics in it at all.
+    const rawText = typeof entry === 'string' ? entry : entry?.text
+    if (typeof rawText !== 'string') continue
+    const text = rawText.trim().replace(/^[-*•]\s*/, '').replace(/^\d+[.)]\s*/, '').trim()
     if (!text) continue
     if (text.length > 120) continue
     if (isAdminItem(text)) continue
     const key = text.toLowerCase().replace(/[^a-z0-9]/g, '')
     if (!key || seen.has(key)) continue
     seen.add(key)
-    out.push(text)
+    const evidence = Array.isArray(entry?.evidence)
+      ? entry.evidence.filter((x: unknown): x is string => typeof x === 'string')
+      : undefined
+    out.push({ text, evidence })
     if (out.length >= count) break
   }
   return out
+}
+
+/** Text-only view, for callers that just need clean lines (the agreed list
+ *  posted back at session start). */
+export function sanitizeItems(raw: unknown, count: number): string[] {
+  return sanitizeRawItems(raw, count).map(i => i.text)
 }
 
 export interface ShapeContext {
@@ -102,15 +116,41 @@ export interface ShapeContext {
   windowMinutes: number | null
   lastCloseout: string | null
   openTasks: string[]
-  fragments: string[]
+  /** Recent captures, newest first, with the date they were made. */
+  fragments: { text: string; date: string | null }[]
   slots: SlotInput[]
   /** What the user just said was wrong with the current list, if anything. */
   instruction?: string | null
   currentItems?: string[]
 }
 
-export function buildShapePrompt(ctx: ShapeContext): string {
+/**
+ * Everything the app actually knows about this project, numbered so the
+ * model can point at what it used and the result can be checked against
+ * it. Nothing outside this list is knowledge — it's invention.
+ */
+export function buildEvidence(ctx: ShapeContext): Evidence[] {
+  const evidence: Evidence[] = []
+  let n = 0
+  const add = (label: string, text: string) => {
+    if (!text?.trim()) return
+    evidence.push({ id: `e${++n}`, label, text: text.trim() })
+  }
+
+  add('from the project description', ctx.goal ?? '')
+  add('from your last close-out', ctx.lastCloseout ?? '')
+  ctx.fragments.forEach(f =>
+    add(f.date ? `from your note on ${f.date}` : 'from one of your notes', f.text),
+  )
+  ctx.openTasks.forEach(t => add('already on the project', t))
+  ctx.slots.filter(s => !s.filled).forEach(s => add('still undecided', `No ${s.name} chosen yet.`))
+
+  return evidence
+}
+
+export function buildShapePrompt(ctx: ShapeContext, evidence: Evidence[]): string {
   const count = itemCountForWindow(ctx.windowMinutes)
+  const total = count + BENCH_SIZE
   const windowText = ctx.windowMinutes
     ? `${ctx.windowMinutes} minutes`
     : 'an unknown amount of time — assume about an hour'
@@ -127,45 +167,76 @@ throw out items they didn't complain about.
 `
     : ''
 
-  const total = count + BENCH_SIZE
-
   return `You are shaping one work session on a creative project. The user has ${windowText}
 and is about to start.
 
-Give ${total} things to do. The FIRST ${count} are the session, in order. The
-last ${BENCH_SIZE} are spares — same quality, same project, but different
-angles, so that if one of the first ${count} doesn't suit today there's a real
-replacement ready. Don't mark them; just order them that way.
+Project: "${ctx.title}"
 
-Project: "${ctx.title}"${ctx.goal ? `\nWhat done looks like: ${ctx.goal}` : ''}
-${ctx.lastCloseout ? `\nWhere they left off last time, in their words: "${ctx.lastCloseout}"` : '\nThey have not had a session on this yet.'}
-${ctx.openTasks.length ? `\nOpen tasks already on the project:\n${ctx.openTasks.map(t => `- ${t}`).join('\n')}` : ''}
-${ctx.fragments.length ? `\nRecent things they captured about it:\n${ctx.fragments.map(t => `- "${t}"`).join('\n')}` : ''}
-${ctx.slots.filter(s => !s.filled).length ? `\nStill undecided on this project: ${ctx.slots.filter(s => !s.filled).map(s => s.name).join(', ')}` : ''}
+EVERYTHING KNOWN ABOUT THIS PROJECT:
+${evidence.length
+  ? evidence.map(e => `[${e.id}] ${e.text}`).join('\n')
+  : '(nothing yet — the user has not said anything about this project)'}
+
+That list is the whole of it. Anything not in it, you do not know.
 ${reshaping}
+Give ${total} things to do. The FIRST ${count} are the session, in order. The
+last ${BENCH_SIZE} are spares — same quality, different angles, ready to swap in
+if one of the first ${count} doesn't suit today. Don't mark them; just order
+them that way.
+
+THE RULE THAT MATTERS MOST — never invent a detail:
+- No tools, gear, brands, model numbers, file formats, settings, tempos,
+  keys, instruments, people or place names unless they appear verbatim
+  above. If the notes never mention a guitar, this project has no guitar.
+- Do not guess how they work. You do not know what software they use, what
+  they record with, or what stage anything is at, unless it says so above.
+- Every item that refers to anything specific must cite the evidence ids it
+  comes from. If you cannot cite it, you cannot say it.
+- An item that asserts nothing beyond the project's own name needs no
+  citation. "Open it and play it back from the start" is always allowed.
+- Vague and true beats specific and invented. If you only know a little,
+  give a short list of things that are certainly real. Fewer honest items
+  is the correct answer, not a failure.
+
 Rules for the list:
-- The first item is an ignition move: physical, trivial, done in under two
-  minutes. "Open the project and read the last thing you wrote." Starting
-  must be easier than deliberating.
-- Every other item is a real move against the work: cut, write, record,
-  drill, mix, send, commit, phone, drive. Something exists afterwards that
-  didn't before.
-- BANNED — this is admin pretending to be building: research, plan, outline,
+- The first item is an ignition move: physical, trivial, under two minutes.
+  Starting must be easier than deliberating.
+- Every other item is a real move against the work — something exists
+  afterwards that didn't before.
+- BANNED, this is admin pretending to be building: research, plan, outline,
   decide, list, consider, review, think about, set up, brainstorm, explore.
-  If an item starts with one of those, it isn't a session item. Rewrite it
-  as the thing you'd actually do.
-- Size the first ${count} to ${windowText}. They should be finishable, not
-  aspirational.
-- The ${BENCH_SIZE} spares should not need the first ${count} to have happened —
-  each one has to stand on its own as a swap for any of them.
+- Size the first ${count} to ${windowText}. Finishable, not aspirational.
 - One line each. No sub-bullets, no time estimates, no explanation.
 
 ${PLAIN_ENGLISH_RULES}
 
-Bad: "Review the vocal mix notes and consider your distribution options."
-Good: "Bounce the vocal at -3dB and listen back on the phone speaker."
+Say the note has: "Next: fix the transition out of track two."
+  BAD:  "Record a fresh guitar take with the SM57 while the click runs."
+        — the notes say nothing about a guitar, a microphone or a click.
+        Every one of those is made up, and one made-up detail means they
+        have to check the whole list themselves.
+  GOOD: "Play track two from the top and find where the transition breaks."
+        — cites the note, adds nothing that wasn't in it.
 
-Respond with JSON only: { "items": ["...", "..."] }`
+Respond with JSON only:
+{ "items": [ { "text": "...", "evidence": ["e1"] } ] }`
+}
+
+/**
+ * The floor below which a list stops being a plan. Two grounded items out
+ * of five means the model was guessing for the other three, and showing
+ * them anyway is what destroys trust in the two that were real.
+ */
+const MIN_TRUSTWORTHY_ITEMS = 3
+
+export interface ShapeResult {
+  items: GroundedItem[]
+  bench: GroundedItem[]
+  source: 'ai' | 'derived'
+  /** Set when the app doesn't know enough to fill a session honestly. The
+   *  right move then is to ask, not to invent — and the answer becomes a
+   *  fragment, so the next session knows more than this one did. */
+  needsInput: string | null
 }
 
 /**
@@ -181,7 +252,7 @@ export async function shapeSession(
   windowMinutes: number | null,
   instruction?: string | null,
   currentItems?: string[],
-): Promise<{ items: string[]; bench: string[]; source: 'ai' | 'derived' }> {
+): Promise<ShapeResult> {
   // Column list matters: `goal` is NOT a column on projects (what done
   // looks like lives in metadata.end_goal). Asking for one that doesn't
   // exist fails the whole select, which is how this returned "Project not
@@ -207,11 +278,11 @@ export async function shapeSession(
 
   const { data: fragmentRows } = await supabase
     .from('fragments')
-    .select('text')
+    .select('text, created_at')
     .eq('project_id', projectId)
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
-    .limit(5)
+    .limit(8)
 
   const ctx: ShapeContext = {
     title: project.title,
@@ -219,28 +290,67 @@ export async function shapeSession(
     windowMinutes,
     lastCloseout: project.last_closeout_text || null,
     openTasks,
-    fragments: (fragmentRows || []).map(f => f.text).filter(Boolean),
+    fragments: (fragmentRows || [])
+      .filter(f => f.text)
+      .map(f => ({
+        text: f.text,
+        date: f.created_at
+          ? new Date(f.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+          : null,
+      })),
     slots,
     instruction,
     currentItems,
   }
 
+  const evidence = buildEvidence(ctx)
   const count = itemCountForWindow(windowMinutes)
 
+  // Nothing known means nothing to say. Inventing a plan here is exactly
+  // what cost this feature its credibility, so ask instead — and let the
+  // answer be the thing that makes next time better.
+  if (evidence.length === 0) {
+    return {
+      items: [{ text: `Open ${project.title} and look at where you left it.`, source: null }],
+      bench: [],
+      source: 'derived',
+      needsInput: `I don't know anything about ${project.title} yet. What are you actually trying to do with it?`,
+    }
+  }
+
   try {
-    const response = await generateText(buildShapePrompt(ctx), {
+    const response = await generateText(buildShapePrompt(ctx, evidence), {
       responseFormat: 'json',
-      temperature: 0.8,
-      maxTokens: 1200,
+      // Low: this is a reporting task over a fixed evidence list, not a
+      // creative one. High temperature here reads as confident invention.
+      temperature: 0.3,
+      maxTokens: 1600,
     })
-    // Sanitise the whole pool first, THEN split — otherwise a dropped
-    // admin item in the first few would silently promote a spare into the
-    // list without anything taking its place on the bench.
-    const pool = sanitizeItems(JSON.parse(response)?.items, count + BENCH_SIZE)
-    const { items, bench } = splitBench(pool, count)
-    // Two survivors isn't a session plan, it's a coin flip — fall through
-    // to the derivation rather than showing a list that looks broken.
-    if (items.length >= 3) return { items, bench, source: 'ai' }
+
+    const raw = JSON.parse(response)?.items
+    const cleaned = sanitizeRawItems(raw, count + BENCH_SIZE)
+    const { kept, rejected } = filterGrounded(cleaned, evidence, project.title)
+
+    if (rejected.length > 0) {
+      console.warn(
+        `[session-shaper] dropped ${rejected.length} ungrounded item(s) for ${projectId}:`,
+        rejected.map(r => `"${r.text}" — ${r.reason}`),
+      )
+    }
+
+    if (kept.length >= MIN_TRUSTWORTHY_ITEMS) {
+      const { items, bench } = splitBench(kept, count)
+      return { items, bench, source: 'ai', needsInput: null }
+    }
+
+    // Not enough survived. Show what did — those are real — and ask for
+    // the rest rather than padding with things that aren't.
+    return {
+      items: kept,
+      bench: [],
+      source: 'ai',
+      needsInput: `That's all I can say for certain about ${project.title}. What are you working on with it right now?`,
+    }
   } catch (e) {
     console.error('[session-shaper] generation failed, falling back:', e)
   }
@@ -251,5 +361,10 @@ export async function shapeSession(
     mvsMinutes: null,
     windowMinutes,
   })
-  return { items: derived.map(s => s.text), bench: [], source: 'derived' }
+  return {
+    items: derived.map(sh => ({ text: sh.text, source: null })),
+    bench: [],
+    source: 'derived',
+    needsInput: null,
+  }
 }
