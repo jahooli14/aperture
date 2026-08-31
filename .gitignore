@@ -28,6 +28,10 @@ dist-ssr
 .env
 .env.*
 .env.local
+
+# Claude Code agent worktrees — transient checkouts created by isolated
+# subagent runs, not repo content.
+.claude/worktrees/
 .env.production.local
 .env.development.local
 .env.temp
