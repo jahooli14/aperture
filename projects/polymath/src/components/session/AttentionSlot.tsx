@@ -407,7 +407,7 @@ export function AttentionSlot() {
 
   if (kind === 'closeout' && pendingCloseout) {
     return (
-      <div className="glass-card p-6 space-y-3 mb-4">
+      <div className="glass-card p-6 space-y-3 mt-5 mb-4">
         <p className="text-base">
           You did some time on {pendingCloseout.projects?.title ?? 'a project'} — where'd you get to?
         </p>
@@ -438,7 +438,7 @@ export function AttentionSlot() {
 
   if (kind === 'mirror') {
     return (
-      <div className="mb-4">
+      <div className="mt-5 mb-4">
         <MirrorSlot rows={mirrorRows} onDismiss={() => setResolved(true)} />
       </div>
     )
@@ -446,7 +446,7 @@ export function AttentionSlot() {
 
   if (kind === 'reask' && reask) {
     return (
-      <div className="mb-4">
+      <div className="mt-5 mb-4">
         <ReaskSlot suggestion={reask} onResolved={() => setResolved(true)} />
       </div>
     )
@@ -454,7 +454,7 @@ export function AttentionSlot() {
 
   if ((kind === 'morph' || kind === 'composite') && proposal) {
     return (
-      <div className="mb-4">
+      <div className="mt-5 mb-4">
         <ProposalSlot proposal={proposal} onResolved={() => setResolved(true)} />
       </div>
     )
@@ -462,7 +462,7 @@ export function AttentionSlot() {
 
   if (kind === 'spark' && spark) {
     return (
-      <div className="mb-4">
+      <div className="mt-5 mb-4">
         {spark.type === 'forgotten' ? (
           <ForgottenSlot spark={spark} onResolved={() => setResolved(true)} />
         ) : (
