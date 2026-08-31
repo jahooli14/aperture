@@ -84,6 +84,11 @@ export interface PlanDraft {
   /** Set when the app couldn't fill the session from what it actually
    *  knows. It asks rather than padding the list out with guesses. */
   needsInput: string | null
+  /** Which gap the question is closing, so the answer gets filed as the
+   *  thing it is (a finish line, a next step, a slot) rather than as
+   *  another undifferentiated note. */
+  gapKind: string | null
+  slotName: string | null
   /** 'derived' means the model was unreachable and this is the fallback
    *  list -- worth saying out loud rather than passing off as a plan. */
   source: 'ai' | 'derived'
@@ -116,7 +121,7 @@ interface SessionState {
   /** Answers the app's "I don't know enough" question. Saves the answer to
    *  the project so it's evidence next time, then re-shapes on it. */
   answerPlanQuestion: (answer: string) => Promise<void>
-  closeSession: (closeoutText: string, mvsSeedMinutes?: number) => Promise<{ moved: boolean | null; duration_minutes: number } | null>
+  closeSession: (closeoutText: string, mvsSeedMinutes?: number, doneItems?: string[]) => Promise<{ moved: boolean | null; duration_minutes: number } | null>
   checkPendingCloseout: () => Promise<void>
   closeoutForPending: (closeoutText: string) => Promise<void>
   dismissPendingCloseout: () => void
@@ -128,6 +133,8 @@ interface ShapeResponse {
   bench: PlanItem[]
   source: 'ai' | 'derived'
   needs_input: string | null
+  gap_kind: string | null
+  slot_name: string | null
 }
 
 async function postJson<T>(url: string, body: unknown): Promise<T> {
@@ -170,6 +177,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
           projectId, windowMinutes,
           items: data.items, bench: data.bench ?? [],
           source: data.source, needsInput: data.needs_input ?? null,
+          gapKind: data.gap_kind ?? null, slotName: data.slot_name ?? null,
         },
         shaping: false,
       })
@@ -200,6 +208,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
           ...plan,
           items: data.items, bench: data.bench ?? [],
           source: data.source, needsInput: data.needs_input ?? null,
+          gapKind: data.gap_kind ?? null, slotName: data.slot_name ?? null,
         },
         shaping: false,
       })
@@ -245,6 +254,8 @@ export const useSessionStore = create<SessionState>((set, get) => ({
         project_id: plan.projectId,
         window_minutes: plan.windowMinutes,
         remember: answer.trim(),
+        gap_kind: plan.gapKind,
+        slot_name: plan.slotName,
       })
     } catch (e) {
       console.error('[session] could not save the answer:', e)
@@ -277,14 +288,19 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     }
   },
 
-  closeSession: async (closeoutText, mvsSeedMinutes) => {
+  closeSession: async (closeoutText, mvsSeedMinutes, doneItems) => {
     const active = get().active
     if (!active) return null
     set({ closing: true, error: null })
     try {
       const result = await postJson<{ ok: boolean; moved: boolean | null; duration_minutes: number }>(
         '/api/utilities?resource=close',
-        { session_id: active.id, closeout_text: closeoutText, mvs_seed_minutes: mvsSeedMinutes }
+        {
+          session_id: active.id,
+          closeout_text: closeoutText,
+          mvs_seed_minutes: mvsSeedMinutes,
+          done_items: doneItems,
+        }
       )
       set({ active: null, closing: false })
       return { moved: result.moved, duration_minutes: result.duration_minutes }

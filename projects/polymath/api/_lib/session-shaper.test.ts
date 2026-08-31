@@ -108,6 +108,9 @@ describe('buildShapePrompt', () => {
     windowMinutes: 60,
     lastCloseout: null as string | null,
     openTasks: [] as string[],
+    doneTasks: [] as { text: string; date: string | null }[],
+    pastCloseouts: [] as { text: string; date: string | null }[],
+    shapingTurns: [] as string[],
     fragments: [] as { text: string; date: string | null }[],
     slots: [] as { name: string; filled: boolean }[],
   }
@@ -212,6 +215,7 @@ function stubClient(opts: {
           return chain
         },
         eq: () => chain,
+        not: () => chain,
         order: () => chain,
         limit: () => Promise.resolve({ data: opts.fragments ?? [], error: null }),
         single: () =>
@@ -224,6 +228,46 @@ function stubClient(opts: {
     },
   } as any
 }
+
+describe('buildEvidence', () => {
+  const base = {
+    title: 'Graham song', goal: null as string | null, windowMinutes: 60,
+    lastCloseout: null as string | null, openTasks: [] as string[],
+    doneTasks: [] as { text: string; date: string | null }[],
+    pastCloseouts: [] as { text: string; date: string | null }[],
+    shapingTurns: [] as string[],
+    fragments: [] as { text: string; date: string | null }[],
+    slots: [] as { name: string; filled: boolean }[],
+  }
+
+  it('does not count a machine-seeded slot as something the user said', () => {
+    // slot-seed.ts invents these. Counting them made a project the user
+    // has never described look like one the app knows — the exact
+    // condition under which it starts filling gaps with invention.
+    const ev = buildEvidence({ ...base, slots: [{ name: 'first track', filled: false }] })
+    expect(ev).toHaveLength(0)
+  })
+
+  it('includes finished work, which used to be filtered out entirely', () => {
+    const ev = buildEvidence({ ...base, doneTasks: [{ text: 'record the intro', date: '3 Aug' }] })
+    expect(ev[0].text).toBe('record the intro')
+    expect(ev[0].label).toContain('finished this on 3 Aug')
+  })
+
+  it('includes older close-outs, not just the one that overwrote the rest', () => {
+    const ev = buildEvidence({
+      ...base,
+      lastCloseout: 'Got the intro sorted.',
+      pastCloseouts: [{ text: 'Laid down a rough vocal.', date: '1 Aug' }],
+    })
+    expect(ev.map(e => e.text)).toContain('Laid down a rough vocal.')
+  })
+
+  it('includes what the user said when shaping the project', () => {
+    const ev = buildEvidence({ ...base, shapingTurns: ['It should sound like the demo but tighter'] })
+    expect(ev[0].text).toContain('sound like the demo')
+  })
+})
 
 describe('shapeSession', () => {
   const project = {
@@ -245,7 +289,8 @@ describe('shapeSession', () => {
     )
     const known = new Set([
       'id', 'user_id', 'title', 'description', 'type', 'status', 'metadata',
-      'slots', 'last_closeout_text', 'mvs_minutes', 'state', 'last_active',
+      'slots', 'last_closeout_text', 'last_session_ended_at', 'mvs_minutes',
+      'state', 'last_active',
     ])
     expect(seen).toHaveLength(1)
     for (const col of seen[0].split(',').map(c => c.trim())) {

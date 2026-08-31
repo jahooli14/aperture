@@ -96,7 +96,51 @@ const STOPWORDS = new Set([
   'the', 'and', 'for', 'with', 'from', 'into', 'that', 'this', 'your', 'you',
   'out', 'off', 'get', 'got', 'its', 'was', 'are', 'has', 'have', 'onto',
   'then', 'them', 'next', 'over', 'back', 'down', 'one', 'two', 'new', 'all',
+  'still', 'just', 'need', 'needs', 'again', 'until', 'where', 'what', 'when',
+  'some', 'more', 'much', 'very', 'here', 'there', 'about', 'through',
 ])
+
+/**
+ * Verbs that appear in almost every session item ever written. Sharing one
+ * of these with a note proves nothing -- "sort the album artwork" and "got
+ * the intro sorted" have "sort" in common and nothing else, and treating
+ * that as a citation is how an invention launders itself.
+ *
+ * They still count as content for length purposes; they just can't be the
+ * thing that makes a citation valid.
+ */
+const WEAK_MATCH_WORDS = new Set([
+  'work', 'sort', 'make', 'made', 'take', 'took', 'give', 'put', 'set',
+  'start', 'started', 'finish', 'finished', 'open', 'close', 'play', 'look',
+  'find', 'fix', 'try', 'keep', 'move', 'add', 'use', 'check', 'sort',
+  'thing', 'things', 'stuff', 'bit', 'part', 'time', 'day', 'week',
+])
+
+/**
+ * Crude suffix stripping, deliberately not a real stemmer. It exists to
+ * make "sent"/"send", "mixed"/"mix" and "cutting"/"cut" match, because a
+ * citation was being rejected purely on English inflection -- "Send the
+ * rough to Graham" genuinely does come from a goal that says "sent to
+ * him", and blocking it taught the app to be useless on well-known
+ * projects rather than honest on thin ones.
+ */
+export function stem(word: string): string {
+  let w = word
+  for (const suffix of ['ing', 'ed']) {
+    if (w.length > suffix.length + 2 && w.endsWith(suffix)) {
+      w = w.slice(0, -suffix.length)
+      break
+    }
+  }
+  // Plurals strip only the 's': taking 'es' off "bounces" gives "bounc",
+  // which then fails to match "bounce".
+  if (w.length > 3 && w.endsWith('s') && !w.endsWith('ss')) w = w.slice(0, -1)
+  // Doubled final consonant from -ing/-ed ("cutting" -> "cutt" -> "cut").
+  if (w.length > 3 && w[w.length - 1] === w[w.length - 2]) w = w.slice(0, -1)
+  // Irregulars worth the two lines: they're the verbs this domain uses most.
+  const irregular: Record<string, string> = { sent: 'send', wrote: 'writ', cut: 'cut', got: 'get' }
+  return irregular[w] ?? w
+}
 
 function contentWords(text: string): string[] {
   return text
@@ -104,19 +148,25 @@ function contentWords(text: string): string[] {
     .replace(/[^a-z0-9\s]/g, ' ')
     .split(/\s+/)
     .filter(w => w.length >= 3 && !STOPWORDS.has(w))
+    .map(stem)
 }
 
 /**
- * The same loose check verifyCitations uses on morph proposals: the cited
- * evidence has to genuinely share vocabulary with the claim, so a model
- * can't point at an unrelated note to make an invention look sourced.
+ * A citation holds when the item and its cited evidence share at least one
+ * DISTINCTIVE word — a noun or a domain term, not a verb every item uses.
+ *
+ * The earlier version wanted two raw word matches, which blocked most
+ * honest inference on a well-shaped project: "Work on the intro level"
+ * citing "Got the intro sorted" has exactly one word in common and is
+ * plainly legitimate. One distinctive word is a stronger signal than two
+ * weak ones, and it's the specifics gate above — not this — that does the
+ * heavy lifting against fabrication.
  */
 export function citationSupports(itemText: string, evidenceText: string): boolean {
   const claim = contentWords(itemText)
   const source = new Set(contentWords(evidenceText))
   if (claim.length === 0 || source.size === 0) return false
-  const hits = claim.filter(w => source.has(w)).length
-  return hits >= 2
+  return claim.some(w => source.has(w) && !WEAK_MATCH_WORDS.has(w))
 }
 
 /**

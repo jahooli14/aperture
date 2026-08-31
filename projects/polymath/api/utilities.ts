@@ -1867,11 +1867,53 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
       // the app had to ask because the corpus was thin, so the answer has
       // to make the corpus less thin, not just unblock this one session.
       if (typeof remember === 'string' && remember.trim()) {
+        // Route the answer by what was asked. Filing every answer as a
+        // generic note meant the app kept re-asking the same question:
+        // the project's shape never actually improved, so the gap that
+        // triggered the question was still there next session.
+        const answer = remember.trim()
+        const gapKind = typeof req.body?.gap_kind === 'string' ? req.body.gap_kind : null
+        const slotName = typeof req.body?.slot_name === 'string' ? req.body.slot_name : null
+
+        const { data: proj } = await supabase
+          .from('projects')
+          .select('metadata, slots')
+          .eq('id', project_id).eq('user_id', userId).single()
+        const metadata = proj?.metadata ?? {}
+
+        if (gapKind === 'end_goal') {
+          await supabase.from('projects').update({
+            metadata: { ...metadata, end_goal: answer, end_goal_source: 'guide' },
+          }).eq('id', project_id).eq('user_id', userId)
+        } else if (gapKind === 'first_step' || gapKind === 'next_step') {
+          const tasks = Array.isArray(metadata.tasks) ? metadata.tasks : []
+          await supabase.from('projects').update({
+            metadata: {
+              ...metadata,
+              tasks: [...tasks, {
+                id: `t-${Date.now()}`,
+                text: answer,
+                done: false,
+                created_at: new Date().toISOString(),
+              }],
+            },
+          }).eq('id', project_id).eq('user_id', userId)
+        } else if (gapKind === 'slot' && slotName) {
+          const slots = Array.isArray(proj?.slots) ? proj.slots : []
+          await supabase.from('projects').update({
+            slots: slots.map((sl: any) => (sl?.name === slotName ? { ...sl, filled: true } : sl)),
+          }).eq('id', project_id).eq('user_id', userId)
+        }
+
+        // Always keep the verbatim answer too: the routed field is the
+        // structure, the fragment is what they actually said, and the
+        // shaper cites the words rather than the field.
         const { error: fragErr } = await supabase.from('fragments').insert({
           user_id: userId,
           project_id,
-          role: 'reference',
-          text: remember.trim(),
+          role: gapKind === 'slot' ? 'material' : 'reference',
+          ...(gapKind === 'slot' && slotName ? { fills_slot: slotName } : {}),
+          text: answer,
         })
         if (fragErr) console.error('[utilities/sessions] could not save the answer:', fragErr)
         return res.status(200).json({ ok: true })
@@ -1890,6 +1932,9 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
         bench: result.bench,
         source: result.source,
         needs_input: result.needsInput,
+        gap_kind: result.gap?.kind ?? null,
+        slot_name: result.gap?.slotName ?? null,
+        confidence: result.confidence,
       })
     } catch (e) {
       const message = e instanceof Error ? e.message : 'Could not shape the session.'
@@ -1963,12 +2008,12 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
   // ─── CLOSE ──────────────────────────────────────────────────────────
   if (resource === 'close') {
     if (req.method !== 'POST') return res.status(405).json({ error: 'POST required' })
-    const { session_id, closeout_text, mvs_seed_minutes } = req.body || {}
+    const { session_id, closeout_text, mvs_seed_minutes, done_items } = req.body || {}
     if (!session_id) return res.status(400).json({ error: 'session_id required' })
 
     const { data: session, error: sessionErr } = await supabase
       .from('sessions')
-      .select('id, project_id, started_at, user_id')
+      .select('id, project_id, started_at, user_id, items')
       .eq('id', session_id)
       .eq('user_id', userId)
       .single()
@@ -1982,6 +2027,19 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
     const text = typeof closeout_text === 'string' ? closeout_text.trim() : ''
     const moved = text.length > 0 ? await classifyMoved(text) : null
 
+    // What actually got ticked off. Until now the ticks only pre-filled the
+    // close-out box and were then thrown away — so "the tasks have been
+    // checked off properly" was never true of the data, and the shaper had
+    // no way to know what was already finished.
+    const ticked: string[] = Array.isArray(done_items)
+      ? done_items.filter((x: unknown): x is string => typeof x === 'string')
+      : []
+    const sessionItems: any[] = Array.isArray(session.items) ? session.items : []
+    const itemsWithOutcome = sessionItems.map((it: any) => ({
+      ...it,
+      done: ticked.includes(typeof it === 'string' ? it : it?.text),
+    }))
+
     const { error: updateErr } = await supabase
       .from('sessions')
       .update({
@@ -1989,6 +2047,7 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
         duration_minutes: durationMinutes,
         closeout_text: text || null,
         moved,
+        items: itemsWithOutcome,
       })
       .eq('id', session_id)
       .eq('user_id', userId)
@@ -2000,6 +2059,28 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
 
     // Re-entry playback for next time, and MVS seeding/recompute.
     const projectUpdate: Record<string, unknown> = {}
+
+    // A ticked session item that matches an open task on the project marks
+    // that task done, with a timestamp. This is what turns finished work
+    // into evidence the next session can reason from.
+    if (ticked.length > 0) {
+      const { data: proj } = await supabase
+        .from('projects')
+        .select('metadata')
+        .eq('id', session.project_id).eq('user_id', userId).single()
+      const tasks = Array.isArray(proj?.metadata?.tasks) ? proj.metadata.tasks : []
+      const tickedLower = new Set(ticked.map(t => t.toLowerCase().trim()))
+      let changed = false
+      const nextTasks = tasks.map((t: any) => {
+        if (!t?.done && typeof t.text === 'string' && tickedLower.has(t.text.toLowerCase().trim())) {
+          changed = true
+          return { ...t, done: true, completed_at: endedAt.toISOString() }
+        }
+        return t
+      })
+      if (changed) projectUpdate.metadata = { ...(proj?.metadata ?? {}), tasks: nextTasks }
+    }
+
     if (text) {
       projectUpdate.last_closeout_text = text
       projectUpdate.last_session_ended_at = endedAt.toISOString()

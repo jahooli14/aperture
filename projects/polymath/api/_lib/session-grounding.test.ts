@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
+  stem,
   extractSpecifics,
   hasOnlyKnownSpecifics,
   evidenceHaystack,
@@ -69,7 +70,18 @@ describe('hasOnlyKnownSpecifics', () => {
   })
 })
 
+describe('stem', () => {
+  it('matches a word to its own inflections', () => {
+    expect(stem('mixed')).toBe(stem('mix'))
+    expect(stem('sent')).toBe(stem('send'))
+    expect(stem('cutting')).toBe(stem('cut'))
+    expect(stem('bounces')).toBe(stem('bounce'))
+  })
+})
+
 describe('citationSupports', () => {
+  const GOAL = 'Finish the Graham song and get it mixed and sent to him.'
+
   it('accepts an item that shares real vocabulary with its source', () => {
     expect(citationSupports('Fix the transition out of track two.', EVIDENCE[0].text)).toBe(true)
   })
@@ -78,8 +90,28 @@ describe('citationSupports', () => {
     expect(citationSupports('Record an acoustic guitar take.', EVIDENCE[0].text)).toBe(false)
   })
 
-  it('needs more than a single incidental word in common', () => {
-    expect(citationSupports('Sort the artwork out.', EVIDENCE[0].text)).toBe(false)
+  // These are the honest inferences a well-shaped project should produce.
+  // The earlier two-raw-word rule blocked all of them, which is how the
+  // anti-fabrication fix turned into "useless on projects it knows well".
+  it('accepts across ordinary English inflection', () => {
+    expect(citationSupports('Send the rough to Graham.', GOAL)).toBe(true)
+    expect(citationSupports('Get it mixed enough to send.', GOAL)).toBe(true)
+  })
+
+  it('accepts a single distinctive word in common', () => {
+    expect(citationSupports('Work on the intro level.', EVIDENCE[0].text)).toBe(true)
+  })
+
+  // ...without letting an invention launder itself through a common verb.
+  it('does not count a verb every item uses as a citation', () => {
+    // "sort" is shared with "Got the intro sorted", and nothing else is.
+    expect(citationSupports('Sort the album artwork out.', EVIDENCE[0].text)).toBe(false)
+    expect(citationSupports('Take a photo of the studio.', EVIDENCE[1].text)).toBe(false)
+    expect(citationSupports('Start on the second single.', EVIDENCE[0].text)).toBe(false)
+  })
+
+  it('still rejects something with nothing in common at all', () => {
+    expect(citationSupports('Book a mastering engineer.', GOAL)).toBe(false)
   })
 })
 
