@@ -31,6 +31,7 @@ import { usePin } from '../contexts/PinContext'
 
 import { useContextEngineStore } from '../stores/useContextEngineStore'
 import { SubtleBackground } from '../components/SubtleBackground'
+import { api } from '../lib/apiClient'
 
 function BlockerField({ blocker, onSave }: { blocker?: string; onSave: (text: string) => Promise<void> }) {
   const [editing, setEditing] = useState(false)
@@ -124,6 +125,35 @@ export function ProjectDetailPage() {
   // instead — same state, one place it's presented.
   const windowMinutes = useSessionStore(s => s.windowMinutes)
   const [sessionOpen, setSessionOpen] = useState(false)
+  const [replanning, setReplanning] = useState(false)
+
+  // A spine gets used up: tick everything off and the project has a goal,
+  // a history, and nothing to do next. Re-planning is the same backwards
+  // pass that built it, run again over everything learned since — and it
+  // keeps finished work, so it extends the plan rather than resetting it.
+  const handleReplan = async () => {
+    if (!project) return
+    setReplanning(true)
+    try {
+      const result = await api.post('utilities?resource=replan', { project_id: project.id }) as { added?: number }
+      await fetchProjects()
+      addToast({
+        title: result?.added ? `Planned ${result.added} more steps` : 'Nothing new to add',
+        description: result?.added
+          ? 'Working back from your finish line.'
+          : "Say more about where it's at and try again.",
+        variant: result?.added ? 'success' : 'default',
+      })
+    } catch (err) {
+      addToast({
+        title: "Couldn't re-plan that",
+        description: err instanceof Error ? err.message : 'Try again.',
+        variant: 'destructive',
+      })
+    } finally {
+      setReplanning(false)
+    }
+  }
   const { setContext, clearContext } = useContextEngineStore()
   const { pinnedItem, pinItem, unpinItem } = usePin()
 
@@ -971,6 +1001,32 @@ export function ProjectDetailPage() {
                     </button>
                   </div>
                 )}
+
+                {/* Offered when the plan is spent — every step ticked, or
+                    there was never one. A project with a finish line and
+                    nothing to do next is the state where people quietly
+                    stop opening it. */}
+                {(() => {
+                  const allTasks = project.metadata?.tasks || []
+                  const spent = allTasks.length === 0 || allTasks.every((t: any) => t?.done)
+                  if (!spent || project.status === 'completed' || project.status === 'graveyard') return null
+                  return (
+                    <button
+                      onClick={handleReplan}
+                      disabled={replanning}
+                      className="w-full py-3 rounded-2xl text-[12px] font-semibold uppercase tracking-widest transition-all active:scale-[0.99] disabled:opacity-50"
+                      style={{
+                        background: 'rgba(var(--brand-primary-rgb),0.10)',
+                        border: '1px solid rgba(var(--brand-primary-rgb),0.28)',
+                        color: 'rgb(var(--brand-primary-rgb))',
+                      }}
+                    >
+                      {replanning
+                        ? 'Working back from the finish line…'
+                        : allTasks.length === 0 ? 'Plan the steps' : 'Plan what comes next'}
+                    </button>
+                  )
+                })()}
 
                 <ProjectPath
                   tasks={project.metadata?.tasks || []}

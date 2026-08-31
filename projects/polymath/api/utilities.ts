@@ -47,6 +47,8 @@ import { DEFAULT_IDEA_BRIEF } from './_lib/project-ideas/default-prompt.js'
 import type { CoverageGrid } from '../src/types'
 import { deriveSessionShapes, needsMvsSeed, measuredMvs, type SlotInput, type SessionShape } from './_lib/session-shapes.js'
 import { shapeSession, sanitizeItems } from './_lib/session-shaper.js'
+import { shapeProjectFromDump } from './_lib/project-shaping.js'
+import { generateTaskSpine, toStoredTasks } from './_lib/task-spine.js'
 import { pickNextSparkType, type SparkHistoryEntry } from './_lib/spark-types.js'
 import { generateSpark } from './_lib/spark-generator.js'
 import { canMorphProject, anyProjectMorphedToday } from './_lib/morph.js'
@@ -66,7 +68,7 @@ function getCronUserId(req: VercelRequest): string | null {
 }
 
 const EXECUTION_SESSIONS_RESOURCES = new Set([
-  'shape',
+  'shape', 'shape-project', 'replan',
   'start', 'close', 'pending-closeout', 'log-retro', 'declare-live',
   'live-reask', 'different-thing-status', 'harvest', 'mirror', 'book',
 ])
@@ -1852,6 +1854,117 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
   const resource = req.query.resource as string
 
   // ─── START ──────────────────────────────────────────────────────────
+  // ─── SHAPE-PROJECT (capture: one dump in, a whole project out) ──────
+  // The old path created a project with `tasks: []` and threw the
+  // conversation away, so everything the user had just explained was lost
+  // and the app asked again next session. This keeps all of it: the words
+  // become evidence, the goal becomes the thing the spine plans back from,
+  // and the spine becomes real tasks.
+  if (resource === 'shape-project') {
+    if (req.method !== 'POST') return res.status(405).json({ error: 'POST required' })
+    const { dump, title: givenTitle, end_goal: givenGoal } = req.body || {}
+    if (typeof dump !== 'string' || !dump.trim()) {
+      return res.status(400).json({ error: 'dump required' })
+    }
+
+    try {
+      // Reuse the labels they already have so a new project joins an
+      // existing group instead of minting a near-synonym nobody filters by.
+      const { data: tagRows } = await supabase
+        .from('projects')
+        .select('metadata')
+        .eq('user_id', userId)
+        .limit(120)
+      const existingTags = [...new Set(
+        (tagRows || []).flatMap(r => (Array.isArray(r.metadata?.tags) ? r.metadata.tags : [])),
+      )].filter((t): t is string => typeof t === 'string').slice(0, 30)
+
+      const shaped = await shapeProjectFromDump(dump, existingTags)
+      if (!shaped) return res.status(422).json({ error: "Couldn't make sense of that." })
+
+      const title = (typeof givenTitle === 'string' && givenTitle.trim()) || shaped.title
+      const endGoal = (typeof givenGoal === 'string' && givenGoal.trim()) || shaped.endGoal
+
+      // No goal means nothing to plan backwards from, so don't guess a
+      // spine -- hand back the one question instead.
+      const steps = endGoal
+        ? await generateTaskSpine({ title, endGoal, said: [dump] })
+        : []
+
+      return res.status(200).json({
+        title,
+        end_goal: endGoal,
+        summary: shaped.summary,
+        tags: shaped.tags,
+        tasks: toStoredTasks(steps),
+        question: endGoal ? null : shaped.question,
+      })
+    } catch (e) {
+      const message = e instanceof Error ? e.message : 'Could not shape that project.'
+      console.error('[utilities/shape-project] failed:', message)
+      return res.status(500).json({ error: message })
+    }
+  }
+
+  // ─── REPLAN (the spine again, on a project that already exists) ─────
+  // Same engine as creation. A spine that's been ticked out, or one made
+  // before the goal was written, needs redoing rather than patching by
+  // hand -- and it must extend what's already agreed, not silently bin it.
+  if (resource === 'replan') {
+    if (req.method !== 'POST') return res.status(405).json({ error: 'POST required' })
+    const { project_id } = req.body || {}
+    if (!project_id) return res.status(400).json({ error: 'project_id required' })
+
+    try {
+      const { data: project, error: projErr } = await supabase
+        .from('projects')
+        .select('title, description, metadata, last_closeout_text')
+        .eq('id', project_id).eq('user_id', userId).single()
+      if (projErr || !project) return res.status(404).json({ error: 'project not found' })
+
+      const { data: fragmentRows } = await supabase
+        .from('fragments')
+        .select('text')
+        .eq('project_id', project_id).eq('user_id', userId)
+        .order('created_at', { ascending: false }).limit(10)
+
+      const metadata = project.metadata ?? {}
+      const conversation: any[] = Array.isArray(metadata.conversation) ? metadata.conversation : []
+      const said = [
+        project.description,
+        project.last_closeout_text,
+        ...conversation.filter(t => t?.role === 'user' && typeof t.content === 'string').map(t => t.content),
+        ...(fragmentRows || []).map(f => f.text),
+      ].filter((t): t is string => typeof t === 'string' && t.trim().length > 0)
+
+      const existingTasks: any[] = Array.isArray(metadata.tasks) ? metadata.tasks : []
+      const steps = await generateTaskSpine({
+        title: project.title,
+        endGoal: metadata.end_goal ?? null,
+        said,
+        existingSteps: existingTasks.filter(t => !t?.done).map(t => t?.text).filter(Boolean),
+      })
+
+      if (steps.length === 0) {
+        return res.status(200).json({ tasks: existingTasks, added: 0 })
+      }
+
+      // Finished work stays on the record: a re-plan replaces what's still
+      // to do, never the history of what's been done.
+      const doneTasks = existingTasks.filter(t => t?.done)
+      const nextTasks = [...doneTasks, ...toStoredTasks(steps)]
+      await supabase.from('projects')
+        .update({ metadata: { ...metadata, tasks: nextTasks, is_shaped: true } })
+        .eq('id', project_id).eq('user_id', userId)
+
+      return res.status(200).json({ tasks: nextTasks, added: steps.length })
+    } catch (e) {
+      const message = e instanceof Error ? e.message : 'Could not re-plan that project.'
+      console.error('[utilities/replan] failed:', message)
+      return res.status(500).json({ error: message })
+    }
+  }
+
   // ─── SHAPE (the two minutes of planning) ────────────────────────────
   // No session row yet -- this is what you're agreeing to before the
   // clock starts. Called once on arrival, then again for each "no, more
@@ -2063,11 +2176,14 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
     // A ticked session item that matches an open task on the project marks
     // that task done, with a timestamp. This is what turns finished work
     // into evidence the next session can reason from.
+    const { data: projRow } = await supabase
+      .from('projects')
+      .select('metadata')
+      .eq('id', session.project_id).eq('user_id', userId).single()
+    const currentMetadata = projRow?.metadata ?? {}
+
     if (ticked.length > 0) {
-      const { data: proj } = await supabase
-        .from('projects')
-        .select('metadata')
-        .eq('id', session.project_id).eq('user_id', userId).single()
+      const proj = projRow
       const tasks = Array.isArray(proj?.metadata?.tasks) ? proj.metadata.tasks : []
       const tickedLower = new Set(ticked.map(t => t.toLowerCase().trim()))
       let changed = false
@@ -2084,6 +2200,34 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
     if (text) {
       projectUpdate.last_closeout_text = text
       projectUpdate.last_session_ended_at = endedAt.toISOString()
+
+      // "Next: X" in a close-out is the user writing the next task in
+      // their own words at the moment they know best. It used to survive
+      // only as a string on the project, overwritten by the following
+      // session — so the plan never actually grew from doing the work.
+      const nextMatch = text.match(/\bnext\s*[:\-]\s*(.+)$/is)
+      const nextStep = nextMatch?.[1]?.trim().replace(/\s+/g, ' ')
+      if (nextStep && nextStep.length > 3 && nextStep.length < 160) {
+        const base = (projectUpdate.metadata as any) ?? currentMetadata
+        const existing: any[] = Array.isArray(base?.tasks) ? base.tasks : []
+        const already = existing.some(
+          (t: any) => typeof t?.text === 'string' &&
+            t.text.toLowerCase().trim() === nextStep.toLowerCase(),
+        )
+        if (!already) {
+          projectUpdate.metadata = {
+            ...base,
+            tasks: [...existing, {
+              id: `t-${endedAt.getTime()}`,
+              text: nextStep,
+              done: false,
+              created_at: endedAt.toISOString(),
+              origin: 'closeout',
+              source: 'you said it at the end of a session',
+            }],
+          }
+        }
+      }
     }
 
     if (typeof mvs_seed_minutes === 'number' && mvs_seed_minutes > 0) {

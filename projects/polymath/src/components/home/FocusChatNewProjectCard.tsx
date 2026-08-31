@@ -13,11 +13,13 @@ import { useNavigate } from 'react-router-dom'
 import { Check } from 'lucide-react'
 import { api } from '../../lib/apiClient'
 import { useProjectStore } from '../../stores/useProjectStore'
+import { useFocusChatStore } from '../../stores/useFocusChatStore'
 import { useProjectIdeasStore } from '../../stores/useProjectIdeasStore'
 import { useHomeAnswerStore } from '../../stores/useHomeAnswerStore'
 import { useToast } from '../ui/toast'
 import { ConfirmButton, DismissButton, ResolvedBadge, DismissedRow, ProposalCard } from '../chat/ChatPrimitives'
 import { type PortfolioNewProject } from './focusChatOps'
+import type { ChatTurn } from '../../types'
 
 export function FocusChatNewProjectCard({ proposal, resolved, dismissed, onResolve, onDismiss }: {
   proposal: PortfolioNewProject
@@ -34,7 +36,42 @@ export function FocusChatNewProjectCard({ proposal, resolved, dismissed, onResol
   const apply = async () => {
     setApplying(true)
     try {
-      const description = [proposal.pitch, proposal.firstStep ? `First move: ${proposal.firstStep}` : null]
+      // Everything the user said in the thread, not just the model's
+      // one-line pitch. This conversation IS the project brief — throwing
+      // it away at the moment of creation is why the app kept asking the
+      // same questions afterwards, and why a project arrived with nothing
+      // in it. It becomes the evidence the spine is planned from and the
+      // sessions later cite.
+      const turns = useFocusChatStore.getState().messages
+      const saidByUser = turns
+        .filter(m => m.kind === 'you' && typeof m.content === 'string')
+        .map(m => m.content.trim())
+        .filter(Boolean)
+
+      const dump = [proposal.title, proposal.pitch, ...saidByUser, proposal.firstStep]
+        .filter(Boolean)
+        .join('\n')
+
+      // One call: extract the shape, then plan the steps backwards from
+      // whatever finish line it found. Falls back to the proposal's own
+      // fields if it can't — a project the user asked for always gets
+      // created, it just arrives thinner.
+      let shaped: {
+        title?: string; end_goal?: string | null; summary?: string
+        tags?: string[]; tasks?: any[]; question?: string | null
+      } = {}
+      try {
+        shaped = (await api.post('utilities?resource=shape-project', {
+          dump,
+          title: proposal.title,
+          end_goal: proposal.pitch,
+        })) as typeof shaped
+      } catch (err) {
+        console.warn('[FocusChat] shaping failed, creating with what we have:', err)
+      }
+
+      const tasks = Array.isArray(shaped.tasks) ? shaped.tasks : []
+      const description = [shaped.summary || proposal.pitch, proposal.firstStep ? `First move: ${proposal.firstStep}` : null]
         .filter(Boolean)
         .join('\n\n')
 
@@ -43,15 +80,29 @@ export function FocusChatNewProjectCard({ proposal, resolved, dismissed, onResol
       // everywhere it appears afterwards. Left unset, it falls through to
       // the theme system's title-hash colour until the user shapes it.
       const created = await createProject({
-        title: proposal.title,
+        title: shaped.title || proposal.title,
         description,
         status: 'active',
         metadata: {
-          tasks: [],
+          tasks,
           progress: 0,
-          is_shaped: false,
-          end_goal: proposal.pitch,
+          // A project born from a real conversation with a real task list
+          // is shaped. Marking it unshaped filtered it out of the priority
+          // selector, the warm row, the chat's own portfolio and the
+          // answer card — which is exactly why it looked like it saved and
+          // then vanished.
+          is_shaped: tasks.length > 0,
+          end_goal: shaped.end_goal ?? proposal.pitch,
+          end_goal_source: 'guide',
           project_mode: 'completion',
+          ...(shaped.tags?.length ? { tags: shaped.tags } : {}),
+          // Kept verbatim: the shaper reads the user's turns back as
+          // evidence, so the project stays explainable months later.
+          conversation: turns.map(m => ({
+            role: (m.kind === 'you' ? 'user' : 'assistant') as ChatTurn['role'],
+            content: m.content,
+            at: new Date().toISOString(),
+          })),
           ...(proposal.ideaId ? { from_idea: proposal.ideaId } : {}),
         },
       })
@@ -73,8 +124,10 @@ export function FocusChatNewProjectCard({ proposal, resolved, dismissed, onResol
       useHomeAnswerStore.getState().setOverride(created.id)
 
       addToast({
-        title: 'Project created',
-        description: `"${proposal.title}" is now today's answer.`,
+        title: tasks.length > 0 ? `Created with ${tasks.length} steps` : 'Project created',
+        description: tasks.length > 0
+          ? `"${created.title}" is today's answer. Tap to see the plan.`
+          : `"${created.title}" is today's answer.`,
         variant: 'success',
         action: { label: 'Open it', onClick: () => navigate(`/projects/${created.id}`) },
       })
