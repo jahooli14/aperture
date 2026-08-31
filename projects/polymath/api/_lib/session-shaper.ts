@@ -23,6 +23,8 @@ import { generateText } from './gemini-chat.js'
 import { PLAIN_ENGLISH_RULES } from './plain-english.js'
 import { deriveSessionShapes, type SlotInput } from './session-shapes.js'
 import { filterGrounded, type Evidence, type GroundedItem, type RawItem } from './session-grounding.js'
+import { confidenceFor, reasoningLicence, type Confidence } from './session-confidence.js'
+import { pickGap, genericGapQuestion, type Gap } from './session-gap.js'
 
 /**
  * "3-6 depending on time." A 20-minute window that lists six things is
@@ -116,8 +118,18 @@ export interface ShapeContext {
   windowMinutes: number | null
   lastCloseout: string | null
   openTasks: string[]
+  /** Finished work, with when it was finished. Reasoning backwards from
+   *  the goal is impossible without knowing what's already done, and this
+   *  was being filtered out before the model ever saw it. */
+  doneTasks: { text: string; date: string | null }[]
+  /** Every close-out, not just the newest -- projects.last_closeout_text
+   *  is overwritten each session, so the history only exists in `sessions`. */
+  pastCloseouts: { text: string; date: string | null }[]
+  /** What the user said when the project was first shaped in the chat.
+   *  Their turns only: the app's own prose is not evidence. */
+  shapingTurns: string[]
   /** Recent captures, newest first, with the date they were made. */
-  fragments: { text: string; date: string | null }[]
+  fragments: { text: string; date: string | null; role?: string | null }[]
   slots: SlotInput[]
   /** What the user just said was wrong with the current list, if anything. */
   instruction?: string | null
@@ -137,18 +149,32 @@ export function buildEvidence(ctx: ShapeContext): Evidence[] {
     evidence.push({ id: `e${++n}`, label, text: text.trim() })
   }
 
-  add('from the project description', ctx.goal ?? '')
+  add('the finish line you set', ctx.goal ?? '')
   add('from your last close-out', ctx.lastCloseout ?? '')
+  ctx.pastCloseouts.forEach(c =>
+    add(c.date ? `from your close-out on ${c.date}` : 'from an earlier close-out', c.text),
+  )
   ctx.fragments.forEach(f =>
     add(f.date ? `from your note on ${f.date}` : 'from one of your notes', f.text),
   )
+  ctx.doneTasks.forEach(t =>
+    add(t.date ? `you finished this on ${t.date}` : 'already finished', t.text),
+  )
   ctx.openTasks.forEach(t => add('already on the project', t))
-  ctx.slots.filter(s => !s.filled).forEach(s => add('still undecided', `No ${s.name} chosen yet.`))
+  ctx.shapingTurns.forEach(t => add('from when you set this project up', t))
 
+  // Slots are deliberately NOT evidence. They're seeded by a model
+  // (slot-seed.ts), so counting them made a project the user has never
+  // described look like one the app knows -- which is precisely the
+  // condition under which it starts inventing.
   return evidence
 }
 
-export function buildShapePrompt(ctx: ShapeContext, evidence: Evidence[]): string {
+export function buildShapePrompt(
+  ctx: ShapeContext,
+  evidence: Evidence[],
+  confidence: Confidence = 'partial',
+): string {
   const count = itemCountForWindow(ctx.windowMinutes)
   const total = count + BENCH_SIZE
   const windowText = ctx.windowMinutes
@@ -178,6 +204,8 @@ ${evidence.length
   : '(nothing yet — the user has not said anything about this project)'}
 
 That list is the whole of it. Anything not in it, you do not know.
+
+${reasoningLicence(confidence)}
 ${reshaping}
 Give ${total} things to do. The FIRST ${count} are the session, in order. The
 last ${BENCH_SIZE} are spares — same quality, different angles, ready to swap in
@@ -234,9 +262,13 @@ export interface ShapeResult {
   bench: GroundedItem[]
   source: 'ai' | 'derived'
   /** Set when the app doesn't know enough to fill a session honestly. The
-   *  right move then is to ask, not to invent — and the answer becomes a
-   *  fragment, so the next session knows more than this one did. */
+   *  right move then is to ask, not to invent — and the answer is filed as
+   *  the thing it is, so it fixes the project rather than this one session. */
   needsInput: string | null
+  /** What kind of answer the question is fishing for, so the API knows
+   *  where to put it. Null when the question is the generic fallback. */
+  gap: Gap | null
+  confidence: Confidence
 }
 
 /**
@@ -259,7 +291,7 @@ export async function shapeSession(
   // found" for projects that plainly exist.
   const { data: project, error } = await supabase
     .from('projects')
-    .select('title, description, metadata, slots, last_closeout_text')
+    .select('title, description, metadata, slots, last_closeout_text, last_session_ended_at')
     .eq('id', projectId)
     .eq('user_id', userId)
     .single()
@@ -271,18 +303,59 @@ export async function shapeSession(
   if (!project) throw new Error('Project not found')
 
   const slots: SlotInput[] = Array.isArray(project.slots) ? project.slots : []
-  const openTasks: string[] = (project.metadata?.tasks || [])
-    .filter((t: any) => t && !t.done && typeof t.text === 'string')
-    .slice(0, 6)
-    .map((t: any) => t.text)
+  const allTasks: any[] = Array.isArray(project.metadata?.tasks) ? project.metadata.tasks : []
+  const shortDate = (iso?: string | null) =>
+    iso ? new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : null
 
-  const { data: fragmentRows } = await supabase
-    .from('fragments')
-    .select('text, created_at')
-    .eq('project_id', projectId)
-    .eq('user_id', userId)
-    .order('created_at', { ascending: false })
-    .limit(8)
+  const openTasks: string[] = allTasks
+    .filter(t => t && !t.done && typeof t.text === 'string')
+    .slice(0, 6)
+    .map(t => t.text)
+
+  // Finished work was being filtered out entirely, which made "the intro's
+  // done, so the transition is next" impossible to say even when it was
+  // plainly true. It's the other half of knowing where a project is.
+  const doneTasks = allTasks
+    .filter(t => t && t.done && typeof t.text === 'string')
+    .slice(-6)
+    .map(t => ({ text: t.text, date: shortDate(t.completed_at) }))
+
+  const [{ data: fragmentRows }, { data: sessionRows }] = await Promise.all([
+    supabase
+      .from('fragments')
+      .select('text, created_at, role')
+      .eq('project_id', projectId)
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(8),
+    // projects.last_closeout_text is overwritten every session, so the
+    // record of what actually happened over time only exists here.
+    supabase
+      .from('sessions')
+      .select('closeout_text, ended_at')
+      .eq('project_id', projectId)
+      .eq('user_id', userId)
+      .not('closeout_text', 'is', null)
+      .order('ended_at', { ascending: false })
+      .limit(5),
+  ])
+
+  const pastCloseouts = (sessionRows || [])
+    // The newest one is already in projects.last_closeout_text; don't say
+    // the same sentence to the model twice under two different labels.
+    .filter(r => r.closeout_text && r.closeout_text !== project.last_closeout_text)
+    .map(r => ({ text: r.closeout_text as string, date: shortDate(r.ended_at) }))
+
+  // The project's shaping chat: the user's turns only. The app's own prose
+  // is not evidence about the project, it's evidence about the app.
+  const conversation: any[] = Array.isArray(project.metadata?.conversation)
+    ? project.metadata.conversation
+    : []
+  const shapingTurns = conversation
+    .filter(t => t?.role === 'user' && typeof t.content === 'string')
+    .slice(-6)
+    .map(t => t.content.trim())
+    .filter(Boolean)
 
   const ctx: ShapeContext = {
     title: project.title,
@@ -290,36 +363,61 @@ export async function shapeSession(
     windowMinutes,
     lastCloseout: project.last_closeout_text || null,
     openTasks,
+    doneTasks,
+    pastCloseouts,
+    shapingTurns,
     fragments: (fragmentRows || [])
       .filter(f => f.text)
-      .map(f => ({
-        text: f.text,
-        date: f.created_at
-          ? new Date(f.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
-          : null,
-      })),
+      .map(f => ({ text: f.text, date: shortDate(f.created_at), role: f.role })),
     slots,
     instruction,
     currentItems,
   }
 
+  const ninetyDaysAgo = Date.now() - 90 * 86_400_000
+  const confidence = confidenceFor({
+    endGoal: project.metadata?.end_goal ?? null,
+    endGoalSource: project.metadata?.end_goal_source ?? null,
+    lastCloseout: project.last_closeout_text ?? null,
+    lastSessionEndedAt: project.last_session_ended_at ?? null,
+    movedSessionCount: pastCloseouts.length,
+    doneTaskCount: doneTasks.length,
+    openTaskCount: openTasks.length,
+    recentFragmentCount: (fragmentRows || []).filter(
+      f => f.created_at && new Date(f.created_at).getTime() > ninetyDaysAgo,
+    ).length,
+    shapingChatTurns: shapingTurns.length,
+  })
+
   const evidence = buildEvidence(ctx)
   const count = itemCountForWindow(windowMinutes)
+  const gap = pickGap({
+    title: project.title,
+    endGoal: ctx.goal,
+    lastCloseout: ctx.lastCloseout,
+    openTaskCount: openTasks.length,
+    unfilledSlots: slots.filter(sl => !sl.filled).map(sl => sl.name).filter(Boolean),
+  })
+  const ask = (): string => gap?.question ?? genericGapQuestion(project.title)
 
   // Nothing known means nothing to say. Inventing a plan here is exactly
   // what cost this feature its credibility, so ask instead — and let the
   // answer be the thing that makes next time better.
-  if (evidence.length === 0) {
+  // Nothing known means nothing to say, and there's no point spending a
+  // model call to find that out.
+  if (evidence.length === 0 || confidence === 'thin') {
     return {
       items: [{ text: `Open ${project.title} and look at where you left it.`, source: null }],
       bench: [],
       source: 'derived',
-      needsInput: `I don't know anything about ${project.title} yet. What are you actually trying to do with it?`,
+      needsInput: ask(),
+      gap,
+      confidence,
     }
   }
 
   try {
-    const response = await generateText(buildShapePrompt(ctx, evidence), {
+    const response = await generateText(buildShapePrompt(ctx, evidence, confidence), {
       responseFormat: 'json',
       // Low: this is a reporting task over a fixed evidence list, not a
       // creative one. High temperature here reads as confident invention.
@@ -340,17 +438,12 @@ export async function shapeSession(
 
     if (kept.length >= MIN_TRUSTWORTHY_ITEMS) {
       const { items, bench } = splitBench(kept, count)
-      return { items, bench, source: 'ai', needsInput: null }
+      return { items, bench, source: 'ai', needsInput: null, gap: null, confidence }
     }
 
     // Not enough survived. Show what did — those are real — and ask for
     // the rest rather than padding with things that aren't.
-    return {
-      items: kept,
-      bench: [],
-      source: 'ai',
-      needsInput: `That's all I can say for certain about ${project.title}. What are you working on with it right now?`,
-    }
+    return { items: kept, bench: [], source: 'ai', needsInput: ask(), gap, confidence }
   } catch (e) {
     console.error('[session-shaper] generation failed, falling back:', e)
   }
@@ -366,5 +459,7 @@ export async function shapeSession(
     bench: [],
     source: 'derived',
     needsInput: null,
+    gap: null,
+    confidence,
   }
 }

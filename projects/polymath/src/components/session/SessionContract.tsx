@@ -184,7 +184,11 @@ export function SessionContract({
   }
 
   const handleSubmitCloseout = async () => {
-    const result = await closeSession(closeoutText, mvsSeedMinutes ?? undefined)
+    // The ticks go to the server, not just into the close-out text: a
+    // ticked item that matches an open task marks it done, which is what
+    // makes "what's already finished" real evidence next time.
+    const doneItems = (active?.shapes ?? []).filter((_, i) => ticked.has(i)).map(sh => sh.text)
+    const result = await closeSession(closeoutText, mvsSeedMinutes ?? undefined, doneItems)
     if (result) setPhase('done')
   }
 
