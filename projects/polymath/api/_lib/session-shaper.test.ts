@@ -107,14 +107,14 @@ describe('buildShapePrompt', () => {
     goal: null,
     windowMinutes: 60,
     lastCloseout: null as string | null,
-    openTasks: [] as string[],
+    openTasks: [] as { id: string; text: string }[],
     doneTasks: [] as { text: string; date: string | null }[],
     pastCloseouts: [] as { text: string; date: string | null }[],
     shapingTurns: [] as string[],
     fragments: [] as { text: string; date: string | null }[],
     slots: [] as { name: string; filled: boolean }[],
   }
-  const prompt = (ctx: typeof base) => buildShapePrompt(ctx, buildEvidence(ctx))
+  const prompt = (ctx: typeof base) => buildShapePrompt(ctx, buildEvidence(ctx).evidence)
 
   it('asks for the window count plus a bench of spares', () => {
     expect(prompt(base)).toContain(`Give ${5 + BENCH_SIZE} things`)
@@ -232,7 +232,7 @@ function stubClient(opts: {
 describe('buildEvidence', () => {
   const base = {
     title: 'Graham song', goal: null as string | null, windowMinutes: 60,
-    lastCloseout: null as string | null, openTasks: [] as string[],
+    lastCloseout: null as string | null, openTasks: [] as { id: string; text: string }[],
     doneTasks: [] as { text: string; date: string | null }[],
     pastCloseouts: [] as { text: string; date: string | null }[],
     shapingTurns: [] as string[],
@@ -244,28 +244,47 @@ describe('buildEvidence', () => {
     // slot-seed.ts invents these. Counting them made a project the user
     // has never described look like one the app knows — the exact
     // condition under which it starts filling gaps with invention.
-    const ev = buildEvidence({ ...base, slots: [{ name: 'first track', filled: false }] })
-    expect(ev).toHaveLength(0)
+    const { evidence } = buildEvidence({ ...base, slots: [{ name: 'first track', filled: false }] })
+    expect(evidence).toHaveLength(0)
   })
 
   it('includes finished work, which used to be filtered out entirely', () => {
-    const ev = buildEvidence({ ...base, doneTasks: [{ text: 'record the intro', date: '3 Aug' }] })
-    expect(ev[0].text).toBe('record the intro')
-    expect(ev[0].label).toContain('finished this on 3 Aug')
+    const { evidence } = buildEvidence({ ...base, doneTasks: [{ text: 'record the intro', date: '3 Aug' }] })
+    expect(evidence[0].text).toBe('record the intro')
+    expect(evidence[0].label).toContain('finished this on 3 Aug')
   })
 
   it('includes older close-outs, not just the one that overwrote the rest', () => {
-    const ev = buildEvidence({
+    const { evidence } = buildEvidence({
       ...base,
       lastCloseout: 'Got the intro sorted.',
       pastCloseouts: [{ text: 'Laid down a rough vocal.', date: '1 Aug' }],
     })
-    expect(ev.map(e => e.text)).toContain('Laid down a rough vocal.')
+    expect(evidence.map(e => e.text)).toContain('Laid down a rough vocal.')
   })
 
   it('includes what the user said when shaping the project', () => {
-    const ev = buildEvidence({ ...base, shapingTurns: ['It should sound like the demo but tighter'] })
-    expect(ev[0].text).toContain('sound like the demo')
+    const { evidence } = buildEvidence({ ...base, shapingTurns: ['It should sound like the demo but tighter'] })
+    expect(evidence[0].text).toContain('sound like the demo')
+  })
+
+  it('carries the id of the open task each piece of evidence came from', () => {
+    // This is what lets a session item grounded in an open task be traced
+    // back to it at close time by id, surviving whatever the model
+    // paraphrases the item's wording into.
+    const { evidence, taskIdByEvidenceId } = buildEvidence({
+      ...base,
+      openTasks: [{ id: 'task-7', text: 'Fix the transition out of track two' }],
+    })
+    const match = evidence.find(e => e.text === 'Fix the transition out of track two')
+    expect(match).toBeDefined()
+    expect(taskIdByEvidenceId[match!.id]).toBe('task-7')
+  })
+
+  it('does not attach a task id to evidence that is not an open task', () => {
+    const { evidence, taskIdByEvidenceId } = buildEvidence({ ...base, goal: 'A finished mix' })
+    expect(Object.keys(taskIdByEvidenceId)).toHaveLength(0)
+    expect(evidence[0].text).toBe('A finished mix')
   })
 })
 
@@ -273,7 +292,7 @@ describe('shapeSession', () => {
   const project = {
     title: 'Graham song',
     description: 'a remix',
-    metadata: { end_goal: 'released', tasks: [{ text: 'mix it', done: false }] },
+    metadata: { end_goal: 'released', tasks: [{ id: 't1', text: 'mix it', done: false }] },
     slots: [],
     last_closeout_text: 'Next: fix the transition out of track two.',
   }

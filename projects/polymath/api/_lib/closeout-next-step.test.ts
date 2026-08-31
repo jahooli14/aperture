@@ -69,3 +69,56 @@ describe('ticks and the next step compose', () => {
     expect(tasks[1]).toMatchObject({ text: 'fix the transition', done: false })
   })
 })
+
+/**
+ * The task-done matching from the close handler in api/utilities.ts,
+ * mirrored here for unit testing without a database. Two independent code
+ * traces found the same failure: the shaper's own prompt teaches it to
+ * paraphrase the task it's grounded in, so matching purely on ticked TEXT
+ * against stored task text silently misses most real completions. This is
+ * the id-first, text-fallback logic that replaced it.
+ */
+function markDoneTasks(
+  tasks: { id: string; text: string; done: boolean }[],
+  ticked: { text: string; taskId: string | null }[],
+) {
+  const tickedTaskIds = new Set(ticked.map(t => t.taskId).filter((id): id is string => !!id))
+  const tickedTextLower = new Set(ticked.map(t => t.text.toLowerCase().trim()))
+  return tasks.map(t => {
+    if (t.done) return t
+    const matches = tickedTaskIds.has(t.id) || tickedTextLower.has(t.text.toLowerCase().trim())
+    return matches ? { ...t, done: true } : t
+  })
+}
+
+describe('task-done matching survives paraphrase', () => {
+  const tasks = [{ id: 'task-42', text: 'Fix the transition out of track two', done: false }]
+
+  it('marks the task done when the shaper paraphrased it — the real failure that shipped', () => {
+    // This exact paraphrase is the session-shaper's OWN worked example
+    // (session-shaper.ts) for grounding a session item in this exact task.
+    const ticked = [{ text: 'Play track two from the top and find where it breaks.', taskId: 'task-42' }]
+    expect(markDoneTasks(tasks, ticked)[0].done).toBe(true)
+  })
+
+  it('would have silently failed on text alone', () => {
+    const ticked = [{ text: 'Play track two from the top and find where it breaks.', taskId: null }]
+    expect(markDoneTasks(tasks, ticked)[0].done).toBe(false)
+  })
+
+  it('still matches by text when no id is present — the offline/derived fallback path', () => {
+    const ticked = [{ text: 'Fix the transition out of track two', taskId: null }]
+    expect(markDoneTasks(tasks, ticked)[0].done).toBe(true)
+  })
+
+  it('does not mark a task done by an unrelated ticked item', () => {
+    const ticked = [{ text: 'Bounce a rough mix.', taskId: 'some-other-task' }]
+    expect(markDoneTasks(tasks, ticked)[0].done).toBe(false)
+  })
+
+  it('leaves an already-done task alone', () => {
+    const done = [{ id: 'task-42', text: 'Fix the transition out of track two', done: true }]
+    const result = markDoneTasks(done, [{ text: 'anything', taskId: 'task-42' }])
+    expect(result[0].done).toBe(true)
+  })
+})

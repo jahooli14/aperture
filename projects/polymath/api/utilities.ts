@@ -46,7 +46,7 @@ import { PLAIN_ENGLISH_RULES, CHAT_TURN_RULES } from './_lib/plain-english.js'
 import { DEFAULT_IDEA_BRIEF } from './_lib/project-ideas/default-prompt.js'
 import type { CoverageGrid } from '../src/types'
 import { deriveSessionShapes, needsMvsSeed, measuredMvs, type SlotInput, type SessionShape } from './_lib/session-shapes.js'
-import { shapeSession, sanitizeItems } from './_lib/session-shaper.js'
+import { shapeSession } from './_lib/session-shaper.js'
 import { shapeProjectFromDump } from './_lib/project-shaping.js'
 import { generateTaskSpine, toStoredTasks } from './_lib/task-spine.js'
 import { pickNextSparkType, type SparkHistoryEntry } from './_lib/spark-types.js'
@@ -1883,7 +1883,15 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
       if (!shaped) return res.status(422).json({ error: "Couldn't make sense of that." })
 
       const title = (typeof givenTitle === 'string' && givenTitle.trim()) || shaped.title
-      const endGoal = (typeof givenGoal === 'string' && givenGoal.trim()) || shaped.endGoal
+      // The extraction wins when it found one -- it's checked against the
+      // dump (project-shaping.ts refuses to invent a finish line the user
+      // didn't say), where a caller-supplied value is often just a loose
+      // pitch that hasn't been validated as an actual done-condition at
+      // all. The caller's value is only the fallback for when the dump
+      // genuinely didn't contain one. Precedence used to run the other way,
+      // which meant this whole extraction step never did anything on the
+      // one call site that always supplies both fields.
+      const endGoal = shaped.endGoal || (typeof givenGoal === 'string' && givenGoal.trim()) || null
 
       // No goal means nothing to plan backwards from, so don't guess a
       // spine -- hand back the one question instead.
@@ -2083,10 +2091,24 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
 
     // The planning phase agreed a list; start with it rather than
     // re-deriving one behind the user's back. Derivation is only the
-    // fallback for a caller that skipped planning entirely.
-    const agreed = sanitizeItems(req.body?.items, 6)
+    // fallback for a caller that skipped planning entirely. Each item may
+    // carry the real id of the open task it's grounded in -- kept through
+    // to close time so a tick can mark that task done without depending on
+    // the model's session-item wording matching the task's stored text.
+    const rawItems = Array.isArray(req.body?.items) ? req.body.items : []
+    const agreed: { text: string; taskId: string | null }[] = rawItems
+      .map((entry: unknown) => {
+        if (typeof entry === 'string') return { text: entry, taskId: null }
+        if (entry && typeof entry === 'object' && typeof (entry as any).text === 'string') {
+          const e = entry as any
+          return { text: e.text, taskId: typeof e.taskId === 'string' ? e.taskId : null }
+        }
+        return null
+      })
+      .filter((x: { text: string; taskId: string | null } | null): x is { text: string; taskId: string | null } => !!x)
+      .slice(0, 6)
     const shapes: SessionShape[] = agreed.length > 0
-      ? agreed.map(text => ({ text, source: 'shaped' as const, partial: false }))
+      ? agreed.map(({ text, taskId }) => ({ text, source: 'shaped' as const, partial: false, taskId }))
       : deriveSessionShapes({
           lastClosingText: project.last_closeout_text ?? null,
           slots,
@@ -2144,14 +2166,36 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
     // close-out box and were then thrown away — so "the tasks have been
     // checked off properly" was never true of the data, and the shaper had
     // no way to know what was already finished.
-    const ticked: string[] = Array.isArray(done_items)
-      ? done_items.filter((x: unknown): x is string => typeof x === 'string')
+    //
+    // Two code traces independently found the same failure: the shaper's
+    // own prompt teaches it to paraphrase the task it's grounded in ("Fix
+    // the transition out of track two" -> "Play track two from the top and
+    // find where it breaks"), so matching ticked text against stored task
+    // text silently missed almost every real completion. Each ticked item
+    // now carries the real task id it was grounded in (threaded through
+    // session-grounding.ts's citation check), and that id is what gets
+    // matched -- text is kept only as a fallback for items with no id
+    // (the ignition move, offline-derived shapes, anything typed by hand).
+    const ticked: { text: string; taskId: string | null }[] = Array.isArray(done_items)
+      ? done_items
+          .map((x: unknown) => {
+            if (typeof x === 'string') return { text: x, taskId: null }
+            if (x && typeof x === 'object' && typeof (x as any).text === 'string') {
+              return { text: (x as any).text, taskId: typeof (x as any).taskId === 'string' ? (x as any).taskId : null }
+            }
+            return null
+          })
+          .filter((x: { text: string; taskId: string | null } | null): x is { text: string; taskId: string | null } => !!x)
       : []
+    const tickedTaskIds = new Set(ticked.map(t => t.taskId).filter((id): id is string => !!id))
+    const tickedTextLower = new Set(ticked.map(t => t.text.toLowerCase().trim()))
     const sessionItems: any[] = Array.isArray(session.items) ? session.items : []
-    const itemsWithOutcome = sessionItems.map((it: any) => ({
-      ...it,
-      done: ticked.includes(typeof it === 'string' ? it : it?.text),
-    }))
+    const itemsWithOutcome = sessionItems.map((it: any) => {
+      const itText = typeof it === 'string' ? it : it?.text
+      const itTaskId = typeof it === 'object' ? it?.taskId : null
+      const done = (itTaskId && tickedTaskIds.has(itTaskId)) || tickedTextLower.has(String(itText).toLowerCase().trim())
+      return { ...it, done }
+    })
 
     const { error: updateErr } = await supabase
       .from('sessions')
@@ -2185,14 +2229,17 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
     if (ticked.length > 0) {
       const proj = projRow
       const tasks = Array.isArray(proj?.metadata?.tasks) ? proj.metadata.tasks : []
-      const tickedLower = new Set(ticked.map(t => t.toLowerCase().trim()))
       let changed = false
       const nextTasks = tasks.map((t: any) => {
-        if (!t?.done && typeof t.text === 'string' && tickedLower.has(t.text.toLowerCase().trim())) {
-          changed = true
-          return { ...t, done: true, completed_at: endedAt.toISOString() }
-        }
-        return t
+        if (t?.done || typeof t?.id !== 'string') return t
+        // Id match first -- survives paraphrase. Text match only as a
+        // fallback, for the derived/offline path where items were never
+        // grounded against a task and so never got an id at all.
+        const matches = tickedTaskIds.has(t.id) ||
+          (typeof t.text === 'string' && tickedTextLower.has(t.text.toLowerCase().trim()))
+        if (!matches) return t
+        changed = true
+        return { ...t, done: true, completed_at: endedAt.toISOString() }
       })
       if (changed) projectUpdate.metadata = { ...(proj?.metadata ?? {}), tasks: nextTasks }
     }

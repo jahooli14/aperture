@@ -152,6 +152,41 @@ describe('filterGrounded', () => {
       TITLE,
     )
     expect(kept[0].source).toBeNull()
+    expect(kept[0].taskId).toBeNull()
+  })
+
+  it('traces an item back to the open task it is grounded in, by id', () => {
+    // The exact failure two independent code traces found: a ticked
+    // session item is usually the model's PARAPHRASE of the task it's
+    // grounded in, not the task's stored text -- so matching by string
+    // equality at close time silently fails. This is what makes matching
+    // by id possible instead.
+    const { kept } = filterGrounded(
+      [{ text: 'Play track two from the top and find where it breaks.', evidence: ['e1'] }],
+      EVIDENCE,
+      TITLE,
+      { e1: 'task-42' },
+    )
+    expect(kept[0].taskId).toBe('task-42')
+  })
+
+  it('gives no task id to an item grounded in evidence that is not a task', () => {
+    const { kept } = filterGrounded(
+      [{ text: 'Take the second verse vocal again.', evidence: ['e2'] }],
+      EVIDENCE,
+      TITLE,
+      { e1: 'task-42' },
+    )
+    expect(kept[0].taskId).toBeNull()
+  })
+
+  it('defaults to no task ids at all when none are passed', () => {
+    const { kept } = filterGrounded(
+      [{ text: 'Fix the transition out of track two.', evidence: ['e1'] }],
+      EVIDENCE,
+      TITLE,
+    )
+    expect(kept[0].taskId).toBeNull()
   })
 
   it('will not let a real citation launder an invented specific', () => {
