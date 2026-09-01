@@ -15,7 +15,7 @@
  * fragment text it points at, rather than trusting the model's say-so.
  */
 
-const MORPH_COOLDOWN_DAYS = 14
+export const MORPH_COOLDOWN_DAYS = 14
 
 export function canMorphProject(lastMorphedAt: string | null, now: Date = new Date()): boolean {
   if (!lastMorphedAt) return true
