@@ -31,6 +31,16 @@ import { isAdminItem } from './session-shaper.js'
 export const MIN_SPINE_STEPS = 4
 export const MAX_SPINE_STEPS = 8
 
+/**
+ * The very first spine a project gets, at creation, is a different shape
+ * from a replan: 3 broad moves that together are about an hour's work, not
+ * 4-8 tight ones. A brand-new project doesn't have the texture yet to plan
+ * tightly against, and pretending otherwise is how creation ends up
+ * inventing detail nobody said. Loose now, precise once you're in it.
+ */
+export const FIRST_CUT_STEPS = 3
+export const MIN_FIRST_CUT_STEPS = 2
+
 export interface SpineInput {
   title: string
   /** What done looks like, in the user's words. The whole thing hangs off
