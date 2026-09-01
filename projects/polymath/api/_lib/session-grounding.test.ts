@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   stem,
   extractSpecifics,
+  hasAdequateCoverage,
   hasOnlyKnownSpecifics,
   evidenceHaystack,
   citationSupports,
@@ -112,6 +113,37 @@ describe('citationSupports', () => {
 
   it('still rejects something with nothing in common at all', () => {
     expect(citationSupports('Book a mastering engineer.', GOAL)).toBe(false)
+  })
+})
+
+describe('hasAdequateCoverage', () => {
+  const evidence = [
+    { id: 'e1', label: 'goal', text: 'A finished mix sent to Graham before his party.' },
+    { id: 'e2', label: 'closeout', text: 'Got the intro sorted. Next: fix the transition out of track two.' },
+  ]
+
+  it('passes a sentence built mostly from real evidence words', () => {
+    expect(hasAdequateCoverage('Fix the transition out of track two before sending it to Graham.', evidence)).toBe(true)
+  })
+
+  it('fails a sentence that shares one word and invents the rest', () => {
+    // The exact composite failure: "shelf" alone got a fabricated
+    // sentence past the per-citation check.
+    expect(hasAdequateCoverage(
+      'Fix the transition using a Neumann U87 routed through the SSL desk at 96kHz.',
+      evidence,
+    )).toBe(false)
+  })
+
+  it('passes a generic sentence with no distinctive claims at all', () => {
+    expect(hasAdequateCoverage('Open it and see where things are.', evidence)).toBe(true)
+  })
+
+  it('does not let common verbs count toward coverage', () => {
+    // "work", "sort" etc are excluded as weak matches -- a sentence that
+    // only shares those with the evidence still has to fail if the rest
+    // of it is invented.
+    expect(hasAdequateCoverage('Work on it using a totally different mixing console.', evidence)).toBe(false)
   })
 })
 

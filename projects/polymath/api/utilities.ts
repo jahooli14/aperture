@@ -51,9 +51,9 @@ import { shapeProjectFromDump } from './_lib/project-shaping.js'
 import { generateTaskSpine, toStoredTasks } from './_lib/task-spine.js'
 import { pickNextSparkType, type SparkHistoryEntry } from './_lib/spark-types.js'
 import { generateSpark } from './_lib/spark-generator.js'
-import { canMorphProject, anyProjectMorphedToday } from './_lib/morph.js'
+import { canMorphProject, anyProjectMorphedToday, MORPH_COOLDOWN_DAYS } from './_lib/morph.js'
 import { considerMorph } from './_lib/morph-generator.js'
-import { getStalledProjects, proposeComposite } from './_lib/composite-generator.js'
+import { getStalledProjects, attachFragments, proposeComposite } from './_lib/composite-generator.js'
 import { mineJoints } from './_lib/joint-miner.js'
 import { runDriftDecay } from './_lib/drift-runner.js'
 
@@ -2705,7 +2705,35 @@ async function handleExecutionProposals(req: VercelRequest, res: VercelResponse)
       .neq('state', 'harvested')
       .limit(100)
 
-    const eligible = (projects ?? []).filter(p => canMorphProject(p.last_session_ended_at))
+    // The per-project 14-day cooldown has to be checked against when a
+    // project was last MORPHED, not when it was last worked on. It used
+    // to be passed last_session_ended_at instead -- session recency, a
+    // different question -- which meant a project you're actively
+    // feeding fresh captures into (exactly where a real insight would
+    // land) could never be eligible, while an abandoned one always was.
+    // Rather than add a schema column for this, the `proposals` table
+    // already records it: the most recent 'morph' proposal per project.
+    // Anything older than the cooldown window can't affect eligibility
+    // either way (canMorphProject(null) is already true), so bounding the
+    // query to it keeps this cheap regardless of how much morph history
+    // accumulates.
+    const { data: pastMorphs } = await supabase
+      .from('proposals')
+      .select('project_id, created_at')
+      .eq('user_id', userId)
+      .eq('kind', 'morph')
+      .gte('created_at', new Date(Date.now() - MORPH_COOLDOWN_DAYS * 24 * 60 * 60 * 1000).toISOString())
+      .order('created_at', { ascending: false })
+      .limit(500)
+
+    const lastMorphedByProject = new Map<string, string>()
+    for (const row of pastMorphs ?? []) {
+      if (row.project_id && !lastMorphedByProject.has(row.project_id)) {
+        lastMorphedByProject.set(row.project_id, row.created_at)
+      }
+    }
+
+    const eligible = (projects ?? []).filter(p => canMorphProject(lastMorphedByProject.get(p.id) ?? null))
     if (eligible.length === 0) {
       return res.status(200).json({ proposed: false, reason: 'no eligible projects (cooldown)' })
     }
@@ -2788,10 +2816,13 @@ async function handleExecutionProposals(req: VercelRequest, res: VercelResponse)
       return res.status(200).json({ proposed: false, reason: 'a composite is already pending review' })
     }
 
-    const stalled = await getStalledProjects(supabase, userId)
-    if (stalled.length < 2) {
+    const stalledBase = await getStalledProjects(supabase, userId)
+    if (stalledBase.length < 2) {
       return res.status(200).json({ proposed: false, reason: 'fewer than 2 stalled projects' })
     }
+    // Real material to draw on, so the fusion idea can name something
+    // concrete rather than the model guessing what either project has.
+    const stalled = await attachFragments(supabase, userId, stalledBase)
 
     const { data: joints } = await supabase
       .from('joints')
@@ -2816,6 +2847,7 @@ async function handleExecutionProposals(req: VercelRequest, res: VercelResponse)
         project_id_2: candidate.projectIdB,
         joint_id: joint.id,
         proposed_text: candidate.proposedText,
+        cited_fragment_ids: candidate.citedFragmentIds,
       })
       if (insertErr) {
         console.error('[utilities/proposals] generate-composite insert failed:', insertErr)

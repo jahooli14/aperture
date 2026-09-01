@@ -178,6 +178,39 @@ export function citationSupports(itemText: string, evidenceText: string): boolea
 }
 
 /**
+ * Coverage across the WHOLE evidence set, as a second gate alongside
+ * citationSupports rather than a replacement for it.
+ *
+ * citationSupports asks "does ONE cited entry share a real word with this
+ * item" -- right for a session item, which is usually one short move
+ * grounded in one task or close-out. A composite fuses SEVERAL pieces of
+ * evidence into one sentence, and that per-citation check can pass on a
+ * single shared word ("shelf") while every other specific word in the
+ * same sentence ("steel tubing", "turntable") traces to nothing at all --
+ * exactly the smuggled-invention failure this whole module exists to
+ * catch, just spread across a longer sentence instead of concentrated in
+ * one citation.
+ *
+ * This checks that a real majority of the item's own distinctive words
+ * appear SOMEWHERE in the full evidence, not just the one word that
+ * happened to get it past citationSupports. Scoped to composites for now
+ * -- session items are short and single-sourced enough that the per-
+ * citation check alone has held up under test.
+ */
+export function hasAdequateCoverage(text: string, evidence: Evidence[], minRatio = 0.5): boolean {
+  // A slightly higher length floor than contentWords' own 3 -- a lone
+  // short filler word ("see", "got") is common enough in ordinary prose
+  // that penalising a whole sentence for lacking one reads as a false
+  // alarm, where citationSupports' single-word match doesn't have that
+  // problem (it only needs ONE real hit, not a majority).
+  const words = contentWords(text).filter(w => w.length >= 4 && !WEAK_MATCH_WORDS.has(w))
+  if (words.length === 0) return true
+  const haystackWords = new Set(evidence.flatMap(e => contentWords(e.text)))
+  const hits = words.filter(w => haystackWords.has(w)).length
+  return hits / words.length >= minRatio
+}
+
+/**
  * Drops every item the app can't stand behind. Returns what survived, and
  * what didn't with the reason — the rejections are logged, not shown, but
  * they're the thing to look at when the lists come back thin.
