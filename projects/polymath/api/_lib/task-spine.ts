@@ -39,7 +39,6 @@ export const MAX_SPINE_STEPS = 8
  * inventing detail nobody said. Loose now, precise once you're in it.
  */
 export const FIRST_CUT_STEPS = 3
-export const MIN_FIRST_CUT_STEPS = 2
 
 export interface SpineInput {
   title: string
@@ -127,7 +126,7 @@ Respond with JSON only:
  * Model output -> a spine. Same shape of cleaning as session items, plus
  * the length rules that make it a spine rather than a backlog.
  */
-export function sanitizeSteps(raw: unknown): { text: string; evidence?: string[] }[] {
+export function sanitizeSteps(raw: unknown, maxCount: number = MAX_SPINE_STEPS): { text: string; evidence?: string[] }[] {
   if (!Array.isArray(raw)) return []
   const seen = new Set<string>()
   const out: { text: string; evidence?: string[] }[] = []
@@ -146,7 +145,7 @@ export function sanitizeSteps(raw: unknown): { text: string; evidence?: string[]
         ? entry.evidence.filter((x: unknown): x is string => typeof x === 'string')
         : undefined,
     })
-    if (out.length >= MAX_SPINE_STEPS) break
+    if (out.length >= maxCount) break
   }
   return out
 }
@@ -213,4 +212,111 @@ export async function generateStoredSpine(
   input: SpineInput,
 ): Promise<StoredTask[]> {
   return toStoredTasks(await generateTaskSpine(input))
+}
+
+/**
+ * A brand-new project doesn't get a finish line -- an ongoing craft like
+ * "producing music" or "DJing" has no "done" to plan backwards from, and
+ * forcing one meant either inventing a fake one or rewriting it every time
+ * the project moved on. What it does have, from the moment it's created, is
+ * a description of what it actually is. That's what these plan FORWARD
+ * from: not "what had to be true before done", but "what's a real first
+ * move against this".
+ */
+export interface FirstCutInput {
+  title: string
+  /** What the project actually is, in the user's words. The anchor —
+   *  with nothing here there is nothing to plan from. */
+  description: string
+  /** Anything else said while creating it -- conversation turns, a first
+   *  step they mentioned. Extra evidence, not required. */
+  said: string[]
+}
+
+export function buildFirstCutEvidence(title: string, description: string, said: string[]): Evidence[] {
+  const evidence: Evidence[] = []
+  let n = 0
+  const add = (label: string, text: string) => {
+    if (!text?.trim()) return
+    evidence.push({ id: `e${++n}`, label, text: text.trim() })
+  }
+  add('what this project is', description)
+  said.forEach(s => add('from what you said about it', s))
+  return evidence
+}
+
+export function buildFirstCutPrompt(input: FirstCutInput, evidence: Evidence[]): string {
+  return `"${input.title}" is a brand-new project, just started. Give it a first move.
+
+WHAT THIS PROJECT IS:
+${evidence.length
+  ? evidence.map(e => `[${e.id}] ${e.text}`).join('\n')
+  : '(nothing yet)'}
+
+That's the whole of it. Anything not in it, you do not know.
+
+HOW TO DO THIS -- forwards, not backwards:
+There's no finish line yet, and none should be invented. Don't plan
+backwards from a "done" that doesn't exist. Instead give ${FIRST_CUT_STEPS}
+broad first moves: things that would genuinely get someone started today,
+which together would fill about an hour.
+
+They should be coarse ON PURPOSE. The precise plan comes later, once
+they're actually in it and can see what the real next steps are — naming
+the wrong specifics now is worse than leaving them open.
+
+WHAT EACH MOVE MUST BE:
+- A physical, concrete action against the work: open, sketch, record,
+  write, build, try, make, send, book.
+- Broad enough to leave room. "Sketch a rough loop" not "sketch a four-bar
+  loop in C minor at 120bpm" — the second one invents specifics nobody
+  gave you.
+- Something that could plausibly happen in one sitting, today.
+
+WHAT NONE OF THEM MAY BE:
+- Admin pretending to be building: research, plan, outline, decide, list,
+  consider, review, think about, brainstorm, explore.
+- Anything naming a tool, brand, format, instrument, person or place that
+  does NOT appear verbatim above.
+- A finish line, a deadline, or a description of what "done" looks like —
+  that's not what's being asked for here.
+
+Give exactly ${FIRST_CUT_STEPS} moves, in the order they'd make sense to do.
+Cite the evidence id each one comes from; a move that names nothing beyond
+the project's own title needs no citation.
+
+${PLAIN_ENGLISH_RULES}
+
+Respond with JSON only:
+{ "steps": [ { "text": "...", "evidence": ["e1"] } ] }`
+}
+
+/**
+ * Generates the first-cut list. Same honesty rule as the spine: nothing
+ * beats an invented set of three, so a project with no description yet
+ * gets an empty list back rather than three plausible-sounding guesses.
+ */
+export async function generateFirstCutTasks(input: FirstCutInput): Promise<SpineStep[]> {
+  const evidence = buildFirstCutEvidence(input.title, input.description, input.said)
+  if (evidence.length === 0) return []
+
+  try {
+    const response = await generateText(buildFirstCutPrompt(input, evidence), {
+      responseFormat: 'json',
+      temperature: 0.4,
+      maxTokens: 800,
+    })
+    const cleaned = sanitizeSteps(JSON.parse(response)?.steps, FIRST_CUT_STEPS)
+    const { kept, rejected } = filterGrounded(cleaned, evidence, input.title)
+    if (rejected.length > 0) {
+      console.warn(
+        `[task-spine] dropped ${rejected.length} ungrounded first-cut step(s) for "${input.title}":`,
+        rejected.map(r => `"${r.text}" — ${r.reason}`),
+      )
+    }
+    return kept.slice(0, FIRST_CUT_STEPS)
+  } catch (e) {
+    console.error('[task-spine] first-cut generation failed:', e)
+    return []
+  }
 }

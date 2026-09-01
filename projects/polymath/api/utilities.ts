@@ -48,7 +48,7 @@ import type { CoverageGrid } from '../src/types'
 import { deriveSessionShapes, needsMvsSeed, measuredMvs, type SlotInput, type SessionShape } from './_lib/session-shapes.js'
 import { shapeSession } from './_lib/session-shaper.js'
 import { shapeProjectFromDump } from './_lib/project-shaping.js'
-import { generateTaskSpine, toStoredTasks } from './_lib/task-spine.js'
+import { generateTaskSpine, generateFirstCutTasks, toStoredTasks } from './_lib/task-spine.js'
 import { pickNextSparkType, type SparkHistoryEntry } from './_lib/spark-types.js'
 import { generateSpark } from './_lib/spark-generator.js'
 import { canMorphProject, anyProjectMorphedToday } from './_lib/morph.js'
@@ -68,7 +68,7 @@ function getCronUserId(req: VercelRequest): string | null {
 }
 
 const EXECUTION_SESSIONS_RESOURCES = new Set([
-  'shape', 'shape-project', 'replan',
+  'shape', 'shape-project', 'first-cut-tasks', 'replan',
   'start', 'close', 'pending-closeout', 'log-retro', 'declare-live',
   'live-reask', 'different-thing-status', 'harvest', 'mirror', 'book',
 ])
@@ -1910,6 +1910,34 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
     } catch (e) {
       const message = e instanceof Error ? e.message : 'Could not shape that project.'
       console.error('[utilities/shape-project] failed:', message)
+      return res.status(500).json({ error: message })
+    }
+  }
+
+  // ─── FIRST CUT (3 broad tasks for a brand-new project, no finish line) ─
+  // A new project doesn't get a spine planned backwards from a "done" it
+  // doesn't have — it gets a description-anchored first move, loose on
+  // purpose. Kept separate from shape-project (which still does its own
+  // title/tag extraction for the quick-add path): this resource takes an
+  // already-agreed title and description and only generates the tasks.
+  if (resource === 'first-cut-tasks') {
+    if (req.method !== 'POST') return res.status(405).json({ error: 'POST required' })
+    const { title, description, said } = req.body || {}
+    if (typeof title !== 'string' || !title.trim()) return res.status(400).json({ error: 'title required' })
+    if (typeof description !== 'string' || !description.trim()) {
+      return res.status(200).json({ tasks: [] })
+    }
+
+    try {
+      const steps = await generateFirstCutTasks({
+        title: title.trim(),
+        description: description.trim(),
+        said: Array.isArray(said) ? said.filter((x: unknown): x is string => typeof x === 'string') : [],
+      })
+      return res.status(200).json({ tasks: toStoredTasks(steps) })
+    } catch (e) {
+      const message = e instanceof Error ? e.message : 'Could not shape the first tasks.'
+      console.error('[utilities/first-cut-tasks] failed:', message)
       return res.status(500).json({ error: message })
     }
   }

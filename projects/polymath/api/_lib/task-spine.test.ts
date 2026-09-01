@@ -2,11 +2,15 @@ import { describe, it, expect } from 'vitest'
 import {
   buildSpinePrompt,
   buildEvidenceFromSaid,
+  buildFirstCutPrompt,
+  buildFirstCutEvidence,
   sanitizeSteps,
   toStoredTasks,
   MIN_SPINE_STEPS,
   MAX_SPINE_STEPS,
+  FIRST_CUT_STEPS,
   type SpineInput,
+  type FirstCutInput,
 } from './task-spine.js'
 
 const SAID = [
@@ -82,6 +86,57 @@ describe('buildSpinePrompt', () => {
   })
 })
 
+describe('buildFirstCutEvidence', () => {
+  it('anchors on the description, not a finish line', () => {
+    const ev = buildFirstCutEvidence('Producing my first track', 'Making original tracks, not just DJing.', [])
+    expect(ev[0].text).toBe('Making original tracks, not just DJing.')
+    expect(ev[0].label).toBe('what this project is')
+  })
+
+  it('is empty with no description and nothing said', () => {
+    expect(buildFirstCutEvidence('Untitled', '', [])).toEqual([])
+  })
+
+  it('folds in anything else said', () => {
+    const ev = buildFirstCutEvidence('Producing my first track', 'Making original tracks.', ['I want to try a lo-fi sound first'])
+    expect(ev.map(e => e.text)).toContain('I want to try a lo-fi sound first')
+  })
+})
+
+describe('buildFirstCutPrompt', () => {
+  const FIRST_CUT_INPUT: FirstCutInput = {
+    title: 'Producing my first track',
+    description: 'Making original tracks, not just DJing.',
+    said: [],
+  }
+  const prompt = (i = FIRST_CUT_INPUT) => buildFirstCutPrompt(i, buildFirstCutEvidence(i.title, i.description, i.said))
+
+  it('plans forwards, explicitly not backwards from a finish line', () => {
+    const p = prompt()
+    expect(p).toContain('forwards, not backwards')
+    expect(p).toContain("There's no finish line yet, and none should be invented")
+  })
+
+  it('asks for exactly the first-cut count, not the full spine range', () => {
+    expect(prompt()).toContain(`Give exactly ${FIRST_CUT_STEPS} moves`)
+    expect(prompt()).not.toContain(`${MIN_SPINE_STEPS}-${MAX_SPINE_STEPS} steps`)
+  })
+
+  it('tells the model to leave things coarse on purpose', () => {
+    expect(prompt()).toContain('coarse ON PURPOSE')
+  })
+
+  it('bans a finish line as an output, not just backwards planning as a method', () => {
+    expect(prompt()).toContain('A finish line, a deadline, or a description of what "done" looks like')
+  })
+
+  it('carries the same no-invented-specifics and anti-admin rules', () => {
+    const p = prompt()
+    expect(p).toContain('does NOT appear verbatim above')
+    for (const v of ['research', 'decide', 'brainstorm']) expect(p).toContain(v)
+  })
+})
+
 describe('sanitizeSteps', () => {
   it('strips list formatting the model adds anyway', () => {
     expect(sanitizeSteps(['1. Record the vocal', '- Mix it']).map(s => s.text))
@@ -100,6 +155,11 @@ describe('sanitizeSteps', () => {
   it('never returns a backlog', () => {
     const many = Array.from({ length: 30 }, (_, i) => `Do distinct thing number ${i}`)
     expect(sanitizeSteps(many).length).toBeLessThanOrEqual(MAX_SPINE_STEPS)
+  })
+
+  it('caps at a passed-in count, for the first-cut list', () => {
+    const many = Array.from({ length: 10 }, (_, i) => `Do distinct thing number ${i}`)
+    expect(sanitizeSteps(many, FIRST_CUT_STEPS)).toHaveLength(FIRST_CUT_STEPS)
   })
 
   it('keeps the citations so each step can be checked', () => {
@@ -129,5 +189,16 @@ describe('toStoredTasks', () => {
   it('gives every task a distinct id', () => {
     const tasks = toStoredTasks([{ text: 'a', source: null }, { text: 'b', source: null }], now)
     expect(new Set(tasks.map(t => t.id)).size).toBe(2)
+  })
+})
+
+describe('generateFirstCutTasks', () => {
+  it('returns nothing rather than invent, when there is no description to plan from', async () => {
+    // No GEMINI_API_KEY in the test env either way, but the point here is
+    // that it never even tries -- an empty description means no evidence,
+    // same rule as generateTaskSpine with no goal.
+    const { generateFirstCutTasks } = await import('./task-spine.js')
+    const steps = await generateFirstCutTasks({ title: 'Untitled', description: '', said: [] })
+    expect(steps).toEqual([])
   })
 })
