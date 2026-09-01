@@ -68,6 +68,15 @@ describe('summarise', () => {
     expect(summarise(shuffled).startedAt).toBe('2026-01-01T09:00:00.000Z')
   })
 
+  it('surfaces the current and best streak', () => {
+    const streaky = [
+      line({ position: 1, created_at: '2026-01-01T09:00:00.000Z' }),
+      line({ position: 2, created_at: '2026-01-02T09:00:00.000Z' }),
+      line({ position: 3, created_at: '2026-01-03T09:00:00.000Z' }),
+    ]
+    expect(summarise(streaky, '2026-01-03T20:00:00.000Z').streak).toEqual({ current: 3, longest: 3 })
+  })
+
   it('handles a story with no lines yet', () => {
     const stats = summarise([])
     expect(stats.lineCount).toBe(0)

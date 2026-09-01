@@ -43,6 +43,9 @@
   "functions": {
     "api/story-index.ts": {
       "maxDuration": 60
+    },
+    "api/cron/streak-check.ts": {
+      "maxDuration": 30
     }
   }
 }

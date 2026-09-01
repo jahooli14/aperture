@@ -56,6 +56,7 @@ export interface StoryStats {
   daysSinceLastLine: number | null
   longestGapDays: number
   averageWordsPerLine: number
+  streak: { current: number; longest: number }
 }
 
 export interface StorySummary extends Story {

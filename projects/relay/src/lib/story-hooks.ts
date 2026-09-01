@@ -53,3 +53,37 @@ export function useReadPosition(
     return () => clearTimeout(timer)
   }, [storyId, lines, currentPosition])
 }
+
+const TIMEZONE_SENT_KEY = 'relay:timezone-sent-for'
+
+/**
+ * Tells the server what timezone this browser is in, once per story per
+ * browser — it only feeds the 6pm streak nudge, so there's no reason to
+ * resend it every visit.
+ */
+export function useTimezoneSync(storyId: string | undefined) {
+  useEffect(() => {
+    if (!storyId) return
+    let sent: string[] = []
+    try {
+      sent = JSON.parse(localStorage.getItem(TIMEZONE_SENT_KEY) ?? '[]')
+    } catch {
+      sent = []
+    }
+    if (sent.includes(storyId)) return
+
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone
+    if (!timezone) return
+
+    api
+      .setTimezone(storyId, timezone)
+      .then(() => {
+        try {
+          localStorage.setItem(TIMEZONE_SENT_KEY, JSON.stringify([...sent, storyId]))
+        } catch {
+          // Not fatal — it'll just resend next visit.
+        }
+      })
+      .catch(() => {})
+  }, [storyId])
+}

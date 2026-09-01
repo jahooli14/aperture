@@ -1,18 +1,21 @@
 import { Link } from 'react-router-dom'
 import { Avatar } from './Avatar'
 import { duration } from '../lib/format'
-import type { Member, StoryStats as Stats } from '../lib/types'
+import { PeakTimes } from './PeakTimes'
+import type { Line, Member, StoryStats as Stats } from '../lib/types'
 
 /** The story so far — all of it derived from the lines, none of it guessed at. */
 export function StoryStats({
   stats,
   members,
+  lines,
   printHref,
   onJumpToChapter,
   onClose,
 }: {
   stats: Stats
   members: Member[]
+  lines: Line[]
   printHref: string
   onJumpToChapter: (position: number) => void
   onClose: () => void
@@ -31,6 +34,11 @@ export function StoryStats({
         </div>
 
         <dl className="mb-6 grid grid-cols-2 gap-3">
+          <Figure
+            label="Streak"
+            value={stats.streak.current > 0 ? `${stats.streak.current} ${stats.streak.current === 1 ? 'day' : 'days'}` : 'None yet'}
+          />
+          <Figure label="Best streak" value={`${stats.streak.longest} ${stats.streak.longest === 1 ? 'day' : 'days'}`} />
           <Figure label="Lines" value={stats.lineCount.toLocaleString()} />
           <Figure label="Words" value={stats.wordCount.toLocaleString()} />
           <Figure label="Running" value={duration(stats.daysRunning)} />
@@ -73,7 +81,9 @@ export function StoryStats({
           </section>
         )}
 
-        <Link to={printHref} className="btn-quiet mb-6 w-full">
+        <PeakTimes timestamps={lines.map((l) => l.created_at)} />
+
+        <Link to={printHref} className="btn-quiet mb-6 mt-6 w-full">
           Make a book of it
         </Link>
 

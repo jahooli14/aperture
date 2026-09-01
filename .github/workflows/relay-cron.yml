@@ -1,0 +1,44 @@
+name: Relay Cron
+
+# Separate from the main cron.yml on purpose: that workflow hardcodes one
+# BASE domain for every job (a deliberate fix after a past incident — see
+# its own comments), and Relay deploys to a different domain. Giving it its
+# own tiny workflow means a mistake here can't touch Polymath's or Pupils'
+# schedules, and Relay's domain only needs hardcoding once, here.
+#
+# Runs hourly rather than at one fixed time because "6pm" means a different
+# UTC hour depending on the writer's own timezone and the time of year
+# (BST/GMT); the endpoint itself decides, per writer, whether it's currently
+# their 6pm.
+
+on:
+  schedule:
+    - cron: '0 * * * *'
+  workflow_dispatch: {}
+
+concurrency:
+  group: relay-cron
+  cancel-in-progress: false
+
+jobs:
+  streak-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Check streaks
+        env:
+          BASE: https://pen-pal-ponder.vercel.app
+          TOKEN: ${{ secrets.RELAY_CRON_SECRET }}
+        run: |
+          set -u
+          body_file=$(mktemp)
+          code=$(curl -sS -m 60 -X POST "$BASE/api/cron/streak-check" \
+               -H "Authorization: Bearer $TOKEN" \
+               -H "Content-Type: application/json" \
+               -o "$body_file" -w "%{http_code}") || code="000"
+          cat "$body_file"
+          echo ""
+          if [ "$code" -lt 200 ] || [ "$code" -ge 300 ]; then
+            echo "::error::streak-check failed (HTTP $code)"
+            exit 1
+          fi
