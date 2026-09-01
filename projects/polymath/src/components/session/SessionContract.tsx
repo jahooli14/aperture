@@ -111,7 +111,7 @@ export function SessionContract({
   }, [phase, project.id, windowMinutes, shapePlan])
 
   const beginWork = useCallback(async () => {
-    const items = plan?.items?.length ? plan.items.map(i => i.text) : undefined
+    const items = plan?.items?.length ? plan.items : undefined
     await startSession(project.id, windowMinutes, source, items)
     setElapsedSec(0)
     setTicked(new Set())
@@ -176,9 +176,8 @@ export function SessionContract({
     // is never empty at the exact moment attention is lowest.
     // Items already end in a full stop, so trim before joining — "from the
     // top.. Bounce the vocal." reads like a typo in your own words.
-    const done = (active?.shapes ?? [])
-      .filter((_, i) => ticked.has(i))
-      .map(s => s.text.trim().replace(/[.!?]+$/, ''))
+    const tickedShapes = (active?.shapes ?? []).filter((_, i) => ticked.has(i))
+    const done = tickedShapes.map(s => s.text.trim().replace(/[.!?]+$/, ''))
     if (done.length > 0) setCloseoutText(`Did: ${done.join('. ')}.`)
     setPhase('closeout')
   }
@@ -187,7 +186,9 @@ export function SessionContract({
     // The ticks go to the server, not just into the close-out text: a
     // ticked item that matches an open task marks it done, which is what
     // makes "what's already finished" real evidence next time.
-    const doneItems = (active?.shapes ?? []).filter((_, i) => ticked.has(i)).map(sh => sh.text)
+    const doneItems = (active?.shapes ?? [])
+      .filter((_, i) => ticked.has(i))
+      .map(sh => ({ text: sh.text, taskId: sh.taskId ?? null }))
     const result = await closeSession(closeoutText, mvsSeedMinutes ?? undefined, doneItems)
     if (result) setPhase('done')
   }

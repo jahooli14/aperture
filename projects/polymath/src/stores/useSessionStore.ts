@@ -15,6 +15,10 @@ export interface SessionShape {
   text: string
   source: 'closeout' | 'slot' | 'decomposition' | 'start' | 'ignition' | 'shaped'
   partial: boolean
+  /** The task this shape is grounded in, when it has one. Sending this
+   *  back at close time is what lets a tick mark the real task done,
+   *  surviving whatever the model paraphrased the item's text into. */
+  taskId?: string | null
 }
 
 /** The windows the card offers. Not a gate -- a control on the card. */
@@ -72,6 +76,11 @@ export interface PlanItem {
    *  or trivially generic -- there is no third category, because that
    *  third category is invention. */
   source: string | null
+  /** The real id of the open task this item is grounded in, when it has
+   *  one. Sent back at close time so a tick marks the actual task done --
+   *  matching on the model's session-item wording would silently fail,
+   *  since it's prompted to paraphrase whatever task it's citing. */
+  taskId: string | null
 }
 
 export interface PlanDraft {
@@ -117,11 +126,11 @@ interface SessionState {
   swapPlanItem: (index: number) => void
   clearPlan: () => void
 
-  startSession: (projectId: string, windowMinutes: number | null, source?: string, items?: string[]) => Promise<void>
+  startSession: (projectId: string, windowMinutes: number | null, source?: string, items?: PlanItem[]) => Promise<void>
   /** Answers the app's "I don't know enough" question. Saves the answer to
    *  the project so it's evidence next time, then re-shapes on it. */
   answerPlanQuestion: (answer: string) => Promise<void>
-  closeSession: (closeoutText: string, mvsSeedMinutes?: number, doneItems?: string[]) => Promise<{ moved: boolean | null; duration_minutes: number } | null>
+  closeSession: (closeoutText: string, mvsSeedMinutes?: number, doneItems?: { text: string; taskId: string | null }[]) => Promise<{ moved: boolean | null; duration_minutes: number } | null>
   checkPendingCloseout: () => Promise<void>
   closeoutForPending: (closeoutText: string) => Promise<void>
   dismissPendingCloseout: () => void

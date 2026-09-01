@@ -67,7 +67,10 @@ export function useDifferentThingNudge(): DifferentThingNudge {
 
     if (!candidate) return EMPTY
     return {
-      text: `It's been a month on the same things. An hour on ${candidate.title}?`,
+      // Just the suggestion: the card's own eyebrow already says why it's
+      // here, and having both say "a month on the same things" read as a
+      // stutter.
+      text: `An hour on ${candidate.title}?`,
       opener: `I want to spend an hour on ${candidate.title} instead — it's been sat there a while. What would I actually do with it?`,
       project: candidate,
     }

@@ -357,11 +357,18 @@ export function TodaysAnswerCard() {
   const dormancyDays = Math.floor(
     (Date.now() - new Date(focusProject.last_active || focusProject.updated_at || 0).getTime()) / 86_400_000
   )
+  // Amber at both tiers, never red. Red is the destructive/error colour
+  // everywhere else in the app, so outlining the hero in it made the one
+  // thing you're meant to act on read as something that had gone wrong.
+  // The badge carries how long it's been; the card just warms slightly.
   const dormancyColor = dormancyDays >= 28
-    ? 'rgba(239,68,68,0.55)'
+    ? 'rgba(245,158,11,0.45)'
     : dormancyDays >= 7
-    ? 'rgba(245,158,11,0.55)'
+    ? 'rgba(245,158,11,0.28)'
     : null
+  // The badge is the signal, so it stays legible; the card's border is
+  // only atmosphere and sits far softer.
+  const dormancyBadgeColor = dormancyColor ? 'rgba(245,158,11,0.9)' : null
   const dormancyLabel = dormancyDays >= 28
     ? 'long quiet'
     : dormancyDays >= 7
@@ -414,9 +421,7 @@ export function TodaysAnswerCard() {
         backdropFilter: 'blur(32px) saturate(190%)',
         WebkitBackdropFilter: 'blur(32px) saturate(190%)',
         border: `1px solid ${dormancyColor ?? 'rgba(var(--brand-primary-rgb),0.35)'}`,
-        boxShadow: dormancyColor
-          ? `0 0 36px ${dormancyColor.replace('0.55', '0.22')}, 0 12px 36px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.06)`
-          : '0 0 42px rgba(var(--brand-primary-rgb),0.22), 0 12px 36px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.06)',
+        boxShadow: '0 0 42px rgba(var(--brand-primary-rgb),0.22), 0 12px 36px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.06)',
       }}
     >
       {/* Top hairline glow — same brand-primary cue used on ThoughtOfTheDay. */}
@@ -432,8 +437,8 @@ export function TodaysAnswerCard() {
             <span
               className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full flex-shrink-0 mt-0.5"
               style={{
-                color: dormancyColor ?? undefined,
-                border: `1px solid ${dormancyColor}`,
+                color: dormancyBadgeColor ?? undefined,
+                border: `1px solid rgba(245,158,11,0.4)`,
                 background: 'rgba(0,0,0,0.3)',
                 boxShadow: dormancyColor ? `0 0 8px ${dormancyColor.replace('0.55', '0.25')}` : undefined,
               }}
@@ -444,7 +449,7 @@ export function TodaysAnswerCard() {
         </div>
         <span
           className="text-[10px] uppercase tracking-[0.28em] font-semibold mb-3 inline-block"
-          style={{ color: dormancyColor ?? 'rgba(var(--brand-primary-rgb),0.7)' }}
+          style={{ color: dormancyBadgeColor ?? 'rgba(var(--brand-primary-rgb),0.7)' }}
         >
           {formatRelativeTime(focusProject.last_active || focusProject.updated_at)}
         </span>
@@ -569,31 +574,52 @@ export function TodaysAnswerCard() {
 function SteerRow({ onOpen, nudge }: { onOpen: () => void; nudge: string | null }) {
   return (
     <div className="mt-5 pt-4" style={{ borderTop: '1px solid rgba(255,255,255,0.09)' }}>
-      {/* The monthly "try something different" quota lives here rather than
-          in its own card. It used to be a third box on Home with three
-          buttons of its own, competing with the answer — but it isn't a
-          different KIND of thing from steering, it IS steering, just
-          initiated by the app. So it borrows this row for a month and
-          opens the same conversation. */}
-      <button
-        onClick={onOpen}
-        className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-left transition-all active:scale-[0.995]"
-        style={{
-          background: nudge ? 'rgba(var(--brand-primary-rgb),0.08)' : 'rgba(255,255,255,0.05)',
-          border: '1px solid rgba(var(--brand-primary-rgb),0.28)',
-          boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.07), 0 0 24px -10px rgba(var(--brand-primary-rgb),0.4)',
-        }}
-      >
-        <span
-          className="flex-1 text-[15px]"
-          style={nudge
-            ? { color: 'var(--brand-text-primary)', opacity: 0.9 }
-            : { color: 'var(--brand-text-secondary)', opacity: 0.5 }}
+      {nudge ? (
+        // The monthly "try something different" quota. It used to borrow the
+        // steer field's chrome — rounded box, placeholder-grey text, a send
+        // arrow — which made the app's own suggestion look like a sentence
+        // the user had already typed and not sent. It's the app talking, so
+        // it looks like the app talking, with its own answer button.
+        <button
+          onClick={onOpen}
+          className="w-full text-left rounded-xl px-4 py-3.5 transition-all active:scale-[0.995]"
+          style={{
+            background: 'rgba(var(--brand-primary-rgb),0.07)',
+            border: '1px solid rgba(var(--brand-primary-rgb),0.22)',
+          }}
         >
-          {nudge ?? STEER_PROMPT}
-        </span>
-        <ArrowUp className="h-4 w-4 flex-shrink-0" strokeWidth={2.5} style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.5 }} />
-      </button>
+          <span
+            className="block text-[10px] uppercase tracking-[0.2em] mb-1.5"
+            style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.55 }}
+          >
+            a month on the same things
+          </span>
+          <span className="block text-[15px] leading-snug" style={{ color: 'var(--brand-text-primary)' }}>
+            {nudge}
+          </span>
+          <span
+            className="inline-flex items-center gap-1.5 text-[12px] font-medium mt-2.5"
+            style={{ color: 'rgb(var(--brand-primary-rgb))' }}
+          >
+            Talk it through <ChevronRight className="h-3.5 w-3.5" strokeWidth={2.5} />
+          </span>
+        </button>
+      ) : (
+        <button
+          onClick={onOpen}
+          className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-left transition-all active:scale-[0.995]"
+          style={{
+            background: 'rgba(255,255,255,0.05)',
+            border: '1px solid rgba(var(--brand-primary-rgb),0.28)',
+            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.07), 0 0 24px -10px rgba(var(--brand-primary-rgb),0.4)',
+          }}
+        >
+          <span className="flex-1 text-[15px]" style={{ color: 'var(--brand-text-secondary)', opacity: 0.5 }}>
+            {STEER_PROMPT}
+          </span>
+          <ArrowUp className="h-4 w-4 flex-shrink-0" strokeWidth={2.5} style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.5 }} />
+        </button>
+      )}
     </div>
   )
 }

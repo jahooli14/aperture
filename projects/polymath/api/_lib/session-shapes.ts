@@ -37,6 +37,13 @@ export interface SessionShape {
   source: 'closeout' | 'slot' | 'decomposition' | 'start' | 'ignition' | 'shaped'
   /** True when this shape is a deliberately partial piece of a bigger move. */
   partial: boolean
+  /** The real id of the open task this shape is grounded in, when it has
+   *  one. Lets a tick at close time mark the task done by id rather than
+   *  by hoping the model's session-item wording matches the stored task
+   *  text -- which it's explicitly prompted to paraphrase away from.
+   *  Absent (not just null) on shapes from deriveSessionShapes, since
+   *  that pure fallback has no evidence chain to trace one from. */
+  taskId?: string | null
 }
 
 /**

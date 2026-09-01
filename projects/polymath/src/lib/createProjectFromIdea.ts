@@ -38,16 +38,35 @@ export async function createProjectFromIdea(
   // then on. Leaving it unset falls through to the theme system's
   // title-hash color instead of a confident wrong label; the user can set
   // the real type later via shaping, same as the finish line.
+  // Plan the steps backwards from the finish line before the project
+  // exists, so it arrives with a spine rather than an empty list. An empty
+  // project isn't just unhelpful: `is_shaped: false` filters it out of the
+  // priority selector, the warm row and the answer card, so it saves and
+  // then appears to vanish.
+  const endGoal = deriveFinishLine(idea)
+  let tasks: any[] = []
+  try {
+    const shaped = await api.post('utilities?resource=shape-project', {
+      dump: [idea.title, idea.pattern, idea.pitch, idea.next_step].filter(Boolean).join('\n'),
+      title: idea.title,
+      end_goal: endGoal,
+    }) as { tasks?: any[] }
+    if (Array.isArray(shaped?.tasks)) tasks = shaped.tasks
+  } catch (err) {
+    console.warn('[createProjectFromIdea] spine generation failed:', err)
+  }
+
   const created = await createProject({
     title: idea.title,
     description,
     status: 'active',
     metadata: {
-      tasks: [],
+      tasks,
       progress: 0,
-      is_shaped: false,
+      is_shaped: tasks.length > 0,
       from_idea: idea.id,
-      end_goal: deriveFinishLine(idea),
+      end_goal: endGoal,
+      end_goal_source: 'guide',
       project_mode: 'completion',
       // Mark one-hour things so they're distinguishable from full
       // projects (a tonight-sized commitment, not an open-ended one).

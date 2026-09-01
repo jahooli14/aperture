@@ -26,6 +26,7 @@ import { useProjectStore } from '../../stores/useProjectStore'
 import { useAutoSuggestion } from '../../contexts/AutoSuggestionContext'
 import { SuggestionToast } from '../SuggestionToast'
 import { PROJECT_TYPES } from '../../lib/projectTheme'
+import { api } from '../../lib/apiClient'
 
 interface ConversationMessage {
   role: 'user' | 'model'
@@ -227,20 +228,40 @@ export function CreateProjectDialog({
     if (!quickTitle.trim()) return
     setLoading(true)
     try {
+      // Quick add is deliberately one field, so anything the user typed in
+      // the description is all the evidence there is — shape from it rather
+      // than storing an empty project that then hides itself.
+      let shaped: { end_goal?: string | null; tags?: string[]; tasks?: any[] } = {}
+      if (quickDesc.trim()) {
+        try {
+          shaped = await api.post('utilities?resource=shape-project', {
+            dump: `${quickTitle.trim()}\n${quickDesc.trim()}`,
+            title: quickTitle.trim(),
+          }) as typeof shaped
+        } catch (err) {
+          console.warn('[CreateProjectDialog] shaping failed:', err)
+        }
+      }
+      const tasks = Array.isArray(shaped.tasks) ? shaped.tasks : []
+
       await createProject({
         title: quickTitle.trim(),
         description: quickDesc.trim() || '',
         status: 'active',
         type: 'Creative',
         metadata: {
-          tasks: [],
+          tasks,
           progress: 0,
-          is_shaped: false,
+          is_shaped: tasks.length > 0,
+          ...(shaped.end_goal ? { end_goal: shaped.end_goal, end_goal_source: 'guide' } : {}),
+          ...(shaped.tags?.length ? { tags: shaped.tags } : {}),
         },
       })
       addToast({
-        title: 'Project saved',
-        description: `"${quickTitle.trim()}" added — shape it, then Power Hour can run on it.`,
+        title: tasks.length > 0 ? `Saved with ${tasks.length} steps` : 'Project saved',
+        description: tasks.length > 0
+          ? `"${quickTitle.trim()}" is ready to work on.`
+          : `"${quickTitle.trim()}" added — say what done looks like and it'll plan the steps.`,
         variant: 'success',
       })
       setQuickTitle('')

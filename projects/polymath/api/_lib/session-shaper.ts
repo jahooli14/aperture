@@ -117,7 +117,11 @@ export interface ShapeContext {
   goal: string | null
   windowMinutes: number | null
   lastCloseout: string | null
-  openTasks: string[]
+  /** Open tasks with their real ids -- carried through to evidence so a
+   *  session item grounded in one can be matched back to it by id at
+   *  close time, not by hoping the model's paraphrase equals the stored
+   *  text verbatim. */
+  openTasks: { id: string; text: string }[]
   /** Finished work, with when it was finished. Reasoning backwards from
    *  the goal is impossible without knowing what's already done, and this
    *  was being filtered out before the model ever saw it. */
@@ -141,12 +145,24 @@ export interface ShapeContext {
  * model can point at what it used and the result can be checked against
  * it. Nothing outside this list is knowledge — it's invention.
  */
-export function buildEvidence(ctx: ShapeContext): Evidence[] {
+export interface BuiltEvidence {
+  evidence: Evidence[]
+  /** evidence id -> open task id, for evidence entries built from an open
+   *  task. Lets a grounded session item be traced back to the real task
+   *  it's about, surviving whatever the model paraphrases the text into. */
+  taskIdByEvidenceId: Record<string, string>
+}
+
+export function buildEvidence(ctx: ShapeContext): BuiltEvidence {
   const evidence: Evidence[] = []
+  const taskIdByEvidenceId: Record<string, string> = {}
   let n = 0
-  const add = (label: string, text: string) => {
-    if (!text?.trim()) return
-    evidence.push({ id: `e${++n}`, label, text: text.trim() })
+  const add = (label: string, text: string, taskId?: string): string | null => {
+    if (!text?.trim()) return null
+    const id = `e${++n}`
+    evidence.push({ id, label, text: text.trim() })
+    if (taskId) taskIdByEvidenceId[id] = taskId
+    return id
   }
 
   add('the finish line you set', ctx.goal ?? '')
@@ -160,14 +176,14 @@ export function buildEvidence(ctx: ShapeContext): Evidence[] {
   ctx.doneTasks.forEach(t =>
     add(t.date ? `you finished this on ${t.date}` : 'already finished', t.text),
   )
-  ctx.openTasks.forEach(t => add('already on the project', t))
+  ctx.openTasks.forEach(t => add('already on the project', t.text, t.id))
   ctx.shapingTurns.forEach(t => add('from when you set this project up', t))
 
   // Slots are deliberately NOT evidence. They're seeded by a model
   // (slot-seed.ts), so counting them made a project the user has never
   // described look like one the app knows -- which is precisely the
   // condition under which it starts inventing.
-  return evidence
+  return { evidence, taskIdByEvidenceId }
 }
 
 export function buildShapePrompt(
@@ -307,10 +323,10 @@ export async function shapeSession(
   const shortDate = (iso?: string | null) =>
     iso ? new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : null
 
-  const openTasks: string[] = allTasks
-    .filter(t => t && !t.done && typeof t.text === 'string')
+  const openTasks: { id: string; text: string }[] = allTasks
+    .filter(t => t && !t.done && typeof t.text === 'string' && typeof t.id === 'string')
     .slice(0, 6)
-    .map(t => t.text)
+    .map(t => ({ id: t.id, text: t.text }))
 
   // Finished work was being filtered out entirely, which made "the intro's
   // done, so the transition is next" impossible to say even when it was
@@ -389,7 +405,7 @@ export async function shapeSession(
     shapingChatTurns: shapingTurns.length,
   })
 
-  const evidence = buildEvidence(ctx)
+  const { evidence, taskIdByEvidenceId } = buildEvidence(ctx)
   const count = itemCountForWindow(windowMinutes)
   const gap = pickGap({
     title: project.title,
@@ -407,7 +423,7 @@ export async function shapeSession(
   // model call to find that out.
   if (evidence.length === 0 || confidence === 'thin') {
     return {
-      items: [{ text: `Open ${project.title} and look at where you left it.`, source: null }],
+      items: [{ text: `Open ${project.title} and look at where you left it.`, source: null, taskId: null }],
       bench: [],
       source: 'derived',
       needsInput: ask(),
@@ -427,7 +443,7 @@ export async function shapeSession(
 
     const raw = JSON.parse(response)?.items
     const cleaned = sanitizeRawItems(raw, count + BENCH_SIZE)
-    const { kept, rejected } = filterGrounded(cleaned, evidence, project.title)
+    const { kept, rejected } = filterGrounded(cleaned, evidence, project.title, taskIdByEvidenceId)
 
     if (rejected.length > 0) {
       console.warn(
@@ -455,7 +471,7 @@ export async function shapeSession(
     windowMinutes,
   })
   return {
-    items: derived.map(sh => ({ text: sh.text, source: null })),
+    items: derived.map(sh => ({ text: sh.text, source: null, taskId: null })),
     bench: [],
     source: 'derived',
     needsInput: null,

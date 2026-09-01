@@ -43,6 +43,14 @@ export interface GroundedItem {
   /** Human-readable source, e.g. "from your last close-out". Null when the
    *  item is generic enough to need no source. */
   source: string | null
+  /** The real id of the open task this item is grounded in, when its
+   *  supporting citation traces back to one. Session items are usually a
+   *  MODEL'S PARAPHRASE of a task, not its stored text -- "Fix the
+   *  transition out of track two" becomes "Play track two from the top and
+   *  find where it breaks". Matching a ticked item back to its task by
+   *  string equality silently fails the moment the model paraphrases,
+   *  which its own prompt teaches it to do. An id survives the paraphrase. */
+  taskId: string | null
 }
 
 /**
@@ -178,6 +186,10 @@ export function filterGrounded(
   items: RawItem[],
   evidence: Evidence[],
   projectTitle: string,
+  /** evidence id -> the open task it was built from, for evidence that
+   *  came from an open task. Absent for goal/closeout/fragment evidence,
+   *  which isn't a task to mark done. */
+  taskIdByEvidenceId: Record<string, string> = {},
 ): { kept: GroundedItem[]; rejected: { text: string; reason: string }[] } {
   const haystack = evidenceHaystack(evidence, projectTitle)
   const byId = new Map(evidence.map(e => [e.id, e]))
@@ -199,7 +211,7 @@ export function filterGrounded(
     if (cited.length === 0) {
       // No citation is fine only for an item that asserts nothing about the
       // project beyond its own title.
-      kept.push({ text, source: null })
+      kept.push({ text, source: null, taskId: null })
       continue
     }
 
@@ -209,7 +221,7 @@ export function filterGrounded(
       continue
     }
 
-    kept.push({ text, source: supporting.label })
+    kept.push({ text, source: supporting.label, taskId: taskIdByEvidenceId[supporting.id] ?? null })
   }
 
   return { kept, rejected }
