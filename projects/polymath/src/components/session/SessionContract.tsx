@@ -439,7 +439,13 @@ export function SessionContract({
   // moment the user is trying to stop deciding.
   if (phase === 'planning') {
     const items = plan?.projectId === project.id ? plan.items : []
-    const canSwap = (plan?.bench.length ?? 0) > 0
+    // Swapping a single row for a bench spare only makes sense when the
+    // items are interchangeable AI suggestions ("same quality, different
+    // angles" per the shape prompt). When the plan is the user's own task
+    // list verbatim (source 'tasks'), position is the order they actually
+    // left the tasks in -- a real sequence, not a pool to shuffle. Putting
+    // a later task into an earlier slot silently breaks that sequence.
+    const canSwap = (plan?.bench.length ?? 0) > 0 && plan?.source !== 'tasks'
     const needsInput = plan?.projectId === project.id ? plan.needsInput : null
     const elapsedFrac = planLeft == null ? 0 : 1 - planLeft / planningSecondsFor(windowMinutes)
 
