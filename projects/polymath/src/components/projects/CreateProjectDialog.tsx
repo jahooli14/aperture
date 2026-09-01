@@ -12,7 +12,7 @@
  */
 
 import { useState, useEffect, useRef } from 'react'
-import { Plus, ArrowUp, ArrowLeft, Loader2 } from 'lucide-react'
+import { Plus, ArrowUp, ArrowLeft, Loader2, X, Mic, Keyboard } from 'lucide-react'
 import { handleInputFocus } from '../../utils/keyboard'
 import {
   BottomSheet,
@@ -27,11 +27,18 @@ import { useAutoSuggestion } from '../../contexts/AutoSuggestionContext'
 import { SuggestionToast } from '../SuggestionToast'
 import { PROJECT_TYPES } from '../../lib/projectTheme'
 import { api } from '../../lib/apiClient'
+import { VoiceInput } from '../VoiceInput'
+import { useVoicePreference } from '../../stores/useVoicePreference'
 
 interface ConversationMessage {
   role: 'user' | 'model'
   content: string
   echoes?: EchoItem[]
+}
+
+interface DraftTask {
+  id: string
+  text: string
 }
 
 interface EchoItem {
@@ -85,15 +92,61 @@ export function CreateProjectDialog({
   const [genesisDraft, setGenesisDraft] = useState('')
   const threadRef = useRef<HTMLDivElement>(null)
 
+  // Voice by default, listening automatically -- typing is the thing you
+  // opt into. The choice is remembered (useVoicePreference), not re-fought
+  // every phase: switch to text once here and session planning and the
+  // debrief default to text too, not just this one conversation.
+  const prefersText = useVoicePreference(s => s.prefersText)
+  const setPrefersText = useVoicePreference(s => s.setPrefersText)
+  const voiceTurn = !prefersText
+
   // ── Form state ────────────────────────────────────────────────────
+  // No end_goal / finish line: an ongoing project (DJing, producing music)
+  // has no "done" to plan backwards from, and a project that does have one
+  // ("finish this EP") gets there through the tasks themselves, not a
+  // second field that immediately goes stale the moment it's written.
   const [formData, setFormData] = useState({
     title: initialTitle || '',
     description: initialDescription || '',
-    end_goal: '',
     project_mode: 'completion' as 'completion' | 'recurring',
     first_step: '',
     type: 'Creative',
   })
+
+  // ── Starter tasks: 3 broad first moves, generated from the description,
+  //    editable before the project is ever saved. ─────────────────────
+  const [draftTasks, setDraftTasks] = useState<DraftTask[]>([])
+  const [tasksLoading, setTasksLoading] = useState(false)
+
+  const generateDraftTasks = async (title: string, description: string, firstStep: string, said: string[]) => {
+    const desc = description.trim()
+    if (!desc) { setDraftTasks([]); return }
+    setTasksLoading(true)
+    try {
+      const evidence = [firstStep, ...said].map(s => s.trim()).filter(Boolean)
+      const data = await api.post('utilities?resource=first-cut-tasks', {
+        title: title.trim() || 'Untitled',
+        description: desc,
+        said: evidence,
+      }) as { tasks: { id: string; text: string }[] }
+      setDraftTasks((data.tasks || []).map(t => ({ id: t.id, text: t.text })))
+    } catch (err) {
+      console.warn('[CreateProjectDialog] first-cut generation failed:', err)
+      setDraftTasks([])
+    } finally {
+      setTasksLoading(false)
+    }
+  }
+
+  const updateDraftTask = (index: number, text: string) => {
+    setDraftTasks(prev => prev.map((t, i) => (i === index ? { ...t, text } : t)))
+  }
+  const removeDraftTask = (index: number) => {
+    setDraftTasks(prev => prev.filter((_, i) => i !== index))
+  }
+  const addDraftTask = () => {
+    setDraftTasks(prev => [...prev, { id: crypto.randomUUID(), text: '' }])
+  }
 
   // Sync initial values when dialog opens with pre-filled data
   useEffect(() => {
@@ -104,6 +157,7 @@ export function CreateProjectDialog({
         description: initialDescription || prev.description,
       }))
       setMode('commit')
+      void generateDraftTasks(initialTitle || '', initialDescription || '', '', [])
     }
   }, [open, initialTitle, initialDescription])
 
@@ -132,13 +186,14 @@ export function CreateProjectDialog({
     setThinking(false)
     setIsReady(false)
     setGenesisDraft('')
+    setDraftTasks([])
+    setTasksLoading(false)
     setQuickAddMode(false)
     setQuickTitle('')
     setQuickDesc('')
     setFormData({
       title: initialTitle || '',
       description: initialDescription || '',
-      end_goal: '',
       project_mode: 'completion',
       first_step: '',
       type: 'Creative',
@@ -151,8 +206,10 @@ export function CreateProjectDialog({
   }
 
   // ── Chat: send a message ──────────────────────────────────────────
-  const handleSend = async () => {
-    const message = chatInput.trim()
+  // Takes an optional override so a voice transcript can send itself
+  // straight through, rather than round-tripping via the text field state.
+  const handleSend = async (overrideText?: string) => {
+    const message = (overrideText ?? chatInput).trim()
     if (!message || thinking) return
 
     const userMsg: ConversationMessage = { role: 'user', content: message }
@@ -203,7 +260,6 @@ export function CreateProjectDialog({
       setFormData({
         title: data.title || '',
         description: data.description || '',
-        end_goal: data.end_goal || '',
         project_mode: data.project_mode === 'recurring' ? 'recurring' : 'completion',
         first_step: data.first_step || '',
         type: ((PROJECT_TYPES as readonly string[]).includes(data.type)
@@ -212,6 +268,12 @@ export function CreateProjectDialog({
       })
       setGenesisDraft(data.genesisDraft || '')
       setMode('commit')
+      void generateDraftTasks(
+        data.title || '',
+        data.description || '',
+        data.first_step || '',
+        history.filter(m => m.role === 'user').map(m => m.content),
+      )
     } catch {
       setMode('chat')
       addToast({ title: 'Extraction failed', description: 'Try again.', variant: 'destructive' })
@@ -286,9 +348,13 @@ export function CreateProjectDialog({
     setLoading(true)
 
     try {
-      const tasks = formData.first_step
-        ? [{ id: crypto.randomUUID(), text: formData.first_step, done: false, created_at: new Date().toISOString(), order: 0 }]
-        : []
+      const now = new Date().toISOString()
+      const tasks = draftTasks
+        .map(t => t.text.trim())
+        .filter(Boolean)
+        .map((text, order) => ({
+          id: crypto.randomUUID(), text, done: false, created_at: now, order, origin: 'spine' as const,
+        }))
 
       const titleAtCreation = formData.title
 
@@ -300,10 +366,9 @@ export function CreateProjectDialog({
         metadata: {
           tasks,
           progress: 0,
-          end_goal: formData.project_mode === 'completion' ? (formData.end_goal || undefined) : undefined,
           project_mode: formData.project_mode,
           studio_draft: genesisDraft || undefined,
-          is_shaped: true,
+          is_shaped: tasks.length > 0,
         },
       })
 
@@ -427,37 +492,68 @@ export function CreateProjectDialog({
                   )}
                 </div>
 
-                {/* Input row */}
+                {/* Input row — voice on by default, listening automatically
+                    the moment it's your turn; typing is a deliberate switch
+                    away from that, not the default. */}
                 <div
                   className="pt-3 mt-2"
                   style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}
                 >
-                  <div className="flex items-center gap-2">
-                    <input
-                      placeholder="tell me more…"
-                      value={chatInput}
-                      onChange={e => setChatInput(e.target.value)}
-                      onFocus={handleInputFocus}
-                      onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend() } }}
-                      autoComplete="off"
-                      className="flex-1 border-0 focus:outline-none focus:ring-0 bg-transparent appearance-none text-base"
-                      style={{
-                        color: 'var(--brand-text-primary)',
-                      }}
-                    />
-                    <button
-                      type="button"
-                      onClick={handleSend}
-                      disabled={!chatInput.trim() || thinking}
-                      className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 transition-all disabled:opacity-20"
-                      style={{
-                        background: chatInput.trim() ? 'rgba(255,255,255,0.12)' : 'transparent',
-                        color: 'var(--brand-text-secondary)',
-                      }}
-                    >
-                      <ArrowUp className="h-3.5 w-3.5" strokeWidth={2.5} />
-                    </button>
-                  </div>
+                  {voiceTurn && !thinking ? (
+                    <div className="space-y-2">
+                      <VoiceInput
+                        onTranscript={t => { void handleSend(t) }}
+                        autoStart
+                        autoSubmit
+                        maxDuration={45}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setPrefersText(true)}
+                        className="flex items-center gap-1 text-[11px] mx-auto transition-all"
+                        style={{ color: 'var(--brand-text-secondary)', opacity: 0.4 }}
+                      >
+                        <Keyboard className="h-3 w-3" /> type instead
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setPrefersText(false)}
+                        aria-label="Switch to voice"
+                        className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 transition-opacity"
+                        style={{ color: 'var(--brand-text-secondary)', opacity: 0.45 }}
+                      >
+                        <Mic className="h-3.5 w-3.5" />
+                      </button>
+                      <input
+                        placeholder="tell me more…"
+                        value={chatInput}
+                        onChange={e => setChatInput(e.target.value)}
+                        onFocus={handleInputFocus}
+                        onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend() } }}
+                        autoComplete="off"
+                        autoFocus
+                        className="flex-1 border-0 focus:outline-none focus:ring-0 bg-transparent appearance-none text-base"
+                        style={{
+                          color: 'var(--brand-text-primary)',
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleSend()}
+                        disabled={!chatInput.trim() || thinking}
+                        className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 transition-all disabled:opacity-20"
+                        style={{
+                          background: chatInput.trim() ? 'rgba(255,255,255,0.12)' : 'transparent',
+                          color: 'var(--brand-text-secondary)',
+                        }}
+                      >
+                        <ArrowUp className="h-3.5 w-3.5" strokeWidth={2.5} />
+                      </button>
+                    </div>
+                  )}
 
                   {/* Actions row */}
                   <div className="flex items-center justify-between mt-3">
@@ -544,29 +640,99 @@ export function CreateProjectDialog({
                   style={{ color: 'var(--brand-text-secondary)', opacity: formData.description ? 0.7 : 0.4 }}
                 />
 
-                {/* End goal (completion only) */}
-                {formData.project_mode === 'completion' && (
-                  <input
-                    placeholder="What does done look like?"
-                    value={formData.end_goal}
-                    onChange={e => setFormData({ ...formData, end_goal: e.target.value })}
-                    onFocus={handleInputFocus}
-                    autoComplete="off"
-                    className="w-full border-0 focus:outline-none focus:ring-0 bg-transparent appearance-none mt-2 text-sm"
-                    style={{ color: 'var(--brand-text-secondary)', opacity: 0.5 }}
-                  />
-                )}
-
-                {/* First step */}
+                {/* Anything specific to start with -- folded into the tasks
+                    below rather than stored as its own field. */}
                 <input
-                  placeholder="One thing you'd do this week?"
+                  placeholder="One thing you'd do this week? (optional)"
                   value={formData.first_step}
                   onChange={e => setFormData({ ...formData, first_step: e.target.value })}
                   onFocus={handleInputFocus}
+                  onBlur={() => {
+                    if (formData.first_step.trim()) {
+                      void generateDraftTasks(
+                        formData.title, formData.description, formData.first_step,
+                        history.filter(m => m.role === 'user').map(m => m.content),
+                      )
+                    }
+                  }}
                   autoComplete="off"
-                  className="w-full border-0 focus:outline-none focus:ring-0 bg-transparent appearance-none mt-2 mb-4 text-sm"
+                  className="w-full border-0 focus:outline-none focus:ring-0 bg-transparent appearance-none mt-2 mb-3 text-sm"
                   style={{ color: 'var(--brand-text-secondary)', opacity: 0.5 }}
                 />
+
+                {/* Starter tasks -- 3 broad first moves, generated from the
+                    description. No finish line: these are what get you
+                    going, not steps toward a "done" nobody's named yet. */}
+                <div className="mb-4">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <p className="text-[11px] uppercase tracking-wide" style={{ color: 'var(--brand-text-secondary)', opacity: 0.4 }}>
+                      First things to do
+                    </p>
+                    {!tasksLoading && formData.description.trim().length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => void generateDraftTasks(
+                          formData.title, formData.description, formData.first_step,
+                          history.filter(m => m.role === 'user').map(m => m.content),
+                        )}
+                        className="text-[11px]"
+                        style={{ color: 'var(--brand-primary)', opacity: 0.7 }}
+                      >
+                        redo
+                      </button>
+                    )}
+                  </div>
+                  {tasksLoading ? (
+                    <p className="text-xs" style={{ color: 'var(--brand-text-secondary)', opacity: 0.5 }}>
+                      Working out a first move…
+                    </p>
+                  ) : draftTasks.length === 0 ? (
+                    <button
+                      type="button"
+                      onClick={addDraftTask}
+                      className="flex items-center gap-1.5 text-xs"
+                      style={{ color: 'var(--brand-text-secondary)', opacity: 0.4 }}
+                    >
+                      <Plus className="h-3 w-3" /> add one by hand
+                    </button>
+                  ) : (
+                    <div className="space-y-1">
+                      {draftTasks.map((t, i) => (
+                        <div key={t.id} className="flex items-center gap-1.5">
+                          <span className="text-[11px] tabular-nums flex-shrink-0" style={{ color: 'var(--brand-text-secondary)', opacity: 0.35 }}>
+                            {i + 1}
+                          </span>
+                          <input
+                            value={t.text}
+                            onChange={e => updateDraftTask(i, e.target.value)}
+                            onFocus={handleInputFocus}
+                            autoComplete="off"
+                            className="flex-1 border-0 focus:outline-none focus:ring-0 bg-transparent appearance-none text-sm"
+                            style={{ color: 'var(--brand-text-secondary)' }}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removeDraftTask(i)}
+                            aria-label="Remove"
+                            className="flex-shrink-0 opacity-30 hover:opacity-70"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </div>
+                      ))}
+                      {draftTasks.length < 3 && (
+                        <button
+                          type="button"
+                          onClick={addDraftTask}
+                          className="flex items-center gap-1.5 text-[11px] mt-1"
+                          style={{ color: 'var(--brand-text-secondary)', opacity: 0.4 }}
+                        >
+                          <Plus className="h-3 w-3" /> add one
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
 
                 {/* Toolbar */}
                 <div className="flex items-center gap-1 pt-2" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>

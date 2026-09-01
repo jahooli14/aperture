@@ -21,6 +21,12 @@ interface VoiceInputProps {
    *  processing still take over the full block — you need the timer and the
    *  transcript then. */
   variant?: 'block' | 'icon'
+  /** Fires whenever "actively capturing something" (recording or
+   *  transcribing) changes. For a parent with its own timer or auto-advance
+   *  logic -- a countdown that fires while someone is mid-sentence isn't a
+   *  ritual, it's a trap, and "there's unsent text" isn't the only shape
+   *  "busy" can take here. */
+  onRecordingChange?: (active: boolean) => void
 }
 
 export function VoiceInput({
@@ -30,7 +36,8 @@ export function VoiceInput({
   autoSubmit = false,
   autoStart = false,
   shouldStop = false,
-  variant = 'block'
+  variant = 'block',
+  onRecordingChange,
 }: VoiceInputProps) {
   const {
     isRecording,
@@ -65,6 +72,15 @@ export function VoiceInput({
       return () => clearTimeout(timer)
     }
   }, [autoStart, isSupported]) // Reduced dependencies to prevent re-triggers
+
+  // Tell the parent whenever "actively capturing something" changes, so it
+  // can hold off a countdown or auto-advance without duplicating this
+  // hook's internal state. Cleared on unmount too -- switching away from
+  // voice mid-recording must not leave the parent thinking it's still busy.
+  useEffect(() => {
+    onRecordingChange?.(isRecording || isProcessing)
+    return () => onRecordingChange?.(false)
+  }, [isRecording, isProcessing, onRecordingChange])
 
   // Stop recording if externally requested
   useEffect(() => {

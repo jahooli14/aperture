@@ -22,9 +22,14 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { generateText } from './gemini-chat.js'
 import { PLAIN_ENGLISH_RULES } from './plain-english.js'
 import { deriveSessionShapes, type SlotInput } from './session-shapes.js'
-import { filterGrounded, type Evidence, type GroundedItem, type RawItem } from './session-grounding.js'
+import {
+  filterGrounded, evidenceHaystack, hasOnlyKnownSpecifics,
+  type Evidence, type GroundedItem, type RawItem,
+} from './session-grounding.js'
 import { confidenceFor, reasoningLicence, type Confidence } from './session-confidence.js'
 import { pickGap, genericGapQuestion, type Gap } from './session-gap.js'
+import { openTasksInOrder, selectByBudget, sumMinutes, type BudgetTask } from './session-budget.js'
+import { nearestEstimate, type EstimateMinutes } from './session-estimate.js'
 
 /**
  * "3-6 depending on time." A 20-minute window that lists six things is
@@ -112,6 +117,23 @@ export function sanitizeItems(raw: unknown, count: number): string[] {
   return sanitizeRawItems(raw, count).map(i => i.text)
 }
 
+/**
+ * The friction line goes through the same honesty rule as every other AI-
+ * written line here: nothing named that wasn't already known, and genuinely
+ * absent (null) when there's nothing real to say -- a made-up "get your
+ * gear ready" for a project that's just writing or thinking is the same
+ * failure mode filterGrounded exists to stop on task text.
+ */
+export function sanitizeFriction(raw: unknown, evidence: Evidence[], projectTitle: string): FrictionLine | null {
+  if (!raw || typeof raw !== 'object') return null
+  const text = typeof (raw as any).text === 'string' ? (raw as any).text.trim() : ''
+  const minutes = (raw as any).minutes
+  if (!text || text.length > 100 || typeof minutes !== 'number') return null
+  const haystack = evidenceHaystack(evidence, projectTitle)
+  if (!hasOnlyKnownSpecifics(text, haystack)) return null
+  return { text, minutes: nearestEstimate(minutes) }
+}
+
 export interface ShapeContext {
   title: string
   goal: string | null
@@ -120,8 +142,9 @@ export interface ShapeContext {
   /** Open tasks with their real ids -- carried through to evidence so a
    *  session item grounded in one can be matched back to it by id at
    *  close time, not by hoping the model's paraphrase equals the stored
-   *  text verbatim. */
-  openTasks: { id: string; text: string }[]
+   *  text verbatim. Ordered the way the user actually left them, each
+   *  carrying a real or default minute estimate for the budget math. */
+  openTasks: BudgetTask[]
   /** Finished work, with when it was finished. Reasoning backwards from
    *  the goal is impossible without knowing what's already done, and this
    *  was being filtered out before the model ever saw it. */
@@ -192,7 +215,6 @@ export function buildShapePrompt(
   confidence: Confidence = 'partial',
 ): string {
   const count = itemCountForWindow(ctx.windowMinutes)
-  const total = count + BENCH_SIZE
   const windowText = ctx.windowMinutes
     ? `${ctx.windowMinutes} minutes`
     : 'an unknown amount of time — assume about an hour'
@@ -209,6 +231,29 @@ throw out items they didn't complain about.
 `
     : ''
 
+  // The task list is the project's own record, not a suggestion — a
+  // reshape is the user explicitly asking for a different take, so it
+  // still gets the full treatment. Otherwise, real open tasks already
+  // fill part of the session; the model's only job is the rest of it.
+  const openCount = ctx.openTasks.length
+  const usingTasksAsBase = !ctx.instruction && openCount > 0
+  const newNeeded = usingTasksAsBase ? Math.max(0, count - openCount) : count
+  const total = newNeeded + BENCH_SIZE
+
+  const askForCount = usingTasksAsBase
+    ? `You already have ${openCount} thing${openCount === 1 ? '' : 's'} lined up for this
+session — they're in the evidence above, marked "already on the project".
+Do not repeat them.
+
+Give ${total} NEW things. The FIRST ${newNeeded} continue the session those
+queued tasks already started, in order. The last ${BENCH_SIZE} are spares —
+same quality, different angles, ready to swap in if one of the first
+${newNeeded} doesn't suit today. Don't mark them; just order them that way.`
+    : `Give ${total} things to do. The FIRST ${count} are the session, in order. The
+last ${BENCH_SIZE} are spares — same quality, different angles, ready to swap in
+if one of the first ${count} doesn't suit today. Don't mark them; just order
+them that way.`
+
   return `You are shaping one work session on a creative project. The user has ${windowText}
 and is about to start.
 
@@ -223,10 +268,7 @@ That list is the whole of it. Anything not in it, you do not know.
 
 ${reasoningLicence(confidence)}
 ${reshaping}
-Give ${total} things to do. The FIRST ${count} are the session, in order. The
-last ${BENCH_SIZE} are spares — same quality, different angles, ready to swap in
-if one of the first ${count} doesn't suit today. Don't mark them; just order
-them that way.
+${askForCount}
 
 THE RULE THAT MATTERS MOST — never invent a detail:
 - No tools, gear, brands, model numbers, file formats, settings, tempos,
@@ -243,13 +285,18 @@ THE RULE THAT MATTERS MOST — never invent a detail:
   is the correct answer, not a failure.
 
 Rules for the list:
-- The first item is an ignition move: physical, trivial, under two minutes.
-  Starting must be easier than deliberating.
+${usingTasksAsBase
+  ? `- These continue a session, they don't open one — no need for an ignition
+  move here, the queued tasks already start it.`
+  : `- The first item is an ignition move: physical, trivial, under two minutes.
+  Starting must be easier than deliberating.`}
 - Every other item is a real move against the work — something exists
   afterwards that didn't before.
 - BANNED, this is admin pretending to be building: research, plan, outline,
   decide, list, consider, review, think about, set up, brainstorm, explore.
-- Size the first ${count} to ${windowText}. Finishable, not aspirational.
+${usingTasksAsBase
+  ? `- Size the whole session — the ${openCount} queued task${openCount === 1 ? '' : 's'} plus these ${newNeeded} — to ${windowText}. Finishable, not aspirational.`
+  : `- Size the first ${count} to ${windowText}. Finishable, not aspirational.`}
 - One line each. No sub-bullets, no time estimates, no explanation.
 
 ${PLAIN_ENGLISH_RULES}
@@ -262,8 +309,19 @@ Say the note has: "Next: fix the transition out of track two."
   GOOD: "Play track two from the top and find where the transition breaks."
         — cites the note, adds nothing that wasn't in it.
 
+One more thing: is there a real, physical or logistical setup step before
+someone could start on THIS session -- something specific to this project,
+not a generic "get ready"? For a DJ project that might be connecting gear;
+for woodworking, laying out materials; for something that's just writing
+or thinking, there usually isn't one at all. Only name it if it's
+genuinely true of this specific project, grounded in the evidence above —
+a made-up setup step is worse than none. Give it a rough time in minutes.
+
 Respond with JSON only:
-{ "items": [ { "text": "...", "evidence": ["e1"] } ] }`
+{
+  "items": [ { "text": "...", "evidence": ["e1"] } ],
+  "friction": { "text": "...", "minutes": 5 } | null
+}`
 }
 
 /**
@@ -273,10 +331,22 @@ Respond with JSON only:
  */
 const MIN_TRUSTWORTHY_ITEMS = 3
 
+/** A session-specific setup step -- e.g. "get the DJ gear connected". Never
+ *  written back to the project: it's a fact about doing THIS session, not
+ *  about the project, so it's recomputed fresh each time rather than
+ *  calcifying into a permanent task nobody can un-tick. */
+export interface FrictionLine {
+  text: string
+  minutes: EstimateMinutes
+}
+
 export interface ShapeResult {
   items: GroundedItem[]
   bench: GroundedItem[]
-  source: 'ai' | 'derived'
+  /** 'tasks' — the plan is (at least partly) the project's own open task
+   *  list, verbatim. 'ai' — invented to fill a gap the task list couldn't.
+   *  'derived' — the model was unreachable, mechanical fallback. */
+  source: 'ai' | 'derived' | 'tasks'
   /** Set when the app doesn't know enough to fill a session honestly. The
    *  right move then is to ask, not to invent — and the answer is filed as
    *  the thing it is, so it fixes the project rather than this one session. */
@@ -285,6 +355,12 @@ export interface ShapeResult {
    *  where to put it. Null when the question is the generic fallback. */
   gap: Gap | null
   confidence: Confidence
+  /** Null on the fast, no-model-call path -- there's nothing to ask about
+   *  friction when nothing was generated. */
+  friction: FrictionLine | null
+  /** How many open tasks exist beyond what was even considered for this
+   *  plan, so the app can say so rather than silently dropping backlog. */
+  truncatedCount: number
 }
 
 /**
@@ -323,10 +399,15 @@ export async function shapeSession(
   const shortDate = (iso?: string | null) =>
     iso ? new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : null
 
-  const openTasks: { id: string; text: string }[] = allTasks
-    .filter(t => t && !t.done && typeof t.text === 'string' && typeof t.id === 'string')
-    .slice(0, 6)
-    .map(t => ({ id: t.id, text: t.text }))
+  // The project's own task list is the golden source for a session, not a
+  // separate thing the shaper invents alongside it. 24 is generous headroom
+  // over a spine (5-8 steps) plus whatever's accreted since — high enough
+  // that a real backlog is rarely truncated at all, and when it is, the
+  // count below says so rather than silently dropping it.
+  const OPEN_TASK_LIMIT = 24
+  const openTaskCountTotal = allTasks.filter(t => t && !t.done && typeof t.text === 'string' && typeof t.id === 'string').length
+  const truncatedCount = Math.max(0, openTaskCountTotal - OPEN_TASK_LIMIT)
+  const openTasks: BudgetTask[] = openTasksInOrder(allTasks, OPEN_TASK_LIMIT)
 
   // Finished work was being filtered out entirely, which made "the intro's
   // done, so the transition is next" impossible to say even when it was
@@ -416,6 +497,27 @@ export async function shapeSession(
   })
   const ask = (): string => gap?.question ?? genericGapQuestion(project.title)
 
+  // Budget-aware selection over the real list: two 30-minute tasks fill an
+  // hour just as completely as five 10-minute ones, so count alone was
+  // either cutting a real task short of the window or padding past it.
+  // No friction subtracted here -- that only exists once a model call has
+  // actually run, and the fast path below is precisely the case where one
+  // doesn't need to.
+  const budgetMinutes = windowMinutes
+  const { selected: budgetSelected, rest: budgetRest } = selectByBudget(openTasks, budgetMinutes, count)
+  const realTasksFillWindow = openTasks.length >= count ||
+    (budgetMinutes != null && sumMinutes(budgetSelected) >= budgetMinutes)
+
+  // The task list is the golden source: if it already has enough open work
+  // to fill this window, the plan IS the list — no model call, no
+  // invention, nothing that can be wrong. Skipped on an explicit reshape,
+  // which is the user asking for a different take, not more of this one.
+  if (!instruction && realTasksFillWindow) {
+    const pool: GroundedItem[] = budgetSelected.map(t => ({ text: t.text, source: 'already on the project', taskId: t.id }))
+    const bench: GroundedItem[] = budgetRest.map(t => ({ text: t.text, source: 'already on the project', taskId: t.id }))
+    return { items: pool, bench, source: 'tasks', needsInput: null, gap: null, confidence, friction: null, truncatedCount }
+  }
+
   // Nothing known means nothing to say. Inventing a plan here is exactly
   // what cost this feature its credibility, so ask instead — and let the
   // answer be the thing that makes next time better.
@@ -429,8 +531,18 @@ export async function shapeSession(
       needsInput: ask(),
       gap,
       confidence,
+      friction: null,
+      truncatedCount,
     }
   }
+
+  // The task list wasn't enough to fill the window on its own (or this is a
+  // reshape, which starts from scratch). Whatever's real gets shown as-is;
+  // the model only has to invent the shortfall.
+  const openAsItems: GroundedItem[] = !instruction
+    ? budgetSelected.map(t => ({ text: t.text, source: 'already on the project', taskId: t.id }))
+    : []
+  const newNeeded = Math.max(0, count - openAsItems.length)
 
   try {
     const response = await generateText(buildShapePrompt(ctx, evidence, confidence), {
@@ -441,8 +553,9 @@ export async function shapeSession(
       maxTokens: 1600,
     })
 
-    const raw = JSON.parse(response)?.items
-    const cleaned = sanitizeRawItems(raw, count + BENCH_SIZE)
+    const parsed = JSON.parse(response)
+    const target = openAsItems.length > 0 ? newNeeded + BENCH_SIZE : count + BENCH_SIZE
+    const cleaned = sanitizeRawItems(parsed?.items, target)
     const { kept, rejected } = filterGrounded(cleaned, evidence, project.title, taskIdByEvidenceId)
 
     if (rejected.length > 0) {
@@ -452,14 +565,22 @@ export async function shapeSession(
       )
     }
 
-    if (kept.length >= MIN_TRUSTWORTHY_ITEMS) {
-      const { items, bench } = splitBench(kept, count)
-      return { items, bench, source: 'ai', needsInput: null, gap: null, confidence }
+    // A generated item that cites an open task already shown verbatim above
+    // would otherwise duplicate that same task under a paraphrase.
+    const openTaskIds = new Set(openAsItems.map(i => i.taskId).filter((id): id is string => !!id))
+    const keptFiltered = kept.filter(k => !k.taskId || !openTaskIds.has(k.taskId))
+
+    const friction = sanitizeFriction(parsed?.friction, evidence, project.title)
+
+    const pool = [...openAsItems, ...keptFiltered]
+    if (pool.length >= MIN_TRUSTWORTHY_ITEMS) {
+      const { items, bench } = splitBench(pool, count)
+      return { items, bench, source: openAsItems.length > 0 ? 'tasks' : 'ai', needsInput: null, gap: null, confidence, friction, truncatedCount }
     }
 
     // Not enough survived. Show what did — those are real — and ask for
     // the rest rather than padding with things that aren't.
-    return { items: kept, bench: [], source: 'ai', needsInput: ask(), gap, confidence }
+    return { items: pool, bench: [], source: openAsItems.length > 0 ? 'tasks' : 'ai', needsInput: ask(), gap, confidence, friction, truncatedCount }
   } catch (e) {
     console.error('[session-shaper] generation failed, falling back:', e)
   }
@@ -477,5 +598,7 @@ export async function shapeSession(
     needsInput: null,
     gap: null,
     confidence,
+    friction: null,
+    truncatedCount,
   }
 }

@@ -6,8 +6,10 @@ import {
   splitBench,
   buildShapePrompt,
   buildEvidence,
+  sanitizeFriction,
   BENCH_SIZE,
 } from './session-shaper.js'
+import type { BudgetTask } from './session-budget.js'
 
 describe('itemCountForWindow', () => {
   it('gives a short window a short list', () => {
@@ -53,6 +55,34 @@ describe('isAdminItem', () => {
   it('does not flag a real verb that merely contains an admin word', () => {
     expect(isAdminItem('Listen back on the phone speaker')).toBe(false)
     expect(isAdminItem('Replant the seedlings')).toBe(false)
+  })
+})
+
+describe('sanitizeFriction', () => {
+  const evidence = [{ id: 'e1', label: 'what this project is', text: 'Producing a DJ mix with two decks' }]
+
+  it('keeps a friction line grounded in real evidence', () => {
+    const result = sanitizeFriction({ text: 'Get the decks connected and cued up', minutes: 5 }, evidence, 'DJ mix')
+    expect(result).toEqual({ text: 'Get the decks connected and cued up', minutes: 5 })
+  })
+
+  it('drops a friction line that invents gear not in the evidence', () => {
+    const result = sanitizeFriction({ text: 'Set up the Pioneer CDJ-3000s', minutes: 5 }, evidence, 'DJ mix')
+    expect(result).toBeNull()
+  })
+
+  it('is null when the model correctly says there is nothing to set up', () => {
+    expect(sanitizeFriction(null, evidence, 'DJ mix')).toBeNull()
+  })
+
+  it('snaps the minutes onto the shared ladder', () => {
+    const result = sanitizeFriction({ text: 'Get the decks connected', minutes: 7 }, evidence, 'DJ mix')
+    expect(result?.minutes).toBe(5)
+  })
+
+  it('rejects a friction line with no minutes or an over-long text', () => {
+    expect(sanitizeFriction({ text: 'Get the decks connected' }, evidence, 'DJ mix')).toBeNull()
+    expect(sanitizeFriction({ text: 'x'.repeat(150), minutes: 5 }, evidence, 'DJ mix')).toBeNull()
   })
 })
 
@@ -107,7 +137,7 @@ describe('buildShapePrompt', () => {
     goal: null,
     windowMinutes: 60,
     lastCloseout: null as string | null,
-    openTasks: [] as { id: string; text: string }[],
+    openTasks: [] as BudgetTask[],
     doneTasks: [] as { text: string; date: string | null }[],
     pastCloseouts: [] as { text: string; date: string | null }[],
     shapingTurns: [] as string[],
@@ -176,6 +206,25 @@ describe('buildShapePrompt', () => {
     expect(prompt(base)).not.toContain('The user says:')
   })
 
+  it('only asks for the shortfall when open tasks already fill part of the window', () => {
+    // 2 open tasks against a 60-minute window (needs 5): the model should
+    // only be asked for the 3 it's short, not the full 5, and told not to
+    // repeat the 2 that are already queued.
+    const withTasks = { ...base, openTasks: [{ id: 't1', text: 'a', minutes: 20 as const }, { id: 't2', text: 'b', minutes: 20 as const }] }
+    const p = buildShapePrompt(withTasks, buildEvidence(withTasks).evidence)
+    expect(p).toContain(`Give ${3 + BENCH_SIZE} NEW things`)
+    expect(p).toContain('Do not repeat them')
+    expect(p).not.toContain('FIRST 5 are the session')
+  })
+
+  it('asks for the full count when open tasks already cover the reshape', () => {
+    // A reshape starts over regardless of what's already on the list --
+    // it's the user asking for a different take, not more of the same one.
+    const withTasks = { ...base, openTasks: [{ id: 't1', text: 'a', minutes: 20 as const }], instruction: 'too admin-y', currentItems: ['x'] }
+    const p = buildShapePrompt(withTasks as any, buildEvidence(withTasks).evidence)
+    expect(p).toContain(`Give ${5 + BENCH_SIZE} things`)
+  })
+
   it('bans the admin verbs in the prompt, not just in the checker', () => {
     const p = prompt(base)
     for (const v of ['research', 'decide', 'think about', 'brainstorm']) {
@@ -232,7 +281,7 @@ function stubClient(opts: {
 describe('buildEvidence', () => {
   const base = {
     title: 'Graham song', goal: null as string | null, windowMinutes: 60,
-    lastCloseout: null as string | null, openTasks: [] as { id: string; text: string }[],
+    lastCloseout: null as string | null, openTasks: [] as BudgetTask[],
     doneTasks: [] as { text: string; date: string | null }[],
     pastCloseouts: [] as { text: string; date: string | null }[],
     shapingTurns: [] as string[],
@@ -274,7 +323,7 @@ describe('buildEvidence', () => {
     // paraphrases the item's wording into.
     const { evidence, taskIdByEvidenceId } = buildEvidence({
       ...base,
-      openTasks: [{ id: 'task-7', text: 'Fix the transition out of track two' }],
+      openTasks: [{ id: 'task-7', text: 'Fix the transition out of track two', minutes: 20 as const }],
     })
     const match = evidence.find(e => e.text === 'Fix the transition out of track two')
     expect(match).toBeDefined()
@@ -332,5 +381,118 @@ describe('shapeSession', () => {
     await expect(
       shapeSession(stubClient({ projectError: { message: 'column does not exist' } }), 'u1', 'p1', 60),
     ).rejects.toThrow('column does not exist')
+  })
+
+  it('shapes the session straight from the task list when it already has enough, with no model call', async () => {
+    // 5 tasks estimated at 20 minutes each (the default) is exactly
+    // itemCountForWindow(60)'s target -- but at 20 minutes a task, a
+    // 60-minute window only actually fits 3, and the budget is what
+    // decides, not the raw count.
+    const withFullBacklog = {
+      ...project,
+      metadata: {
+        end_goal: 'released',
+        tasks: Array.from({ length: 7 }, (_, i) => ({ id: `t${i}`, text: `step ${i}`, done: false, order: i })),
+      },
+    }
+    const { shapeSession } = await import('./session-shaper.js')
+    const result = await shapeSession(stubClient({ project: withFullBacklog }), 'u1', 'p1', 60)
+    expect(result.source).toBe('tasks')
+    expect(result.items.map(i => i.text)).toEqual(['step 0', 'step 1', 'step 2'])
+    expect(result.items.every(i => i.taskId)).toBe(true)
+    expect(result.bench.map(i => i.text)).toEqual(['step 3', 'step 4', 'step 5', 'step 6'])
+    expect(result.needsInput).toBeNull()
+    expect(result.friction).toBeNull()
+    expect(result.truncatedCount).toBe(0)
+  })
+
+  it('takes the full count when real estimates say they all fit the window', async () => {
+    const withEstimates = {
+      ...project,
+      metadata: {
+        end_goal: 'released',
+        tasks: Array.from({ length: 7 }, (_, i) => ({
+          id: `t${i}`, text: `step ${i}`, done: false, order: i,
+          estimated_minutes: 10, estimate_set: true,
+        })),
+      },
+    }
+    const { shapeSession } = await import('./session-shaper.js')
+    const result = await shapeSession(stubClient({ project: withEstimates }), 'u1', 'p1', 60)
+    // itemCountForWindow(60) === 5; 5 * 10min = 50min, fits inside 60.
+    expect(result.items).toHaveLength(5)
+    expect(result.items.map(i => i.text)).toEqual(['step 0', 'step 1', 'step 2', 'step 3', 'step 4'])
+  })
+
+  it('lets two big real tasks fill the window without padding to the count ceiling', async () => {
+    const withBigTasks = {
+      ...project,
+      metadata: {
+        end_goal: 'released',
+        tasks: [
+          { id: 't0', text: 'big one', done: false, order: 0, estimated_minutes: 30, estimate_set: true },
+          { id: 't1', text: 'big two', done: false, order: 1, estimated_minutes: 30, estimate_set: true },
+          { id: 't2', text: 'small extra', done: false, order: 2, estimated_minutes: 15, estimate_set: true },
+        ],
+      },
+    }
+    const { shapeSession } = await import('./session-shaper.js')
+    const result = await shapeSession(stubClient({ project: withBigTasks }), 'u1', 'p1', 60)
+    expect(result.source).toBe('tasks')
+    expect(result.items.map(i => i.text)).toEqual(['big one', 'big two'])
+    expect(result.bench.map(i => i.text)).toEqual(['small extra'])
+  })
+
+  it('offers every leftover open task as a swap-in, not a re-cycled reject capped at 3', async () => {
+    // The old bench was capped at BENCH_SIZE because generating spares cost
+    // a model call. Real tasks already on the list cost nothing to offer,
+    // so the whole remaining backlog is fair game for a swap.
+    const withFullBacklog = {
+      ...project,
+      metadata: {
+        end_goal: 'released',
+        tasks: Array.from({ length: 8 }, (_, i) => ({
+          id: `t${i}`, text: `step ${i}`, done: false, order: i,
+          estimated_minutes: 5, estimate_set: true,
+        })),
+      },
+    }
+    const { shapeSession } = await import('./session-shaper.js')
+    const result = await shapeSession(stubClient({ project: withFullBacklog }), 'u1', 'p1', 20)
+    // itemCountForWindow(20) === 3, and 3 * 5min easily fits 20.
+    expect(result.items.map(i => i.text)).toEqual(['step 0', 'step 1', 'step 2'])
+    expect(result.bench.map(i => i.text)).toEqual(['step 3', 'step 4', 'step 5', 'step 6', 'step 7'])
+  })
+
+  it('respects manual drag-reorder over array position', async () => {
+    const reordered = {
+      ...project,
+      metadata: {
+        end_goal: 'released',
+        tasks: [
+          { id: 't0', text: 'stored first', done: false, order: 1, estimated_minutes: 30, estimate_set: true },
+          { id: 't1', text: 'stored second', done: false, order: 0, estimated_minutes: 30, estimate_set: true },
+        ],
+      },
+    }
+    const { shapeSession } = await import('./session-shaper.js')
+    const result = await shapeSession(stubClient({ project: reordered }), 'u1', 'p1', 60)
+    expect(result.items.map(i => i.text)).toEqual(['stored second', 'stored first'])
+  })
+
+  it('reports how much of the backlog was truncated rather than silently dropping it', async () => {
+    const bigBacklog = {
+      ...project,
+      metadata: {
+        end_goal: 'released',
+        tasks: Array.from({ length: 30 }, (_, i) => ({
+          id: `t${i}`, text: `step ${i}`, done: false, order: i,
+          estimated_minutes: 5, estimate_set: true,
+        })),
+      },
+    }
+    const { shapeSession } = await import('./session-shaper.js')
+    const result = await shapeSession(stubClient({ project: bigBacklog }), 'u1', 'p1', 20)
+    expect(result.truncatedCount).toBe(6) // 30 open tasks, 24-task ceiling
   })
 })

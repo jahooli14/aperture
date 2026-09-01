@@ -27,9 +27,19 @@ import { generateText } from './gemini-chat.js'
 import { PLAIN_ENGLISH_RULES } from './plain-english.js'
 import { filterGrounded, type Evidence } from './session-grounding.js'
 import { isAdminItem } from './session-shaper.js'
+import { ESTIMATE_MINUTES, nearestEstimate, type EstimateMinutes } from './session-estimate.js'
 
 export const MIN_SPINE_STEPS = 4
 export const MAX_SPINE_STEPS = 8
+
+/**
+ * The very first spine a project gets, at creation, is a different shape
+ * from a replan: 3 broad moves that together are about an hour's work, not
+ * 4-8 tight ones. A brand-new project doesn't have the texture yet to plan
+ * tightly against, and pretending otherwise is how creation ends up
+ * inventing detail nobody said. Loose now, precise once you're in it.
+ */
+export const FIRST_CUT_STEPS = 3
 
 export interface SpineInput {
   title: string
@@ -48,6 +58,10 @@ export interface SpineStep {
   text: string
   /** Where it came from, or null when it's a plainly generic move. */
   source: string | null
+  /** Set once, at generation time, and persisted onto the stored task from
+   *  then on -- the triage that plans a session against real minutes reads
+   *  this rather than re-asking the model "how long is this" every time. */
+  estimatedMinutes: EstimateMinutes | null
 }
 
 export function buildEvidenceFromSaid(title: string, endGoal: string | null, said: string[]): Evidence[] {
@@ -107,20 +121,27 @@ WHAT NONE OF THEM MAY BE:
 Give ${MIN_SPINE_STEPS}-${MAX_SPINE_STEPS} steps, in the order they'd be done, first one first.
 Fewer, honest steps beat a long list you had to invent to fill.
 
+For each step, also guess how long ONE SITTING of it takes -- not the whole
+step if it spans several sessions, just a realistic single sitting. Pick
+the closest value from EXACTLY this list: ${ESTIMATE_MINUTES.join(', ')}.
+
 ${PLAIN_ENGLISH_RULES}
 
 Respond with JSON only:
-{ "steps": [ { "text": "...", "evidence": ["e1"] } ] }`
+{ "steps": [ { "text": "...", "evidence": ["e1"], "estimated_minutes": 20 } ] }`
 }
 
 /**
  * Model output -> a spine. Same shape of cleaning as session items, plus
  * the length rules that make it a spine rather than a backlog.
  */
-export function sanitizeSteps(raw: unknown): { text: string; evidence?: string[] }[] {
+export function sanitizeSteps(
+  raw: unknown,
+  maxCount: number = MAX_SPINE_STEPS,
+): { text: string; evidence?: string[]; estimatedMinutes: EstimateMinutes | null }[] {
   if (!Array.isArray(raw)) return []
   const seen = new Set<string>()
-  const out: { text: string; evidence?: string[] }[] = []
+  const out: { text: string; evidence?: string[]; estimatedMinutes: EstimateMinutes | null }[] = []
   for (const entry of raw) {
     const rawText = typeof entry === 'string' ? entry : entry?.text
     if (typeof rawText !== 'string') continue
@@ -130,18 +151,21 @@ export function sanitizeSteps(raw: unknown): { text: string; evidence?: string[]
     const key = text.toLowerCase().replace(/[^a-z0-9]/g, '')
     if (!key || seen.has(key)) continue
     seen.add(key)
+    const rawMinutes = typeof entry === 'object' && entry !== null ? (entry as any).estimated_minutes : undefined
     out.push({
       text,
       evidence: Array.isArray(entry?.evidence)
         ? entry.evidence.filter((x: unknown): x is string => typeof x === 'string')
         : undefined,
+      estimatedMinutes: typeof rawMinutes === 'number' ? nearestEstimate(rawMinutes) : null,
     })
-    if (out.length >= MAX_SPINE_STEPS) break
+    if (out.length >= maxCount) break
   }
   return out
 }
 
-/** The shape the app stores tasks in (metadata.tasks). */
+/** The shape the app stores tasks in (metadata.tasks). Field names match
+ *  TaskList.tsx's Task interface -- same record, read by both. */
 export interface StoredTask {
   id: string
   text: string
@@ -150,7 +174,9 @@ export interface StoredTask {
   /** Kept so a later session can show where the step came from, and so a
    *  re-plan can tell generated steps from ones the user wrote. */
   source?: string | null
-  origin?: 'spine' | 'closeout' | 'user'
+  origin?: 'spine' | 'closeout' | 'user' | 'session'
+  estimated_minutes?: number
+  estimate_set?: boolean
 }
 
 export function toStoredTasks(steps: SpineStep[], now: Date = new Date()): StoredTask[] {
@@ -161,6 +187,7 @@ export function toStoredTasks(steps: SpineStep[], now: Date = new Date()): Store
     created_at: now.toISOString(),
     source: s.source,
     origin: 'spine' as const,
+    ...(s.estimatedMinutes != null ? { estimated_minutes: s.estimatedMinutes, estimate_set: true } : {}),
   }))
 }
 
@@ -190,7 +217,11 @@ export async function generateTaskSpine(input: SpineInput): Promise<SpineStep[]>
         rejected.map(r => `"${r.text}" — ${r.reason}`),
       )
     }
-    return kept.length >= MIN_SPINE_STEPS ? kept : kept.slice(0, MAX_SPINE_STEPS)
+    // filterGrounded's output shape doesn't carry estimatedMinutes -- reattach
+    // it by text, which survives the grounding pass unchanged.
+    const estimateByText = new Map(cleaned.map(c => [c.text, c.estimatedMinutes]))
+    const withEstimates: SpineStep[] = kept.map(k => ({ ...k, estimatedMinutes: estimateByText.get(k.text) ?? null }))
+    return withEstimates.length >= MIN_SPINE_STEPS ? withEstimates : withEstimates.slice(0, MAX_SPINE_STEPS)
   } catch (e) {
     console.error('[task-spine] generation failed:', e)
     return []
@@ -203,4 +234,116 @@ export async function generateStoredSpine(
   input: SpineInput,
 ): Promise<StoredTask[]> {
   return toStoredTasks(await generateTaskSpine(input))
+}
+
+/**
+ * A brand-new project doesn't get a finish line -- an ongoing craft like
+ * "producing music" or "DJing" has no "done" to plan backwards from, and
+ * forcing one meant either inventing a fake one or rewriting it every time
+ * the project moved on. What it does have, from the moment it's created, is
+ * a description of what it actually is. That's what these plan FORWARD
+ * from: not "what had to be true before done", but "what's a real first
+ * move against this".
+ */
+export interface FirstCutInput {
+  title: string
+  /** What the project actually is, in the user's words. The anchor —
+   *  with nothing here there is nothing to plan from. */
+  description: string
+  /** Anything else said while creating it -- conversation turns, a first
+   *  step they mentioned. Extra evidence, not required. */
+  said: string[]
+}
+
+export function buildFirstCutEvidence(title: string, description: string, said: string[]): Evidence[] {
+  const evidence: Evidence[] = []
+  let n = 0
+  const add = (label: string, text: string) => {
+    if (!text?.trim()) return
+    evidence.push({ id: `e${++n}`, label, text: text.trim() })
+  }
+  add('what this project is', description)
+  said.forEach(s => add('from what you said about it', s))
+  return evidence
+}
+
+export function buildFirstCutPrompt(input: FirstCutInput, evidence: Evidence[]): string {
+  return `"${input.title}" is a brand-new project, just started. Give it a first move.
+
+WHAT THIS PROJECT IS:
+${evidence.length
+  ? evidence.map(e => `[${e.id}] ${e.text}`).join('\n')
+  : '(nothing yet)'}
+
+That's the whole of it. Anything not in it, you do not know.
+
+HOW TO DO THIS -- forwards, not backwards:
+There's no finish line yet, and none should be invented. Don't plan
+backwards from a "done" that doesn't exist. Instead give ${FIRST_CUT_STEPS}
+broad first moves: things that would genuinely get someone started today,
+which together would fill about an hour.
+
+They should be coarse ON PURPOSE. The precise plan comes later, once
+they're actually in it and can see what the real next steps are — naming
+the wrong specifics now is worse than leaving them open.
+
+WHAT EACH MOVE MUST BE:
+- A physical, concrete action against the work: open, sketch, record,
+  write, build, try, make, send, book.
+- Broad enough to leave room. "Sketch a rough loop" not "sketch a four-bar
+  loop in C minor at 120bpm" — the second one invents specifics nobody
+  gave you.
+- Something that could plausibly happen in one sitting, today.
+
+WHAT NONE OF THEM MAY BE:
+- Admin pretending to be building: research, plan, outline, decide, list,
+  consider, review, think about, brainstorm, explore.
+- Anything naming a tool, brand, format, instrument, person or place that
+  does NOT appear verbatim above.
+- A finish line, a deadline, or a description of what "done" looks like —
+  that's not what's being asked for here.
+
+Give exactly ${FIRST_CUT_STEPS} moves, in the order they'd make sense to do.
+Cite the evidence id each one comes from; a move that names nothing beyond
+the project's own title needs no citation.
+
+For each, also guess how long it takes in one sitting. Pick the closest
+value from EXACTLY this list: ${ESTIMATE_MINUTES.join(', ')}.
+
+${PLAIN_ENGLISH_RULES}
+
+Respond with JSON only:
+{ "steps": [ { "text": "...", "evidence": ["e1"], "estimated_minutes": 15 } ] }`
+}
+
+/**
+ * Generates the first-cut list. Same honesty rule as the spine: nothing
+ * beats an invented set of three, so a project with no description yet
+ * gets an empty list back rather than three plausible-sounding guesses.
+ */
+export async function generateFirstCutTasks(input: FirstCutInput): Promise<SpineStep[]> {
+  const evidence = buildFirstCutEvidence(input.title, input.description, input.said)
+  if (evidence.length === 0) return []
+
+  try {
+    const response = await generateText(buildFirstCutPrompt(input, evidence), {
+      responseFormat: 'json',
+      temperature: 0.4,
+      maxTokens: 800,
+    })
+    const cleaned = sanitizeSteps(JSON.parse(response)?.steps, FIRST_CUT_STEPS)
+    const { kept, rejected } = filterGrounded(cleaned, evidence, input.title)
+    if (rejected.length > 0) {
+      console.warn(
+        `[task-spine] dropped ${rejected.length} ungrounded first-cut step(s) for "${input.title}":`,
+        rejected.map(r => `"${r.text}" — ${r.reason}`),
+      )
+    }
+    const estimateByText = new Map(cleaned.map(c => [c.text, c.estimatedMinutes]))
+    const withEstimates: SpineStep[] = kept.map(k => ({ ...k, estimatedMinutes: estimateByText.get(k.text) ?? null }))
+    return withEstimates.slice(0, FIRST_CUT_STEPS)
+  } catch (e) {
+    console.error('[task-spine] first-cut generation failed:', e)
+    return []
+  }
 }

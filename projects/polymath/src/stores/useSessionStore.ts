@@ -13,12 +13,21 @@ import { create } from 'zustand'
 
 export interface SessionShape {
   text: string
-  source: 'closeout' | 'slot' | 'decomposition' | 'start' | 'ignition' | 'shaped'
+  source: 'closeout' | 'slot' | 'decomposition' | 'start' | 'ignition' | 'shaped' | 'friction'
   partial: boolean
   /** The task this shape is grounded in, when it has one. Sending this
    *  back at close time is what lets a tick mark the real task done,
    *  surviving whatever the model paraphrased the item's text into. */
   taskId?: string | null
+}
+
+/** A session-specific setup step, added client-side to the running list
+ *  when the plan carried one -- never sent to /resource=start as a real
+ *  item, so it can never be promoted into a task the way an invented plan
+ *  item can. Ticking it does nothing at close but feel good. */
+export interface FrictionLine {
+  text: string
+  minutes: number
 }
 
 /** The windows the card offers. Not a gate -- a control on the card. */
@@ -66,8 +75,19 @@ export interface PendingCloseout {
 }
 
 /** The two minutes of planning, in seconds. Long enough to reshape a list
- *  once or twice; short enough that shaping can't become the session. */
+ *  once or twice; short enough that shaping can't become the session. A
+ *  flat two minutes taxes a genuinely short session hardest -- planning
+ *  overhead that doesn't scale down with the window eats a much bigger
+ *  share of 15 minutes than it does of an hour. */
 export const PLANNING_SECONDS = 120
+export const SHORT_PLANNING_SECONDS = 60
+export const SHORT_WINDOW_CUTOFF_MINUTES = 20
+
+export function planningSecondsFor(windowMinutes: number | null): number {
+  return windowMinutes != null && windowMinutes <= SHORT_WINDOW_CUTOFF_MINUTES
+    ? SHORT_PLANNING_SECONDS
+    : PLANNING_SECONDS
+}
 
 export interface PlanItem {
   text: string
@@ -98,9 +118,17 @@ export interface PlanDraft {
    *  another undifferentiated note. */
   gapKind: string | null
   slotName: string | null
-  /** 'derived' means the model was unreachable and this is the fallback
-   *  list -- worth saying out loud rather than passing off as a plan. */
-  source: 'ai' | 'derived'
+  /** 'tasks' means (at least part of) this plan is the project's own open
+   *  task list, verbatim. 'derived' means the model was unreachable and
+   *  this is the fallback list -- both worth saying out loud rather than
+   *  passing either off as a freshly-invented plan. */
+  source: 'ai' | 'derived' | 'tasks'
+  /** Null on the verbatim, no-model-call path -- there's nothing to ask
+   *  about friction when nothing was generated. */
+  friction: FrictionLine | null
+  /** How much of the real backlog wasn't even considered for this plan
+   *  (the 24-task ceiling), so it can be said rather than silently eaten. */
+  truncatedCount: number
 }
 
 interface SessionState {
@@ -126,11 +154,11 @@ interface SessionState {
   swapPlanItem: (index: number) => void
   clearPlan: () => void
 
-  startSession: (projectId: string, windowMinutes: number | null, source?: string, items?: PlanItem[]) => Promise<void>
+  startSession: (projectId: string, windowMinutes: number | null, source?: string, items?: PlanItem[], friction?: FrictionLine | null) => Promise<void>
   /** Answers the app's "I don't know enough" question. Saves the answer to
    *  the project so it's evidence next time, then re-shapes on it. */
   answerPlanQuestion: (answer: string) => Promise<void>
-  closeSession: (closeoutText: string, mvsSeedMinutes?: number, doneItems?: { text: string; taskId: string | null }[]) => Promise<{ moved: boolean | null; duration_minutes: number } | null>
+  closeSession: (closeoutText: string, mvsSeedMinutes?: number, doneItems?: { text: string; taskId: string | null }[]) => Promise<CloseResult | null>
   checkPendingCloseout: () => Promise<void>
   closeoutForPending: (closeoutText: string) => Promise<void>
   dismissPendingCloseout: () => void
@@ -140,10 +168,23 @@ interface SessionState {
 interface ShapeResponse {
   items: PlanItem[]
   bench: PlanItem[]
-  source: 'ai' | 'derived'
+  source: 'ai' | 'derived' | 'tasks'
   needs_input: string | null
   gap_kind: string | null
   slot_name: string | null
+  friction: FrictionLine | null
+  truncated_count: number
+}
+
+/** What actually happened to the task list at close -- the receipt shown
+ *  for a beat before "Logged.", rather than a silent rewrite discovered
+ *  weeks later. */
+export interface CloseResult {
+  moved: boolean | null
+  duration_minutes: number
+  markedDone: string[]
+  created: string[]
+  nextAdded: string[]
 }
 
 async function postJson<T>(url: string, body: unknown): Promise<T> {
@@ -187,6 +228,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
           items: data.items, bench: data.bench ?? [],
           source: data.source, needsInput: data.needs_input ?? null,
           gapKind: data.gap_kind ?? null, slotName: data.slot_name ?? null,
+          friction: data.friction ?? null, truncatedCount: data.truncated_count ?? 0,
         },
         shaping: false,
       })
@@ -218,6 +260,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
           items: data.items, bench: data.bench ?? [],
           source: data.source, needsInput: data.needs_input ?? null,
           gapKind: data.gap_kind ?? null, slotName: data.slot_name ?? null,
+          friction: data.friction ?? null, truncatedCount: data.truncated_count ?? 0,
         },
         shaping: false,
       })
@@ -273,20 +316,26 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     await get().shapePlan(plan.projectId, plan.windowMinutes)
   },
 
-  startSession: async (projectId, windowMinutes, source = 'live', items) => {
+  startSession: async (projectId, windowMinutes, source = 'live', items, friction) => {
     set({ starting: true, error: null })
     try {
       const data = await postJson<{ session: any; shapes: SessionShape[]; ask_mvs_seed: boolean }>(
         '/api/utilities?resource=start',
         { project_id: projectId, window_minutes: windowMinutes, source, items }
       )
+      // Friction never goes to the server as a real plan item -- it's
+      // added to the running list client-side, so it can never be
+      // promoted into a task the way an invented item can.
+      const shapes = friction
+        ? [{ text: friction.text, source: 'friction' as const, partial: false, taskId: null }, ...data.shapes]
+        : data.shapes
       set({
         active: {
           id: data.session.id,
           project_id: projectId,
           started_at: data.session.started_at,
           window_minutes: windowMinutes,
-          shapes: data.shapes,
+          shapes,
           askMvsSeed: data.ask_mvs_seed,
         },
         plan: null,
@@ -302,7 +351,10 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     if (!active) return null
     set({ closing: true, error: null })
     try {
-      const result = await postJson<{ ok: boolean; moved: boolean | null; duration_minutes: number }>(
+      const result = await postJson<{
+        ok: boolean; moved: boolean | null; duration_minutes: number
+        marked_done?: string[]; created?: string[]; next_added?: string[]
+      }>(
         '/api/utilities?resource=close',
         {
           session_id: active.id,
@@ -312,7 +364,13 @@ export const useSessionStore = create<SessionState>((set, get) => ({
         }
       )
       set({ active: null, closing: false })
-      return { moved: result.moved, duration_minutes: result.duration_minutes }
+      return {
+        moved: result.moved,
+        duration_minutes: result.duration_minutes,
+        markedDone: result.marked_done ?? [],
+        created: result.created ?? [],
+        nextAdded: result.next_added ?? [],
+      }
     } catch (e) {
       set({ closing: false, error: e instanceof Error ? e.message : 'Could not save the close-out.' })
       return null

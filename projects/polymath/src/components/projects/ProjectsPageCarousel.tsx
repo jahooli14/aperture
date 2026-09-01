@@ -1,10 +1,11 @@
 import React, { useMemo, useRef, useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Star, ArrowRight, CheckCircle2, Clock, Snowflake, Archive, Sprout, Loader2, ListOrdered } from 'lucide-react'
+import { Star, ArrowRight, CheckCircle2, Clock, Snowflake, Archive, Sprout, Loader2, ListOrdered, Play } from 'lucide-react'
 import type { Project } from '../../types'
 import { useProjectStore } from '../../stores/useProjectStore'
 import { useContextEngineStore } from '../../stores/useContextEngineStore'
+import { useHomeAnswerStore } from '../../stores/useHomeAnswerStore'
 import { PROJECT_COLORS, getTheme } from '../../lib/projectTheme'
 import { getNextTask } from '../../lib/taskUtils'
 import { api } from '../../lib/apiClient'
@@ -34,6 +35,20 @@ function ProjectCard({ project, prominent = false }: { project: Project, promine
   const { setContext, toggleSidebar } = useContextEngineStore()
   const { setPriority, setUpNext, replaceUpNext } = useProjectStore()
   const { addToast } = useToast()
+  const navigate = useNavigate()
+  const requestStart = useHomeAnswerStore(s => s.requestStart)
+
+  // Browsing the full list is exactly the "oh actually I want to have a go
+  // at this one" moment -- starting a session shouldn't require detouring
+  // through the project page first. Same engine as the mini-card's play
+  // button: point home at this project, then go there.
+  const handleStartSession = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    haptic.medium()
+    requestStart(project.id)
+    navigate('/')
+  }
   const tasks = (project.metadata?.tasks || []) as Task[]
   const nextTask = getNextTask(project)
   const totalTasks = tasks.length
@@ -295,6 +310,19 @@ function ProjectCard({ project, prominent = false }: { project: Project, promine
               <Snowflake className="h-2.5 w-2.5" />
             </span>
           )}
+          <button
+            type="button"
+            onClick={handleStartSession}
+            aria-label={`Start session for ${project.title}`}
+            className="h-7 w-7 rounded-full flex items-center justify-center transition-transform hover:scale-110 active:scale-95"
+            style={{
+              background: `rgba(${theme.rgb}, 0.14)`,
+              border: `1px solid rgba(${theme.rgb}, 0.4)`,
+              color: theme.textColor,
+            }}
+          >
+            <Play className="h-3 w-3 fill-current" style={{ marginLeft: '1px' }} />
+          </button>
           <div className="h-7 w-7 rounded-full flex items-center justify-center bg-white/5 group-hover:bg-[var(--brand-primary)] group-hover:text-black transition-colors text-white/70">
             <ArrowRight className="h-3.5 w-3.5" />
           </div>
