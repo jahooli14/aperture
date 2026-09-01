@@ -28,6 +28,7 @@ import { SuggestionToast } from '../SuggestionToast'
 import { PROJECT_TYPES } from '../../lib/projectTheme'
 import { api } from '../../lib/apiClient'
 import { VoiceInput } from '../VoiceInput'
+import { useVoicePreference } from '../../stores/useVoicePreference'
 
 interface ConversationMessage {
   role: 'user' | 'model'
@@ -91,11 +92,13 @@ export function CreateProjectDialog({
   const [genesisDraft, setGenesisDraft] = useState('')
   const threadRef = useRef<HTMLDivElement>(null)
 
-  // Each new turn defaults to voice, listening automatically -- typing is
-  // the thing you opt into, not the other way round. Reset after every
-  // reply so the next turn offers voice again regardless of what the last
-  // one was.
-  const [voiceTurn, setVoiceTurn] = useState(true)
+  // Voice by default, listening automatically -- typing is the thing you
+  // opt into. The choice is remembered (useVoicePreference), not re-fought
+  // every phase: switch to text once here and session planning and the
+  // debrief default to text too, not just this one conversation.
+  const prefersText = useVoicePreference(s => s.prefersText)
+  const setPrefersText = useVoicePreference(s => s.setPrefersText)
+  const voiceTurn = !prefersText
 
   // ── Form state ────────────────────────────────────────────────────
   // No end_goal / finish line: an ongoing project (DJing, producing music)
@@ -183,7 +186,6 @@ export function CreateProjectDialog({
     setThinking(false)
     setIsReady(false)
     setGenesisDraft('')
-    setVoiceTurn(true)
     setDraftTasks([])
     setTasksLoading(false)
     setQuickAddMode(false)
@@ -239,8 +241,6 @@ export function CreateProjectDialog({
       ])
     } finally {
       setThinking(false)
-      // The next turn defaults back to voice, whatever this one was.
-      setVoiceTurn(true)
     }
   }
 
@@ -509,7 +509,7 @@ export function CreateProjectDialog({
                       />
                       <button
                         type="button"
-                        onClick={() => setVoiceTurn(false)}
+                        onClick={() => setPrefersText(true)}
                         className="flex items-center gap-1 text-[11px] mx-auto transition-all"
                         style={{ color: 'var(--brand-text-secondary)', opacity: 0.4 }}
                       >
@@ -520,7 +520,7 @@ export function CreateProjectDialog({
                     <div className="flex items-center gap-2">
                       <button
                         type="button"
-                        onClick={() => setVoiceTurn(true)}
+                        onClick={() => setPrefersText(false)}
                         aria-label="Switch to voice"
                         className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 transition-opacity"
                         style={{ color: 'var(--brand-text-secondary)', opacity: 0.45 }}
