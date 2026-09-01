@@ -17,7 +17,7 @@
 
 import { generateText } from './gemini-chat.js'
 import { PLAIN_ENGLISH_RULES } from './plain-english.js'
-import { citationSupports } from './session-grounding.js'
+import { sharesSubstantialWording } from './session-grounding.js'
 import { isAdminItem } from './session-shaper.js'
 
 export interface DebriefOpenTask {
@@ -154,10 +154,12 @@ export function sanitizeDebrief(
           const key = normalize(t)
           if (nextSeen.has(key)) return false
           // Mechanical backstop against the model repeating the list back
-          // to itself: drop anything that shares a distinctive word with
-          // an already-open task, same bar session-grounding.ts uses to
-          // decide a citation actually supports a claim.
-          if (openTasks.some(ot => citationSupports(t, ot.text))) return false
+          // to itself: drop anything that's substantially the same wording
+          // as an already-open task. Deliberately NOT citationSupports --
+          // that accepts a single shared word, which would wrongly treat
+          // "record a vocal take" as a duplicate of an open task about
+          // recording a guitar solo just because they share "record".
+          if (openTasks.some(ot => sharesSubstantialWording(t, ot.text))) return false
           nextSeen.add(key)
           return true
         })
