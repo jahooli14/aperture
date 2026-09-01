@@ -98,9 +98,11 @@ export interface PlanDraft {
    *  another undifferentiated note. */
   gapKind: string | null
   slotName: string | null
-  /** 'derived' means the model was unreachable and this is the fallback
-   *  list -- worth saying out loud rather than passing off as a plan. */
-  source: 'ai' | 'derived'
+  /** 'tasks' means (at least part of) this plan is the project's own open
+   *  task list, verbatim. 'derived' means the model was unreachable and
+   *  this is the fallback list -- both worth saying out loud rather than
+   *  passing either off as a freshly-invented plan. */
+  source: 'ai' | 'derived' | 'tasks'
 }
 
 interface SessionState {
@@ -140,7 +142,7 @@ interface SessionState {
 interface ShapeResponse {
   items: PlanItem[]
   bench: PlanItem[]
-  source: 'ai' | 'derived'
+  source: 'ai' | 'derived' | 'tasks'
   needs_input: string | null
   gap_kind: string | null
   slot_name: string | null

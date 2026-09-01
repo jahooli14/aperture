@@ -2071,7 +2071,7 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
 
     const { data: project, error: projectErr } = await supabase
       .from('projects')
-      .select('id, title, last_closeout_text, mvs_minutes, slots')
+      .select('id, title, last_closeout_text, mvs_minutes, slots, metadata')
       .eq('id', project_id)
       .eq('user_id', userId)
       .single()
@@ -2096,7 +2096,7 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
     // to close time so a tick can mark that task done without depending on
     // the model's session-item wording matching the task's stored text.
     const rawItems = Array.isArray(req.body?.items) ? req.body.items : []
-    const agreed: { text: string; taskId: string | null }[] = rawItems
+    const agreedRaw: { text: string; taskId: string | null }[] = rawItems
       .map((entry: unknown) => {
         if (typeof entry === 'string') return { text: entry, taskId: null }
         if (entry && typeof entry === 'object' && typeof (entry as any).text === 'string') {
@@ -2107,6 +2107,36 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
       })
       .filter((x: { text: string; taskId: string | null } | null): x is { text: string; taskId: string | null } => !!x)
       .slice(0, 6)
+
+    // The task list is the project's own record, not scratch paper for the
+    // session -- an item the shaper invented to fill the window (no grounded
+    // taskId) becomes a real task the moment you commit to working it,
+    // rather than vanishing the instant the tab closes.
+    const existingTasks: any[] = Array.isArray(project.metadata?.tasks) ? project.metadata.tasks : []
+    const newTasks: any[] = []
+    const agreed: { text: string; taskId: string | null }[] = agreedRaw.map(({ text, taskId }) => {
+      if (taskId) return { text, taskId }
+      const id = `t-${Date.now()}-${newTasks.length}`
+      newTasks.push({
+        id,
+        text,
+        done: false,
+        created_at: new Date().toISOString(),
+        order: existingTasks.length + newTasks.length,
+        origin: 'session',
+      })
+      return { text, taskId: id }
+    })
+
+    if (newTasks.length > 0) {
+      const { error: taskErr } = await supabase
+        .from('projects')
+        .update({ metadata: { ...(project.metadata ?? {}), tasks: [...existingTasks, ...newTasks] } })
+        .eq('id', project_id)
+        .eq('user_id', userId)
+      if (taskErr) console.warn('[utilities/sessions] could not write new tasks to the project (non-fatal):', taskErr.message)
+    }
+
     const shapes: SessionShape[] = agreed.length > 0
       ? agreed.map(({ text, taskId }) => ({ text, source: 'shaped' as const, partial: false, taskId }))
       : deriveSessionShapes({

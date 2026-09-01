@@ -460,9 +460,11 @@ export function SessionContract({
           <p className="text-xs" style={{ ...secondaryTextStyle, opacity: 0.45 }}>
             {plan?.source === 'derived'
               ? 'Offline list — built from your last close-out, not shaped.'
-              : canSwap
-                ? 'Tap any line to swap it. Say what\u2019s off to redo the lot.'
-                : 'Say what\u2019s off and it\u2019ll redo the list.'}
+              : plan?.source === 'tasks'
+                ? 'Straight from your task list.'
+                : canSwap
+                  ? 'Tap any line to swap it. Say what\u2019s off to redo the lot.'
+                  : 'Say what\u2019s off and it\u2019ll redo the list.'}
           </p>
         ) : null}
 

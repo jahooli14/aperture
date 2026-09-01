@@ -192,7 +192,6 @@ export function buildShapePrompt(
   confidence: Confidence = 'partial',
 ): string {
   const count = itemCountForWindow(ctx.windowMinutes)
-  const total = count + BENCH_SIZE
   const windowText = ctx.windowMinutes
     ? `${ctx.windowMinutes} minutes`
     : 'an unknown amount of time — assume about an hour'
@@ -209,6 +208,29 @@ throw out items they didn't complain about.
 `
     : ''
 
+  // The task list is the project's own record, not a suggestion — a
+  // reshape is the user explicitly asking for a different take, so it
+  // still gets the full treatment. Otherwise, real open tasks already
+  // fill part of the session; the model's only job is the rest of it.
+  const openCount = ctx.openTasks.length
+  const usingTasksAsBase = !ctx.instruction && openCount > 0
+  const newNeeded = usingTasksAsBase ? Math.max(0, count - openCount) : count
+  const total = newNeeded + BENCH_SIZE
+
+  const askForCount = usingTasksAsBase
+    ? `You already have ${openCount} thing${openCount === 1 ? '' : 's'} lined up for this
+session — they're in the evidence above, marked "already on the project".
+Do not repeat them.
+
+Give ${total} NEW things. The FIRST ${newNeeded} continue the session those
+queued tasks already started, in order. The last ${BENCH_SIZE} are spares —
+same quality, different angles, ready to swap in if one of the first
+${newNeeded} doesn't suit today. Don't mark them; just order them that way.`
+    : `Give ${total} things to do. The FIRST ${count} are the session, in order. The
+last ${BENCH_SIZE} are spares — same quality, different angles, ready to swap in
+if one of the first ${count} doesn't suit today. Don't mark them; just order
+them that way.`
+
   return `You are shaping one work session on a creative project. The user has ${windowText}
 and is about to start.
 
@@ -223,10 +245,7 @@ That list is the whole of it. Anything not in it, you do not know.
 
 ${reasoningLicence(confidence)}
 ${reshaping}
-Give ${total} things to do. The FIRST ${count} are the session, in order. The
-last ${BENCH_SIZE} are spares — same quality, different angles, ready to swap in
-if one of the first ${count} doesn't suit today. Don't mark them; just order
-them that way.
+${askForCount}
 
 THE RULE THAT MATTERS MOST — never invent a detail:
 - No tools, gear, brands, model numbers, file formats, settings, tempos,
@@ -243,13 +262,18 @@ THE RULE THAT MATTERS MOST — never invent a detail:
   is the correct answer, not a failure.
 
 Rules for the list:
-- The first item is an ignition move: physical, trivial, under two minutes.
-  Starting must be easier than deliberating.
+${usingTasksAsBase
+  ? `- These continue a session, they don't open one — no need for an ignition
+  move here, the queued tasks already start it.`
+  : `- The first item is an ignition move: physical, trivial, under two minutes.
+  Starting must be easier than deliberating.`}
 - Every other item is a real move against the work — something exists
   afterwards that didn't before.
 - BANNED, this is admin pretending to be building: research, plan, outline,
   decide, list, consider, review, think about, set up, brainstorm, explore.
-- Size the first ${count} to ${windowText}. Finishable, not aspirational.
+${usingTasksAsBase
+  ? `- Size the whole session — the ${openCount} queued task${openCount === 1 ? '' : 's'} plus these ${newNeeded} — to ${windowText}. Finishable, not aspirational.`
+  : `- Size the first ${count} to ${windowText}. Finishable, not aspirational.`}
 - One line each. No sub-bullets, no time estimates, no explanation.
 
 ${PLAIN_ENGLISH_RULES}
@@ -276,7 +300,10 @@ const MIN_TRUSTWORTHY_ITEMS = 3
 export interface ShapeResult {
   items: GroundedItem[]
   bench: GroundedItem[]
-  source: 'ai' | 'derived'
+  /** 'tasks' — the plan is (at least partly) the project's own open task
+   *  list, verbatim. 'ai' — invented to fill a gap the task list couldn't.
+   *  'derived' — the model was unreachable, mechanical fallback. */
+  source: 'ai' | 'derived' | 'tasks'
   /** Set when the app doesn't know enough to fill a session honestly. The
    *  right move then is to ask, not to invent — and the answer is filed as
    *  the thing it is, so it fixes the project rather than this one session. */
@@ -323,9 +350,14 @@ export async function shapeSession(
   const shortDate = (iso?: string | null) =>
     iso ? new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : null
 
+  // The project's own task list is the golden source for a session, not a
+  // separate thing the shaper invents alongside it. 24 is generous headroom
+  // over a spine (5-8 steps) plus whatever's accreted since — high enough
+  // that a real backlog is never silently truncated before it gets a
+  // chance to fill the window on its own.
   const openTasks: { id: string; text: string }[] = allTasks
     .filter(t => t && !t.done && typeof t.text === 'string' && typeof t.id === 'string')
-    .slice(0, 6)
+    .slice(0, 24)
     .map(t => ({ id: t.id, text: t.text }))
 
   // Finished work was being filtered out entirely, which made "the intro's
@@ -416,6 +448,16 @@ export async function shapeSession(
   })
   const ask = (): string => gap?.question ?? genericGapQuestion(project.title)
 
+  // The task list is the golden source: if it already has enough open work
+  // to fill this window, the plan IS the list — no model call, no
+  // invention, nothing that can be wrong. Skipped on an explicit reshape,
+  // which is the user asking for a different take, not more of this one.
+  if (!instruction && openTasks.length >= count) {
+    const pool: GroundedItem[] = openTasks.map(t => ({ text: t.text, source: 'already on the project', taskId: t.id }))
+    const { items, bench } = splitBench(pool, count)
+    return { items, bench, source: 'tasks', needsInput: null, gap: null, confidence }
+  }
+
   // Nothing known means nothing to say. Inventing a plan here is exactly
   // what cost this feature its credibility, so ask instead — and let the
   // answer be the thing that makes next time better.
@@ -432,6 +474,14 @@ export async function shapeSession(
     }
   }
 
+  // The task list wasn't enough to fill the window on its own (or this is a
+  // reshape, which starts from scratch). Whatever's real gets shown as-is;
+  // the model only has to invent the shortfall.
+  const openAsItems: GroundedItem[] = !instruction
+    ? openTasks.map(t => ({ text: t.text, source: 'already on the project', taskId: t.id }))
+    : []
+  const newNeeded = Math.max(0, count - openAsItems.length)
+
   try {
     const response = await generateText(buildShapePrompt(ctx, evidence, confidence), {
       responseFormat: 'json',
@@ -442,7 +492,8 @@ export async function shapeSession(
     })
 
     const raw = JSON.parse(response)?.items
-    const cleaned = sanitizeRawItems(raw, count + BENCH_SIZE)
+    const target = openAsItems.length > 0 ? newNeeded + BENCH_SIZE : count + BENCH_SIZE
+    const cleaned = sanitizeRawItems(raw, target)
     const { kept, rejected } = filterGrounded(cleaned, evidence, project.title, taskIdByEvidenceId)
 
     if (rejected.length > 0) {
@@ -452,14 +503,20 @@ export async function shapeSession(
       )
     }
 
-    if (kept.length >= MIN_TRUSTWORTHY_ITEMS) {
-      const { items, bench } = splitBench(kept, count)
-      return { items, bench, source: 'ai', needsInput: null, gap: null, confidence }
+    // A generated item that cites an open task already shown verbatim above
+    // would otherwise duplicate that same task under a paraphrase.
+    const openTaskIds = new Set(openAsItems.map(i => i.taskId).filter((id): id is string => !!id))
+    const keptFiltered = kept.filter(k => !k.taskId || !openTaskIds.has(k.taskId))
+
+    const pool = [...openAsItems, ...keptFiltered]
+    if (pool.length >= MIN_TRUSTWORTHY_ITEMS) {
+      const { items, bench } = splitBench(pool, count)
+      return { items, bench, source: openAsItems.length > 0 ? 'tasks' : 'ai', needsInput: null, gap: null, confidence }
     }
 
     // Not enough survived. Show what did — those are real — and ask for
     // the rest rather than padding with things that aren't.
-    return { items: kept, bench: [], source: 'ai', needsInput: ask(), gap, confidence }
+    return { items: pool, bench: [], source: openAsItems.length > 0 ? 'tasks' : 'ai', needsInput: ask(), gap, confidence }
   } catch (e) {
     console.error('[session-shaper] generation failed, falling back:', e)
   }

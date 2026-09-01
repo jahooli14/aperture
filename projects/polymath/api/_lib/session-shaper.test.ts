@@ -176,6 +176,25 @@ describe('buildShapePrompt', () => {
     expect(prompt(base)).not.toContain('The user says:')
   })
 
+  it('only asks for the shortfall when open tasks already fill part of the window', () => {
+    // 2 open tasks against a 60-minute window (needs 5): the model should
+    // only be asked for the 3 it's short, not the full 5, and told not to
+    // repeat the 2 that are already queued.
+    const withTasks = { ...base, openTasks: [{ id: 't1', text: 'a' }, { id: 't2', text: 'b' }] }
+    const p = buildShapePrompt(withTasks, buildEvidence(withTasks).evidence)
+    expect(p).toContain(`Give ${3 + BENCH_SIZE} NEW things`)
+    expect(p).toContain('Do not repeat them')
+    expect(p).not.toContain('FIRST 5 are the session')
+  })
+
+  it('asks for the full count when open tasks already cover the reshape', () => {
+    // A reshape starts over regardless of what's already on the list --
+    // it's the user asking for a different take, not more of the same one.
+    const withTasks = { ...base, openTasks: [{ id: 't1', text: 'a' }], instruction: 'too admin-y', currentItems: ['x'] }
+    const p = buildShapePrompt(withTasks as any, buildEvidence(withTasks).evidence)
+    expect(p).toContain(`Give ${5 + BENCH_SIZE} things`)
+  })
+
   it('bans the admin verbs in the prompt, not just in the checker', () => {
     const p = prompt(base)
     for (const v of ['research', 'decide', 'think about', 'brainstorm']) {
@@ -332,5 +351,43 @@ describe('shapeSession', () => {
     await expect(
       shapeSession(stubClient({ projectError: { message: 'column does not exist' } }), 'u1', 'p1', 60),
     ).rejects.toThrow('column does not exist')
+  })
+
+  it('shapes the session straight from the task list when it already has enough, with no model call', async () => {
+    // 5 open tasks is exactly itemCountForWindow(60) -- the list alone
+    // fills the window, so there's nothing left to invent.
+    const withFullBacklog = {
+      ...project,
+      metadata: {
+        end_goal: 'released',
+        tasks: Array.from({ length: 7 }, (_, i) => ({ id: `t${i}`, text: `step ${i}`, done: false })),
+      },
+    }
+    const { shapeSession } = await import('./session-shaper.js')
+    const result = await shapeSession(stubClient({ project: withFullBacklog }), 'u1', 'p1', 60)
+    expect(result.source).toBe('tasks')
+    expect(result.items).toHaveLength(5)
+    expect(result.items.map(i => i.text)).toEqual(['step 0', 'step 1', 'step 2', 'step 3', 'step 4'])
+    expect(result.items.every(i => i.taskId)).toBe(true)
+    expect(result.bench.map(i => i.text)).toEqual(['step 5', 'step 6'])
+    expect(result.needsInput).toBeNull()
+  })
+
+  it('offers every leftover open task as a swap-in, not a re-cycled reject capped at 3', async () => {
+    // The old bench was capped at BENCH_SIZE because generating spares cost
+    // a model call. Real tasks already on the list cost nothing to offer,
+    // so the whole remaining backlog is fair game for a swap.
+    const withFullBacklog = {
+      ...project,
+      metadata: {
+        end_goal: 'released',
+        tasks: Array.from({ length: 8 }, (_, i) => ({ id: `t${i}`, text: `step ${i}`, done: false })),
+      },
+    }
+    const { shapeSession } = await import('./session-shaper.js')
+    const result = await shapeSession(stubClient({ project: withFullBacklog }), 'u1', 'p1', 20)
+    // itemCountForWindow(20) === 3.
+    expect(result.items.map(i => i.text)).toEqual(['step 0', 'step 1', 'step 2'])
+    expect(result.bench.map(i => i.text)).toEqual(['step 3', 'step 4', 'step 5', 'step 6', 'step 7'])
   })
 })
