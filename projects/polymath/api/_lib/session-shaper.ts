@@ -23,7 +23,7 @@ import { generateText } from './gemini-chat.js'
 import { PLAIN_ENGLISH_RULES } from './plain-english.js'
 import { deriveSessionShapes, type SlotInput } from './session-shapes.js'
 import {
-  filterGrounded, evidenceHaystack, hasOnlyKnownSpecifics,
+  filterGrounded, evidenceHaystack, hasOnlyKnownSpecifics, citationSupports,
   type Evidence, type GroundedItem, type RawItem,
 } from './session-grounding.js'
 import { confidenceFor, reasoningLicence, type Confidence } from './session-confidence.js'
@@ -83,6 +83,27 @@ export function isAdminItem(text: string): boolean {
  */
 export function splitBench<T>(pool: T[], count: number): { items: T[]; bench: T[] } {
   return { items: pool.slice(0, count), bench: pool.slice(count) }
+}
+
+/**
+ * A mechanical backstop against two items saying the same thing in
+ * different words -- the prompt asks the model not to, but "structure
+ * does the thinking, not hoped for in the prompt" is the rule everywhere
+ * else in this file, and this is exactly the kind of thing a model
+ * reliably gets wrong on a reshape. Catches shared-vocabulary duplicates
+ * (the citationSupports check already used to verify grounding); it can't
+ * catch two items that mean the same thing in completely different words,
+ * which is what the prompt rule is still for.
+ */
+export function dedupeSimilar<T extends { text: string }>(items: T[], against: T[] = []): T[] {
+  const seen = [...against]
+  const out: T[] = []
+  for (const item of items) {
+    if (seen.some(s => citationSupports(item.text, s.text))) continue
+    seen.push(item)
+    out.push(item)
+  }
+  return out
 }
 
 export function sanitizeRawItems(raw: unknown, count: number): RawItem[] {
@@ -188,6 +209,17 @@ export function buildEvidence(ctx: ShapeContext): BuiltEvidence {
     return id
   }
 
+  // What the user just said, on a reshape, is the single most current and
+  // most authoritative thing known about this session -- it has to be a
+  // real, citable evidence entry, not just a rewrite directive sitting
+  // outside the evidence list. Without this, an item that genuinely comes
+  // straight from "listen to the song, then plan the riff" had no honest
+  // citation available and either got dropped or got stapled to an
+  // unrelated old evidence id (a finished task, an old close-out) to
+  // satisfy the citation rule -- which is how "you finished this on 27
+  // Jun" ends up as the stated source for something the user just asked
+  // for fresh.
+  add('what you just said', ctx.instruction ?? '')
   add('the finish line you set', ctx.goal ?? '')
   add('from your last close-out', ctx.lastCloseout ?? '')
   ctx.pastCloseouts.forEach(c =>
@@ -227,7 +259,18 @@ ${ctx.currentItems.map((t, i) => `${i + 1}. ${t}`).join('\n')}
 The user says: "${ctx.instruction}"
 
 Rewrite the list so it answers that. Keep whatever still works — don't
-throw out items they didn't complain about.
+throw out items they didn't complain about. What they just said is its
+own evidence entry above, labelled "what you just said" -- cite THAT for
+anything that comes straight from it. Don't reach for an unrelated old
+citation (a finished task, an old close-out) just to satisfy the citation
+rule when the real source is what they said two seconds ago.
+
+If they used a word like "plan", "decide" or "think about" in their own
+instruction, that's them describing the INTENT, not dictating the exact
+wording of the task -- turn it into the concrete action that intent
+implies ("plan the new riff" -> "try a few ideas for the new riff"), the
+same way you would for any other admin-sounding phrasing. Never write an
+item that just repeats a banned verb because the user happened to say it.
 `
     : ''
 
@@ -283,6 +326,13 @@ THE RULE THAT MATTERS MOST — never invent a detail:
 - Vague and true beats specific and invented. If you only know a little,
   give a short list of things that are certainly real. Fewer honest items
   is the correct answer, not a failure.
+- Evidence about work that's ALREADY FINISHED ("you finished this on...")
+  tells you a fact about where the project is. It is not itself a
+  suggestion. Never propose redoing or repeating something the evidence
+  says is done, unless the user's own instruction just explicitly asked
+  for exactly that.
+- No two items may say the same thing in different words. "Listen to the
+  song" and "Play back the mixed file" are the same move -- pick one.
 
 Rules for the list:
 ${usingTasksAsBase
@@ -568,7 +618,7 @@ export async function shapeSession(
     // A generated item that cites an open task already shown verbatim above
     // would otherwise duplicate that same task under a paraphrase.
     const openTaskIds = new Set(openAsItems.map(i => i.taskId).filter((id): id is string => !!id))
-    const keptFiltered = kept.filter(k => !k.taskId || !openTaskIds.has(k.taskId))
+    const keptFiltered = dedupeSimilar(kept.filter(k => !k.taskId || !openTaskIds.has(k.taskId)), openAsItems)
 
     const friction = sanitizeFriction(parsed?.friction, evidence, project.title)
 

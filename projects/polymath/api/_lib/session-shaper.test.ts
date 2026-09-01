@@ -7,6 +7,7 @@ import {
   buildShapePrompt,
   buildEvidence,
   sanitizeFriction,
+  dedupeSimilar,
   BENCH_SIZE,
 } from './session-shaper.js'
 import type { BudgetTask } from './session-budget.js'
@@ -55,6 +56,32 @@ describe('isAdminItem', () => {
   it('does not flag a real verb that merely contains an admin word', () => {
     expect(isAdminItem('Listen back on the phone speaker')).toBe(false)
     expect(isAdminItem('Replant the seedlings')).toBe(false)
+  })
+})
+
+describe('dedupeSimilar', () => {
+  it('drops a later item that shares a distinctive word with an earlier one', () => {
+    const items = [
+      { text: 'Listen to the song from the top' },
+      { text: 'Play the song back and take notes' },
+      { text: 'Try a new riff over the chorus' },
+    ]
+    expect(dedupeSimilar(items).map(i => i.text)).toEqual([
+      'Listen to the song from the top',
+      'Try a new riff over the chorus',
+    ])
+  })
+
+  it('also dedupes against an already-agreed pool, not just itself', () => {
+    const already = [{ text: 'Listen to the song from the top' }]
+    const items = [{ text: 'Play the song back once more' }]
+    expect(dedupeSimilar(items, already)).toEqual([])
+  })
+
+  it('keeps items that share only weak, common verbs', () => {
+    // "make", "get" etc aren't distinctive enough to count as the same move.
+    const items = [{ text: 'Make the intro punchier' }, { text: 'Make the outro fade cleanly' }]
+    expect(dedupeSimilar(items)).toHaveLength(2)
   })
 })
 
@@ -206,6 +233,25 @@ describe('buildShapePrompt', () => {
     expect(prompt(base)).not.toContain('The user says:')
   })
 
+  it('tells the model to cite the live instruction, not an unrelated old citation', () => {
+    const p = prompt({ ...base, instruction: 'listen to the song first', currentItems: ['x'] } as any)
+    expect(p).toContain('what you just said')
+    expect(p).toContain('cite THAT')
+  })
+
+  it('tells the model to translate the user’s own admin-sounding words into a concrete action', () => {
+    const p = prompt({ ...base, instruction: 'plan the new riff', currentItems: ['x'] } as any)
+    expect(p).toContain('turn it into the concrete action')
+  })
+
+  it('bans resuggesting something evidence says is already finished', () => {
+    expect(prompt(base)).toContain('Never propose redoing or repeating')
+  })
+
+  it('bans two items saying the same thing in different words', () => {
+    expect(prompt(base)).toContain('No two items may say the same thing')
+  })
+
   it('only asks for the shortfall when open tasks already fill part of the window', () => {
     // 2 open tasks against a 60-minute window (needs 5): the model should
     // only be asked for the 3 it's short, not the full 5, and told not to
@@ -328,6 +374,21 @@ describe('buildEvidence', () => {
     const match = evidence.find(e => e.text === 'Fix the transition out of track two')
     expect(match).toBeDefined()
     expect(taskIdByEvidenceId[match!.id]).toBe('task-7')
+  })
+
+  it('makes a live reshape instruction its own citable evidence entry', () => {
+    // Without this, an item that comes straight from what the user just
+    // said had no honest citation available -- it either got dropped or
+    // got stapled to an unrelated old evidence id to satisfy the citation
+    // rule, which is how a freshly-requested item ends up mislabelled
+    // "you finished this on 27 Jun".
+    const { evidence } = buildEvidence({
+      ...base,
+      instruction: 'I want to listen to the song, then plan the new riff',
+    } as any)
+    const match = evidence.find(e => e.text.includes('listen to the song'))
+    expect(match).toBeDefined()
+    expect(match!.label).toBe('what you just said')
   })
 
   it('does not attach a task id to evidence that is not an open task', () => {
