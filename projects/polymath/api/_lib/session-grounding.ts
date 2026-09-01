@@ -178,6 +178,34 @@ export function citationSupports(itemText: string, evidenceText: string): boolea
 }
 
 /**
+ * Two ITEMS describing the same real-world move -- not one item citing
+ * evidence. Deliberately a different, stricter bar than citationSupports:
+ * that function's whole point is that ONE shared word is enough to accept
+ * a citation ("Work on the intro level" citing "Got the intro sorted" is
+ * legitimate on one word). Reusing that same one-word bar to decide two
+ * TASKS are duplicates is wrong in both directions -- "Record the vocal"
+ * and "Record the guitar solo" share exactly one word and are plainly
+ * different tasks, while "Listen to the song" and "Play back the mixed
+ * file" describe the same move with zero shared vocabulary at all (that
+ * case can only be caught by the model itself, not word-matching).
+ * This asks a narrower question: do most of the shorter text's own
+ * distinctive words show up in the other -- catching near-identical
+ * restatements ("Fix the transition out of track two" vs "Fix the
+ * transition between the two tracks") without flagging two genuinely
+ * different tasks that merely share a topic word.
+ */
+export function sharesSubstantialWording(a: string, b: string, minRatio = 0.6): boolean {
+  const wordsA = new Set(contentWords(a))
+  const wordsB = new Set(contentWords(b))
+  if (wordsA.size === 0 || wordsB.size === 0) return false
+  const smaller = wordsA.size <= wordsB.size ? wordsA : wordsB
+  const larger = smaller === wordsA ? wordsB : wordsA
+  let shared = 0
+  for (const w of smaller) if (larger.has(w)) shared++
+  return shared / smaller.size >= minRatio
+}
+
+/**
  * Coverage across the WHOLE evidence set, as a second gate alongside
  * citationSupports rather than a replacement for it.
  *

@@ -60,22 +60,34 @@ describe('isAdminItem', () => {
 })
 
 describe('dedupeSimilar', () => {
-  it('drops a later item that shares a distinctive word with an earlier one', () => {
+  it('drops a later item that is really a restatement of an earlier one', () => {
     const items = [
-      { text: 'Listen to the song from the top' },
-      { text: 'Play the song back and take notes' },
+      { text: 'Fix the transition out of track two' },
+      { text: 'Fix the transition between the two tracks' },
       { text: 'Try a new riff over the chorus' },
     ]
     expect(dedupeSimilar(items).map(i => i.text)).toEqual([
-      'Listen to the song from the top',
+      'Fix the transition out of track two',
       'Try a new riff over the chorus',
     ])
   })
 
   it('also dedupes against an already-agreed pool, not just itself', () => {
-    const already = [{ text: 'Listen to the song from the top' }]
-    const items = [{ text: 'Play the song back once more' }]
+    const already = [{ text: 'Fix the transition out of track two' }]
+    const items = [{ text: 'Fix the transition between the two tracks' }]
     expect(dedupeSimilar(items, already)).toEqual([])
+  })
+
+  it('keeps two genuinely different tasks that merely share one topic word', () => {
+    // Regression: this used to reuse citationSupports, which accepts a
+    // single shared word -- "record" alone would have wrongly merged a
+    // vocal take with an unrelated guitar-solo task. Also covers the
+    // exact "Listen to the song" vs "Play back the mixed file" case from
+    // the live bug report: near-zero word overlap, genuinely different
+    // wording, and this mechanical check correctly leaves both alone
+    // (that case needs the prompt-level fix, not word-matching).
+    const items = [{ text: 'Record the vocal' }, { text: 'Record the guitar solo' }]
+    expect(dedupeSimilar(items)).toHaveLength(2)
   })
 
   it('keeps items that share only weak, common verbs', () => {

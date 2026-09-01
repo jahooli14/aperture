@@ -77,6 +77,18 @@ describe('sanitizeDebrief', () => {
     expect(result.next.some(t => t.toLowerCase().includes('transition'))).toBe(false)
   })
 
+  it('keeps a next item that only shares a topic word with an open task, not the same task', () => {
+    // Regression: the dedupe check used to reuse citationSupports, which
+    // accepts a single shared word -- "record" alone would have wrongly
+    // merged a vocal take with a totally different guitar-solo task.
+    const tasksAboutRecording: DebriefOpenTask[] = [{ id: 't3', text: 'Record the guitar solo' }]
+    const result = sanitizeDebrief(
+      { next: [{ text: 'Record a rough vocal take', quote: 'add a bassline' }] },
+      closeoutText, tasksAboutRecording,
+    )
+    expect(result.next).toEqual(['Record a rough vocal take'])
+  })
+
   it('drops a next item that is admin, not a real move', () => {
     const result = sanitizeDebrief(
       { next: [{ text: 'Decide on the running order', quote: 'add a bassline' }] },

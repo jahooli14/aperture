@@ -23,7 +23,7 @@ import { generateText } from './gemini-chat.js'
 import { PLAIN_ENGLISH_RULES } from './plain-english.js'
 import { deriveSessionShapes, type SlotInput } from './session-shapes.js'
 import {
-  filterGrounded, evidenceHaystack, hasOnlyKnownSpecifics, citationSupports,
+  filterGrounded, evidenceHaystack, hasOnlyKnownSpecifics, sharesSubstantialWording,
   type Evidence, type GroundedItem, type RawItem,
 } from './session-grounding.js'
 import { confidenceFor, reasoningLicence, type Confidence } from './session-confidence.js'
@@ -86,20 +86,24 @@ export function splitBench<T>(pool: T[], count: number): { items: T[]; bench: T[
 }
 
 /**
- * A mechanical backstop against two items saying the same thing in
- * different words -- the prompt asks the model not to, but "structure
- * does the thinking, not hoped for in the prompt" is the rule everywhere
- * else in this file, and this is exactly the kind of thing a model
- * reliably gets wrong on a reshape. Catches shared-vocabulary duplicates
- * (the citationSupports check already used to verify grounding); it can't
- * catch two items that mean the same thing in completely different words,
- * which is what the prompt rule is still for.
+ * A mechanical backstop against two items saying near enough the same
+ * thing in different words -- the prompt asks the model not to, but
+ * "structure does the thinking, not hoped for in the prompt" is the rule
+ * everywhere else in this file. Uses sharesSubstantialWording, NOT
+ * citationSupports: that function accepts a single shared word (right for
+ * "does this citation support this claim"), which would wrongly merge
+ * "Record the vocal" and "Record the guitar solo" as duplicates. This
+ * needs most of the shorter item's words to reappear -- catches a
+ * near-identical restatement without flagging two different tasks that
+ * merely share a topic word. It still can't catch two items that mean the
+ * same thing in completely different words ("Listen to the song" vs
+ * "Play back the mixed file") -- that's what the prompt rule is for.
  */
 export function dedupeSimilar<T extends { text: string }>(items: T[], against: T[] = []): T[] {
   const seen = [...against]
   const out: T[] = []
   for (const item of items) {
-    if (seen.some(s => citationSupports(item.text, s.text))) continue
+    if (seen.some(s => sharesSubstantialWording(item.text, s.text))) continue
     seen.push(item)
     out.push(item)
   }

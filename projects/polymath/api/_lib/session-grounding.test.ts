@@ -6,6 +6,7 @@ import {
   hasOnlyKnownSpecifics,
   evidenceHaystack,
   citationSupports,
+  sharesSubstantialWording,
   filterGrounded,
   type Evidence,
 } from './session-grounding.js'
@@ -113,6 +114,40 @@ describe('citationSupports', () => {
 
   it('still rejects something with nothing in common at all', () => {
     expect(citationSupports('Book a mastering engineer.', GOAL)).toBe(false)
+  })
+})
+
+describe('sharesSubstantialWording', () => {
+  // A stricter, deliberately different bar than citationSupports: that
+  // function accepts one shared word because it's deciding whether a
+  // citation supports a claim. This decides whether two ITEMS are the
+  // same task, where one shared topic word is not nearly enough evidence.
+  it('catches a near-identical restatement', () => {
+    expect(sharesSubstantialWording(
+      'Fix the transition out of track two',
+      'Fix the transition between the two tracks',
+    )).toBe(true)
+  })
+
+  it('does not merge two different tasks that share one topic word', () => {
+    // The exact failure citationSupports would produce if reused here:
+    // "record" alone is not evidence these are the same task.
+    expect(sharesSubstantialWording('Record the vocal', 'Record the guitar solo')).toBe(false)
+  })
+
+  it('does not catch two items describing the same move in unrelated words', () => {
+    // This is the gap this function is honest about -- word-overlap
+    // cannot find a duplicate with no shared vocabulary at all. That case
+    // needs the model itself to avoid it, not mechanical matching.
+    expect(sharesSubstantialWording(
+      'Listen to the song from the top',
+      'Play back the mixed file',
+    )).toBe(false)
+  })
+
+  it('is false when either side has no real content words', () => {
+    expect(sharesSubstantialWording('', 'Fix the transition')).toBe(false)
+    expect(sharesSubstantialWording('the and for', 'Fix the transition')).toBe(false)
   })
 })
 
