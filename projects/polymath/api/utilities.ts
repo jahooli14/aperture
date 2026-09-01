@@ -49,6 +49,8 @@ import { deriveSessionShapes, needsMvsSeed, measuredMvs, type SlotInput, type Se
 import { shapeSession } from './_lib/session-shaper.js'
 import { shapeProjectFromDump } from './_lib/project-shaping.js'
 import { generateTaskSpine, generateFirstCutTasks, toStoredTasks } from './_lib/task-spine.js'
+import { debriefSession, type DebriefOpenTask } from './_lib/debrief-matcher.js'
+import { bumpEstimate } from './_lib/session-estimate.js'
 import { pickNextSparkType, type SparkHistoryEntry } from './_lib/spark-types.js'
 import { generateSpark } from './_lib/spark-generator.js'
 import { canMorphProject, anyProjectMorphedToday } from './_lib/morph.js'
@@ -2084,6 +2086,8 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
         gap_kind: result.gap?.kind ?? null,
         slot_name: result.gap?.slotName ?? null,
         confidence: result.confidence,
+        friction: result.friction,
+        truncated_count: result.truncatedCount,
       })
     } catch (e) {
       const message = e instanceof Error ? e.message : 'Could not shape the session.'
@@ -2099,7 +2103,7 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
 
     const { data: project, error: projectErr } = await supabase
       .from('projects')
-      .select('id, title, last_closeout_text, mvs_minutes, slots, metadata')
+      .select('id, title, last_closeout_text, mvs_minutes, slots')
       .eq('id', project_id)
       .eq('user_id', userId)
       .single()
@@ -2136,34 +2140,16 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
       .filter((x: { text: string; taskId: string | null } | null): x is { text: string; taskId: string | null } => !!x)
       .slice(0, 6)
 
-    // The task list is the project's own record, not scratch paper for the
-    // session -- an item the shaper invented to fill the window (no grounded
-    // taskId) becomes a real task the moment you commit to working it,
-    // rather than vanishing the instant the tab closes.
-    const existingTasks: any[] = Array.isArray(project.metadata?.tasks) ? project.metadata.tasks : []
-    const newTasks: any[] = []
-    const agreed: { text: string; taskId: string | null }[] = agreedRaw.map(({ text, taskId }) => {
-      if (taskId) return { text, taskId }
-      const id = `t-${Date.now()}-${newTasks.length}`
-      newTasks.push({
-        id,
-        text,
-        done: false,
-        created_at: new Date().toISOString(),
-        order: existingTasks.length + newTasks.length,
-        origin: 'session',
-      })
-      return { text, taskId: id }
-    })
-
-    if (newTasks.length > 0) {
-      const { error: taskErr } = await supabase
-        .from('projects')
-        .update({ metadata: { ...(project.metadata ?? {}), tasks: [...existingTasks, ...newTasks] } })
-        .eq('id', project_id)
-        .eq('user_id', userId)
-      if (taskErr) console.warn('[utilities/sessions] could not write new tasks to the project (non-fatal):', taskErr.message)
-    }
+    // An item the shaper invented to fill the window (no grounded taskId)
+    // only becomes a real task on the project at CLOSE, and only if it was
+    // actually ticked or the debrief confirms it -- not the instant Start
+    // is tapped. Writing it in here meant a session that never reached
+    // closeout (a dead phone, a dropped tab) still left a permanent,
+    // never-reviewed task behind. A "pending-" id marks it as provisional
+    // through the running session; resource=close is what makes it real.
+    const agreed: { text: string; taskId: string | null }[] = agreedRaw.map(({ text, taskId }, i) => (
+      taskId ? { text, taskId } : { text, taskId: `pending-${Date.now()}-${i}` }
+    ))
 
     const shapes: SessionShape[] = agreed.length > 0
       ? agreed.map(({ text, taskId }) => ({ text, source: 'shaped' as const, partial: false, taskId }))
@@ -2206,7 +2192,7 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
 
     const { data: session, error: sessionErr } = await supabase
       .from('sessions')
-      .select('id, project_id, started_at, user_id, items')
+      .select('id, project_id, started_at, user_id, items, window_minutes')
       .eq('id', session_id)
       .eq('user_id', userId)
       .single()
@@ -2217,6 +2203,8 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
     const startedAt = new Date(session.started_at)
     const durationMinutes = Math.max(1, Math.round((endedAt.getTime() - startedAt.getTime()) / 60000))
 
+    // Empty is a valid, free close: a session that got interrupted or went
+    // nowhere shouldn't have to manufacture something to say just to exit.
     const text = typeof closeout_text === 'string' ? closeout_text.trim() : ''
     const moved = text.length > 0 ? await classifyMoved(text) : null
 
@@ -2272,67 +2260,100 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
       return res.status(500).json({ error: updateErr.message })
     }
 
-    // Re-entry playback for next time, and MVS seeding/recompute.
-    const projectUpdate: Record<string, unknown> = {}
-
-    // A ticked session item that matches an open task on the project marks
-    // that task done, with a timestamp. This is what turns finished work
-    // into evidence the next session can reason from.
+    // ── Task-list reconciliation, all in one pass ──────────────────────
+    // Every write below happens against ONE in-memory working copy, so the
+    // project gets exactly one update() call rather than several racing
+    // against each other within this same request.
     const { data: projRow } = await supabase
       .from('projects')
-      .select('metadata')
+      .select('title, metadata')
       .eq('id', session.project_id).eq('user_id', userId).single()
     const currentMetadata = projRow?.metadata ?? {}
+    let tasks: any[] = Array.isArray(currentMetadata?.tasks) ? [...currentMetadata.tasks] : []
+    let tasksChanged = false
+    const markedDoneTexts: string[] = []
+    const createdTexts: string[] = []
 
-    if (ticked.length > 0) {
-      const proj = projRow
-      const tasks = Array.isArray(proj?.metadata?.tasks) ? proj.metadata.tasks : []
-      let changed = false
-      const nextTasks = tasks.map((t: any) => {
-        if (t?.done || typeof t?.id !== 'string') return t
-        // Id match first -- survives paraphrase. Text match only as a
-        // fallback, for the derived/offline path where items were never
-        // grounded against a task and so never got an id at all.
-        const matches = tickedTaskIds.has(t.id) ||
-          (typeof t.text === 'string' && tickedTextLower.has(t.text.toLowerCase().trim()))
-        if (!matches) return t
-        changed = true
-        return { ...t, done: true, completed_at: endedAt.toISOString() }
-      })
-      if (changed) projectUpdate.metadata = { ...(proj?.metadata ?? {}), tasks: nextTasks }
+    const markDoneById = (id: string) => {
+      const idx = tasks.findIndex(t => t?.id === id && !t?.done)
+      if (idx === -1) return
+      tasks[idx] = { ...tasks[idx], done: true, completed_at: endedAt.toISOString() }
+      tasksChanged = true
+      markedDoneTexts.push(String(tasks[idx].text))
     }
+    const createTask = (text: string, done: boolean, origin: string, source: string | null) => {
+      tasks.push({
+        id: `t-${endedAt.getTime()}-${tasks.length}`,
+        text,
+        done,
+        created_at: endedAt.toISOString(),
+        ...(done ? { completed_at: endedAt.toISOString() } : {}),
+        order: tasks.length,
+        origin,
+        source,
+      })
+      tasksChanged = true
+      if (done) markedDoneTexts.push(text); else createdTexts.push(text)
+    }
+
+    // Ticked items: id match first (survives the shaper's paraphrasing),
+    // text match as a fallback for items that were never grounded to a
+    // task at all. A "pending-" id is a session-invented item that was
+    // never written to the project -- ticking it is what promotes it from
+    // provisional to real; left unticked, it simply never existed.
+    for (const t of ticked) {
+      if (!t.taskId) continue
+      if (t.taskId.startsWith('pending-')) {
+        createTask(t.text, true, 'session', null)
+        continue
+      }
+      markDoneById(t.taskId)
+    }
+    for (const t of ticked) {
+      if (t.taskId) continue
+      const idx = tasks.findIndex(x => !x.done && typeof x.text === 'string' && x.text.toLowerCase().trim() === t.text.toLowerCase().trim())
+      if (idx !== -1) markDoneById(tasks[idx].id)
+    }
+
+    // Voice debrief: reconciled against the WHOLE open list, not just what
+    // was on screen this session -- someone regularly does something
+    // unplanned mid-session, and it should still land as real progress.
+    const nextAddedTexts: string[] = []
+    if (text) {
+      const openForDebrief: DebriefOpenTask[] = tasks
+        .filter(t => !t.done && typeof t.id === 'string' && typeof t.text === 'string')
+        .map(t => ({ id: t.id, text: t.text }))
+      const debrief = await debriefSession(text, openForDebrief, projRow?.title || 'this project')
+      debrief.doneTaskIds.forEach(markDoneById)
+      debrief.newDone.forEach(t => createTask(t, true, 'closeout', 'you said it at the end of a session'))
+      debrief.next.forEach(t => { createTask(t, false, 'closeout', 'you said it at the end of a session'); nextAddedTexts.push(t) })
+    }
+
+    // A task that was in this session's plan, never ticked, and the
+    // session ran its full window anyway -- real evidence the estimate
+    // was too low, cheap to nudge without another model call.
+    if (typeof session.window_minutes === 'number' && durationMinutes >= session.window_minutes) {
+      const unfinishedTaskIds = new Set(
+        itemsWithOutcome
+          .filter((it: any) => !it.done && typeof it.taskId === 'string' && !String(it.taskId).startsWith('pending-'))
+          .map((it: any) => it.taskId),
+      )
+      if (unfinishedTaskIds.size > 0) {
+        tasks = tasks.map(t => {
+          if (!unfinishedTaskIds.has(t.id) || !t.estimate_set || typeof t.estimated_minutes !== 'number') return t
+          tasksChanged = true
+          return { ...t, estimated_minutes: bumpEstimate(t.estimated_minutes) }
+        })
+      }
+    }
+
+    // Re-entry playback for next time, and MVS seeding/recompute.
+    const projectUpdate: Record<string, unknown> = {}
+    if (tasksChanged) projectUpdate.metadata = { ...currentMetadata, tasks }
 
     if (text) {
       projectUpdate.last_closeout_text = text
       projectUpdate.last_session_ended_at = endedAt.toISOString()
-
-      // "Next: X" in a close-out is the user writing the next task in
-      // their own words at the moment they know best. It used to survive
-      // only as a string on the project, overwritten by the following
-      // session — so the plan never actually grew from doing the work.
-      const nextMatch = text.match(/\bnext\s*[:\-]\s*(.+)$/is)
-      const nextStep = nextMatch?.[1]?.trim().replace(/\s+/g, ' ')
-      if (nextStep && nextStep.length > 3 && nextStep.length < 160) {
-        const base = (projectUpdate.metadata as any) ?? currentMetadata
-        const existing: any[] = Array.isArray(base?.tasks) ? base.tasks : []
-        const already = existing.some(
-          (t: any) => typeof t?.text === 'string' &&
-            t.text.toLowerCase().trim() === nextStep.toLowerCase(),
-        )
-        if (!already) {
-          projectUpdate.metadata = {
-            ...base,
-            tasks: [...existing, {
-              id: `t-${endedAt.getTime()}`,
-              text: nextStep,
-              done: false,
-              created_at: endedAt.toISOString(),
-              origin: 'closeout',
-              source: 'you said it at the end of a session',
-            }],
-          }
-        }
-      }
     }
 
     if (typeof mvs_seed_minutes === 'number' && mvs_seed_minutes > 0) {
@@ -2360,7 +2381,17 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
       if (projErr) console.warn('[utilities/sessions] project re-entry update failed (non-fatal):', projErr.message)
     }
 
-    return res.status(200).json({ ok: true, duration_minutes: durationMinutes, moved })
+    // A brief receipt of what actually happened to the task list -- shown
+    // for a beat before "Logged." rather than a silent rewrite the user
+    // only discovers weeks later.
+    return res.status(200).json({
+      ok: true,
+      duration_minutes: durationMinutes,
+      moved,
+      marked_done: [...new Set(markedDoneTexts)],
+      created: [...new Set(createdTexts)],
+      next_added: nextAddedTexts,
+    })
   }
 
   // ─── PENDING CLOSE-OUT ──────────────────────────────────────────────

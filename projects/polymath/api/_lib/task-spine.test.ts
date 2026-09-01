@@ -84,6 +84,12 @@ describe('buildSpinePrompt', () => {
   it('leaves the re-plan block out on a first pass', () => {
     expect(prompt()).not.toContain('STEPS ALREADY AGREED')
   })
+
+  it('asks for a one-sitting time estimate off the shared ladder', () => {
+    const p = prompt()
+    expect(p).toContain('estimated_minutes')
+    expect(p).toContain('5, 10, 15, 20, 30, 45, 60')
+  })
 })
 
 describe('buildFirstCutEvidence', () => {
@@ -176,7 +182,7 @@ describe('toStoredTasks', () => {
   const now = new Date('2026-09-01T10:00:00Z')
 
   it('produces the shape the app already stores tasks in', () => {
-    const [task] = toStoredTasks([{ text: 'Record the vocal', source: 'from what you said about it' }], now)
+    const [task] = toStoredTasks([{ text: 'Record the vocal', source: 'from what you said about it', estimatedMinutes: null }], now)
     expect(task).toMatchObject({
       text: 'Record the vocal',
       done: false,
@@ -187,8 +193,20 @@ describe('toStoredTasks', () => {
   })
 
   it('gives every task a distinct id', () => {
-    const tasks = toStoredTasks([{ text: 'a', source: null }, { text: 'b', source: null }], now)
+    const tasks = toStoredTasks([{ text: 'a', source: null, estimatedMinutes: null }, { text: 'b', source: null, estimatedMinutes: null }], now)
     expect(new Set(tasks.map(t => t.id)).size).toBe(2)
+  })
+
+  it('carries the estimate onto the stored task when one was set', () => {
+    const [task] = toStoredTasks([{ text: 'Record the vocal', source: null, estimatedMinutes: 20 }], now)
+    expect(task.estimated_minutes).toBe(20)
+    expect(task.estimate_set).toBe(true)
+  })
+
+  it('leaves the estimate unset rather than guessing when none was given', () => {
+    const [task] = toStoredTasks([{ text: 'Record the vocal', source: null, estimatedMinutes: null }], now)
+    expect(task.estimated_minutes).toBeUndefined()
+    expect(task.estimate_set).toBeUndefined()
   })
 })
 

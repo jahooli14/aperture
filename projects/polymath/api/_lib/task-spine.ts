@@ -27,6 +27,7 @@ import { generateText } from './gemini-chat.js'
 import { PLAIN_ENGLISH_RULES } from './plain-english.js'
 import { filterGrounded, type Evidence } from './session-grounding.js'
 import { isAdminItem } from './session-shaper.js'
+import { ESTIMATE_MINUTES, nearestEstimate, type EstimateMinutes } from './session-estimate.js'
 
 export const MIN_SPINE_STEPS = 4
 export const MAX_SPINE_STEPS = 8
@@ -57,6 +58,10 @@ export interface SpineStep {
   text: string
   /** Where it came from, or null when it's a plainly generic move. */
   source: string | null
+  /** Set once, at generation time, and persisted onto the stored task from
+   *  then on -- the triage that plans a session against real minutes reads
+   *  this rather than re-asking the model "how long is this" every time. */
+  estimatedMinutes: EstimateMinutes | null
 }
 
 export function buildEvidenceFromSaid(title: string, endGoal: string | null, said: string[]): Evidence[] {
@@ -116,20 +121,27 @@ WHAT NONE OF THEM MAY BE:
 Give ${MIN_SPINE_STEPS}-${MAX_SPINE_STEPS} steps, in the order they'd be done, first one first.
 Fewer, honest steps beat a long list you had to invent to fill.
 
+For each step, also guess how long ONE SITTING of it takes -- not the whole
+step if it spans several sessions, just a realistic single sitting. Pick
+the closest value from EXACTLY this list: ${ESTIMATE_MINUTES.join(', ')}.
+
 ${PLAIN_ENGLISH_RULES}
 
 Respond with JSON only:
-{ "steps": [ { "text": "...", "evidence": ["e1"] } ] }`
+{ "steps": [ { "text": "...", "evidence": ["e1"], "estimated_minutes": 20 } ] }`
 }
 
 /**
  * Model output -> a spine. Same shape of cleaning as session items, plus
  * the length rules that make it a spine rather than a backlog.
  */
-export function sanitizeSteps(raw: unknown, maxCount: number = MAX_SPINE_STEPS): { text: string; evidence?: string[] }[] {
+export function sanitizeSteps(
+  raw: unknown,
+  maxCount: number = MAX_SPINE_STEPS,
+): { text: string; evidence?: string[]; estimatedMinutes: EstimateMinutes | null }[] {
   if (!Array.isArray(raw)) return []
   const seen = new Set<string>()
-  const out: { text: string; evidence?: string[] }[] = []
+  const out: { text: string; evidence?: string[]; estimatedMinutes: EstimateMinutes | null }[] = []
   for (const entry of raw) {
     const rawText = typeof entry === 'string' ? entry : entry?.text
     if (typeof rawText !== 'string') continue
@@ -139,18 +151,21 @@ export function sanitizeSteps(raw: unknown, maxCount: number = MAX_SPINE_STEPS):
     const key = text.toLowerCase().replace(/[^a-z0-9]/g, '')
     if (!key || seen.has(key)) continue
     seen.add(key)
+    const rawMinutes = typeof entry === 'object' && entry !== null ? (entry as any).estimated_minutes : undefined
     out.push({
       text,
       evidence: Array.isArray(entry?.evidence)
         ? entry.evidence.filter((x: unknown): x is string => typeof x === 'string')
         : undefined,
+      estimatedMinutes: typeof rawMinutes === 'number' ? nearestEstimate(rawMinutes) : null,
     })
     if (out.length >= maxCount) break
   }
   return out
 }
 
-/** The shape the app stores tasks in (metadata.tasks). */
+/** The shape the app stores tasks in (metadata.tasks). Field names match
+ *  TaskList.tsx's Task interface -- same record, read by both. */
 export interface StoredTask {
   id: string
   text: string
@@ -159,7 +174,9 @@ export interface StoredTask {
   /** Kept so a later session can show where the step came from, and so a
    *  re-plan can tell generated steps from ones the user wrote. */
   source?: string | null
-  origin?: 'spine' | 'closeout' | 'user'
+  origin?: 'spine' | 'closeout' | 'user' | 'session'
+  estimated_minutes?: number
+  estimate_set?: boolean
 }
 
 export function toStoredTasks(steps: SpineStep[], now: Date = new Date()): StoredTask[] {
@@ -170,6 +187,7 @@ export function toStoredTasks(steps: SpineStep[], now: Date = new Date()): Store
     created_at: now.toISOString(),
     source: s.source,
     origin: 'spine' as const,
+    ...(s.estimatedMinutes != null ? { estimated_minutes: s.estimatedMinutes, estimate_set: true } : {}),
   }))
 }
 
@@ -199,7 +217,11 @@ export async function generateTaskSpine(input: SpineInput): Promise<SpineStep[]>
         rejected.map(r => `"${r.text}" — ${r.reason}`),
       )
     }
-    return kept.length >= MIN_SPINE_STEPS ? kept : kept.slice(0, MAX_SPINE_STEPS)
+    // filterGrounded's output shape doesn't carry estimatedMinutes -- reattach
+    // it by text, which survives the grounding pass unchanged.
+    const estimateByText = new Map(cleaned.map(c => [c.text, c.estimatedMinutes]))
+    const withEstimates: SpineStep[] = kept.map(k => ({ ...k, estimatedMinutes: estimateByText.get(k.text) ?? null }))
+    return withEstimates.length >= MIN_SPINE_STEPS ? withEstimates : withEstimates.slice(0, MAX_SPINE_STEPS)
   } catch (e) {
     console.error('[task-spine] generation failed:', e)
     return []
@@ -285,10 +307,13 @@ Give exactly ${FIRST_CUT_STEPS} moves, in the order they'd make sense to do.
 Cite the evidence id each one comes from; a move that names nothing beyond
 the project's own title needs no citation.
 
+For each, also guess how long it takes in one sitting. Pick the closest
+value from EXACTLY this list: ${ESTIMATE_MINUTES.join(', ')}.
+
 ${PLAIN_ENGLISH_RULES}
 
 Respond with JSON only:
-{ "steps": [ { "text": "...", "evidence": ["e1"] } ] }`
+{ "steps": [ { "text": "...", "evidence": ["e1"], "estimated_minutes": 15 } ] }`
 }
 
 /**
@@ -314,7 +339,9 @@ export async function generateFirstCutTasks(input: FirstCutInput): Promise<Spine
         rejected.map(r => `"${r.text}" — ${r.reason}`),
       )
     }
-    return kept.slice(0, FIRST_CUT_STEPS)
+    const estimateByText = new Map(cleaned.map(c => [c.text, c.estimatedMinutes]))
+    const withEstimates: SpineStep[] = kept.map(k => ({ ...k, estimatedMinutes: estimateByText.get(k.text) ?? null }))
+    return withEstimates.slice(0, FIRST_CUT_STEPS)
   } catch (e) {
     console.error('[task-spine] first-cut generation failed:', e)
     return []
