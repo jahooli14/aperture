@@ -18,11 +18,18 @@
 import { generateText } from './gemini-chat.js'
 import { PLAIN_ENGLISH_RULES } from './plain-english.js'
 import { sharesSubstantialWording } from './session-grounding.js'
-import { isAdminItem } from './session-shaper.js'
+import { isAdminItem } from './session-items.js'
 
 export interface DebriefOpenTask {
   id: string
   text: string
+}
+
+export interface DebriefProgress {
+  taskId: string
+  /** Where they got to, in their words. Short enough to read back as the
+   *  re-entry line next time. */
+  note: string
 }
 
 export interface DebriefResult {
@@ -34,9 +41,14 @@ export interface DebriefResult {
   /** Something the text says should happen next session, that isn't
    *  already effectively on the list. */
   next: string[]
+  /** An open task they worked on but did NOT finish, with how far they
+   *  got. Most sessions end mid-step; without this the app only knew
+   *  "ticked" or "not ticked", and the next session re-started the step
+   *  from the top. */
+  progress: DebriefProgress[]
 }
 
-const EMPTY: DebriefResult = { doneTaskIds: [], newDone: [], next: [] }
+const EMPTY: DebriefResult = { doneTaskIds: [], newDone: [], next: [], progress: [] }
 
 function normalize(s: string): string {
   return s.toLowerCase().replace(/\s+/g, ' ').trim()
@@ -63,7 +75,7 @@ ${openTasks.length
   ? openTasks.map(t => `[${t.id}] ${t.text}`).join('\n')
   : '(none open right now)'}
 
-Read what they said and sort it into three things:
+Read what they said and sort it into four things:
 
 1. DONE, MATCHING AN OPEN TASK -- they described finishing one of the tasks
    above. Cite its id. Only cite a task id when what they said is genuinely
@@ -79,11 +91,18 @@ Read what they said and sort it into three things:
    (don't repeat the list back). Give each as a short line, plus the exact
    phrase from what they said that supports it.
 
+4. PART WAY -- they worked on one of the open tasks above but did NOT
+   finish it. Cite its id and say how far they got, in their words, as one
+   short line ("got the outline cut, not the fine detail"). This is the
+   line they'll read next time before picking it back up, so it has to say
+   where the work IS, not how it went. A task in category 1 can't also be
+   here.
+
 If they only mentioned one or two of these things, the others are empty
 lists -- don't invent content to fill a category. A close-out that's just
-"got nowhere, distracted the whole time" has nothing in any of the three.
+"got nowhere, distracted the whole time" has nothing in any of the four.
 
-Every line in categories 2 and 3 must carry a "quote" -- an exact,
+Every line in categories 2, 3 and 4 must carry a "quote" -- an exact,
 verbatim phrase copied from what they said above. If you can't quote it,
 you can't include it.
 
@@ -97,7 +116,8 @@ Respond with JSON only:
 {
   "done": [ { "task_id": "..." } ],
   "new_done": [ { "text": "...", "quote": "..." } ],
-  "next": [ { "text": "...", "quote": "..." } ]
+  "next": [ { "text": "...", "quote": "..." } ],
+  "progress": [ { "task_id": "...", "note": "...", "quote": "..." } ]
 }`
 }
 
@@ -113,7 +133,7 @@ export function sanitizeDebrief(
   openTasks: DebriefOpenTask[],
 ): DebriefResult {
   if (!raw || typeof raw !== 'object') return EMPTY
-  const parsed = raw as { done?: unknown; new_done?: unknown; next?: unknown }
+  const parsed = raw as { done?: unknown; new_done?: unknown; next?: unknown; progress?: unknown }
   const openIds = new Set(openTasks.map(t => t.id))
 
   const doneTaskIds = Array.isArray(parsed.done)
@@ -165,7 +185,26 @@ export function sanitizeDebrief(
         })
     : []
 
-  return { doneTaskIds, newDone, next }
+  // Part-way progress: a real, still-open task id (never one just marked
+  // done), a short note, and a quote that actually appears in the text.
+  const doneSet = new Set(doneTaskIds)
+  const progressSeen = new Set<string>()
+  const progress: DebriefProgress[] = Array.isArray(parsed.progress)
+    ? parsed.progress
+        .map((entry: any): DebriefProgress | null => {
+          if (!entry || typeof entry !== 'object') return null
+          const taskId = typeof entry.task_id === 'string' ? entry.task_id : ''
+          const note = typeof entry.note === 'string' ? entry.note.trim() : ''
+          if (!openIds.has(taskId) || doneSet.has(taskId) || progressSeen.has(taskId)) return null
+          if (!note || note.length > 140) return null
+          if (!quoteVerified(entry.quote, closeoutText)) return null
+          progressSeen.add(taskId)
+          return { taskId, note }
+        })
+        .filter((p: DebriefProgress | null): p is DebriefProgress => !!p)
+    : []
+
+  return { doneTaskIds, newDone, next, progress }
 }
 
 /**

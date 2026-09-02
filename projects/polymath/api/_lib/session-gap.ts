@@ -13,7 +13,7 @@
  * business of guessing.
  */
 
-export type GapKind = 'end_goal' | 'first_step' | 'next_step' | 'slot'
+export type GapKind = 'first_step' | 'next_step' | 'slot'
 
 export interface GapInput {
   title: string
@@ -44,17 +44,12 @@ export function quoteCloseout(text: string, maxWords = 12): string {
 }
 
 export function pickGap(input: GapInput): Gap | null {
-  // 1. No finish line. Everything else is guesswork without one, and it's
-  //    the answer that keeps paying off — every future session reasons
-  //    backwards from it.
-  if (!input.endGoal?.trim()) {
-    return {
-      kind: 'end_goal',
-      question: `When ${input.title} is finished, what have you actually got?`,
-    }
-  }
+  // The finish line is never asked for. An ongoing project has none, and
+  // the app plans forward from what the project is when it's missing
+  // (project-shaping.ts, session-shaper.ts). When the user volunteers one
+  // it is used; it is not a gate.
 
-  // 2. A goal but nothing started. Ask for the first real thing, not a plan.
+  // 1. Nothing started. Ask for the first real thing, not a plan.
   if (!input.lastCloseout?.trim() && input.openTaskCount === 0) {
     return {
       kind: 'first_step',
@@ -62,7 +57,7 @@ export function pickGap(input: GapInput): Gap | null {
     }
   }
 
-  // 3. A close-out that says where they got to but not where they're going.
+  // 2. A close-out that says where they got to but not where they're going.
   //    Quoting it back means they answer from memory instead of reconstructing.
   if (input.lastCloseout?.trim() && !closeoutNamesNextStep(input.lastCloseout)) {
     return {
@@ -71,7 +66,7 @@ export function pickGap(input: GapInput): Gap | null {
     }
   }
 
-  // 4. A named open question on the project that has never been answered.
+  // 3. A named open question on the project that has never been answered.
   if (input.unfilledSlots.length > 0) {
     const slotName = input.unfilledSlots[0]
     return {

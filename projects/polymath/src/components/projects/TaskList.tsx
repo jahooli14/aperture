@@ -21,6 +21,10 @@ export interface Task {
   is_ai_suggested?: boolean
   ai_reasoning?: string
   task_type?: 'ignition' | 'core' | 'shutdown'
+  /** Where a session got to on this step without finishing it, in the
+   *  user's own words. Cleared when the step is ticked. */
+  progress_note?: string
+  progress_at?: string
 }
 
 // Helper for approximate string matching

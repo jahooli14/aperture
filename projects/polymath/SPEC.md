@@ -132,15 +132,63 @@ Decomposition is the value, not history. History makes it faster, not real.
 
 ### Where session shapes come from (derived, never authored)
 
-You never write a to-do list. Shapes are derived, in this order of preference:
+You never write a to-do list. One planning model, three altitudes, and a session is
+only ever the bottom one:
 
-1. **The last close-out.** "What's next" from the previous session *is* the next shape.
-   This is the primary source and why close-out is non-negotiable.
-2. **Empty slots.** No first track → *"find one"* is a real 20-minute shape.
-3. **Decomposition**, only when the window is smaller than MVS: split the stated next
-   move into a piece that fits, and say plainly that it isn't the whole thing.
+1. **What done looks like** — in the user's words, and **never asked for**. Plenty of
+   real projects are ongoing (DJing, a sketchbook habit) and have no "done"; asking
+   makes people invent one and then rewrite it forever. It is kept when volunteered
+   and used to plan backwards; when it's absent the steps are planned *forwards* from
+   what the project is and where it got to. Its absence is never a gate, a warning,
+   or an empty field on a card.
+2. **The steps** — the spine (`task-spine.ts`), planned backwards from the finish line
+   when there is one and forwards from the description when there isn't,
+   each declaring what it comes `after`. A topological sort enforces that, so "peel the
+   stencil off" can never sit above "cut the stencil". Every stored task carries an
+   explicit `order` (`task-order.ts`); what a close-out says comes *next* goes to the
+   front of the open list, never the end.
+3. **The session** (`session-shaper.ts`) — the re-entry line, then the next open steps
+   in plan order, as many as fit the window, then one line saying what "done today"
+   looks like. Two things can change that, and both change the PLAN, not just the
+   session:
+   - **The next step can't be started yet** (`session-ready.ts`). Ordered doesn't mean
+     complete: a spine is a handful of steps for a whole project, so a real
+     prerequisite can simply never have been written down. One check asks whether the
+     top step is startable. If the missing thing is already further down the list it
+     moves up; if it isn't on the list at all it's written in front of the step it
+     blocks. Either way the session says so out loud — never a silent reshuffle.
+   - **The next step is bigger than the window**, so one call splits *that step* into
+     the first piece of it that fits (`session-split.ts`), and the pieces cite it.
 
-A brand-new project has no shapes, so its first session is always a *start it* shape.
+   Nothing else is ever generated for a session: no filler, no spares, no bench. Saying
+   what's wrong with the list reshapes it by voice, and every line the reshape returns
+   must cite a real step or the words just spoken.
+
+   The prerequisite check is the one place the app writes to the plan on the user's
+   behalf mid-flow, so its gates are the strictest in the codebase: admin verbs
+   rejected outright, restatements of the step rejected, a citation *required* (unlike
+   a session item, a prerequisite always asserts something), no invented specifics, and
+   anything failing any gate is treated as "ready". A missed prerequisite costs one
+   awkward session; an invented one rewrites the plan and reads as the app not knowing
+   the project.
+
+An empty list gets *planned* — the same pass that built it, run again over everything
+learned since — not padded with session-sized invention. Only when there is genuinely
+nothing to plan from does it ask, and it asks for the first real thing
+(`session-gap.ts`), never for a finish line.
+
+### Making a project (one call)
+
+Capture is one screen, not three: say it (voice, listening on open), and the assistant
+asks **at most one question**, only when it can't plan a step from what's been said.
+Then a single `shape-project` call returns the title, what it is, the labels, the
+finish line *if they said one*, and the first steps in order — all editable in place
+before anything is saved. The conversation is stored on the project, so later sessions
+cite what was said instead of asking again.
+
+What creation no longer asks for: a finish line, a project type (`type` is legacy and
+labels are the grouping axis), a finish-or-habit toggle (derived from whether a finish
+line exists), or a separate "first step" field.
 
 ### Seeding MVS
 
@@ -187,6 +235,21 @@ Timer stops → one question → thirty seconds of voice.
   about conditions, and the wrong question there gets no answer.
 
 It sets `last_stopped_at`, feeds the corpus, and makes the next session a two-minute start.
+
+The debrief (`debrief-matcher.ts`) sorts what was said into four things, each cited or
+dropped: a step finished, something finished that wasn't on the list, what comes next,
+and **part way** — a step worked on but not finished, with where it got to. That last
+one lives on the task (`progress_note`) and is the re-entry line for that step next
+time, so a session never restarts a step from the top. Ticking every piece of a split
+step finishes it; ticking some of them is progress, recorded as such.
+
+When the last open step is ticked and the user has stated a finish line, one capped
+call reads it against what has actually been made (`finish-line.ts`) and the receipt
+says which it is: *that's the finish line* → one action, mark it finished; or *plan's
+done, project isn't* → the next session starts by planning the rest. With no stated
+finish line the receipt just says the list is clear. "All tasks ticked" is never
+assumed to mean done, and the project page leads with *plan what comes next*, with
+*mark it finished* as the quiet second option.
 
 **Never say "incomplete."** 22 minutes with item one done is a good session. The framing
 decides whether the app gets opened next week.

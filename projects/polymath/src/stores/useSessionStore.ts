@@ -91,25 +91,27 @@ export function planningSecondsFor(windowMinutes: number | null): number {
 
 export interface PlanItem {
   text: string
-  /** Where it came from ("from your last close-out"). Null when the item
-   *  asserts nothing that needs a source. Every item is either traceable
-   *  or trivially generic -- there is no third category, because that
-   *  third category is invention. */
+  /** Where it came from ("already on the project", "part of: <step>").
+   *  Null when the item asserts nothing that needs a source. Every item
+   *  is either traceable or trivially generic -- there is no third
+   *  category, because that third category is invention. */
   source: string | null
-  /** The real id of the open task this item is grounded in, when it has
-   *  one. Sent back at close time so a tick marks the actual task done --
-   *  matching on the model's session-item wording would silently fail,
-   *  since it's prompted to paraphrase whatever task it's citing. */
+  /** The real id of the open step this item is, or is a piece of. Sent
+   *  back at close time so a tick lands on the actual step. */
   taskId: string | null
+  /** True when this is a piece of a bigger step, not the whole of it --
+   *  ticking it records progress on the step, never completion. */
+  partial?: boolean
 }
+
+export type PlanSource = 'tasks' | 'split' | 'ai' | 'derived'
 
 export interface PlanDraft {
   projectId: string
   windowMinutes: number | null
   items: PlanItem[]
-  /** Spares generated with the list. Swapping pulls from here so "not
-   *  that one" is instant instead of a model round-trip. */
-  bench: PlanItem[]
+  /** What exists at the end of the sitting if the list lands. */
+  doneLooksLike: string | null
   /** Set when the app couldn't fill the session from what it actually
    *  knows. It asks rather than padding the list out with guesses. */
   needsInput: string | null
@@ -118,17 +120,24 @@ export interface PlanDraft {
    *  another undifferentiated note. */
   gapKind: string | null
   slotName: string | null
-  /** 'tasks' means (at least part of) this plan is the project's own open
-   *  task list, verbatim. 'derived' means the model was unreachable and
-   *  this is the fallback list -- both worth saying out loud rather than
-   *  passing either off as a freshly-invented plan. */
-  source: 'ai' | 'derived' | 'tasks'
+  /** 'tasks' — the project's own next steps, verbatim. 'split' — the next
+   *  step was bigger than the window, this is the first piece of it.
+   *  'ai' — reshaped on what the user said. 'derived' — nothing to plan
+   *  from, a placeholder rather than an invention. */
+  source: PlanSource
   /** Null on the verbatim, no-model-call path -- there's nothing to ask
    *  about friction when nothing was generated. */
   friction: FrictionLine | null
   /** How much of the real backlog wasn't even considered for this plan
    *  (the 24-task ceiling), so it can be said rather than silently eaten. */
   truncatedCount: number
+  /** Steps the app planned onto the project first, because its list was
+   *  empty -- said out loud, since it just rewrote the plan. */
+  planned: number
+  /** Set when the next step couldn't be started yet, so the plan changed:
+   *  a step moved up from further down, or a missing one written in
+   *  before it. Said out loud for the same reason. */
+  unblocked: { text: string; before: string; added: boolean } | null
 }
 
 interface SessionState {
@@ -151,14 +160,13 @@ interface SessionState {
 
   shapePlan: (projectId: string, windowMinutes: number | null) => Promise<void>
   reshapePlan: (instruction: string) => Promise<void>
-  swapPlanItem: (index: number) => void
   clearPlan: () => void
 
   startSession: (projectId: string, windowMinutes: number | null, source?: string, items?: PlanItem[], friction?: FrictionLine | null) => Promise<void>
   /** Answers the app's "I don't know enough" question. Saves the answer to
    *  the project so it's evidence next time, then re-shapes on it. */
   answerPlanQuestion: (answer: string) => Promise<void>
-  closeSession: (closeoutText: string, mvsSeedMinutes?: number, doneItems?: { text: string; taskId: string | null }[]) => Promise<CloseResult | null>
+  closeSession: (closeoutText: string, mvsSeedMinutes?: number, doneItems?: { text: string; taskId: string | null; partial?: boolean }[]) => Promise<CloseResult | null>
   checkPendingCloseout: () => Promise<void>
   closeoutForPending: (closeoutText: string) => Promise<void>
   dismissPendingCloseout: () => void
@@ -167,13 +175,27 @@ interface SessionState {
 
 interface ShapeResponse {
   items: PlanItem[]
-  bench: PlanItem[]
-  source: 'ai' | 'derived' | 'tasks'
+  done_looks_like: string | null
+  source: PlanSource
   needs_input: string | null
   gap_kind: string | null
   slot_name: string | null
   friction: FrictionLine | null
   truncated_count: number
+  planned: number
+  unblocked: { text: string; before: string; added: boolean } | null
+}
+
+function draftFrom(projectId: string, windowMinutes: number | null, data: ShapeResponse): PlanDraft {
+  return {
+    projectId, windowMinutes,
+    items: data.items,
+    doneLooksLike: data.done_looks_like ?? null,
+    source: data.source, needsInput: data.needs_input ?? null,
+    gapKind: data.gap_kind ?? null, slotName: data.slot_name ?? null,
+    friction: data.friction ?? null, truncatedCount: data.truncated_count ?? 0,
+    planned: data.planned ?? 0, unblocked: data.unblocked ?? null,
+  }
 }
 
 /** What actually happened to the task list at close -- the receipt shown
@@ -185,6 +207,11 @@ export interface CloseResult {
   markedDone: string[]
   created: string[]
   nextAdded: string[]
+  /** Steps worked on but not finished, with where they got to. */
+  progressNoted: string[]
+  /** Set when the last open step was just ticked: is the finish line
+   *  actually reached, and in one sentence why or why not. */
+  finish: { reached: boolean; reason: string } | null
 }
 
 async function postJson<T>(url: string, body: unknown): Promise<T> {
@@ -222,16 +249,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
         '/api/utilities?resource=shape',
         { project_id: projectId, window_minutes: windowMinutes }
       )
-      set({
-        plan: {
-          projectId, windowMinutes,
-          items: data.items, bench: data.bench ?? [],
-          source: data.source, needsInput: data.needs_input ?? null,
-          gapKind: data.gap_kind ?? null, slotName: data.slot_name ?? null,
-          friction: data.friction ?? null, truncatedCount: data.truncated_count ?? 0,
-        },
-        shaping: false,
-      })
+      set({ plan: draftFrom(projectId, windowMinutes, data), shaping: false })
     } catch (e) {
       // Raw transport errors ("Request failed: 404") are not something to
       // read two minutes before you start. Log them, say the plain thing.
@@ -254,42 +272,13 @@ export const useSessionStore = create<SessionState>((set, get) => ({
           current_items: plan.items.map(i => i.text),
         }
       )
-      set({
-        plan: {
-          ...plan,
-          items: data.items, bench: data.bench ?? [],
-          source: data.source, needsInput: data.needs_input ?? null,
-          gapKind: data.gap_kind ?? null, slotName: data.slot_name ?? null,
-          friction: data.friction ?? null, truncatedCount: data.truncated_count ?? 0,
-        },
-        shaping: false,
-      })
+      set({ plan: draftFrom(plan.projectId, plan.windowMinutes, data), shaping: false })
     } catch (e) {
       // Keep the list that's on screen -- a failed reshape must never
       // leave the user staring at nothing two minutes before they start.
       console.error('[session] reshape failed:', e)
       set({ shaping: false, error: "Didn't catch that — the list is unchanged." })
     }
-  },
-
-  // One tap is cheaper than a sentence when the only problem is that one
-  // item doesn't suit today. It SWAPS rather than deletes: a five-item
-  // hour that becomes a four-item hour because you rejected one line is
-  // the app quietly shrinking the session you asked for. The rejected
-  // item goes to the back of the bench, so tapping through is a carousel
-  // and nothing is lost by accident.
-  swapPlanItem: (index) => {
-    const plan = get().plan
-    if (!plan || plan.bench.length === 0) return
-    const [next, ...restOfBench] = plan.bench
-    const replaced = plan.items[index]
-    set({
-      plan: {
-        ...plan,
-        items: plan.items.map((t, i) => (i === index ? next : t)),
-        bench: [...restOfBench, replaced],
-      },
-    })
   },
 
   clearPlan: () => set({ plan: null }),
@@ -354,6 +343,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       const result = await postJson<{
         ok: boolean; moved: boolean | null; duration_minutes: number
         marked_done?: string[]; created?: string[]; next_added?: string[]
+        progress_noted?: string[]; finish?: { reached: boolean; reason: string } | null
       }>(
         '/api/utilities?resource=close',
         {
@@ -370,6 +360,8 @@ export const useSessionStore = create<SessionState>((set, get) => ({
         markedDone: result.marked_done ?? [],
         created: result.created ?? [],
         nextAdded: result.next_added ?? [],
+        progressNoted: result.progress_noted ?? [],
+        finish: result.finish ?? null,
       }
     } catch (e) {
       set({ closing: false, error: e instanceof Error ? e.message : 'Could not save the close-out.' })

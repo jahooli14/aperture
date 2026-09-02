@@ -34,13 +34,14 @@ describe('quoteCloseout', () => {
 })
 
 describe('pickGap', () => {
-  it('asks for the finish line first — everything reasons backwards from it', () => {
+  it('never asks for a finish line -- an ongoing project has none', () => {
     const gap = pickGap(BASE)
-    expect(gap?.kind).toBe('end_goal')
-    expect(gap?.question).toContain('what have you actually got')
+    expect(gap?.kind).not.toBe('end_goal')
+    expect(gap?.question).not.toContain('what have you actually got')
   })
 
-  it('asks for the first real thing when there is a goal but no motion', () => {
+  it('asks for the first real thing when nothing has started', () => {
+    expect(pickGap(BASE)?.kind).toBe('first_step')
     expect(pickGap({ ...BASE, endGoal: 'A finished mix' })?.kind).toBe('first_step')
   })
 

@@ -88,6 +88,10 @@ Cron bakes a deep queue overnight (full pipeline, Read enabled). The on-demand b
 
 Active, partly-shaped, dormant, and abandoned are different states. Long-dormant projects are explicitly **not** waste — they are eligible for reshape via the crossover generator.
 
+**Never ask what done looks like.** Plenty of real projects are ongoing (DJing, a sketchbook habit) and have no "done"; asking makes people invent one and rewrite it forever. `metadata.end_goal` is kept when the user volunteers it (extraction picks it up, the Guide writes it down when it's said in passing) and used to plan backwards. When it's absent, steps are planned *forwards* from what the project is. Its absence is never a gate, a warning, or an empty field on a card. See SPEC.md → "Where session shapes come from".
+
+**The order of `metadata.tasks` is the plan.** The session takes the top open steps in order, so every writer keeps `order` contiguous (`api/_lib/task-order.ts`), generated steps declare what they come `after`, and what a close-out says comes next goes to the *front* of the open list. A step worked on but not finished carries `progress_note` — the user's own words — read back as the re-entry line for that step.
+
 ### Anti-patterns (kill on sight)
 
 - **Forced surrealist mashups** — "willow memory totem," "dazzle-patterned commuter bike." Inputs as motifs, not as load-bearing structure.

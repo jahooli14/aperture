@@ -97,6 +97,33 @@ describe('applyOpToTasks', () => {
     expect(out.every(t => !t.done)).toBe(true)
   })
 
+  describe('move — the order is the plan', () => {
+    it('puts a step after the one it depends on, and renumbers', () => {
+      // "Peel the stencil off" sitting above "cut the stencil" is the
+      // failure this exists to fix.
+      const out = applyOpToTasks(base, { action: 'move', taskId: 'a', afterTaskId: 'c' })
+      expect(out.map(t => t.id)).toEqual(['b', 'c', 'a'])
+      expect(out.map(t => t.order)).toEqual([0, 1, 2])
+    })
+
+    it('moves to the top when afterTaskId is null', () => {
+      const out = applyOpToTasks(base, { action: 'move', taskId: 'c', afterTaskId: null })
+      expect(out.map(t => t.id)).toEqual(['c', 'a', 'b'])
+      expect(out.map(t => t.order)).toEqual([0, 1, 2])
+    })
+
+    it('is a no-op for an unknown task, an unknown target, or itself', () => {
+      expect(applyOpToTasks(base, { action: 'move', taskId: 'zzz', afterTaskId: 'a' }).map(t => t.id)).toEqual(['a', 'b', 'c'])
+      expect(applyOpToTasks(base, { action: 'move', taskId: 'a', afterTaskId: 'zzz' }).map(t => t.id)).toEqual(['a', 'b', 'c'])
+      expect(applyOpToTasks(base, { action: 'move', taskId: 'a', afterTaskId: 'a' }).map(t => t.id)).toEqual(['a', 'b', 'c'])
+    })
+  })
+
+  it('renumbers after a delete so order stays contiguous', () => {
+    const out = applyOpToTasks(base, { action: 'delete', taskId: 'a' })
+    expect(out.map(t => t.order)).toEqual([0, 1])
+  })
+
   it('composes correctly when reduced sequentially (Apply all)', () => {
     const ops = [
       { action: 'complete' as const, taskId: 'a' },
