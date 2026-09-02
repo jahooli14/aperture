@@ -132,15 +132,26 @@ Decomposition is the value, not history. History makes it faster, not real.
 
 ### Where session shapes come from (derived, never authored)
 
-You never write a to-do list. Shapes are derived, in this order of preference:
+You never write a to-do list. One planning model, three altitudes, and a session is
+only ever the bottom one:
 
-1. **The last close-out.** "What's next" from the previous session *is* the next shape.
-   This is the primary source and why close-out is non-negotiable.
-2. **Empty slots.** No first track → *"find one"* is a real 20-minute shape.
-3. **Decomposition**, only when the window is smaller than MVS: split the stated next
-   move into a piece that fits, and say plainly that it isn't the whole thing.
+1. **The finish line** — what done looks like, in the user's words. Every creation
+   path keeps it or asks the one question that gets it.
+2. **The steps** — the spine (`task-spine.ts`), planned backwards from the finish line,
+   each declaring what it comes `after`. A topological sort enforces that, so "peel the
+   stencil off" can never sit above "cut the stencil". Every stored task carries an
+   explicit `order` (`task-order.ts`); what a close-out says comes *next* goes to the
+   front of the open list, never the end.
+3. **The session** (`session-shaper.ts`) — the re-entry line, then the next open steps
+   in plan order, as many as fit the window, then one line saying what "done today"
+   looks like. If the very next step is bigger than the window, one model call splits
+   *that step* into the first piece of it that fits (`session-split.ts`), and the pieces
+   cite it. Nothing else is ever generated for a session: no filler, no spares, no
+   bench. Saying what's wrong with the list reshapes it by voice, and every line the
+   reshape returns must cite a real step or the words just spoken.
 
-A brand-new project has no shapes, so its first session is always a *start it* shape.
+An empty list with a finish line gets *planned* (the spine, run again over everything
+learned since), not padded. An empty list with no finish line gets the one question.
 
 ### Seeding MVS
 
@@ -187,6 +198,18 @@ Timer stops → one question → thirty seconds of voice.
   about conditions, and the wrong question there gets no answer.
 
 It sets `last_stopped_at`, feeds the corpus, and makes the next session a two-minute start.
+
+The debrief (`debrief-matcher.ts`) sorts what was said into four things, each cited or
+dropped: a step finished, something finished that wasn't on the list, what comes next,
+and **part way** — a step worked on but not finished, with where it got to. That last
+one lives on the task (`progress_note`) and is the re-entry line for that step next
+time, so a session never restarts a step from the top. Ticking every piece of a split
+step finishes it; ticking some of them is progress, recorded as such.
+
+When the last open step is ticked, one capped call reads the finish line against what
+has actually been made (`finish-line.ts`) and the receipt says which it is: *that's the
+finish line* → one action, mark it finished; or *plan's done, project isn't* → the next
+session starts by planning the rest. "All tasks ticked" is never assumed to mean done.
 
 **Never say "incomplete."** 22 minutes with item one done is a good session. The framing
 decides whether the app gets opened next week.

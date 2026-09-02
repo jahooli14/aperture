@@ -1,50 +1,56 @@
 /**
  * Session shaper — the two minutes of planning that buy the hour.
  *
- * The old pure `deriveSessionShapes` produced 1-3 mechanical items from the
- * last close-out and the empty slots. That's the right FALLBACK, but it
- * isn't a plan: a brand-new project got exactly one item, "Start it.",
- * which is not something anyone can work through.
+ * One planning model, three altitudes:
+ *   - the FINISH LINE, in the user's words (metadata.end_goal)
+ *   - the STEPS that reach it, in order (metadata.tasks, task-spine.ts)
+ *   - the SESSION: the next step or steps, cut to fit this sitting
  *
- * So the real list is written by a model against the project, its recent
- * fragments and the window you actually have, and can be reshaped by
- * saying what's wrong with it. Structure still does the thinking:
- *   - how many items is a function of the window, not the model's mood
- *   - the banned-verb list is enforced here, not hoped for in the prompt
- *   - anything the model returns is sanitised down to plain lines
- * The model only writes the sentences.
+ * The earlier shaper had a second, competing planning unit: it invented
+ * 3-6 fresh items per session "sized to the window", with spares on a
+ * bench to swap in. Filling a window is the wrong job -- it's where the
+ * imaginary microphones came from -- and swapping a step for a spare
+ * quietly broke the order the steps were in. There is no bench now. A
+ * session is:
  *
- * Everything except `shapeSession` is pure, so the parts that decide what
- * a session looks like are unit-tested without a database or a model call.
+ *   1. the re-entry line (last close-out, the user's own words)
+ *   2. the next open steps, in plan order, as many as fit the window
+ *   3. if the very next step is bigger than the window, ONE model call
+ *      splits that step into the first piece of it that fits
+ *      (session-split.ts) -- nothing else is ever generated
+ *   4. one line saying what "done today" looks like
+ *
+ * Saying what's wrong with the list still reshapes it by voice, and that
+ * path is model-written -- but every item it returns must cite a real
+ * step or the words just spoken, so it can reorder, split or drop, and
+ * never invent.
+ *
+ * Everything except `shapeSession` is pure and unit-tested.
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { generateText } from './gemini-chat.js'
 import { PLAIN_ENGLISH_RULES } from './plain-english.js'
-import { deriveSessionShapes, type SlotInput } from './session-shapes.js'
 import {
-  filterGrounded, evidenceHaystack, hasOnlyKnownSpecifics, sharesSubstantialWording,
-  type Evidence, type GroundedItem, type RawItem,
+  filterGrounded, evidenceHaystack, hasOnlyKnownSpecifics,
+  type Evidence, type GroundedItem,
 } from './session-grounding.js'
+import { sanitizeRawItems, dedupeSimilar } from './session-items.js'
 import { confidenceFor, reasoningLicence, type Confidence } from './session-confidence.js'
 import { pickGap, genericGapQuestion, type Gap } from './session-gap.js'
-import { openTasksInOrder, selectByBudget, sumMinutes, type BudgetTask } from './session-budget.js'
+import { openTasksInOrder, selectByBudget, type BudgetTask } from './session-budget.js'
 import { nearestEstimate, type EstimateMinutes } from './session-estimate.js'
+import { splitStep, doneLineForSteps, sanitizeDoneLooksLike } from './session-split.js'
+import { generateTaskSpine, toStoredTasks } from './task-spine.js'
+import { normalizeTaskOrder } from './task-order.js'
+
+export { isAdminItem, sanitizeItems, sanitizeRawItems, dedupeSimilar } from './session-items.js'
 
 /**
  * "3-6 depending on time." A 20-minute window that lists six things is
  * lying to you, and an hour with three is under-using the hour. These are
- * ceilings the model is told to hit, not suggestions.
+ * ceilings on how many real steps go on screen, not targets to pad to.
  */
-/**
- * Spares generated alongside the list. Swapping an item out has to be
- * instant — a model round-trip per "not that one" would spend a quarter
- * of the planning window on latency, and the whole point of the two
- * minutes is that they're cheap. So the shape call over-generates and the
- * extras sit on the bench.
- */
-export const BENCH_SIZE = 3
-
 export function itemCountForWindow(windowMinutes: number | null): number {
   if (windowMinutes == null) return 4
   if (windowMinutes <= 20) return 3
@@ -54,100 +60,9 @@ export function itemCountForWindow(windowMinutes: number | null): number {
 }
 
 /**
- * Admin disguised as build (CLAUDE.md's anti-pattern). A session item has
- * to be something you DO to the work, not something you decide about it.
- * Checked after generation because the model agrees to this in the prompt
- * and then does it anyway.
- */
-const ADMIN_VERBS = [
-  'research', 'plan', 'outline', 'decide', 'list', 'consider', 'review',
-  'think about', 'set up', 'organise', 'organize', 'brainstorm', 'explore',
-  'reflect on', 'assess', 'evaluate', 'identify', 'define',
-]
-
-export function isAdminItem(text: string): boolean {
-  const t = text.trim().toLowerCase().replace(/^[-*\d.\s)]+/, '')
-  return ADMIN_VERBS.some(v => t.startsWith(v + ' ') || t === v)
-}
-
-/**
- * Model output → a list you can put on screen. Strips bullet/number
- * prefixes, drops blanks, near-duplicates and admin items, trims anything
- * long enough to need re-reading mid-session, and caps at the count the
- * window allows.
- */
-/**
- * The sanitised pool split into what's on screen and what's held back.
- * Deliberately a pure function of the pool, so the bench can never
- * contain something already in the list.
- */
-export function splitBench<T>(pool: T[], count: number): { items: T[]; bench: T[] } {
-  return { items: pool.slice(0, count), bench: pool.slice(count) }
-}
-
-/**
- * A mechanical backstop against two items saying near enough the same
- * thing in different words -- the prompt asks the model not to, but
- * "structure does the thinking, not hoped for in the prompt" is the rule
- * everywhere else in this file. Uses sharesSubstantialWording, NOT
- * citationSupports: that function accepts a single shared word (right for
- * "does this citation support this claim"), which would wrongly merge
- * "Record the vocal" and "Record the guitar solo" as duplicates. This
- * needs most of the shorter item's words to reappear -- catches a
- * near-identical restatement without flagging two different tasks that
- * merely share a topic word. It still can't catch two items that mean the
- * same thing in completely different words ("Listen to the song" vs
- * "Play back the mixed file") -- that's what the prompt rule is for.
- */
-export function dedupeSimilar<T extends { text: string }>(items: T[], against: T[] = []): T[] {
-  const seen = [...against]
-  const out: T[] = []
-  for (const item of items) {
-    if (seen.some(s => sharesSubstantialWording(item.text, s.text))) continue
-    seen.push(item)
-    out.push(item)
-  }
-  return out
-}
-
-export function sanitizeRawItems(raw: unknown, count: number): RawItem[] {
-  if (!Array.isArray(raw)) return []
-  const seen = new Set<string>()
-  const out: RawItem[] = []
-  for (const entry of raw) {
-    // Tolerate a bare string as well as the {text, evidence} shape -- an
-    // uncited item is still checkable, it just has to survive on having no
-    // specifics in it at all.
-    const rawText = typeof entry === 'string' ? entry : entry?.text
-    if (typeof rawText !== 'string') continue
-    const text = rawText.trim().replace(/^[-*•]\s*/, '').replace(/^\d+[.)]\s*/, '').trim()
-    if (!text) continue
-    if (text.length > 120) continue
-    if (isAdminItem(text)) continue
-    const key = text.toLowerCase().replace(/[^a-z0-9]/g, '')
-    if (!key || seen.has(key)) continue
-    seen.add(key)
-    const evidence = Array.isArray(entry?.evidence)
-      ? entry.evidence.filter((x: unknown): x is string => typeof x === 'string')
-      : undefined
-    out.push({ text, evidence })
-    if (out.length >= count) break
-  }
-  return out
-}
-
-/** Text-only view, for callers that just need clean lines (the agreed list
- *  posted back at session start). */
-export function sanitizeItems(raw: unknown, count: number): string[] {
-  return sanitizeRawItems(raw, count).map(i => i.text)
-}
-
-/**
  * The friction line goes through the same honesty rule as every other AI-
  * written line here: nothing named that wasn't already known, and genuinely
- * absent (null) when there's nothing real to say -- a made-up "get your
- * gear ready" for a project that's just writing or thinking is the same
- * failure mode filterGrounded exists to stop on task text.
+ * absent (null) when there's nothing real to say.
  */
 export function sanitizeFriction(raw: unknown, evidence: Evidence[], projectTitle: string): FrictionLine | null {
   if (!raw || typeof raw !== 'object') return null
@@ -159,33 +74,32 @@ export function sanitizeFriction(raw: unknown, evidence: Evidence[], projectTitl
   return { text, minutes: nearestEstimate(minutes) }
 }
 
+export interface OpenStep extends BudgetTask {
+  progressNote: string | null
+}
+
 export interface ShapeContext {
   title: string
   goal: string | null
   windowMinutes: number | null
   lastCloseout: string | null
-  /** Open tasks with their real ids -- carried through to evidence so a
-   *  session item grounded in one can be matched back to it by id at
-   *  close time, not by hoping the model's paraphrase equals the stored
-   *  text verbatim. Ordered the way the user actually left them, each
-   *  carrying a real or default minute estimate for the budget math. */
-  openTasks: BudgetTask[]
-  /** Finished work, with when it was finished. Reasoning backwards from
-   *  the goal is impossible without knowing what's already done, and this
-   *  was being filtered out before the model ever saw it. */
+  /** Open steps in plan order, each carrying a real or default estimate
+   *  and, when a close-out said so, where the user got to on it. */
+  openTasks: OpenStep[]
   doneTasks: { text: string; date: string | null }[]
-  /** Every close-out, not just the newest -- projects.last_closeout_text
-   *  is overwritten each session, so the history only exists in `sessions`. */
   pastCloseouts: { text: string; date: string | null }[]
-  /** What the user said when the project was first shaped in the chat.
-   *  Their turns only: the app's own prose is not evidence. */
   shapingTurns: string[]
-  /** Recent captures, newest first, with the date they were made. */
   fragments: { text: string; date: string | null; role?: string | null }[]
-  slots: SlotInput[]
   /** What the user just said was wrong with the current list, if anything. */
   instruction?: string | null
   currentItems?: string[]
+}
+
+export interface BuiltEvidence {
+  evidence: Evidence[]
+  /** evidence id -> open task id, so an item that cites a step can be
+   *  traced back to it at close time whatever the wording. */
+  taskIdByEvidenceId: Record<string, string>
 }
 
 /**
@@ -193,14 +107,6 @@ export interface ShapeContext {
  * model can point at what it used and the result can be checked against
  * it. Nothing outside this list is knowledge — it's invention.
  */
-export interface BuiltEvidence {
-  evidence: Evidence[]
-  /** evidence id -> open task id, for evidence entries built from an open
-   *  task. Lets a grounded session item be traced back to the real task
-   *  it's about, surviving whatever the model paraphrases the text into. */
-  taskIdByEvidenceId: Record<string, string>
-}
-
 export function buildEvidence(ctx: ShapeContext): BuiltEvidence {
   const evidence: Evidence[] = []
   const taskIdByEvidenceId: Record<string, string> = {}
@@ -214,15 +120,9 @@ export function buildEvidence(ctx: ShapeContext): BuiltEvidence {
   }
 
   // What the user just said, on a reshape, is the single most current and
-  // most authoritative thing known about this session -- it has to be a
-  // real, citable evidence entry, not just a rewrite directive sitting
-  // outside the evidence list. Without this, an item that genuinely comes
-  // straight from "listen to the song, then plan the riff" had no honest
-  // citation available and either got dropped or got stapled to an
-  // unrelated old evidence id (a finished task, an old close-out) to
-  // satisfy the citation rule -- which is how "you finished this on 27
-  // Jun" ends up as the stated source for something the user just asked
-  // for fresh.
+  // most authoritative thing known about this session -- a real, citable
+  // entry, so an item that comes straight from it has an honest citation
+  // instead of being stapled to an unrelated old note.
   add('what you just said', ctx.instruction ?? '')
   add('the finish line you set', ctx.goal ?? '')
   add('from your last close-out', ctx.lastCloseout ?? '')
@@ -235,17 +135,22 @@ export function buildEvidence(ctx: ShapeContext): BuiltEvidence {
   ctx.doneTasks.forEach(t =>
     add(t.date ? `you finished this on ${t.date}` : 'already finished', t.text),
   )
-  ctx.openTasks.forEach(t => add('already on the project', t.text, t.id))
+  // Steps in plan order, so "[e7] then [e8]" reads as the sequence it is.
+  ctx.openTasks.forEach(t => {
+    add('already on the project', t.text, t.id)
+    if (t.progressNote) add(`where you got to on "${t.text}"`, t.progressNote, t.id)
+  })
   ctx.shapingTurns.forEach(t => add('from when you set this project up', t))
 
-  // Slots are deliberately NOT evidence. They're seeded by a model
-  // (slot-seed.ts), so counting them made a project the user has never
-  // described look like one the app knows -- which is precisely the
-  // condition under which it starts inventing.
   return { evidence, taskIdByEvidenceId }
 }
 
-export function buildShapePrompt(
+/**
+ * The reshape prompt. The only session-time prompt that writes a whole
+ * list, and it is constrained to the steps: reorder, split, drop, or add
+ * what the user just asked for -- never a new idea of its own.
+ */
+export function buildReshapePrompt(
   ctx: ShapeContext,
   evidence: Evidence[],
   confidence: Confidence = 'partial',
@@ -254,54 +159,11 @@ export function buildShapePrompt(
   const windowText = ctx.windowMinutes
     ? `${ctx.windowMinutes} minutes`
     : 'an unknown amount of time — assume about an hour'
+  const current = ctx.currentItems?.length
+    ? ctx.currentItems.map((t, i) => `${i + 1}. ${t}`).join('\n')
+    : '(nothing yet)'
 
-  const reshaping = ctx.instruction && ctx.currentItems?.length
-    ? `
-You already gave this list:
-${ctx.currentItems.map((t, i) => `${i + 1}. ${t}`).join('\n')}
-
-The user says: "${ctx.instruction}"
-
-Rewrite the list so it answers that. Keep whatever still works — don't
-throw out items they didn't complain about. What they just said is its
-own evidence entry above, labelled "what you just said" -- cite THAT for
-anything that comes straight from it. Don't reach for an unrelated old
-citation (a finished task, an old close-out) just to satisfy the citation
-rule when the real source is what they said two seconds ago.
-
-If they used a word like "plan", "decide" or "think about" in their own
-instruction, that's them describing the INTENT, not dictating the exact
-wording of the task -- turn it into the concrete action that intent
-implies ("plan the new riff" -> "try a few ideas for the new riff"), the
-same way you would for any other admin-sounding phrasing. Never write an
-item that just repeats a banned verb because the user happened to say it.
-`
-    : ''
-
-  // The task list is the project's own record, not a suggestion — a
-  // reshape is the user explicitly asking for a different take, so it
-  // still gets the full treatment. Otherwise, real open tasks already
-  // fill part of the session; the model's only job is the rest of it.
-  const openCount = ctx.openTasks.length
-  const usingTasksAsBase = !ctx.instruction && openCount > 0
-  const newNeeded = usingTasksAsBase ? Math.max(0, count - openCount) : count
-  const total = newNeeded + BENCH_SIZE
-
-  const askForCount = usingTasksAsBase
-    ? `You already have ${openCount} thing${openCount === 1 ? '' : 's'} lined up for this
-session — they're in the evidence above, marked "already on the project".
-Do not repeat them.
-
-Give ${total} NEW things. The FIRST ${newNeeded} continue the session those
-queued tasks already started, in order. The last ${BENCH_SIZE} are spares —
-same quality, different angles, ready to swap in if one of the first
-${newNeeded} doesn't suit today. Don't mark them; just order them that way.`
-    : `Give ${total} things to do. The FIRST ${count} are the session, in order. The
-last ${BENCH_SIZE} are spares — same quality, different angles, ready to swap in
-if one of the first ${count} doesn't suit today. Don't mark them; just order
-them that way.`
-
-  return `You are shaping one work session on a creative project. The user has ${windowText}
+  return `You are reshaping one work session on a creative project. The user has ${windowText}
 and is about to start.
 
 Project: "${ctx.title}"
@@ -312,83 +174,70 @@ ${evidence.length
   : '(nothing yet — the user has not said anything about this project)'}
 
 That list is the whole of it. Anything not in it, you do not know.
+The entries marked "already on the project" are the plan's steps, in the
+order they're meant to be done.
 
 ${reasoningLicence(confidence)}
-${reshaping}
-${askForCount}
 
-THE RULE THAT MATTERS MOST — never invent a detail:
-- No tools, gear, brands, model numbers, file formats, settings, tempos,
-  keys, instruments, people or place names unless they appear verbatim
-  above. If the notes never mention a guitar, this project has no guitar.
-- Do not guess how they work. You do not know what software they use, what
-  they record with, or what stage anything is at, unless it says so above.
-- Every item that refers to anything specific must cite the evidence ids it
-  comes from. If you cannot cite it, you cannot say it.
-- An item that asserts nothing beyond the project's own name needs no
-  citation. "Open it and play it back from the start" is always allowed.
-- Vague and true beats specific and invented. If you only know a little,
-  give a short list of things that are certainly real. Fewer honest items
-  is the correct answer, not a failure.
-- Evidence about work that's ALREADY FINISHED ("you finished this on...")
-  tells you a fact about where the project is. It is not itself a
-  suggestion. Never propose redoing or repeating something the evidence
-  says is done, unless the user's own instruction just explicitly asked
-  for exactly that.
-- No two items may say the same thing in different words. "Listen to the
-  song" and "Play back the mixed file" are the same move -- pick one.
+The list on screen right now:
+${current}
 
-Rules for the list:
-${usingTasksAsBase
-  ? `- These continue a session, they don't open one — no need for an ignition
-  move here, the queued tasks already start it.`
-  : `- The first item is an ignition move: physical, trivial, under two minutes.
-  Starting must be easier than deliberating.`}
-- Every other item is a real move against the work — something exists
-  afterwards that didn't before.
-- BANNED, this is admin pretending to be building: research, plan, outline,
-  decide, list, consider, review, think about, set up, brainstorm, explore.
-${usingTasksAsBase
-  ? `- Size the whole session — the ${openCount} queued task${openCount === 1 ? '' : 's'} plus these ${newNeeded} — to ${windowText}. Finishable, not aspirational.`
-  : `- Size the first ${count} to ${windowText}. Finishable, not aspirational.`}
+The user says: "${ctx.instruction}"
+
+Rewrite the list so it answers that. Keep whatever still works — don't
+throw out items they didn't complain about. Up to ${count} items, sized to
+${windowText}. Finishable, not aspirational: under-reach when unsure.
+
+What you may do:
+- Reorder, drop, or keep the steps that are already on the project.
+- Split one step into the first piece of it that fits the time.
+- Add exactly what they just asked for, citing "what you just said".
+What you may not do:
+- Invent a step. Every item cites the step it belongs to or the words they
+  just said. If you can't cite it, you can't say it.
+- Put a step before one it plainly depends on. "Peel the stencil off"
+  cannot come before "cut the stencil".
+- Name a tool, brand, format, setting, person or place that isn't word
+  for word in the list above.
+- Admin dressed as building: research, plan, outline, decide, list,
+  consider, review, think about, set up, brainstorm, explore. If they used
+  one of those words themselves, that's the INTENT — turn it into the
+  concrete action it implies ("plan the riff" -> "try a few ideas for the
+  riff").
+- Repeat something the evidence says is already finished.
+- Two items that say the same thing in different words.
 - One line each. No sub-bullets, no time estimates, no explanation.
+
+Also say, in one plain sentence, what exists at the end of the session if
+the list lands ("done_looks_like").
+
+Is there a real, physical setup step before they could start on THIS
+session — connecting gear, laying out materials — that the evidence
+above actually supports? Only then name it ("friction"), with rough
+minutes. A made-up setup step is worse than none.
 
 ${PLAIN_ENGLISH_RULES}
 
 Say the note has: "Next: fix the transition out of track two."
   BAD:  "Record a fresh guitar take with the SM57 while the click runs."
         — the notes say nothing about a guitar, a microphone or a click.
-        Every one of those is made up, and one made-up detail means they
-        have to check the whole list themselves.
   GOOD: "Play track two from the top and find where the transition breaks."
         — cites the note, adds nothing that wasn't in it.
-
-One more thing: is there a real, physical or logistical setup step before
-someone could start on THIS session -- something specific to this project,
-not a generic "get ready"? For a DJ project that might be connecting gear;
-for woodworking, laying out materials; for something that's just writing
-or thinking, there usually isn't one at all. Only name it if it's
-genuinely true of this specific project, grounded in the evidence above —
-a made-up setup step is worse than none. Give it a rough time in minutes.
 
 Respond with JSON only:
 {
   "items": [ { "text": "...", "evidence": ["e1"] } ],
+  "done_looks_like": "...",
   "friction": { "text": "...", "minutes": 5 } | null
 }`
 }
 
 /**
- * The floor below which a list stops being a plan. Two grounded items out
- * of five means the model was guessing for the other three, and showing
- * them anyway is what destroys trust in the two that were real.
+ * The floor below which a reshaped list stops being a plan. Two grounded
+ * items out of five means the model was guessing for the other three.
  */
-const MIN_TRUSTWORTHY_ITEMS = 3
+export const MIN_TRUSTWORTHY_ITEMS = 2
 
-/** A session-specific setup step -- e.g. "get the DJ gear connected". Never
- *  written back to the project: it's a fact about doing THIS session, not
- *  about the project, so it's recomputed fresh each time rather than
- *  calcifying into a permanent task nobody can un-tick. */
 export interface FrictionLine {
   text: string
   minutes: EstimateMinutes
@@ -396,32 +245,42 @@ export interface FrictionLine {
 
 export interface ShapeResult {
   items: GroundedItem[]
-  bench: GroundedItem[]
-  /** 'tasks' — the plan is (at least partly) the project's own open task
-   *  list, verbatim. 'ai' — invented to fill a gap the task list couldn't.
-   *  'derived' — the model was unreachable, mechanical fallback. */
-  source: 'ai' | 'derived' | 'tasks'
-  /** Set when the app doesn't know enough to fill a session honestly. The
-   *  right move then is to ask, not to invent — and the answer is filed as
-   *  the thing it is, so it fixes the project rather than this one session. */
+  /** What exists at the end of the sitting if the list lands. */
+  doneLooksLike: string | null
+  /** 'tasks' — the plan is the project's own next steps, verbatim.
+   *  'split' — the next step was bigger than the window; this is the first
+   *  piece of it. 'ai' — reshaped on the user's instruction. 'derived' —
+   *  nothing to plan from; a placeholder rather than an invention. */
+  source: 'tasks' | 'split' | 'ai' | 'derived'
   needsInput: string | null
-  /** What kind of answer the question is fishing for, so the API knows
-   *  where to put it. Null when the question is the generic fallback. */
   gap: Gap | null
   confidence: Confidence
-  /** Null on the fast, no-model-call path -- there's nothing to ask about
-   *  friction when nothing was generated. */
   friction: FrictionLine | null
-  /** How many open tasks exist beyond what was even considered for this
-   *  plan, so the app can say so rather than silently dropping backlog. */
+  /** Open steps beyond what was even considered, so the app can say so. */
   truncatedCount: number
+  /** Steps planned onto the project first because its list was empty. */
+  planned: number
+}
+
+const OPEN_TASK_LIMIT = 24
+
+function shortDate(iso?: string | null): string | null {
+  return iso ? new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : null
+}
+
+function toOpenSteps(allTasks: any[]): OpenStep[] {
+  const notes = new Map<string, string>(
+    allTasks
+      .filter(t => t && typeof t.id === 'string' && typeof t.progress_note === 'string' && t.progress_note.trim())
+      .map(t => [t.id, t.progress_note.trim()]),
+  )
+  return openTasksInOrder(allTasks, OPEN_TASK_LIMIT).map(t => ({ ...t, progressNote: notes.get(t.id) ?? null }))
 }
 
 /**
- * Generates the list, falling back to the pure derivation if the model is
- * unavailable or gives nothing usable. The fallback matters more than
- * usual here: this sits at the top of a rare hour, and "the AI is down"
- * must never mean "you can't start."
+ * Generates the session, planning steps first when the list is empty.
+ * Never invents to fill a window: the fallbacks are the real steps, and
+ * below that, the one question that would let the app plan honestly.
  */
 export async function shapeSession(
   supabase: SupabaseClient,
@@ -433,8 +292,7 @@ export async function shapeSession(
 ): Promise<ShapeResult> {
   // Column list matters: `goal` is NOT a column on projects (what done
   // looks like lives in metadata.end_goal). Asking for one that doesn't
-  // exist fails the whole select, which is how this returned "Project not
-  // found" for projects that plainly exist.
+  // exist fails the whole select.
   const { data: project, error } = await supabase
     .from('projects')
     .select('title, description, metadata, slots, last_closeout_text, last_session_ended_at')
@@ -448,28 +306,9 @@ export async function shapeSession(
   }
   if (!project) throw new Error('Project not found')
 
-  const slots: SlotInput[] = Array.isArray(project.slots) ? project.slots : []
-  const allTasks: any[] = Array.isArray(project.metadata?.tasks) ? project.metadata.tasks : []
-  const shortDate = (iso?: string | null) =>
-    iso ? new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : null
-
-  // The project's own task list is the golden source for a session, not a
-  // separate thing the shaper invents alongside it. 24 is generous headroom
-  // over a spine (5-8 steps) plus whatever's accreted since — high enough
-  // that a real backlog is rarely truncated at all, and when it is, the
-  // count below says so rather than silently dropping it.
-  const OPEN_TASK_LIMIT = 24
-  const openTaskCountTotal = allTasks.filter(t => t && !t.done && typeof t.text === 'string' && typeof t.id === 'string').length
-  const truncatedCount = Math.max(0, openTaskCountTotal - OPEN_TASK_LIMIT)
-  const openTasks: BudgetTask[] = openTasksInOrder(allTasks, OPEN_TASK_LIMIT)
-
-  // Finished work was being filtered out entirely, which made "the intro's
-  // done, so the transition is next" impossible to say even when it was
-  // plainly true. It's the other half of knowing where a project is.
-  const doneTasks = allTasks
-    .filter(t => t && t.done && typeof t.text === 'string')
-    .slice(-6)
-    .map(t => ({ text: t.text, date: shortDate(t.completed_at) }))
+  const metadata = project.metadata ?? {}
+  let allTasks: any[] = Array.isArray(metadata.tasks) ? metadata.tasks : []
+  const goal: string | null = metadata.end_goal || project.description || null
 
   const [{ data: fragmentRows }, { data: sessionRows }] = await Promise.all([
     supabase
@@ -479,8 +318,6 @@ export async function shapeSession(
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
       .limit(8),
-    // projects.last_closeout_text is overwritten every session, so the
-    // record of what actually happened over time only exists here.
     supabase
       .from('sessions')
       .select('closeout_text, ended_at')
@@ -492,43 +329,78 @@ export async function shapeSession(
   ])
 
   const pastCloseouts = (sessionRows || [])
-    // The newest one is already in projects.last_closeout_text; don't say
-    // the same sentence to the model twice under two different labels.
     .filter(r => r.closeout_text && r.closeout_text !== project.last_closeout_text)
     .map(r => ({ text: r.closeout_text as string, date: shortDate(r.ended_at) }))
 
-  // The project's shaping chat: the user's turns only. The app's own prose
-  // is not evidence about the project, it's evidence about the app.
-  const conversation: any[] = Array.isArray(project.metadata?.conversation)
-    ? project.metadata.conversation
-    : []
+  const conversation: any[] = Array.isArray(metadata.conversation) ? metadata.conversation : []
   const shapingTurns = conversation
     .filter(t => t?.role === 'user' && typeof t.content === 'string')
     .slice(-6)
     .map(t => t.content.trim())
     .filter(Boolean)
 
+  const fragments = (fragmentRows || [])
+    .filter(f => f.text)
+    .map(f => ({ text: f.text as string, date: shortDate(f.created_at), role: f.role as string | null }))
+
+  // ── An empty plan gets planned, not padded ────────────────────────
+  // The list is the golden source for a session. When it's spent and the
+  // project has a finish line, the right move is the same backwards pass
+  // that built it, run over everything learned since -- once, here, so
+  // the session that follows is made of real steps rather than of
+  // whatever a session-sized prompt could invent.
+  let planned = 0
+  const openNow = allTasks.filter(t => t && !t.done && typeof t.text === 'string' && typeof t.id === 'string')
+  if (openNow.length === 0 && metadata.end_goal && !instruction) {
+    const said = [
+      project.description, project.last_closeout_text,
+      ...pastCloseouts.map(c => c.text), ...shapingTurns, ...fragments.map(f => f.text),
+    ].filter((t): t is string => typeof t === 'string' && t.trim().length > 0)
+    const steps = await generateTaskSpine({
+      title: project.title,
+      endGoal: metadata.end_goal,
+      said,
+      existingSteps: [],
+    })
+    if (steps.length > 0) {
+      const doneTasks = allTasks.filter(t => t?.done)
+      allTasks = normalizeTaskOrder([...doneTasks, ...toStoredTasks(steps, new Date(), doneTasks.length)])
+      planned = steps.length
+      const { error: saveErr } = await supabase
+        .from('projects')
+        .update({ metadata: { ...metadata, tasks: allTasks, is_shaped: true } })
+        .eq('id', projectId)
+        .eq('user_id', userId)
+      if (saveErr) console.warn('[session-shaper] could not save the new plan:', saveErr.message)
+    }
+  }
+
+  const openTaskCountTotal = allTasks.filter(t => t && !t.done && typeof t.text === 'string' && typeof t.id === 'string').length
+  const truncatedCount = Math.max(0, openTaskCountTotal - OPEN_TASK_LIMIT)
+  const openTasks = toOpenSteps(allTasks)
+  const doneTasks = allTasks
+    .filter(t => t && t.done && typeof t.text === 'string')
+    .slice(-6)
+    .map(t => ({ text: t.text, date: shortDate(t.completed_at) }))
+
   const ctx: ShapeContext = {
     title: project.title,
-    goal: project.metadata?.end_goal || project.description || null,
+    goal,
     windowMinutes,
     lastCloseout: project.last_closeout_text || null,
     openTasks,
     doneTasks,
     pastCloseouts,
     shapingTurns,
-    fragments: (fragmentRows || [])
-      .filter(f => f.text)
-      .map(f => ({ text: f.text, date: shortDate(f.created_at), role: f.role })),
-    slots,
+    fragments,
     instruction,
     currentItems,
   }
 
   const ninetyDaysAgo = Date.now() - 90 * 86_400_000
   const confidence = confidenceFor({
-    endGoal: project.metadata?.end_goal ?? null,
-    endGoalSource: project.metadata?.end_goal_source ?? null,
+    endGoal: metadata.end_goal ?? null,
+    endGoalSource: metadata.end_goal_source ?? null,
     lastCloseout: project.last_closeout_text ?? null,
     lastSessionEndedAt: project.last_session_ended_at ?? null,
     movedSessionCount: pastCloseouts.length,
@@ -541,118 +413,84 @@ export async function shapeSession(
   })
 
   const { evidence, taskIdByEvidenceId } = buildEvidence(ctx)
-  const count = itemCountForWindow(windowMinutes)
-  const gap = pickGap({
-    title: project.title,
-    endGoal: ctx.goal,
-    lastCloseout: ctx.lastCloseout,
-    openTaskCount: openTasks.length,
-    unfilledSlots: slots.filter(sl => !sl.filled).map(sl => sl.name).filter(Boolean),
-  })
-  const ask = (): string => gap?.question ?? genericGapQuestion(project.title)
+  const base = { confidence, truncatedCount, planned, gap: null, needsInput: null, friction: null }
 
-  // Budget-aware selection over the real list: two 30-minute tasks fill an
-  // hour just as completely as five 10-minute ones, so count alone was
-  // either cutting a real task short of the window or padding past it.
-  // No friction subtracted here -- that only exists once a model call has
-  // actually run, and the fast path below is precisely the case where one
-  // doesn't need to.
-  const budgetMinutes = windowMinutes
-  const { selected: budgetSelected, rest: budgetRest } = selectByBudget(openTasks, budgetMinutes, count)
-  const realTasksFillWindow = openTasks.length >= count ||
-    (budgetMinutes != null && sumMinutes(budgetSelected) >= budgetMinutes)
-
-  // The task list is the golden source: if it already has enough open work
-  // to fill this window, the plan IS the list — no model call, no
-  // invention, nothing that can be wrong. Skipped on an explicit reshape,
-  // which is the user asking for a different take, not more of this one.
-  if (!instruction && realTasksFillWindow) {
-    const pool: GroundedItem[] = budgetSelected.map(t => ({ text: t.text, source: 'already on the project', taskId: t.id }))
-    const bench: GroundedItem[] = budgetRest.map(t => ({ text: t.text, source: 'already on the project', taskId: t.id }))
-    return { items: pool, bench, source: 'tasks', needsInput: null, gap: null, confidence, friction: null, truncatedCount }
-  }
-
-  // Nothing known means nothing to say. Inventing a plan here is exactly
-  // what cost this feature its credibility, so ask instead — and let the
-  // answer be the thing that makes next time better.
-  // Nothing known means nothing to say, and there's no point spending a
-  // model call to find that out.
-  if (evidence.length === 0 || confidence === 'thin') {
-    return {
-      items: [{ text: `Open ${project.title} and look at where you left it.`, source: null, taskId: null }],
-      bench: [],
-      source: 'derived',
-      needsInput: ask(),
-      gap,
-      confidence,
-      friction: null,
-      truncatedCount,
-    }
-  }
-
-  // The task list wasn't enough to fill the window on its own (or this is a
-  // reshape, which starts from scratch). Whatever's real gets shown as-is;
-  // the model only has to invent the shortfall.
-  const openAsItems: GroundedItem[] = !instruction
-    ? budgetSelected.map(t => ({ text: t.text, source: 'already on the project', taskId: t.id }))
-    : []
-  const newNeeded = Math.max(0, count - openAsItems.length)
-
-  try {
-    const response = await generateText(buildShapePrompt(ctx, evidence, confidence), {
+  // ── Reshape: the user said what's wrong ───────────────────────────
+  if (instruction) {
+    const response = await generateText(buildReshapePrompt(ctx, evidence, confidence), {
       responseFormat: 'json',
-      // Low: this is a reporting task over a fixed evidence list, not a
-      // creative one. High temperature here reads as confident invention.
       temperature: 0.3,
-      maxTokens: 1600,
+      maxTokens: 1400,
     })
-
     const parsed = JSON.parse(response)
-    const target = openAsItems.length > 0 ? newNeeded + BENCH_SIZE : count + BENCH_SIZE
-    const cleaned = sanitizeRawItems(parsed?.items, target)
+    const cleaned = sanitizeRawItems(parsed?.items, itemCountForWindow(windowMinutes))
     const { kept, rejected } = filterGrounded(cleaned, evidence, project.title, taskIdByEvidenceId)
-
     if (rejected.length > 0) {
-      console.warn(
-        `[session-shaper] dropped ${rejected.length} ungrounded item(s) for ${projectId}:`,
-        rejected.map(r => `"${r.text}" — ${r.reason}`),
-      )
+      console.warn(`[session-shaper] dropped ${rejected.length} ungrounded item(s) on reshape for ${projectId}:`,
+        rejected.map(r => `"${r.text}" — ${r.reason}`))
     }
-
-    // A generated item that cites an open task already shown verbatim above
-    // would otherwise duplicate that same task under a paraphrase.
-    const openTaskIds = new Set(openAsItems.map(i => i.taskId).filter((id): id is string => !!id))
-    const keptFiltered = dedupeSimilar(kept.filter(k => !k.taskId || !openTaskIds.has(k.taskId)), openAsItems)
-
-    const friction = sanitizeFriction(parsed?.friction, evidence, project.title)
-
-    const pool = [...openAsItems, ...keptFiltered]
-    if (pool.length >= MIN_TRUSTWORTHY_ITEMS) {
-      const { items, bench } = splitBench(pool, count)
-      return { items, bench, source: openAsItems.length > 0 ? 'tasks' : 'ai', needsInput: null, gap: null, confidence, friction, truncatedCount }
+    const stepText = new Map(openTasks.map(t => [t.id, t.text.toLowerCase().trim()]))
+    const items = dedupeSimilar(kept).map(k => ({
+      ...k,
+      partial: !!k.taskId && stepText.get(k.taskId) !== k.text.toLowerCase().trim(),
+    }))
+    if (items.length < MIN_TRUSTWORTHY_ITEMS && items.length < openTasks.length) {
+      throw new Error("Couldn't make a list out of that.")
     }
-
-    // Not enough survived. Show what did — those are real — and ask for
-    // the rest rather than padding with things that aren't.
-    return { items: pool, bench: [], source: openAsItems.length > 0 ? 'tasks' : 'ai', needsInput: ask(), gap, confidence, friction, truncatedCount }
-  } catch (e) {
-    console.error('[session-shaper] generation failed, falling back:', e)
+    const haystack = evidenceHaystack(evidence, project.title)
+    return {
+      ...base,
+      items,
+      doneLooksLike: sanitizeDoneLooksLike(parsed?.done_looks_like, haystack) ?? doneLineForSteps(items),
+      source: 'ai',
+      friction: sanitizeFriction(parsed?.friction, evidence, project.title),
+    }
   }
 
-  const derived = deriveSessionShapes({
-    lastClosingText: ctx.lastCloseout,
-    slots,
-    mvsMinutes: null,
-    windowMinutes,
-  })
-  return {
-    items: derived.map(sh => ({ text: sh.text, source: null, taskId: null })),
-    bench: [],
-    source: 'derived',
-    needsInput: null,
-    gap: null,
-    confidence,
-    friction: null,
-    truncatedCount,
+  // ── Nothing to plan from: ask, don't invent ───────────────────────
+  if (openTasks.length === 0) {
+    const gap = pickGap({
+      title: project.title,
+      endGoal: metadata.end_goal ?? null,
+      lastCloseout: ctx.lastCloseout,
+      openTaskCount: 0,
+      unfilledSlots: (Array.isArray(project.slots) ? project.slots : [])
+        .filter((sl: any) => !sl?.filled).map((sl: any) => sl?.name).filter(Boolean),
+    })
+    return {
+      ...base,
+      items: [{ text: `Open ${project.title} and look at where you left it.`, source: null, taskId: null }],
+      doneLooksLike: null,
+      source: 'derived',
+      needsInput: gap?.question ?? genericGapQuestion(project.title),
+      gap,
+    }
   }
+
+  // ── The next steps, in order, as many as fit ──────────────────────
+  const count = itemCountForWindow(windowMinutes)
+  const { selected } = selectByBudget(openTasks, windowMinutes, count)
+  const first = selected[0]
+
+  // The next step is bigger than the sitting: split it, once.
+  if (first && windowMinutes != null && first.minutes > windowMinutes) {
+    const split = await splitStep({
+      title: project.title,
+      step: first,
+      progressNote: first.progressNote,
+      windowMinutes,
+      evidence,
+    })
+    if (split) {
+      return { ...base, items: split.moves, doneLooksLike: split.doneLooksLike ?? doneLineForSteps(split.moves), source: 'split' }
+    }
+  }
+
+  const items: GroundedItem[] = selected.map(t => ({
+    text: t.text,
+    source: t.progressNote ? `last time: ${t.progressNote}` : 'already on the project',
+    taskId: t.id,
+    partial: false,
+  }))
+  return { ...base, items, doneLooksLike: doneLineForSteps(selected), source: 'tasks' }
 }

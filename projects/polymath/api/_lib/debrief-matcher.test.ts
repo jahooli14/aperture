@@ -98,8 +98,57 @@ describe('sanitizeDebrief', () => {
   })
 
   it('is empty for junk input', () => {
-    expect(sanitizeDebrief(null, closeoutText, openTasks)).toEqual({ doneTaskIds: [], newDone: [], next: [] })
-    expect(sanitizeDebrief({}, closeoutText, openTasks)).toEqual({ doneTaskIds: [], newDone: [], next: [] })
+    const empty = { doneTaskIds: [], newDone: [], next: [], progress: [] }
+    expect(sanitizeDebrief(null, closeoutText, openTasks)).toEqual(empty)
+    expect(sanitizeDebrief({}, closeoutText, openTasks)).toEqual(empty)
+  })
+
+  describe('part-way progress', () => {
+    const partWay = 'Got the outline of the verse recorded but not the harmonies. Next time the harmonies.'
+
+    it('keeps a progress note on a real open task with a verified quote', () => {
+      const result = sanitizeDebrief(
+        { progress: [{ task_id: 't2', note: 'outline recorded, not the harmonies', quote: 'not the harmonies' }] },
+        partWay, openTasks,
+      )
+      expect(result.progress).toEqual([{ taskId: 't2', note: 'outline recorded, not the harmonies' }])
+    })
+
+    it('drops a note on a task that was never offered', () => {
+      const result = sanitizeDebrief(
+        { progress: [{ task_id: 't-invented', note: 'x', quote: 'not the harmonies' }] },
+        partWay, openTasks,
+      )
+      expect(result.progress).toEqual([])
+    })
+
+    it('never notes progress on a task the same debrief marked done', () => {
+      const result = sanitizeDebrief(
+        { done: [{ task_id: 't2' }], progress: [{ task_id: 't2', note: 'nearly', quote: 'not the harmonies' }] },
+        partWay, openTasks,
+      )
+      expect(result.doneTaskIds).toEqual(['t2'])
+      expect(result.progress).toEqual([])
+    })
+
+    it('drops a note with no verifiable quote', () => {
+      const result = sanitizeDebrief(
+        { progress: [{ task_id: 't2', note: 'nearly', quote: 'recorded the whole thing' }] },
+        partWay, openTasks,
+      )
+      expect(result.progress).toEqual([])
+    })
+
+    it('keeps one note per task', () => {
+      const result = sanitizeDebrief(
+        { progress: [
+          { task_id: 't2', note: 'first', quote: 'not the harmonies' },
+          { task_id: 't2', note: 'second', quote: 'not the harmonies' },
+        ] },
+        partWay, openTasks,
+      )
+      expect(result.progress).toHaveLength(1)
+    })
   })
 })
 
@@ -131,5 +180,12 @@ describe('buildDebriefPrompt', () => {
     const p = buildDebriefPrompt('did some stuff', openTasks, 'Graham song')
     expect(p).toContain('decide')
     expect(p).toContain('not a task yet')
+  })
+
+  it('asks for part-way progress as where the work IS, with a quote', () => {
+    const p = buildDebriefPrompt('did some stuff', openTasks, 'Graham song')
+    expect(p).toContain('PART WAY')
+    expect(p).toContain('where the work IS')
+    expect(p).toContain('"progress"')
   })
 })

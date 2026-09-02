@@ -101,41 +101,61 @@ export function CreateProjectDialog({
   const voiceTurn = !prefersText
 
   // ── Form state ────────────────────────────────────────────────────
-  // No end_goal / finish line: an ongoing project (DJing, producing music)
-  // has no "done" to plan backwards from, and a project that does have one
-  // ("finish this EP") gets there through the tasks themselves, not a
-  // second field that immediately goes stale the moment it's written.
+  // The finish line is kept. The extraction already found it; an earlier
+  // cut dropped it here on the theory that the tasks would carry it, and
+  // the result was a project with three loose starter moves, no "done",
+  // and a session shaper that had nothing to plan backwards from. An
+  // ongoing project (DJing, a sketchbook habit) is the recurring mode,
+  // which has no finish line and gets first moves instead of a spine.
   const [formData, setFormData] = useState({
     title: initialTitle || '',
     description: initialDescription || '',
+    end_goal: '',
     project_mode: 'completion' as 'completion' | 'recurring',
     first_step: '',
     type: 'Creative',
   })
 
-  // ── Starter tasks: 3 broad first moves, generated from the description,
-  //    editable before the project is ever saved. ─────────────────────
+  // ── Draft tasks, editable before the project is ever saved. With a
+  //    finish line: the spine, planned backwards from it, in order. Without
+  //    one (or for a recurring project): 3 broad first moves. ────────────
   const [draftTasks, setDraftTasks] = useState<DraftTask[]>([])
   const [tasksLoading, setTasksLoading] = useState(false)
 
-  const generateDraftTasks = async (title: string, description: string, firstStep: string, said: string[]) => {
+  const generateDraftTasks = async (
+    title: string, description: string, firstStep: string, said: string[],
+    endGoal: string, mode: 'completion' | 'recurring',
+  ) => {
     const desc = description.trim()
-    if (!desc) { setDraftTasks([]); return }
+    const goal = endGoal.trim()
+    const evidence = [firstStep, ...said].map(s => s.trim()).filter(Boolean)
+    const dump = [desc, ...evidence].filter(Boolean).join('\n')
+    if (!dump) { setDraftTasks([]); return }
     setTasksLoading(true)
     try {
-      const evidence = [firstStep, ...said].map(s => s.trim()).filter(Boolean)
-      const data = await api.post('utilities?resource=first-cut-tasks', {
-        title: title.trim() || 'Untitled',
-        description: desc,
-        said: evidence,
-      }) as { tasks: { id: string; text: string }[] }
+      const data = mode === 'completion' && goal
+        ? await api.post('utilities?resource=shape-project', {
+            dump, title: title.trim() || 'Untitled', end_goal: goal,
+          }) as { tasks: { id: string; text: string }[] }
+        : await api.post('utilities?resource=first-cut-tasks', {
+            title: title.trim() || 'Untitled', description: desc || dump, said: evidence,
+          }) as { tasks: { id: string; text: string }[] }
       setDraftTasks((data.tasks || []).map(t => ({ id: t.id, text: t.text })))
     } catch (err) {
-      console.warn('[CreateProjectDialog] first-cut generation failed:', err)
+      console.warn('[CreateProjectDialog] task generation failed:', err)
       setDraftTasks([])
     } finally {
       setTasksLoading(false)
     }
+  }
+
+  const regenerateDraftTasks = (overrides: Partial<typeof formData> = {}) => {
+    const f = { ...formData, ...overrides }
+    void generateDraftTasks(
+      f.title, f.description, f.first_step,
+      history.filter(m => m.role === 'user').map(m => m.content),
+      f.end_goal, f.project_mode,
+    )
   }
 
   const updateDraftTask = (index: number, text: string) => {
@@ -157,7 +177,7 @@ export function CreateProjectDialog({
         description: initialDescription || prev.description,
       }))
       setMode('commit')
-      void generateDraftTasks(initialTitle || '', initialDescription || '', '', [])
+      void generateDraftTasks(initialTitle || '', initialDescription || '', '', [], '', 'completion')
     }
   }, [open, initialTitle, initialDescription])
 
@@ -194,6 +214,7 @@ export function CreateProjectDialog({
     setFormData({
       title: initialTitle || '',
       description: initialDescription || '',
+      end_goal: '',
       project_mode: 'completion',
       first_step: '',
       type: 'Creative',
@@ -257,10 +278,12 @@ export function CreateProjectDialog({
         }),
       })
       const data = await res.json()
+      const mode: 'completion' | 'recurring' = data.project_mode === 'recurring' ? 'recurring' : 'completion'
       setFormData({
         title: data.title || '',
         description: data.description || '',
-        project_mode: data.project_mode === 'recurring' ? 'recurring' : 'completion',
+        end_goal: data.end_goal || '',
+        project_mode: mode,
         first_step: data.first_step || '',
         type: ((PROJECT_TYPES as readonly string[]).includes(data.type)
           ? data.type
@@ -273,6 +296,8 @@ export function CreateProjectDialog({
         data.description || '',
         data.first_step || '',
         history.filter(m => m.role === 'user').map(m => m.content),
+        data.end_goal || '',
+        mode,
       )
     } catch {
       setMode('chat')
@@ -357,6 +382,7 @@ export function CreateProjectDialog({
         }))
 
       const titleAtCreation = formData.title
+      const endGoal = formData.project_mode === 'completion' ? formData.end_goal.trim() : ''
 
       await createProject({
         title: formData.title,
@@ -369,6 +395,16 @@ export function CreateProjectDialog({
           project_mode: formData.project_mode,
           studio_draft: genesisDraft || undefined,
           is_shaped: tasks.length > 0,
+          ...(endGoal ? { end_goal: endGoal, end_goal_source: 'guide' as const } : {}),
+          // The conversation is the project brief. Kept so every later
+          // session can cite what was actually said here.
+          ...(history.length > 1 ? {
+            conversation: history.map(m => ({
+              role: (m.role === 'user' ? 'user' : 'assistant') as 'user' | 'assistant',
+              content: m.content,
+              at: now,
+            })),
+          } : {}),
         },
       })
 
@@ -640,6 +676,23 @@ export function CreateProjectDialog({
                   style={{ color: 'var(--brand-text-secondary)', opacity: formData.description ? 0.7 : 0.4 }}
                 />
 
+                {/* The finish line. Every step below is planned backwards
+                    from this, so it's editable here, before anything is
+                    saved. Hidden for a recurring project -- nothing to
+                    plan back from, by definition. */}
+                {formData.project_mode === 'completion' && (
+                  <input
+                    placeholder="When it's finished, what have you got?"
+                    value={formData.end_goal}
+                    onChange={e => setFormData({ ...formData, end_goal: e.target.value })}
+                    onFocus={handleInputFocus}
+                    onBlur={() => { if (formData.end_goal.trim()) regenerateDraftTasks() }}
+                    autoComplete="off"
+                    className="w-full border-0 focus:outline-none focus:ring-0 bg-transparent appearance-none mt-2 text-sm italic"
+                    style={{ color: 'var(--brand-text-secondary)', opacity: formData.end_goal ? 0.7 : 0.45 }}
+                  />
+                )}
+
                 {/* Anything specific to start with -- folded into the tasks
                     below rather than stored as its own field. */}
                 <input
@@ -647,34 +700,24 @@ export function CreateProjectDialog({
                   value={formData.first_step}
                   onChange={e => setFormData({ ...formData, first_step: e.target.value })}
                   onFocus={handleInputFocus}
-                  onBlur={() => {
-                    if (formData.first_step.trim()) {
-                      void generateDraftTasks(
-                        formData.title, formData.description, formData.first_step,
-                        history.filter(m => m.role === 'user').map(m => m.content),
-                      )
-                    }
-                  }}
+                  onBlur={() => { if (formData.first_step.trim()) regenerateDraftTasks() }}
                   autoComplete="off"
                   className="w-full border-0 focus:outline-none focus:ring-0 bg-transparent appearance-none mt-2 mb-3 text-sm"
                   style={{ color: 'var(--brand-text-secondary)', opacity: 0.5 }}
                 />
 
-                {/* Starter tasks -- 3 broad first moves, generated from the
-                    description. No finish line: these are what get you
-                    going, not steps toward a "done" nobody's named yet. */}
+                {/* The steps. With a finish line, the spine planned backwards
+                    from it, in the order they'd be done. Without one, three
+                    broad first moves to get going. */}
                 <div className="mb-4">
                   <div className="flex items-center justify-between mb-1.5">
                     <p className="text-[11px] uppercase tracking-wide" style={{ color: 'var(--brand-text-secondary)', opacity: 0.4 }}>
-                      First things to do
+                      {formData.project_mode === 'completion' && formData.end_goal.trim() ? 'The steps, in order' : 'First things to do'}
                     </p>
-                    {!tasksLoading && formData.description.trim().length > 0 && (
+                    {!tasksLoading && (formData.description.trim().length > 0 || formData.end_goal.trim().length > 0) && (
                       <button
                         type="button"
-                        onClick={() => void generateDraftTasks(
-                          formData.title, formData.description, formData.first_step,
-                          history.filter(m => m.role === 'user').map(m => m.content),
-                        )}
+                        onClick={() => regenerateDraftTasks()}
                         className="text-[11px]"
                         style={{ color: 'var(--brand-primary)', opacity: 0.7 }}
                       >
@@ -684,7 +727,7 @@ export function CreateProjectDialog({
                   </div>
                   {tasksLoading ? (
                     <p className="text-xs" style={{ color: 'var(--brand-text-secondary)', opacity: 0.5 }}>
-                      Working out a first move…
+                      {formData.end_goal.trim() ? 'Working back from the finish line…' : 'Working out a first move…'}
                     </p>
                   ) : draftTasks.length === 0 ? (
                     <button
@@ -720,7 +763,7 @@ export function CreateProjectDialog({
                           </button>
                         </div>
                       ))}
-                      {draftTasks.length < 3 && (
+                      {draftTasks.length < 8 && (
                         <button
                           type="button"
                           onClick={addDraftTask}
@@ -764,7 +807,13 @@ export function CreateProjectDialog({
                       <button
                         key={m.value}
                         type="button"
-                        onClick={() => setFormData({ ...formData, project_mode: m.value })}
+                        onClick={() => {
+                          if (formData.project_mode === m.value) return
+                          setFormData({ ...formData, project_mode: m.value })
+                          // Finish vs habit changes what the list IS (a spine
+                          // vs first moves), so it's redone, not kept.
+                          regenerateDraftTasks({ project_mode: m.value })
+                        }}
                         className="px-2.5 py-1 text-[11px] font-medium transition-all"
                         style={{
                           background: formData.project_mode === m.value ? 'rgba(255,255,255,0.12)' : 'transparent',

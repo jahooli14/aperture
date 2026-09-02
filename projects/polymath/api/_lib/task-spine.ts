@@ -26,8 +26,9 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { generateText } from './gemini-chat.js'
 import { PLAIN_ENGLISH_RULES } from './plain-english.js'
 import { filterGrounded, type Evidence } from './session-grounding.js'
-import { isAdminItem } from './session-shaper.js'
+import { isAdminItem } from './session-items.js'
 import { ESTIMATE_MINUTES, nearestEstimate, type EstimateMinutes } from './session-estimate.js'
+import { orderSteps } from './task-order.js'
 
 export const MIN_SPINE_STEPS = 4
 export const MAX_SPINE_STEPS = 8
@@ -121,6 +122,18 @@ WHAT NONE OF THEM MAY BE:
 Give ${MIN_SPINE_STEPS}-${MAX_SPINE_STEPS} steps, in the order they'd be done, first one first.
 Fewer, honest steps beat a long list you had to invent to fill.
 
+THE ORDER IS THE PLAN. Before you answer, read your list top to bottom and
+ask of each step: could they actually do this with only the steps above it
+finished? If not, it's in the wrong place.
+  BAD:  1. Let the piece dry and peel the stencil off
+        2. Design and cut the stencil
+        -- there's nothing to peel off until the stencil exists.
+  GOOD: 1. Design and cut the stencil
+        2. Pour the paint over it
+        3. Let it dry and peel the stencil off
+For each step, list "after": the numbers of the steps that must be finished
+before it can start. An empty list means it can be done any time.
+
 For each step, also guess how long ONE SITTING of it takes -- not the whole
 step if it spans several sessions, just a realistic single sitting. Pick
 the closest value from EXACTLY this list: ${ESTIMATE_MINUTES.join(', ')}.
@@ -128,40 +141,79 @@ the closest value from EXACTLY this list: ${ESTIMATE_MINUTES.join(', ')}.
 ${PLAIN_ENGLISH_RULES}
 
 Respond with JSON only:
-{ "steps": [ { "text": "...", "evidence": ["e1"], "estimated_minutes": 20 } ] }`
+{ "steps": [ { "text": "...", "evidence": ["e1"], "after": [], "estimated_minutes": 20 } ] }`
 }
 
 /**
  * Model output -> a spine. Same shape of cleaning as session items, plus
  * the length rules that make it a spine rather than a backlog.
  */
+export interface CleanStep {
+  text: string
+  evidence?: string[]
+  estimatedMinutes: EstimateMinutes | null
+  /** 1-based position in the model's own numbering -- what `after` refers to. */
+  position: number
+  /** Positions that must be finished first, as the model declared them. */
+  after: number[]
+}
+
 export function sanitizeSteps(
   raw: unknown,
   maxCount: number = MAX_SPINE_STEPS,
-): { text: string; evidence?: string[]; estimatedMinutes: EstimateMinutes | null }[] {
+): CleanStep[] {
   if (!Array.isArray(raw)) return []
   const seen = new Set<string>()
-  const out: { text: string; evidence?: string[]; estimatedMinutes: EstimateMinutes | null }[] = []
-  for (const entry of raw) {
+  const out: CleanStep[] = []
+  raw.forEach((entry, index) => {
+    if (out.length >= maxCount) return
     const rawText = typeof entry === 'string' ? entry : entry?.text
-    if (typeof rawText !== 'string') continue
+    if (typeof rawText !== 'string') return
     const text = rawText.trim().replace(/^[-*•]\s*/, '').replace(/^\d+[.)]\s*/, '').trim()
-    if (!text || text.length > 140) continue
-    if (isAdminItem(text)) continue
+    if (!text || text.length > 140) return
+    if (isAdminItem(text)) return
     const key = text.toLowerCase().replace(/[^a-z0-9]/g, '')
-    if (!key || seen.has(key)) continue
+    if (!key || seen.has(key)) return
     seen.add(key)
-    const rawMinutes = typeof entry === 'object' && entry !== null ? (entry as any).estimated_minutes : undefined
+    const obj = typeof entry === 'object' && entry !== null ? (entry as any) : {}
+    const rawMinutes = obj.estimated_minutes
     out.push({
       text,
-      evidence: Array.isArray(entry?.evidence)
-        ? entry.evidence.filter((x: unknown): x is string => typeof x === 'string')
+      evidence: Array.isArray(obj.evidence)
+        ? obj.evidence.filter((x: unknown): x is string => typeof x === 'string')
         : undefined,
       estimatedMinutes: typeof rawMinutes === 'number' ? nearestEstimate(rawMinutes) : null,
+      position: index + 1,
+      after: Array.isArray(obj.after)
+        ? obj.after.filter((x: unknown): x is number => typeof x === 'number' && Number.isInteger(x))
+        : [],
     })
-    if (out.length >= maxCount) break
-  }
+  })
   return out
+}
+
+/**
+ * Grounding drops steps and loses the estimate/order fields (it only
+ * carries text and citation). Reattach them by text -- which survives the
+ * pass unchanged -- then put the survivors in an order that respects what
+ * the model said had to come first.
+ */
+export function assembleSteps(
+  cleaned: CleanStep[],
+  kept: { text: string; source: string | null }[],
+): SpineStep[] {
+  const byText = new Map(cleaned.map(c => [c.text, c]))
+  const sequenced = kept.map(k => {
+    const c = byText.get(k.text)
+    return {
+      text: k.text,
+      source: k.source,
+      estimatedMinutes: c?.estimatedMinutes ?? null,
+      position: c?.position ?? 0,
+      after: c?.after ?? [],
+    }
+  })
+  return orderSteps(sequenced).map(({ after: _after, ...step }) => step)
 }
 
 /** The shape the app stores tasks in (metadata.tasks). Field names match
@@ -171,20 +223,33 @@ export interface StoredTask {
   text: string
   done: boolean
   created_at: string
+  /** Position in the plan. Always set by anything that writes tasks --
+   *  see task-order.ts for the invariant. */
+  order: number
   /** Kept so a later session can show where the step came from, and so a
    *  re-plan can tell generated steps from ones the user wrote. */
   source?: string | null
   origin?: 'spine' | 'closeout' | 'user' | 'session'
   estimated_minutes?: number
   estimate_set?: boolean
+  /** Where a session got to on a step it didn't finish, in the user's own
+   *  words from the close-out. Read back at the next session so re-entry
+   *  is specific ("got as far as cutting the outline"), and cleared when
+   *  the step is ticked. */
+  progress_note?: string
+  progress_at?: string
 }
 
-export function toStoredTasks(steps: SpineStep[], now: Date = new Date()): StoredTask[] {
+export function toStoredTasks(steps: SpineStep[], now: Date = new Date(), startOrder = 0): StoredTask[] {
   return steps.map((s, i) => ({
     id: `t-${now.getTime()}-${i}`,
     text: s.text,
     done: false,
     created_at: now.toISOString(),
+    // Always set. An absent order used to sort as 0 and land wherever the
+    // engine's stable sort happened to put it relative to tasks that had
+    // one -- the plan's order is not something to leave to chance.
+    order: startOrder + i,
     source: s.source,
     origin: 'spine' as const,
     ...(s.estimatedMinutes != null ? { estimated_minutes: s.estimatedMinutes, estimate_set: true } : {}),
@@ -217,11 +282,7 @@ export async function generateTaskSpine(input: SpineInput): Promise<SpineStep[]>
         rejected.map(r => `"${r.text}" — ${r.reason}`),
       )
     }
-    // filterGrounded's output shape doesn't carry estimatedMinutes -- reattach
-    // it by text, which survives the grounding pass unchanged.
-    const estimateByText = new Map(cleaned.map(c => [c.text, c.estimatedMinutes]))
-    const withEstimates: SpineStep[] = kept.map(k => ({ ...k, estimatedMinutes: estimateByText.get(k.text) ?? null }))
-    return withEstimates.length >= MIN_SPINE_STEPS ? withEstimates : withEstimates.slice(0, MAX_SPINE_STEPS)
+    return assembleSteps(cleaned, kept).slice(0, MAX_SPINE_STEPS)
   } catch (e) {
     console.error('[task-spine] generation failed:', e)
     return []
@@ -339,9 +400,7 @@ export async function generateFirstCutTasks(input: FirstCutInput): Promise<Spine
         rejected.map(r => `"${r.text}" — ${r.reason}`),
       )
     }
-    const estimateByText = new Map(cleaned.map(c => [c.text, c.estimatedMinutes]))
-    const withEstimates: SpineStep[] = kept.map(k => ({ ...k, estimatedMinutes: estimateByText.get(k.text) ?? null }))
-    return withEstimates.slice(0, FIRST_CUT_STEPS)
+    return assembleSteps(cleaned, kept).slice(0, FIRST_CUT_STEPS)
   } catch (e) {
     console.error('[task-spine] first-cut generation failed:', e)
     return []

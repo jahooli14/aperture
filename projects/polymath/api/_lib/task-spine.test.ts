@@ -5,6 +5,7 @@ import {
   buildFirstCutPrompt,
   buildFirstCutEvidence,
   sanitizeSteps,
+  assembleSteps,
   toStoredTasks,
   MIN_SPINE_STEPS,
   MAX_SPINE_STEPS,
@@ -89,6 +90,44 @@ describe('buildSpinePrompt', () => {
     const p = prompt()
     expect(p).toContain('estimated_minutes')
     expect(p).toContain('5, 10, 15, 20, 30, 45, 60')
+  })
+
+  it('makes the order a rule, with the stencil case as the anti-example', () => {
+    const p = prompt()
+    expect(p).toContain('THE ORDER IS THE PLAN')
+    expect(p).toContain('nothing to peel off until the stencil exists')
+    expect(p).toContain('"after"')
+  })
+})
+
+describe('assembleSteps', () => {
+  it('puts a step below the ones it says it comes after, even if the model wrote it first', () => {
+    const cleaned = sanitizeSteps([
+      { text: 'Let it dry and peel the stencil off', after: [2, 3], estimated_minutes: 10 },
+      { text: 'Design and cut the stencil', after: [], estimated_minutes: 60 },
+      { text: 'Pour the paint over it', after: [2], estimated_minutes: 20 },
+    ])
+    const kept = cleaned.map(c => ({ text: c.text, source: null }))
+    expect(assembleSteps(cleaned, kept).map(s => s.text)).toEqual([
+      'Design and cut the stencil',
+      'Pour the paint over it',
+      'Let it dry and peel the stencil off',
+    ])
+  })
+
+  it('keeps each step’s estimate through the reorder', () => {
+    const cleaned = sanitizeSteps([
+      { text: 'b', after: [2], estimated_minutes: 10 },
+      { text: 'a', after: [], estimated_minutes: 45 },
+    ])
+    const out = assembleSteps(cleaned, cleaned.map(c => ({ text: c.text, source: null })))
+    expect(out.map(s => [s.text, s.estimatedMinutes])).toEqual([['a', 45], ['b', 10]])
+  })
+
+  it('ignores a dependency on a step grounding dropped', () => {
+    const cleaned = sanitizeSteps([{ text: 'invented one' }, { text: 'real one', after: [1] }])
+    const kept = [{ text: 'real one', source: null }]
+    expect(assembleSteps(cleaned, kept).map(s => s.text)).toEqual(['real one'])
   })
 })
 
@@ -195,6 +234,13 @@ describe('toStoredTasks', () => {
   it('gives every task a distinct id', () => {
     const tasks = toStoredTasks([{ text: 'a', source: null, estimatedMinutes: null }, { text: 'b', source: null, estimatedMinutes: null }], now)
     expect(new Set(tasks.map(t => t.id)).size).toBe(2)
+  })
+
+  it('always sets an explicit order, continuing from wherever the list already ends', () => {
+    // An absent order used to sort as 0 -- so a spine step and a close-out
+    // step could land in whatever relative order the engine's sort chose.
+    const tasks = toStoredTasks([{ text: 'a', source: null, estimatedMinutes: null }, { text: 'b', source: null, estimatedMinutes: null }], now, 3)
+    expect(tasks.map(t => t.order)).toEqual([3, 4])
   })
 
   it('carries the estimate onto the stored task when one was set', () => {

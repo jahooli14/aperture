@@ -51,6 +51,8 @@ import { shapeProjectFromDump } from './_lib/project-shaping.js'
 import { generateTaskSpine, generateFirstCutTasks, toStoredTasks } from './_lib/task-spine.js'
 import { debriefSession, type DebriefOpenTask } from './_lib/debrief-matcher.js'
 import { bumpEstimate } from './_lib/session-estimate.js'
+import { insertAfterDone, normalizeTaskOrder } from './_lib/task-order.js'
+import { judgeFinishLine } from './_lib/finish-line.js'
 import { pickNextSparkType, type SparkHistoryEntry } from './_lib/spark-types.js'
 import { generateSpark } from './_lib/spark-generator.js'
 import { canMorphProject, anyProjectMorphedToday, MORPH_COOLDOWN_DAYS } from './_lib/morph.js'
@@ -1990,7 +1992,7 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
       // Finished work stays on the record: a re-plan replaces what's still
       // to do, never the history of what's been done.
       const doneTasks = existingTasks.filter(t => t?.done)
-      const nextTasks = [...doneTasks, ...toStoredTasks(steps)]
+      const nextTasks = normalizeTaskOrder([...doneTasks, ...toStoredTasks(steps, new Date(), doneTasks.length)])
       await supabase.from('projects')
         .update({ metadata: { ...metadata, tasks: nextTasks, is_shaped: true } })
         .eq('id', project_id).eq('user_id', userId)
@@ -2080,7 +2082,7 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
       )
       return res.status(200).json({
         items: result.items,
-        bench: result.bench,
+        done_looks_like: result.doneLooksLike,
         source: result.source,
         needs_input: result.needsInput,
         gap_kind: result.gap?.kind ?? null,
@@ -2088,6 +2090,7 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
         confidence: result.confidence,
         friction: result.friction,
         truncated_count: result.truncatedCount,
+        planned: result.planned,
       })
     } catch (e) {
       const message = e instanceof Error ? e.message : 'Could not shape the session.'
@@ -2128,31 +2131,30 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
     // to close time so a tick can mark that task done without depending on
     // the model's session-item wording matching the task's stored text.
     const rawItems = Array.isArray(req.body?.items) ? req.body.items : []
-    const agreedRaw: { text: string; taskId: string | null }[] = rawItems
+    type AgreedItem = { text: string; taskId: string | null; partial: boolean }
+    const agreedRaw: AgreedItem[] = rawItems
       .map((entry: unknown) => {
-        if (typeof entry === 'string') return { text: entry, taskId: null }
+        if (typeof entry === 'string') return { text: entry, taskId: null, partial: false }
         if (entry && typeof entry === 'object' && typeof (entry as any).text === 'string') {
           const e = entry as any
-          return { text: e.text, taskId: typeof e.taskId === 'string' ? e.taskId : null }
+          return { text: e.text, taskId: typeof e.taskId === 'string' ? e.taskId : null, partial: e.partial === true }
         }
         return null
       })
-      .filter((x: { text: string; taskId: string | null } | null): x is { text: string; taskId: string | null } => !!x)
+      .filter((x: AgreedItem | null): x is AgreedItem => !!x)
       .slice(0, 6)
 
-    // An item the shaper invented to fill the window (no grounded taskId)
-    // only becomes a real task on the project at CLOSE, and only if it was
-    // actually ticked or the debrief confirms it -- not the instant Start
-    // is tapped. Writing it in here meant a session that never reached
-    // closeout (a dead phone, a dropped tab) still left a permanent,
-    // never-reviewed task behind. A "pending-" id marks it as provisional
-    // through the running session; resource=close is what makes it real.
-    const agreed: { text: string; taskId: string | null }[] = agreedRaw.map(({ text, taskId }, i) => (
-      taskId ? { text, taskId } : { text, taskId: `pending-${Date.now()}-${i}` }
+    // An item with no grounded taskId (a reshape line citing what the user
+    // just said) only becomes a real task on the project at CLOSE, and only
+    // if it was actually ticked -- not the instant Start is tapped. A
+    // "pending-" id marks it as provisional through the running session;
+    // resource=close is what makes it real.
+    const agreed: AgreedItem[] = agreedRaw.map(({ text, taskId, partial }, i) => (
+      taskId ? { text, taskId, partial } : { text, taskId: `pending-${Date.now()}-${i}`, partial }
     ))
 
     const shapes: SessionShape[] = agreed.length > 0
-      ? agreed.map(({ text, taskId }) => ({ text, source: 'shaped' as const, partial: false, taskId }))
+      ? agreed.map(({ text, taskId, partial }) => ({ text, source: 'shaped' as const, partial, taskId }))
       : deriveSessionShapes({
           lastClosingText: project.last_closeout_text ?? null,
           slots,
@@ -2222,16 +2224,21 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
     // session-grounding.ts's citation check), and that id is what gets
     // matched -- text is kept only as a fallback for items with no id
     // (the ignition move, offline-derived shapes, anything typed by hand).
-    const ticked: { text: string; taskId: string | null }[] = Array.isArray(done_items)
+    type TickedItem = { text: string; taskId: string | null; partial: boolean }
+    const ticked: TickedItem[] = Array.isArray(done_items)
       ? done_items
           .map((x: unknown) => {
-            if (typeof x === 'string') return { text: x, taskId: null }
+            if (typeof x === 'string') return { text: x, taskId: null, partial: false }
             if (x && typeof x === 'object' && typeof (x as any).text === 'string') {
-              return { text: (x as any).text, taskId: typeof (x as any).taskId === 'string' ? (x as any).taskId : null }
+              return {
+                text: (x as any).text,
+                taskId: typeof (x as any).taskId === 'string' ? (x as any).taskId : null,
+                partial: (x as any).partial === true,
+              }
             }
             return null
           })
-          .filter((x: { text: string; taskId: string | null } | null): x is { text: string; taskId: string | null } => !!x)
+          .filter((x: TickedItem | null): x is TickedItem => !!x)
       : []
     const tickedTaskIds = new Set(ticked.map(t => t.taskId).filter((id): id is string => !!id))
     const tickedTextLower = new Set(ticked.map(t => t.text.toLowerCase().trim()))
@@ -2239,9 +2246,24 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
     const itemsWithOutcome = sessionItems.map((it: any) => {
       const itText = typeof it === 'string' ? it : it?.text
       const itTaskId = typeof it === 'object' ? it?.taskId : null
-      const done = (itTaskId && tickedTaskIds.has(itTaskId)) || tickedTextLower.has(String(itText).toLowerCase().trim())
+      const byText = tickedTextLower.has(String(itText).toLowerCase().trim())
+      // Pieces of one step share its id, so only the text says which
+      // piece was ticked.
+      const done = it?.partial === true ? byText : ((itTaskId && tickedTaskIds.has(itTaskId)) || byText)
       return { ...it, done }
     })
+
+    // A split step: the session showed pieces of ONE step. Ticking every
+    // piece finishes the step; ticking some of them is progress on it,
+    // recorded as such, never a false "done".
+    const piecesByStep = new Map<string, { total: number; ticked: string[] }>()
+    for (const it of sessionItems) {
+      if (!it || typeof it !== 'object' || it.partial !== true || typeof it.taskId !== 'string') continue
+      const entry = piecesByStep.get(it.taskId) ?? { total: 0, ticked: [] }
+      entry.total++
+      if (tickedTaskIds.has(it.taskId) && tickedTextLower.has(String(it.text).toLowerCase().trim())) entry.ticked.push(String(it.text))
+      piecesByStep.set(it.taskId, entry)
+    }
 
     const { error: updateErr } = await supabase
       .from('sessions')
@@ -2273,51 +2295,71 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
     let tasksChanged = false
     const markedDoneTexts: string[] = []
     const createdTexts: string[] = []
+    const progressNoted: string[] = []
 
     const markDoneById = (id: string) => {
       const idx = tasks.findIndex(t => t?.id === id && !t?.done)
       if (idx === -1) return
-      tasks[idx] = { ...tasks[idx], done: true, completed_at: endedAt.toISOString() }
+      // A finished step has no "where I got to" any more.
+      const { progress_note: _n, progress_at: _a, ...rest } = tasks[idx]
+      tasks[idx] = { ...rest, done: true, completed_at: endedAt.toISOString() }
       tasksChanged = true
       markedDoneTexts.push(String(tasks[idx].text))
     }
-    const createTask = (text: string, done: boolean, origin: string, source: string | null) => {
-      tasks.push({
-        id: `t-${endedAt.getTime()}-${tasks.length}`,
-        text,
-        done,
-        created_at: endedAt.toISOString(),
-        ...(done ? { completed_at: endedAt.toISOString() } : {}),
-        order: tasks.length,
-        origin,
-        source,
-      })
+    const noteProgress = (id: string, note: string) => {
+      const idx = tasks.findIndex(t => t?.id === id && !t?.done)
+      if (idx === -1) return
+      tasks[idx] = { ...tasks[idx], progress_note: note, progress_at: endedAt.toISOString() }
       tasksChanged = true
-      if (done) markedDoneTexts.push(text); else createdTexts.push(text)
+      progressNoted.push(`${tasks[idx].text} — ${note}`)
+    }
+    let seq = 0
+    const newTask = (text: string, done: boolean, origin: string, source: string | null) => ({
+      id: `t-${endedAt.getTime()}-${seq++}`,
+      text,
+      done,
+      created_at: endedAt.toISOString(),
+      ...(done ? { completed_at: endedAt.toISOString() } : {}),
+      order: tasks.length,
+      origin,
+      source,
+    })
+    const createDoneTask = (text: string, origin: string, source: string | null) => {
+      tasks.push(newTask(text, true, origin, source))
+      tasksChanged = true
+      markedDoneTexts.push(text)
     }
 
-    // Ticked items: id match first (survives the shaper's paraphrasing),
-    // text match as a fallback for items that were never grounded to a
-    // task at all. A "pending-" id is a session-invented item that was
-    // never written to the project -- ticking it is what promotes it from
-    // provisional to real; left unticked, it simply never existed.
+    // Ticked items: id match first (survives any paraphrasing), text match
+    // as a fallback for items that were never grounded to a task at all. A
+    // "pending-" id is a session line that was never written to the
+    // project -- ticking it is what promotes it from provisional to real;
+    // left unticked, it simply never existed. A partial item is a piece of
+    // a step, handled below, never a tick on the whole step.
     for (const t of ticked) {
-      if (!t.taskId) continue
+      if (!t.taskId || t.partial) continue
       if (t.taskId.startsWith('pending-')) {
-        createTask(t.text, true, 'session', null)
+        createDoneTask(t.text, 'session', null)
         continue
       }
       markDoneById(t.taskId)
     }
     for (const t of ticked) {
-      if (t.taskId) continue
+      if (t.taskId || t.partial) continue
       const idx = tasks.findIndex(x => !x.done && typeof x.text === 'string' && x.text.toLowerCase().trim() === t.text.toLowerCase().trim())
       if (idx !== -1) markDoneById(tasks[idx].id)
+    }
+    for (const [stepId, pieces] of piecesByStep) {
+      if (pieces.ticked.length === 0) continue
+      if (pieces.ticked.length >= pieces.total) markDoneById(stepId)
+      else noteProgress(stepId, `did: ${pieces.ticked.map(p => p.replace(/[.!?]+$/, '')).join('; ')}`)
     }
 
     // Voice debrief: reconciled against the WHOLE open list, not just what
     // was on screen this session -- someone regularly does something
     // unplanned mid-session, and it should still land as real progress.
+    // What they said comes after the ticks, so a spoken "got as far as X"
+    // on a step overrides the mechanical "did: piece one" note.
     const nextAddedTexts: string[] = []
     if (text) {
       const openForDebrief: DebriefOpenTask[] = tasks
@@ -2325,9 +2367,18 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
         .map(t => ({ id: t.id, text: t.text }))
       const debrief = await debriefSession(text, openForDebrief, projRow?.title || 'this project')
       debrief.doneTaskIds.forEach(markDoneById)
-      debrief.newDone.forEach(t => createTask(t, true, 'closeout', 'you said it at the end of a session'))
-      debrief.next.forEach(t => { createTask(t, false, 'closeout', 'you said it at the end of a session'); nextAddedTexts.push(t) })
+      debrief.newDone.forEach(t => createDoneTask(t, 'closeout', 'you said it at the end of a session'))
+      debrief.progress.forEach(p => noteProgress(p.taskId, p.note))
+      // What comes next is, by definition, the very next thing: it goes at
+      // the front of the open list, not after the eight steps already there.
+      if (debrief.next.length > 0) {
+        const incoming = debrief.next.map(t => newTask(t, false, 'closeout', 'you said it at the end of a session'))
+        tasks = insertAfterDone(tasks, incoming)
+        tasksChanged = true
+        debrief.next.forEach(t => { createdTexts.push(t); nextAddedTexts.push(t) })
+      }
     }
+    if (tasksChanged) tasks = normalizeTaskOrder(tasks)
 
     // A task that was in this session's plan, never ticked, and the
     // session ran its full window anyway -- real evidence the estimate
@@ -2381,6 +2432,30 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
       if (projErr) console.warn('[utilities/sessions] project re-entry update failed (non-fatal):', projErr.message)
     }
 
+    // The last open step just got ticked. "All tasks done" and "the finish
+    // line is reached" are different things -- one cheap call reads the
+    // finish line against what's actually been made and says which, so
+    // the receipt can offer one honest action instead of a guess.
+    let finish: { reached: boolean; reason: string } | null = null
+    const openLeft = tasks.filter(t => t && !t.done).length
+    const endGoal = typeof currentMetadata?.end_goal === 'string' ? currentMetadata.end_goal.trim() : ''
+    if (tasksChanged && openLeft === 0 && endGoal && markedDoneTexts.length > 0) {
+      const { data: closeoutRows } = await supabase
+        .from('sessions')
+        .select('closeout_text')
+        .eq('project_id', session.project_id)
+        .eq('user_id', userId)
+        .not('closeout_text', 'is', null)
+        .order('ended_at', { ascending: false })
+        .limit(6)
+      finish = await judgeFinishLine({
+        title: projRow?.title || 'this project',
+        endGoal,
+        doneTasks: normalizeTaskOrder(tasks).filter(t => t?.done && typeof t.text === 'string').map(t => t.text),
+        closeouts: (closeoutRows || []).map(r => r.closeout_text as string).filter(Boolean),
+      })
+    }
+
     // A brief receipt of what actually happened to the task list -- shown
     // for a beat before "Logged." rather than a silent rewrite the user
     // only discovers weeks later.
@@ -2391,6 +2466,8 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
       marked_done: [...new Set(markedDoneTexts)],
       created: [...new Set(createdTexts)],
       next_added: nextAddedTexts,
+      progress_noted: progressNoted,
+      finish,
     })
   }
 

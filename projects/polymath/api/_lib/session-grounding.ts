@@ -51,6 +51,9 @@ export interface GroundedItem {
    *  string equality silently fails the moment the model paraphrases,
    *  which its own prompt teaches it to do. An id survives the paraphrase. */
   taskId: string | null
+  /** True when the item is deliberately a piece of a bigger step, not the
+   *  whole of it -- ticking it records progress, not completion. */
+  partial?: boolean
 }
 
 /**

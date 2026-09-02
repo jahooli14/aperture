@@ -25,10 +25,11 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Clock, Square, ArrowUp, Shuffle, Check, Keyboard, Mic, Wrench } from 'lucide-react'
+import { Clock, Square, ArrowUp, Check, Keyboard, Mic, Wrench, Flag } from 'lucide-react'
 import { VoiceInput } from '../VoiceInput'
 import { useSessionStore, WINDOW_PRESETS, planningSecondsFor, type CloseResult } from '../../stores/useSessionStore'
 import { useVoicePreference } from '../../stores/useVoicePreference'
+import { useProjectStore } from '../../stores/useProjectStore'
 import { haptic } from '../../utils/haptics'
 import type { Project } from '../../types'
 
@@ -63,12 +64,17 @@ type Phase = 'window' | 'planning' | 'running' | 'closeout' | 'receipt' | 'done'
 export function SessionContract({
   project,
   onDone,
+  onFinish,
   source = 'live',
   surface = 'card',
   presetWindowMinutes = null,
 }: {
   project: Project
   onDone: () => void
+  /** The receipt says the finish line is reached and the user agrees.
+   *  The default marks the project completed; a page with its own
+   *  completion ritual passes its handler instead. */
+  onFinish?: () => void | Promise<void>
   /** 'different-thing' for the monthly quota session -- doesn't touch the
    *  live-project declaration, just tags the logged session so the mirror
    *  and the quota check (different-thing.ts) can find it. */
@@ -87,7 +93,7 @@ export function SessionContract({
   const shell = (extra: string) => (surface === 'bare' ? extra : `glass-card p-6 ${extra}`)
   const {
     active, plan, shaping, starting, closing, error,
-    shapePlan, reshapePlan, swapPlanItem, clearPlan, startSession, closeSession,
+    shapePlan, reshapePlan, clearPlan, startSession, closeSession,
     answerPlanQuestion,
   } = useSessionStore()
 
@@ -210,18 +216,28 @@ export function SessionContract({
     // — it just can't accidentally become a task.
     const doneItems = (active?.shapes ?? [])
       .filter((_, i) => ticked.has(i))
-      .map(sh => ({ text: sh.text, taskId: sh.taskId ?? null }))
+      .map(sh => ({ text: sh.text, taskId: sh.taskId ?? null, partial: sh.partial }))
     const result = await closeSession(closeoutText, mvsSeedMinutes ?? undefined, doneItems)
     if (!result) return
     // A brief receipt of what the task list just did, rather than a silent
     // rewrite discovered weeks later -- skipped only when there's genuinely
     // nothing to show (an empty close-out with nothing ticked).
-    if (result.markedDone.length > 0 || result.created.length > 0 || result.nextAdded.length > 0) {
+    if (
+      result.markedDone.length > 0 || result.created.length > 0 || result.nextAdded.length > 0 ||
+      result.progressNoted.length > 0 || result.finish
+    ) {
       setCloseResult(result)
       setPhase('receipt')
     } else {
       setPhase('done')
     }
+  }
+
+  const handleFinish = async () => {
+    haptic.medium()
+    if (onFinish) await onFinish()
+    else await useProjectStore.getState().updateProject(project.id, { status: 'completed' })
+    setPhase('done')
   }
 
   // ─── done ──────────────────────────────────────────────────────────
@@ -259,9 +275,19 @@ export function SessionContract({
               </ul>
             </div>
           )}
+          {closeResult.progressNoted.length > 0 && (
+            <div>
+              <p className="text-[11px] uppercase tracking-wide mb-1" style={{ ...secondaryTextStyle, opacity: 0.5 }}>Where you got to</p>
+              <ul className="space-y-1">
+                {closeResult.progressNoted.map((t, i) => (
+                  <li key={i} className="text-sm" style={secondaryTextStyle}>{t}</li>
+                ))}
+              </ul>
+            </div>
+          )}
           {closeResult.nextAdded.length > 0 && (
             <div>
-              <p className="text-[11px] uppercase tracking-wide mb-1" style={{ ...secondaryTextStyle, opacity: 0.5 }}>Added for next time</p>
+              <p className="text-[11px] uppercase tracking-wide mb-1" style={{ ...secondaryTextStyle, opacity: 0.5 }}>Up next</p>
               <ul className="space-y-1">
                 {closeResult.nextAdded.map((t, i) => (
                   <li key={i} className="text-sm" style={secondaryTextStyle}>{t}</li>
@@ -269,14 +295,56 @@ export function SessionContract({
               </ul>
             </div>
           )}
+          {/* The last step just got ticked. A fact, then one action: the
+              finish line is reached and this can be marked finished, or
+              it isn't and the next session plans what's left. Never a
+              question beside two competing buttons. */}
+          {closeResult.finish && (
+            <div
+              className="rounded-xl px-3.5 py-3 space-y-1"
+              style={{
+                background: 'rgba(var(--brand-primary-rgb),0.06)',
+                border: '1px solid rgba(var(--brand-primary-rgb),0.20)',
+              }}
+            >
+              <p className="text-[11px] uppercase tracking-wide flex items-center gap-1.5" style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.7 }}>
+                <Flag size={11} /> {closeResult.finish.reached ? 'That’s the finish line' : 'Plan’s done, project isn’t'}
+              </p>
+              <p className="text-sm leading-snug">{closeResult.finish.reason}</p>
+              {!closeResult.finish.reached && (
+                <p className="text-[11px]" style={{ ...secondaryTextStyle, opacity: 0.5 }}>
+                  Next session starts by planning the rest.
+                </p>
+              )}
+            </div>
+          )}
         </div>
-        <button
-          className="w-full py-2 rounded-lg text-sm font-medium"
-          style={primaryButtonStyle}
-          onClick={() => setPhase('done')}
-        >
-          Good
-        </button>
+        {closeResult.finish?.reached ? (
+          <div className="space-y-2">
+            <button
+              className="w-full py-2.5 rounded-lg text-sm font-semibold"
+              style={primaryButtonStyle}
+              onClick={() => { void handleFinish() }}
+            >
+              Mark it finished
+            </button>
+            <button
+              className="w-full text-xs"
+              style={{ ...secondaryTextStyle, opacity: 0.5 }}
+              onClick={() => setPhase('done')}
+            >
+              Not yet
+            </button>
+          </div>
+        ) : (
+          <button
+            className="w-full py-2 rounded-lg text-sm font-medium"
+            style={primaryButtonStyle}
+            onClick={() => setPhase('done')}
+          >
+            Good
+          </button>
+        )}
       </div>
     )
   }
@@ -429,25 +497,21 @@ export function SessionContract({
   // Two minutes, spent deciding, visibly. The layout has one job: make it
   // obvious what you can change and how, without becoming a form.
   //
-  //   the plan        — numbered, each row swappable in place
-  //   say what's off  — one input, for the cases a swap can't express
-  //   Start           — the only filled button on screen
+  //   where you left off — your own words, the re-entry line
+  //   the plan           — the next steps, in order, numbered
+  //   done today         — what exists at the end if it lands
+  //   say what's off     — one input; voice reshapes the list
+  //   Start              — the only filled button on screen
   //
-  // An earlier cut had nine tap targets here (five dim x glyphs, a big
-  // "Tap to talk", a text field, Start, Not now) with no hierarchy between
-  // them. That's the menu the whole spec exists to avoid, at the exact
-  // moment the user is trying to stop deciding.
+  // No per-row controls. An earlier cut let you tap a row to swap it for
+  // a spare, which put a later step above the one it depends on. The
+  // order IS the plan; the one way to change it is to say so.
   if (phase === 'planning') {
     const items = plan?.projectId === project.id ? plan.items : []
-    // Swapping a single row for a bench spare only makes sense when the
-    // items are interchangeable AI suggestions ("same quality, different
-    // angles" per the shape prompt). When the plan is the user's own task
-    // list verbatim (source 'tasks'), position is the order they actually
-    // left the tasks in -- a real sequence, not a pool to shuffle. Putting
-    // a later task into an earlier slot silently breaks that sequence.
-    const canSwap = (plan?.bench.length ?? 0) > 0 && plan?.source !== 'tasks'
     const needsInput = plan?.projectId === project.id ? plan.needsInput : null
+    const reEntry = project.last_closeout_text?.trim() || null
     const elapsedFrac = planLeft == null ? 0 : 1 - planLeft / planningSecondsFor(windowMinutes)
+    const windowLabel = windowMinutes ? (windowMinutes < 60 ? `${windowMinutes} minutes` : `${windowMinutes / 60}h`) : 'today'
 
     return (
       <div className={shell('space-y-4')}>
@@ -493,6 +557,15 @@ export function SessionContract({
           )}
         </div>
 
+        {/* Re-entry first (SPEC.md): your own words from the end of last
+            time. The fastest warm-up there is, and the reason a cold
+            project costs double. */}
+        {reEntry && !needsInput && (
+          <p className="text-sm italic leading-snug" style={{ ...secondaryTextStyle, opacity: 0.6 }}>
+            “{reEntry}”
+          </p>
+        )}
+
         {/* The setup step, when this project genuinely has one -- shown
             above the real tasks since it comes first, but visually
             distinct so it doesn't read as one of them. */}
@@ -526,49 +599,42 @@ export function SessionContract({
         ) : (
           <ol className="space-y-0.5" style={shaping ? { opacity: 0.45 } : undefined}>
             {items.map((item, i) => (
-              <li key={`${i}-${item.text}`}>
-                {/* The whole row is the swap target. A 13px glyph at 30%
-                    opacity was both invisible and a miss risk on a phone;
-                    the row is 44px of hit area and the icon is a label for
-                    it, not the control. */}
-                <button
-                  onClick={() => { haptic.light(); swapPlanItem(i) }}
-                  disabled={!canSwap || shaping}
-                  className="w-full flex items-start gap-2.5 text-left py-2 px-2 -mx-2 rounded-lg transition-colors enabled:hover:bg-white/[0.04] disabled:cursor-default"
+              <li key={`${i}-${item.text}`} className="flex items-start gap-2.5 py-2">
+                <span
+                  className="mt-0.5 text-[11px] tabular-nums font-semibold flex-shrink-0 w-4"
+                  style={{ color: 'rgba(var(--brand-primary-rgb),0.8)' }}
                 >
-                  <span
-                    className="mt-0.5 text-[11px] tabular-nums font-semibold flex-shrink-0 w-4"
-                    style={{ color: 'rgba(var(--brand-primary-rgb),0.8)' }}
-                  >
-                    {i + 1}
-                  </span>
-                  <span className="flex-1 min-w-0">
-                    <span className="text-sm leading-snug block">{item.text}</span>
-                    {/* The receipt. Every line either points at something
-                        you actually said, or says nothing that needs a
-                        source. Seeing which is which at a glance is the
-                        difference between a list you can act on and one
-                        you have to fact-check first. */}
-                    {item.source && (
-                      <span
-                        className="text-[10.5px] leading-tight block mt-0.5"
-                        style={{ color: 'var(--brand-text-secondary)', opacity: 0.45 }}
-                      >
-                        {item.source}
-                      </span>
-                    )}
-                  </span>
-                  {canSwap && (
-                    <Shuffle
-                      size={13}
-                      className="mt-0.5 flex-shrink-0"
+                  {i + 1}
+                </span>
+                <span className="flex-1 min-w-0">
+                  <span className="text-sm leading-snug block">{item.text}</span>
+                  {/* The receipt. Every line either points at the step it
+                      is (or is a piece of), or says nothing that needs a
+                      source. Seeing which is which at a glance is the
+                      difference between a list you can act on and one you
+                      have to fact-check first. */}
+                  {item.source && (
+                    <span
+                      className="text-[10.5px] leading-tight block mt-0.5"
                       style={{ color: 'var(--brand-text-secondary)', opacity: 0.45 }}
-                    />
+                    >
+                      {item.source}
+                    </span>
                   )}
-                </button>
+                </span>
               </li>
             ))}
           </ol>
+        )}
+
+        {/* What exists at the end of the hour if the list lands -- the
+            contract's other half. "Its obligation is not to exceed the
+            window; yours is to start." */}
+        {plan?.doneLooksLike && items.length > 0 && !needsInput && (
+          <p className="text-sm leading-snug" style={{ ...secondaryTextStyle, opacity: 0.75 }}>
+            <span className="text-[10.5px] uppercase tracking-wide mr-1.5" style={{ opacity: 0.6 }}>done today</span>
+            {plan.doneLooksLike}
+          </p>
         )}
 
         {/* The app ran out of things it actually knows. It says so and asks,
@@ -594,9 +660,9 @@ export function SessionContract({
             {plan?.source === 'derived'
               ? 'Offline list — built from your last close-out, not shaped.'
               : plan?.source === 'tasks'
-                ? 'Straight from your task list.'
-                : canSwap
-                  ? 'Tap any line to swap it. Say what\u2019s off to redo the lot.'
+                ? 'The next steps on your list, in order.'
+                : plan?.source === 'split'
+                  ? `The next step, cut to fit ${windowLabel}.`
                   : 'Say what\u2019s off and it\u2019ll redo the list.'}
           </p>
         ) : null}

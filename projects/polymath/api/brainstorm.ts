@@ -152,39 +152,52 @@ async function handleShaping(
     ? `\nThe user is shaping this idea: "${projectTitle}"${projectDescription ? ` — ${projectDescription}` : ''}\n`
     : ''
 
-  const prompt = `You are shaping a creative project with someone. Your job is to help them turn a vague impulse into something they can actually build. You're a thoughtful collaborator — curious, engaged, focused on their idea.
+  // Extract first, ask at most one thing (project-shaping.ts's rule, now
+  // applied to the chat too). The old version worked through six topics
+  // and wouldn't let go until four of them were "genuinely clear", which
+  // made every new project a six-question interview. The plan only needs
+  // two things, and a third when it's there: what they're making, what
+  // done looks like, and what's already in hand.
+  const userTurns = history.filter(m => m.role === 'user').length + 1
+
+  const prompt = `Someone is telling you about a creative project they want to start. Help them say
+it clearly enough to plan from. You're a friend who's paying attention, not an
+interviewer.
 
 ${PLAIN_ENGLISH_RULES}
 
-Your goal: help them get to the core of what this project really is. Ask the questions they haven't thought to ask themselves.
+WHAT THE PLAN NEEDS, and nothing more:
+1. WHAT THEY'RE MAKING — a concrete thing. "A three-track EP", "a stencil print
+   for the hallway", not "getting into printmaking".
+2. WHAT DONE LOOKS LIKE — the state where they'd stop. Something you could
+   point at. If it's an ongoing thing with no end (DJing, a sketchbook habit),
+   that counts as an answer: it's ongoing.
+3. WHAT'S ALREADY IN HAND — anything they've already made, got, or decided.
+   Only if they mention it; never ask for a list.
 
-TOPICS TO EXPLORE (work through these, one per exchange, in natural order):
-1. WHY — What's the real motivation? Not "it'd be cool" but what's drawing them in? A gift? A skill they want? A feeling?
-2. WHAT — What does the finished thing actually look like? Concrete. A 3-minute song? A deployed app? A framed print?
-3. WHO — Is this for them or for someone else? Who sees/hears/uses the output?
-4. HOW — What tools, skills, materials do they have? What's missing?
-5. CONSTRAINTS — How much time can they realistically give this? What's in the way?
-6. FIRST MOVE — What's the smallest thing they could do in 30 minutes to start?
-
-Rules:
+HOW TO REPLY:
+- First, read everything they've said so far and work out which of 1 and 2
+  is still missing. Usually one of them is already answered by the time
+  they've finished talking.
+- If something's missing, ask ONE plain question that gets it. Tie it to
+  what they just said. Not "tell me more" — the specific thing.
+- If nothing's missing, don't ask. Say back in one sentence what you've got,
+  so they can correct it, and stop.
+- Never ask why it matters, who it's for, what tools they have, or how
+  much time they've got. None of that changes the first step.
 ${CHAT_TURN_RULES}
-- The question is the point; everything else is setup.
-- Ask, don't lecture. Never tell them what they "aren't" doing or "haven't" figured out — invite them to think, don't diagnose them.
-- If you spot something in their knowledge lake that connects, name it specifically.
-- If a previous answer was vague, gently follow up. "Can you say more about what you mean?" works.
-- Reflect back specifics: names, tools, references they've mentioned.
+- If you spot something in their notes that connects, name it in a few
+  words. Don't make a question out of it.
+- Never tell them what they "haven't" figured out.
 ${projectContext}
 ${contextBlock ? `\n${contextBlock}\n` : ''}
 ${priorTurns ? `\nCONVERSATION SO FAR:\n${priorTurns}\n` : ''}
 USER: ${message}
 
-Assess whether you now have enough to define a project. You need at minimum:
-1. What they're making (concrete output, not abstract)
-2. Why it matters to them
-3. What "done" looks like
-4. A concrete first step
+This is their turn number ${userTurns}. By turn 3 you should have what you need.
 
-Set readyToExtract to true ONLY when all four are genuinely clear from the conversation — not assumed, not generic. If the user is still vague on any of these, keep probing.
+Set readyToExtract to true when 1 and 2 are both clear (or 2 is "ongoing").
+Not "assumed" — said. If one is still missing, false.
 
 Return JSON only:
 {
@@ -192,14 +205,17 @@ Return JSON only:
   "readyToExtract": false
 }`
 
-  const raw = await generateText(prompt, { temperature: 0.72, maxTokens: 250, responseFormat: 'json' })
+  const raw = await generateText(prompt, { temperature: 0.6, maxTokens: 250, responseFormat: 'json' })
 
   try {
     const parsed = JSON.parse(raw)
     return {
       reply: (parsed.reply || '').trim(),
       echoes: lakeResults.all.slice(0, 6),
-      readyToExtract: parsed.readyToExtract === true,
+      // Three turns is the interview budget. After that the shape is
+      // extracted from whatever was said, and the one gap the extraction
+      // finds gets asked on the commit screen instead of here.
+      readyToExtract: parsed.readyToExtract === true || userTurns >= 3,
     }
   } catch {
     // Don't surface raw JSON as if it were a chat reply — that reads as a
@@ -236,25 +252,42 @@ async function handleExtract(
 
 ${conversationText}
 
-Extract a structured project definition from this conversation. Be specific — don't invent details that weren't discussed.
+Pull the project out of what THEY said. Say nothing they didn't: no gear,
+brands, formats, people or places unless they named them. Every step of
+the plan gets worked backwards from the finish line, so a guessed one
+poisons the lot -- if they never said what done looks like, end_goal is
+null, not a plausible guess.
 
-Also write a "genesis draft": the conversation retold as a first-person journal entry (3-5 sentences, conversational). This becomes the project's initial Studio note.
+Also write a "genesis draft": the conversation retold as a first-person
+journal entry (3-5 sentences), in their words where possible.
+
+${PLAIN_ENGLISH_RULES}
 
 Return JSON only:
 {
-  "title": "concise active-voice title, 6 words max",
-  "description": "1-2 sentences: what this is and why it matters to the person",
+  "title": "short, concrete, what they'd call it themselves. Not a slogan. 6 words max",
+  "description": "1-2 plain sentences: what this is",
   "type": "exactly one of: Writing, Tech, Art, Music, Business, Creative",
-  "project_mode": "completion or recurring",
-  "end_goal": "a plain sentence describing when this is finished — e.g. 'A working iOS app in the App Store' or 'The manuscript is edited and sent to beta readers'. Concrete, not abstract.",
-  "first_step": "the smallest concrete action to begin — a verb phrase",
+  "project_mode": "completion if there is a state where they'd stop; recurring if it's ongoing with no end",
+  "end_goal": "what they'll have when it's finished, in their words, or null. 'The print is framed and on the hallway wall', not 'a finished piece'",
+  "first_step": "the first thing they said they'd do, if they said one, else null",
   "genesisDraft": "the conversation as a first-person journal entry"
 }`
 
-  const raw = await generateText(prompt, { temperature: 0.35, maxTokens: 500, responseFormat: 'json' })
+  const raw = await generateText(prompt, { temperature: 0.3, maxTokens: 600, responseFormat: 'json' })
 
   try {
-    return JSON.parse(raw)
+    const parsed = JSON.parse(raw)
+    const clean = (v: unknown) => (typeof v === 'string' && v.trim() && v.trim().toLowerCase() !== 'null' ? v.trim() : '')
+    return {
+      title: clean(parsed.title),
+      description: clean(parsed.description),
+      type: clean(parsed.type) || 'Creative',
+      project_mode: parsed.project_mode === 'recurring' ? 'recurring' : 'completion',
+      end_goal: clean(parsed.end_goal),
+      first_step: clean(parsed.first_step),
+      genesisDraft: clean(parsed.genesisDraft) || conversationText,
+    }
   } catch {
     return {
       title: '',

@@ -865,6 +865,7 @@ export function ProjectDetailPage() {
                   project={project}
                   presetWindowMinutes={windowMinutes}
                   onDone={() => { setSessionOpen(false); void fetchProjects() }}
+                  onFinish={() => handleStatusChange('completed')}
                 />
               ) : (
                 <button

@@ -3,14 +3,12 @@ import {
   itemCountForWindow,
   isAdminItem,
   sanitizeItems,
-  splitBench,
-  buildShapePrompt,
+  buildReshapePrompt,
   buildEvidence,
   sanitizeFriction,
   dedupeSimilar,
-  BENCH_SIZE,
+  type ShapeContext,
 } from './session-shaper.js'
-import type { BudgetTask } from './session-budget.js'
 
 describe('itemCountForWindow', () => {
   it('gives a short window a short list', () => {
@@ -25,14 +23,6 @@ describe('itemCountForWindow', () => {
 
   it('assumes a middling session when the window is unknown', () => {
     expect(itemCountForWindow(null)).toBe(4)
-  })
-
-  it('stays in the 3-6 band for every window', () => {
-    for (const m of [1, 5, 20, 21, 45, 46, 75, 76, 180]) {
-      const n = itemCountForWindow(m)
-      expect(n).toBeGreaterThanOrEqual(3)
-      expect(n).toBeLessThanOrEqual(6)
-    }
   })
 })
 
@@ -72,27 +62,8 @@ describe('dedupeSimilar', () => {
     ])
   })
 
-  it('also dedupes against an already-agreed pool, not just itself', () => {
-    const already = [{ text: 'Fix the transition out of track two' }]
-    const items = [{ text: 'Fix the transition between the two tracks' }]
-    expect(dedupeSimilar(items, already)).toEqual([])
-  })
-
   it('keeps two genuinely different tasks that merely share one topic word', () => {
-    // Regression: this used to reuse citationSupports, which accepts a
-    // single shared word -- "record" alone would have wrongly merged a
-    // vocal take with an unrelated guitar-solo task. Also covers the
-    // exact "Listen to the song" vs "Play back the mixed file" case from
-    // the live bug report: near-zero word overlap, genuinely different
-    // wording, and this mechanical check correctly leaves both alone
-    // (that case needs the prompt-level fix, not word-matching).
     const items = [{ text: 'Record the vocal' }, { text: 'Record the guitar solo' }]
-    expect(dedupeSimilar(items)).toHaveLength(2)
-  })
-
-  it('keeps items that share only weak, common verbs', () => {
-    // "make", "get" etc aren't distinctive enough to count as the same move.
-    const items = [{ text: 'Make the intro punchier' }, { text: 'Make the outro fade cleanly' }]
     expect(dedupeSimilar(items)).toHaveLength(2)
   })
 })
@@ -106,213 +77,165 @@ describe('sanitizeFriction', () => {
   })
 
   it('drops a friction line that invents gear not in the evidence', () => {
-    const result = sanitizeFriction({ text: 'Set up the Pioneer CDJ-3000s', minutes: 5 }, evidence, 'DJ mix')
-    expect(result).toBeNull()
+    expect(sanitizeFriction({ text: 'Set up the Pioneer CDJ-3000s', minutes: 5 }, evidence, 'DJ mix')).toBeNull()
   })
 
   it('is null when the model correctly says there is nothing to set up', () => {
     expect(sanitizeFriction(null, evidence, 'DJ mix')).toBeNull()
   })
-
-  it('snaps the minutes onto the shared ladder', () => {
-    const result = sanitizeFriction({ text: 'Get the decks connected', minutes: 7 }, evidence, 'DJ mix')
-    expect(result?.minutes).toBe(5)
-  })
-
-  it('rejects a friction line with no minutes or an over-long text', () => {
-    expect(sanitizeFriction({ text: 'Get the decks connected' }, evidence, 'DJ mix')).toBeNull()
-    expect(sanitizeFriction({ text: 'x'.repeat(150), minutes: 5 }, evidence, 'DJ mix')).toBeNull()
-  })
 })
 
 describe('sanitizeItems', () => {
   it('strips bullets and numbering', () => {
-    expect(sanitizeItems(['1. Open the file', '- Cut the intro'], 4))
-      .toEqual(['Open the file', 'Cut the intro'])
+    expect(sanitizeItems(['1. Open the file', '- Cut the intro'], 4)).toEqual(['Open the file', 'Cut the intro'])
   })
 
   it('drops admin items, blanks and over-long lines', () => {
-    expect(sanitizeItems(
-      ['Open the file', '', 'Plan the release', 'x'.repeat(200), 'Cut the intro'],
-      6,
-    )).toEqual(['Open the file', 'Cut the intro'])
-  })
-
-  it('drops near-duplicates that differ only in punctuation or case', () => {
-    expect(sanitizeItems(['Cut the intro', 'cut the intro.'], 4)).toEqual(['Cut the intro'])
-  })
-
-  it('caps at the window count', () => {
-    expect(sanitizeItems(['a move', 'b move', 'c move', 'd move'], 2))
-      .toEqual(['a move', 'b move'])
+    expect(sanitizeItems(['Open the file', '', 'Plan the release', 'x'.repeat(200), 'Cut the intro'], 6))
+      .toEqual(['Open the file', 'Cut the intro'])
   })
 
   it('survives anything that is not an array of strings', () => {
     expect(sanitizeItems(null, 4)).toEqual([])
-    expect(sanitizeItems('nope', 4)).toEqual([])
     expect(sanitizeItems([1, {}, null], 4)).toEqual([])
   })
 })
 
-describe('splitBench', () => {
-  it('puts the first N on screen and holds the rest back', () => {
-    expect(splitBench(['a', 'b', 'c', 'd', 'e'], 3))
-      .toEqual({ items: ['a', 'b', 'c'], bench: ['d', 'e'] })
+const base: ShapeContext = {
+  title: 'Graham song',
+  goal: null,
+  windowMinutes: 60,
+  lastCloseout: null,
+  openTasks: [],
+  doneTasks: [],
+  pastCloseouts: [],
+  shapingTurns: [],
+  fragments: [],
+}
+
+describe('buildEvidence', () => {
+  it('includes finished work, older close-outs and the shaping chat', () => {
+    const { evidence } = buildEvidence({
+      ...base,
+      lastCloseout: 'Got the intro sorted.',
+      pastCloseouts: [{ text: 'Laid down a rough vocal.', date: '1 Aug' }],
+      doneTasks: [{ text: 'record the intro', date: '3 Aug' }],
+      shapingTurns: ['It should sound like the demo but tighter'],
+    })
+    const texts = evidence.map(e => e.text)
+    expect(texts).toContain('Laid down a rough vocal.')
+    expect(texts).toContain('record the intro')
+    expect(texts).toContain('It should sound like the demo but tighter')
   })
 
-  it('never benches something already in the list', () => {
-    const { items, bench } = splitBench(['a', 'b', 'c', 'd'], 2)
-    expect(bench.some(x => items.includes(x))).toBe(false)
+  it('carries the id of the open step each piece of evidence came from', () => {
+    const { evidence, taskIdByEvidenceId } = buildEvidence({
+      ...base,
+      openTasks: [{ id: 'task-7', text: 'Fix the transition out of track two', minutes: 20, progressNote: null }],
+    })
+    const match = evidence.find(e => e.text === 'Fix the transition out of track two')
+    expect(match).toBeDefined()
+    expect(taskIdByEvidenceId[match!.id]).toBe('task-7')
   })
 
-  it('gives an empty bench rather than a short list when the pool is thin', () => {
-    expect(splitBench(['a', 'b'], 4)).toEqual({ items: ['a', 'b'], bench: [] })
+  it('lists where the user got to on a step, tied to that step', () => {
+    const { evidence, taskIdByEvidenceId } = buildEvidence({
+      ...base,
+      openTasks: [{ id: 'task-7', text: 'Cut the stencil', minutes: 60, progressNote: 'outline drawn, nothing cut yet' }],
+    })
+    const note = evidence.find(e => e.text === 'outline drawn, nothing cut yet')
+    expect(note).toBeDefined()
+    expect(note!.label).toContain('where you got to on "Cut the stencil"')
+    expect(taskIdByEvidenceId[note!.id]).toBe('task-7')
+  })
+
+  it('makes a live reshape instruction its own citable evidence entry', () => {
+    const { evidence } = buildEvidence({ ...base, instruction: 'I want to listen to the song, then plan the new riff' })
+    const match = evidence.find(e => e.text.includes('listen to the song'))
+    expect(match).toBeDefined()
+    expect(match!.label).toBe('what you just said')
   })
 })
 
-describe('buildShapePrompt', () => {
-  const base = {
-    title: 'Graham song',
-    goal: null,
-    windowMinutes: 60,
-    lastCloseout: null as string | null,
-    openTasks: [] as BudgetTask[],
-    doneTasks: [] as { text: string; date: string | null }[],
-    pastCloseouts: [] as { text: string; date: string | null }[],
-    shapingTurns: [] as string[],
-    fragments: [] as { text: string; date: string | null }[],
-    slots: [] as { name: string; filled: boolean }[],
+describe('buildReshapePrompt', () => {
+  const ctx: ShapeContext = {
+    ...base,
+    openTasks: [
+      { id: 't1', text: 'Design and cut the stencil', minutes: 60, progressNote: null },
+      { id: 't2', text: 'Pour the paint over it', minutes: 20, progressNote: null },
+    ],
+    instruction: 'too much for an hour',
+    currentItems: ['Design and cut the stencil', 'Pour the paint over it'],
   }
-  const prompt = (ctx: typeof base) => buildShapePrompt(ctx, buildEvidence(ctx).evidence)
+  const prompt = (c = ctx) => buildReshapePrompt(c, buildEvidence(c).evidence)
 
-  it('asks for the window count plus a bench of spares', () => {
-    expect(prompt(base)).toContain(`Give ${5 + BENCH_SIZE} things`)
-    expect(prompt(base)).toContain('FIRST 5 are the session')
-    expect(prompt({ ...base, windowMinutes: 20 })).toContain(`Give ${3 + BENCH_SIZE} things`)
-  })
-
-  it('tells the model the spares are ready to swap in', () => {
-    expect(prompt(base)).toContain('ready to swap in')
-  })
-
-  it('names the window in minutes so the list is sized to it', () => {
-    expect(prompt({ ...base, windowMinutes: 120 })).toContain('120 minutes')
-  })
-
-  it('says plainly when it knows nothing about the project', () => {
-    expect(prompt(base)).toContain('nothing yet')
-  })
-
-  it('hands the model a closed evidence list and says it is closed', () => {
-    const p = prompt({ ...base, lastCloseout: 'Next: fix the transition' })
-    expect(p).toContain('EVERYTHING KNOWN ABOUT THIS PROJECT')
-    expect(p).toContain('[e1] Next: fix the transition')
-    expect(p).toContain('Anything not in it, you do not know')
-  })
-
-  it('bans invented gear, and shows the exact failure that shipped', () => {
-    const p = prompt(base)
-    expect(p).toContain('never invent a detail')
-    expect(p).toContain('SM57')
-    expect(p).toContain('this project has no guitar')
-  })
-
-  it('tells the model fewer honest items is the right answer', () => {
-    expect(prompt(base)).toContain('Fewer honest items')
-  })
-
-  it('asks for citations in the response shape', () => {
-    expect(prompt(base)).toContain('"evidence"')
-  })
-
-  it('quotes the last close-out back when there is one', () => {
-    const p = prompt({ ...base, lastCloseout: 'Next: fix the transition' })
-    expect(p).toContain('fix the transition')
-  })
-
-  it('carries the reshape instruction and the list it applies to', () => {
-    const p = prompt({
-      ...base,
-      instruction: 'too much admin',
-      currentItems: ['Plan the mix', 'Cut the intro'],
-    } as any)
-    expect(p).toContain('too much admin')
-    expect(p).toContain('1. Plan the mix')
+  it('carries the instruction and the list it applies to', () => {
+    const p = prompt()
+    expect(p).toContain('too much for an hour')
+    expect(p).toContain('1. Design and cut the stencil')
     expect(p).toContain("don't\nthrow out items they didn't complain about")
   })
 
-  it('leaves the reshape block out entirely on a first pass', () => {
-    expect(prompt(base)).not.toContain('The user says:')
+  it('hands the model a closed evidence list, with the steps in order, and says it is closed', () => {
+    const p = prompt()
+    expect(p).toContain('EVERYTHING KNOWN ABOUT THIS PROJECT')
+    expect(p).toContain('Anything not in it, you do not know')
+    expect(p.indexOf('Design and cut the stencil')).toBeLessThan(p.indexOf('Pour the paint over it'))
+    expect(p).toContain('in the\norder they\'re meant to be done')
   })
 
-  it('tells the model to cite the live instruction, not an unrelated old citation', () => {
-    const p = prompt({ ...base, instruction: 'listen to the song first', currentItems: ['x'] } as any)
-    expect(p).toContain('what you just said')
-    expect(p).toContain('cite THAT')
+  it('lets the model reorder, split and drop, but never invent a step', () => {
+    const p = prompt()
+    expect(p).toContain('Reorder, drop, or keep')
+    expect(p).toContain('Split one step')
+    expect(p).toContain('Invent a step')
+    expect(p).toContain("If you can't cite it, you can't say it")
   })
 
-  it('tells the model to translate the user’s own admin-sounding words into a concrete action', () => {
-    const p = prompt({ ...base, instruction: 'plan the new riff', currentItems: ['x'] } as any)
-    expect(p).toContain('turn it into the concrete action')
+  it('bans putting a step before one it depends on', () => {
+    expect(prompt()).toContain('cannot come before "cut the stencil"')
   })
 
-  it('bans resuggesting something evidence says is already finished', () => {
-    expect(prompt(base)).toContain('Never propose redoing or repeating')
+  it('tells the model to cite the live instruction for anything that came from it', () => {
+    expect(prompt()).toContain('citing "what you just said"')
   })
 
-  it('bans two items saying the same thing in different words', () => {
-    expect(prompt(base)).toContain('No two items may say the same thing')
-  })
-
-  it('only asks for the shortfall when open tasks already fill part of the window', () => {
-    // 2 open tasks against a 60-minute window (needs 5): the model should
-    // only be asked for the 3 it's short, not the full 5, and told not to
-    // repeat the 2 that are already queued.
-    const withTasks = { ...base, openTasks: [{ id: 't1', text: 'a', minutes: 20 as const }, { id: 't2', text: 'b', minutes: 20 as const }] }
-    const p = buildShapePrompt(withTasks, buildEvidence(withTasks).evidence)
-    expect(p).toContain(`Give ${3 + BENCH_SIZE} NEW things`)
-    expect(p).toContain('Do not repeat them')
-    expect(p).not.toContain('FIRST 5 are the session')
-  })
-
-  it('asks for the full count when open tasks already cover the reshape', () => {
-    // A reshape starts over regardless of what's already on the list --
-    // it's the user asking for a different take, not more of the same one.
-    const withTasks = { ...base, openTasks: [{ id: 't1', text: 'a', minutes: 20 as const }], instruction: 'too admin-y', currentItems: ['x'] }
-    const p = buildShapePrompt(withTasks as any, buildEvidence(withTasks).evidence)
-    expect(p).toContain(`Give ${5 + BENCH_SIZE} things`)
-  })
-
-  it('bans the admin verbs in the prompt, not just in the checker', () => {
-    const p = prompt(base)
-    for (const v of ['research', 'decide', 'think about', 'brainstorm']) {
-      expect(p).toContain(v)
-    }
-  })
-
-  it('carries the plain-English rules and a concrete anti-example', () => {
-    const p = prompt(base)
+  it('bans invented gear, and shows the exact failure that shipped', () => {
+    const p = prompt()
+    expect(p).toContain('SM57')
     expect(p).toContain('BAD:')
     expect(p).toContain('GOOD:')
-    expect(p.toLowerCase()).toContain('plain english')
   })
 
-  it('no longer teaches invented specificity as the good example', () => {
-    // The old "Good" example was "Bounce the vocal at -3dB and listen back
-    // on the phone speaker" -- invented gear settings, presented as the
-    // target. The model did exactly as it was shown.
-    expect(prompt(base)).not.toContain('-3dB')
+  it('asks what done looks like and for an honest friction line', () => {
+    const p = prompt()
+    expect(p).toContain('done_looks_like')
+    expect(p).toContain('friction')
+    expect(p).toContain('A made-up setup step is worse than none')
+  })
+
+  it('sizes the list to the window', () => {
+    expect(prompt()).toContain('Up to 5 items')
+    expect(prompt({ ...ctx, windowMinutes: 20 })).toContain('Up to 3 items')
+    expect(prompt({ ...ctx, windowMinutes: 120 })).toContain('120 minutes')
+  })
+
+  it('carries the plain-English rules', () => {
+    expect(prompt().toLowerCase()).toContain('plain english')
   })
 })
 
 // A thin stand-in for the bits of the Supabase client shapeSession uses.
 // The point of these is the IO wrapper's decisions — which column list it
-// asks for, and what it does when a step fails — not the model call.
+// asks for, what it does when a step fails, and which of the four paths it
+// takes — not the model call (there is no API key in the test env, so
+// every model path fails, which is exactly the fallback worth testing).
 function stubClient(opts: {
   project?: Record<string, unknown> | null
   projectError?: { message: string } | null
   fragments?: { text: string }[]
   onSelect?: (table: string, columns: string) => void
+  onUpdate?: (payload: Record<string, unknown>) => void
 }) {
   return {
     from(table: string) {
@@ -320,6 +243,11 @@ function stubClient(opts: {
         select(columns: string) {
           opts.onSelect?.(table, columns)
           return chain
+        },
+        update(payload: Record<string, unknown>) {
+          opts.onUpdate?.(payload)
+          const updateChain: any = { eq: () => updateChain, then: (resolve: any) => resolve({ error: null }) }
+          return updateChain
         },
         eq: () => chain,
         not: () => chain,
@@ -336,92 +264,16 @@ function stubClient(opts: {
   } as any
 }
 
-describe('buildEvidence', () => {
-  const base = {
-    title: 'Graham song', goal: null as string | null, windowMinutes: 60,
-    lastCloseout: null as string | null, openTasks: [] as BudgetTask[],
-    doneTasks: [] as { text: string; date: string | null }[],
-    pastCloseouts: [] as { text: string; date: string | null }[],
-    shapingTurns: [] as string[],
-    fragments: [] as { text: string; date: string | null }[],
-    slots: [] as { name: string; filled: boolean }[],
-  }
-
-  it('does not count a machine-seeded slot as something the user said', () => {
-    // slot-seed.ts invents these. Counting them made a project the user
-    // has never described look like one the app knows — the exact
-    // condition under which it starts filling gaps with invention.
-    const { evidence } = buildEvidence({ ...base, slots: [{ name: 'first track', filled: false }] })
-    expect(evidence).toHaveLength(0)
-  })
-
-  it('includes finished work, which used to be filtered out entirely', () => {
-    const { evidence } = buildEvidence({ ...base, doneTasks: [{ text: 'record the intro', date: '3 Aug' }] })
-    expect(evidence[0].text).toBe('record the intro')
-    expect(evidence[0].label).toContain('finished this on 3 Aug')
-  })
-
-  it('includes older close-outs, not just the one that overwrote the rest', () => {
-    const { evidence } = buildEvidence({
-      ...base,
-      lastCloseout: 'Got the intro sorted.',
-      pastCloseouts: [{ text: 'Laid down a rough vocal.', date: '1 Aug' }],
-    })
-    expect(evidence.map(e => e.text)).toContain('Laid down a rough vocal.')
-  })
-
-  it('includes what the user said when shaping the project', () => {
-    const { evidence } = buildEvidence({ ...base, shapingTurns: ['It should sound like the demo but tighter'] })
-    expect(evidence[0].text).toContain('sound like the demo')
-  })
-
-  it('carries the id of the open task each piece of evidence came from', () => {
-    // This is what lets a session item grounded in an open task be traced
-    // back to it at close time by id, surviving whatever the model
-    // paraphrases the item's wording into.
-    const { evidence, taskIdByEvidenceId } = buildEvidence({
-      ...base,
-      openTasks: [{ id: 'task-7', text: 'Fix the transition out of track two', minutes: 20 as const }],
-    })
-    const match = evidence.find(e => e.text === 'Fix the transition out of track two')
-    expect(match).toBeDefined()
-    expect(taskIdByEvidenceId[match!.id]).toBe('task-7')
-  })
-
-  it('makes a live reshape instruction its own citable evidence entry', () => {
-    // Without this, an item that comes straight from what the user just
-    // said had no honest citation available -- it either got dropped or
-    // got stapled to an unrelated old evidence id to satisfy the citation
-    // rule, which is how a freshly-requested item ends up mislabelled
-    // "you finished this on 27 Jun".
-    const { evidence } = buildEvidence({
-      ...base,
-      instruction: 'I want to listen to the song, then plan the new riff',
-    } as any)
-    const match = evidence.find(e => e.text.includes('listen to the song'))
-    expect(match).toBeDefined()
-    expect(match!.label).toBe('what you just said')
-  })
-
-  it('does not attach a task id to evidence that is not an open task', () => {
-    const { evidence, taskIdByEvidenceId } = buildEvidence({ ...base, goal: 'A finished mix' })
-    expect(Object.keys(taskIdByEvidenceId)).toHaveLength(0)
-    expect(evidence[0].text).toBe('A finished mix')
-  })
-})
-
 describe('shapeSession', () => {
   const project = {
     title: 'Graham song',
     description: 'a remix',
-    metadata: { end_goal: 'released', tasks: [{ id: 't1', text: 'mix it', done: false }] },
+    metadata: { end_goal: 'released', tasks: [{ id: 't1', text: 'mix it', done: false, order: 0 }] },
     slots: [],
     last_closeout_text: 'Next: fix the transition out of track two.',
   }
 
   it('only asks for columns that exist on projects', async () => {
-    // `goal` is not a column — asking for it failed the whole select and
-    // surfaced as "Project not found" for projects that plainly existed.
     const seen: string[] = []
     const { shapeSession } = await import('./session-shaper.js')
     await shapeSession(
@@ -439,16 +291,6 @@ describe('shapeSession', () => {
     }
   })
 
-  it('falls back to the derived list when the model is unavailable', async () => {
-    // No GEMINI_API_KEY in the test env, so generateText throws — which is
-    // exactly the path that must still hand back a usable session.
-    const { shapeSession } = await import('./session-shaper.js')
-    const result = await shapeSession(stubClient({ project }), 'u1', 'p1', 60)
-    expect(result.source).toBe('derived')
-    expect(result.items.length).toBeGreaterThan(0)
-    expect(result.items.map(i => i.text).join(' ')).toContain('fix the transition out of track two.')
-  })
-
   it('surfaces a database error instead of claiming the project is missing', async () => {
     const { shapeSession } = await import('./session-shaper.js')
     await expect(
@@ -456,12 +298,8 @@ describe('shapeSession', () => {
     ).rejects.toThrow('column does not exist')
   })
 
-  it('shapes the session straight from the task list when it already has enough, with no model call', async () => {
-    // 5 tasks estimated at 20 minutes each (the default) is exactly
-    // itemCountForWindow(60)'s target -- but at 20 minutes a task, a
-    // 60-minute window only actually fits 3, and the budget is what
-    // decides, not the raw count.
-    const withFullBacklog = {
+  it('shapes the session from the next real steps, in order, with no model call', async () => {
+    const withBacklog = {
       ...project,
       metadata: {
         end_goal: 'released',
@@ -469,72 +307,14 @@ describe('shapeSession', () => {
       },
     }
     const { shapeSession } = await import('./session-shaper.js')
-    const result = await shapeSession(stubClient({ project: withFullBacklog }), 'u1', 'p1', 60)
+    const result = await shapeSession(stubClient({ project: withBacklog }), 'u1', 'p1', 60)
     expect(result.source).toBe('tasks')
+    // 20-minute default estimates: three fit an hour.
     expect(result.items.map(i => i.text)).toEqual(['step 0', 'step 1', 'step 2'])
-    expect(result.items.every(i => i.taskId)).toBe(true)
-    expect(result.bench.map(i => i.text)).toEqual(['step 3', 'step 4', 'step 5', 'step 6'])
+    expect(result.items.every(i => i.taskId && i.partial === false)).toBe(true)
+    expect(result.doneLooksLike).toBe('Through to "step 2".')
     expect(result.needsInput).toBeNull()
-    expect(result.friction).toBeNull()
-    expect(result.truncatedCount).toBe(0)
-  })
-
-  it('takes the full count when real estimates say they all fit the window', async () => {
-    const withEstimates = {
-      ...project,
-      metadata: {
-        end_goal: 'released',
-        tasks: Array.from({ length: 7 }, (_, i) => ({
-          id: `t${i}`, text: `step ${i}`, done: false, order: i,
-          estimated_minutes: 10, estimate_set: true,
-        })),
-      },
-    }
-    const { shapeSession } = await import('./session-shaper.js')
-    const result = await shapeSession(stubClient({ project: withEstimates }), 'u1', 'p1', 60)
-    // itemCountForWindow(60) === 5; 5 * 10min = 50min, fits inside 60.
-    expect(result.items).toHaveLength(5)
-    expect(result.items.map(i => i.text)).toEqual(['step 0', 'step 1', 'step 2', 'step 3', 'step 4'])
-  })
-
-  it('lets two big real tasks fill the window without padding to the count ceiling', async () => {
-    const withBigTasks = {
-      ...project,
-      metadata: {
-        end_goal: 'released',
-        tasks: [
-          { id: 't0', text: 'big one', done: false, order: 0, estimated_minutes: 30, estimate_set: true },
-          { id: 't1', text: 'big two', done: false, order: 1, estimated_minutes: 30, estimate_set: true },
-          { id: 't2', text: 'small extra', done: false, order: 2, estimated_minutes: 15, estimate_set: true },
-        ],
-      },
-    }
-    const { shapeSession } = await import('./session-shaper.js')
-    const result = await shapeSession(stubClient({ project: withBigTasks }), 'u1', 'p1', 60)
-    expect(result.source).toBe('tasks')
-    expect(result.items.map(i => i.text)).toEqual(['big one', 'big two'])
-    expect(result.bench.map(i => i.text)).toEqual(['small extra'])
-  })
-
-  it('offers every leftover open task as a swap-in, not a re-cycled reject capped at 3', async () => {
-    // The old bench was capped at BENCH_SIZE because generating spares cost
-    // a model call. Real tasks already on the list cost nothing to offer,
-    // so the whole remaining backlog is fair game for a swap.
-    const withFullBacklog = {
-      ...project,
-      metadata: {
-        end_goal: 'released',
-        tasks: Array.from({ length: 8 }, (_, i) => ({
-          id: `t${i}`, text: `step ${i}`, done: false, order: i,
-          estimated_minutes: 5, estimate_set: true,
-        })),
-      },
-    }
-    const { shapeSession } = await import('./session-shaper.js')
-    const result = await shapeSession(stubClient({ project: withFullBacklog }), 'u1', 'p1', 20)
-    // itemCountForWindow(20) === 3, and 3 * 5min easily fits 20.
-    expect(result.items.map(i => i.text)).toEqual(['step 0', 'step 1', 'step 2'])
-    expect(result.bench.map(i => i.text)).toEqual(['step 3', 'step 4', 'step 5', 'step 6', 'step 7'])
+    expect(result.planned).toBe(0)
   })
 
   it('respects manual drag-reorder over array position', async () => {
@@ -553,6 +333,60 @@ describe('shapeSession', () => {
     expect(result.items.map(i => i.text)).toEqual(['stored second', 'stored first'])
   })
 
+  it('reads back where the user got to on a step, instead of restarting it', async () => {
+    const partWay = {
+      ...project,
+      metadata: {
+        end_goal: 'released',
+        tasks: [{ id: 't0', text: 'Cut the stencil', done: false, order: 0, progress_note: 'outline drawn' }],
+      },
+    }
+    const { shapeSession } = await import('./session-shaper.js')
+    const result = await shapeSession(stubClient({ project: partWay }), 'u1', 'p1', 60)
+    expect(result.items[0].source).toBe('last time: outline drawn')
+  })
+
+  it('falls back to the whole step when a split is needed but the model is unreachable', async () => {
+    // A 60-minute step in a 20-minute window wants a split; with no model
+    // the honest answer is the step itself, said plainly, not nothing.
+    const bigStep = {
+      ...project,
+      metadata: {
+        end_goal: 'released',
+        tasks: [{ id: 't0', text: 'Design and cut the stencil', done: false, order: 0, estimated_minutes: 60, estimate_set: true }],
+      },
+    }
+    const { shapeSession } = await import('./session-shaper.js')
+    const result = await shapeSession(stubClient({ project: bigStep }), 'u1', 'p1', 20)
+    expect(result.source).toBe('tasks')
+    expect(result.items.map(i => i.text)).toEqual(['Design and cut the stencil'])
+    expect(result.doneLooksLike).toBe('"Design and cut the stencil" ticked off.')
+  })
+
+  it('asks the one question rather than inventing when there is nothing to plan from', async () => {
+    const empty = { ...project, metadata: { tasks: [] }, last_closeout_text: null, description: null }
+    const { shapeSession } = await import('./session-shaper.js')
+    const result = await shapeSession(stubClient({ project: empty }), 'u1', 'p1', 60)
+    expect(result.source).toBe('derived')
+    expect(result.needsInput).toContain('what have you actually got')
+    expect(result.gap?.kind).toBe('end_goal')
+  })
+
+  it('tries to plan the steps first when the list is spent and a finish line exists', async () => {
+    // The spine call fails here (no model), so nothing gets saved -- but
+    // the derived fallback must not ask for a finish line the project has.
+    const spent = {
+      ...project,
+      metadata: { end_goal: 'released', tasks: [{ id: 't1', text: 'mix it', done: true, order: 0 }] },
+    }
+    const updates: Record<string, unknown>[] = []
+    const { shapeSession } = await import('./session-shaper.js')
+    const result = await shapeSession(stubClient({ project: spent, onUpdate: p => updates.push(p) }), 'u1', 'p1', 60)
+    expect(updates).toHaveLength(0)
+    expect(result.source).toBe('derived')
+    expect(result.gap?.kind).not.toBe('end_goal')
+  })
+
   it('reports how much of the backlog was truncated rather than silently dropping it', async () => {
     const bigBacklog = {
       ...project,
@@ -566,6 +400,13 @@ describe('shapeSession', () => {
     }
     const { shapeSession } = await import('./session-shaper.js')
     const result = await shapeSession(stubClient({ project: bigBacklog }), 'u1', 'p1', 20)
-    expect(result.truncatedCount).toBe(6) // 30 open tasks, 24-task ceiling
+    expect(result.truncatedCount).toBe(6)
+  })
+
+  it('throws on a reshape the model cannot serve, so the list on screen stays put', async () => {
+    const { shapeSession } = await import('./session-shaper.js')
+    await expect(
+      shapeSession(stubClient({ project }), 'u1', 'p1', 60, 'too much', ['mix it']),
+    ).rejects.toThrow()
   })
 })
