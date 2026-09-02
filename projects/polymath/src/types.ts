@@ -575,6 +575,13 @@ export interface Task {
   order: number
   energy_level?: 'low' | 'moderate' | 'high'
   completed_at?: string
+  estimated_minutes?: number
+  estimate_set?: boolean
+  /** Where a session got to on a step it didn't finish, in the user's own
+   *  words from the close-out. Read back as the re-entry line for that
+   *  step next time, and cleared when it's ticked. */
+  progress_note?: string
+  progress_at?: string
 }
 
 export interface ProjectMetadata {

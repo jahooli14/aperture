@@ -9,15 +9,6 @@ import type { Project } from '../types'
 import { api } from './apiClient'
 import { useProjectIdeasStore, type ProjectIdea } from '../stores/useProjectIdeasStore'
 
-// Every idea prompt ends its pitch with "what done looks like," so that
-// last sentence IS the finish line. Falls back to a concrete line built
-// from the title when the pitch is a single sentence (template ideas).
-export function deriveFinishLine(idea: ProjectIdea): string {
-  const sentences = idea.pitch.split(/(?<=[.!?])\s+/).map(s => s.trim()).filter(Boolean)
-  if (sentences.length >= 2) return sentences[sentences.length - 1]
-  return `${idea.title.replace(/\.$/, '')} exists as a finished thing you can show someone.`
-}
-
 export async function createProjectFromIdea(
   idea: ProjectIdea,
   createProject: (data: Partial<Project>) => Promise<Project>,
@@ -36,24 +27,28 @@ export async function createProjectFromIdea(
   // art, music...), and guessing wrong (this used to hardcode 'Creative')
   // means the project carries the wrong color everywhere it's shown from
   // then on. Leaving it unset falls through to the theme system's
-  // title-hash color instead of a confident wrong label; the user can set
-  // the real type later via shaping, same as the finish line.
-  // Plan the steps backwards from the finish line before the project
-  // exists, so it arrives with a spine rather than an empty list. An empty
-  // project isn't just unhelpful: `is_shaped: false` filters it out of the
-  // priority selector, the warm row and the answer card, so it saves and
-  // then appears to vanish.
-  const endGoal = deriveFinishLine(idea)
+  // title-hash color instead of a confident wrong label.
+  //
+  // One call plans the steps from the idea itself, so the project arrives
+  // with a real list rather than an empty one. An empty project isn't
+  // just unhelpful: `is_shaped: false` filters it out of the priority
+  // selector, the warm row and the answer card, so it saves and then
+  // appears to vanish. A finish line is only kept when the idea genuinely
+  // named one — never derived from the pitch's last sentence, which was
+  // just as likely to be a flourish as a done-condition.
   let tasks: any[] = []
+  let endGoal: string | null = null
+  let tags: string[] = []
   try {
     const shaped = await api.post('utilities?resource=shape-project', {
-      dump: [idea.title, idea.pattern, idea.pitch, idea.next_step].filter(Boolean).join('\n'),
+      dump: [idea.title, idea.pattern, idea.pitch, idea.why_now, idea.next_step].filter(Boolean).join('\n'),
       title: idea.title,
-      end_goal: endGoal,
-    }) as { tasks?: any[] }
+    }) as { tasks?: any[]; end_goal?: string | null; tags?: string[] }
     if (Array.isArray(shaped?.tasks)) tasks = shaped.tasks
+    if (typeof shaped?.end_goal === 'string' && shaped.end_goal.trim()) endGoal = shaped.end_goal.trim()
+    if (Array.isArray(shaped?.tags)) tags = shaped.tags
   } catch (err) {
-    console.warn('[createProjectFromIdea] spine generation failed:', err)
+    console.warn('[createProjectFromIdea] planning failed:', err)
   }
 
   const created = await createProject({
@@ -65,9 +60,9 @@ export async function createProjectFromIdea(
       progress: 0,
       is_shaped: tasks.length > 0,
       from_idea: idea.id,
-      end_goal: endGoal,
-      end_goal_source: 'guide',
-      project_mode: 'completion',
+      ...(endGoal ? { end_goal: endGoal, end_goal_source: 'guide' as const } : {}),
+      project_mode: endGoal ? 'completion' : 'recurring',
+      ...(tags.length ? { tags } : {}),
       // Mark one-hour things so they're distinguishable from full
       // projects (a tonight-sized commitment, not an open-ended one).
       ...(idea.mode === 'hour' ? { scope: 'hour' } : {}),

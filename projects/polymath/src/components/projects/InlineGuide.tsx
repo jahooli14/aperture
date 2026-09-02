@@ -12,7 +12,7 @@
  */
 
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { ArrowUp, Plus, Check, Target, Trash2, Pencil, RotateCcw, FileText } from 'lucide-react'
+import { ArrowUp, Plus, Check, Target, Trash2, Pencil, RotateCcw, FileText, ArrowDownUp } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { supabase } from '../../lib/supabase'
 import type { Project, ChatTurn } from '../../types'
@@ -577,15 +577,16 @@ export function InlineGuide({
   }
 
   const buildSummary = (ops: TaskOp[], goalPending: boolean): string => {
-    const c: Record<string, number> = { add: 0, edit: 0, delete: 0, complete: 0, uncomplete: 0 }
+    const c: Record<string, number> = { add: 0, edit: 0, move: 0, delete: 0, complete: 0, uncomplete: 0 }
     ops.forEach(o => { c[o.action] = (c[o.action] || 0) + 1 })
     const parts: string[] = []
     if (c.add) parts.push(`add ${c.add} task${c.add > 1 ? 's' : ''}`)
     if (c.edit) parts.push(`sharpen ${c.edit}`)
+    if (c.move) parts.push(`reorder ${c.move}`)
     if (c.delete) parts.push(`delete ${c.delete}`)
     if (c.complete) parts.push(`mark ${c.complete} done`)
     if (c.uncomplete) parts.push(`reopen ${c.uncomplete}`)
-    if (goalPending) parts.push('update the finish line')
+    if (goalPending) parts.push('note what done looks like')
     if (parts.length === 0) return ''
     const joined = parts.length === 1
       ? parts[0]
@@ -608,6 +609,15 @@ export function InlineGuide({
         return { label: 'Delete task', preview: existingText, icon: Trash2, destructive: true }
       case 'edit':
         return { label: 'Edit task', preview: `"${existingText}" → "${op.newText || ''}"`, icon: Pencil, destructive: false }
+      case 'move': {
+        const target = op.afterTaskId ? tasks.find(t => t.id === op.afterTaskId) : undefined
+        return {
+          label: 'Reorder',
+          preview: target ? `"${existingText}" goes after "${target.text}"` : `"${existingText}" goes first`,
+          icon: ArrowDownUp,
+          destructive: false,
+        }
+      }
     }
   }
 

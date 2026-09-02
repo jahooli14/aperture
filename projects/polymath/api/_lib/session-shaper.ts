@@ -41,7 +41,7 @@ import { pickGap, genericGapQuestion, type Gap } from './session-gap.js'
 import { openTasksInOrder, selectByBudget, type BudgetTask } from './session-budget.js'
 import { nearestEstimate, type EstimateMinutes } from './session-estimate.js'
 import { splitStep, doneLineForSteps, sanitizeDoneLooksLike } from './session-split.js'
-import { generateTaskSpine, toStoredTasks } from './task-spine.js'
+import { generateTaskSpine, generateFirstCutTasks, toStoredTasks } from './task-spine.js'
 import { normalizeTaskOrder } from './task-order.js'
 
 export { isAdminItem, sanitizeItems, sanitizeRawItems, dedupeSimilar } from './session-items.js'
@@ -344,24 +344,31 @@ export async function shapeSession(
     .map(f => ({ text: f.text as string, date: shortDate(f.created_at), role: f.role as string | null }))
 
   // ── An empty plan gets planned, not padded ────────────────────────
-  // The list is the golden source for a session. When it's spent and the
-  // project has a finish line, the right move is the same backwards pass
-  // that built it, run over everything learned since -- once, here, so
-  // the session that follows is made of real steps rather than of
-  // whatever a session-sized prompt could invent.
+  // The list is the golden source for a session. When it's spent, the
+  // right move is to plan the next steps -- backwards from the finish line
+  // when the user gave one, forwards from what the project is and where
+  // it got to when they didn't -- once, here, so the session that follows
+  // is made of real steps rather than of whatever a session-sized prompt
+  // could invent.
   let planned = 0
   const openNow = allTasks.filter(t => t && !t.done && typeof t.text === 'string' && typeof t.id === 'string')
-  if (openNow.length === 0 && metadata.end_goal && !instruction) {
+  if (openNow.length === 0 && !instruction) {
     const said = [
-      project.description, project.last_closeout_text,
+      project.last_closeout_text,
       ...pastCloseouts.map(c => c.text), ...shapingTurns, ...fragments.map(f => f.text),
     ].filter((t): t is string => typeof t === 'string' && t.trim().length > 0)
-    const steps = await generateTaskSpine({
-      title: project.title,
-      endGoal: metadata.end_goal,
-      said,
-      existingSteps: [],
-    })
+    const steps = metadata.end_goal
+      ? await generateTaskSpine({
+          title: project.title,
+          endGoal: metadata.end_goal,
+          said: [project.description, ...said].filter((t): t is string => !!t),
+          existingSteps: [],
+        })
+      : await generateFirstCutTasks({
+          title: project.title,
+          description: project.description || '',
+          said,
+        })
     if (steps.length > 0) {
       const doneTasks = allTasks.filter(t => t?.done)
       allTasks = normalizeTaskOrder([...doneTasks, ...toStoredTasks(steps, new Date(), doneTasks.length)])
@@ -401,6 +408,7 @@ export async function shapeSession(
   const confidence = confidenceFor({
     endGoal: metadata.end_goal ?? null,
     endGoalSource: metadata.end_goal_source ?? null,
+    description: project.description ?? null,
     lastCloseout: project.last_closeout_text ?? null,
     lastSessionEndedAt: project.last_session_ended_at ?? null,
     movedSessionCount: pastCloseouts.length,

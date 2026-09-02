@@ -123,8 +123,6 @@ export function TodaysAnswerCard() {
     }
   }, [priorityProjectId])
 
-  const [plan, setPlan] = useState<any>(null)
-
   const [engaged, setEngaged] = useState(false)
   // Shared with ProjectIdeasHome — same cache, same fetch. In practice
   // ProjectIdeasHome's own mount-time load usually wins the race, so
@@ -177,22 +175,6 @@ export function TodaysAnswerCard() {
     // off-screen above them.
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }, [startRequestId, focusProject?.id])
-
-  useEffect(() => {
-    if (!focusProject) { setPlan(null); return }
-    let cancelled = false
-    ;(async () => {
-      try {
-        const res = await fetch(`/api/power-hour?projectId=${focusProject.id}&duration=60`)
-        if (!res.ok || cancelled) return
-        const data = await res.json()
-        if (data.tasks?.[0] && !cancelled) setPlan(data.tasks[0])
-      } catch {}
-    })()
-    return () => { cancelled = true }
-    // Refetch only when the project id changes.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [focusProject?.id])
 
   const summaries = useMemo(() => toPortfolioSummaries(
     allProjects.filter(p => p.status !== 'completed' && p.status !== 'graveyard' && p.metadata?.is_shaped !== false)
@@ -347,12 +329,19 @@ export function TodaysAnswerCard() {
   // so it outranks any generated plan text when it exists.
   const reEntry = focusProject.last_closeout_text?.trim() || null
 
-  const headline = plan?.task_title || focusProject.metadata?.session_headline
-  const pitch = plan?.task_description || focusProject.metadata?.session_pitch
+  // The next step on the project's own list, in plan order — the exact
+  // thing the session will open with. This used to be a separate Power
+  // Hour call that generated its own headline, so home promised one thing
+  // and the session then proposed another. One plan, one answer.
+  const nextStep = [...(focusProject.metadata?.tasks ?? [])]
+    .filter((t: any) => t && !t.done && typeof t.text === 'string')
+    .sort((a: any, b: any) => (typeof a.order === 'number' ? a.order : 0) - (typeof b.order === 'number' ? b.order : 0))[0]
   // Only surface a preview when we actually know what's next. Generic
   // "continue where you left off" copy is exactly the analyst voice
   // CLAUDE.md forbids — stay quiet when there's nothing real to say.
-  const answer = headline || focusProject.metadata?.tasks?.find((t: any) => !t.done)?.text
+  const answer = nextStep?.text
+  // Where they got to on it last time, when a close-out said so.
+  const pitch = typeof nextStep?.progress_note === 'string' ? `Last time: ${nextStep.progress_note}` : null
 
   const dormancyDays = Math.floor(
     (Date.now() - new Date(focusProject.last_active || focusProject.updated_at || 0).getTime()) / 86_400_000
@@ -476,7 +465,7 @@ export function TodaysAnswerCard() {
         ) : answer ? (
           <div className="p-3 rounded-xl mb-4" style={{ background: 'rgba(255,255,255,0.045)' }}>
             <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-[var(--brand-text-secondary)] opacity-40 mb-1">
-              {headline ? "today's answer" : "what's next"}
+              what&apos;s next
             </p>
             <p
               className="text-[17px] leading-[1.4] line-clamp-2 mb-1"

@@ -363,28 +363,29 @@ describe('shapeSession', () => {
     expect(result.doneLooksLike).toBe('"Design and cut the stencil" ticked off.')
   })
 
-  it('asks the one question rather than inventing when there is nothing to plan from', async () => {
+  it('asks for the first real thing, never for a finish line, when there is nothing to plan from', async () => {
     const empty = { ...project, metadata: { tasks: [] }, last_closeout_text: null, description: null }
     const { shapeSession } = await import('./session-shaper.js')
     const result = await shapeSession(stubClient({ project: empty }), 'u1', 'p1', 60)
     expect(result.source).toBe('derived')
-    expect(result.needsInput).toContain('what have you actually got')
-    expect(result.gap?.kind).toBe('end_goal')
+    expect(result.needsInput).toContain('first thing that has to exist')
+    expect(result.gap?.kind).toBe('first_step')
   })
 
-  it('tries to plan the steps first when the list is spent and a finish line exists', async () => {
-    // The spine call fails here (no model), so nothing gets saved -- but
-    // the derived fallback must not ask for a finish line the project has.
+  it('plans the steps first when the list is spent, with or without a finish line', async () => {
+    // The generation call fails here (no model), so nothing gets saved --
+    // the point is that it TRIES on a project with no end_goal too, which
+    // it used to skip entirely.
     const spent = {
       ...project,
-      metadata: { end_goal: 'released', tasks: [{ id: 't1', text: 'mix it', done: true, order: 0 }] },
+      metadata: { tasks: [{ id: 't1', text: 'mix it', done: true, order: 0 }] },
     }
     const updates: Record<string, unknown>[] = []
     const { shapeSession } = await import('./session-shaper.js')
     const result = await shapeSession(stubClient({ project: spent, onUpdate: p => updates.push(p) }), 'u1', 'p1', 60)
     expect(updates).toHaveLength(0)
     expect(result.source).toBe('derived')
-    expect(result.gap?.kind).not.toBe('end_goal')
+    expect(result.planned).toBe(0)
   })
 
   it('reports how much of the backlog was truncated rather than silently dropping it', async () => {

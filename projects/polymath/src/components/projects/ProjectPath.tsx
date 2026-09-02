@@ -355,6 +355,18 @@ export function ProjectPath({ tasks, highlightedTasks = [], onUpdate, projectId 
                                   >
                                     <MarkdownRenderer content={task.text} className="text-[14px] leading-snug [&_p]:m-0" />
                                   </div>
+                                  {/* Where a session got to without
+                                      finishing it — the user's own words,
+                                      so picking it back up doesn't mean
+                                      re-reading the whole step. */}
+                                  {task.progress_note && (
+                                    <p
+                                      className="text-[11px] leading-snug mt-0.5 italic"
+                                      style={{ color: 'var(--brand-text-secondary)', opacity: 0.5 }}
+                                    >
+                                      {task.progress_note}
+                                    </p>
+                                  )}
                                   <div className="flex items-center gap-2 mt-0.5">
                                     <button
                                       onClick={(e) => { e.stopPropagation(); handleEstimateChange(task.id, task.estimated_minutes) }}

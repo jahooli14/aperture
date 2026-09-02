@@ -2,6 +2,7 @@
  * Utilities API - Consolidated endpoint for small utility functions
  *
  * Resources in one file (respecting 12-API cap):
+ *   POST ?resource=shape-project            — One dump in, a whole project out (title, labels, steps)
  *   POST ?resource=upload-image             — Generate signed upload URL for images
  *   GET  ?resource=book-search&q=...        — Google Books auto-complete
  *   POST ?resource=analyze                  — Analyse onboarding transcripts → themes, insight, project suggestions
@@ -72,7 +73,7 @@ function getCronUserId(req: VercelRequest): string | null {
 }
 
 const EXECUTION_SESSIONS_RESOURCES = new Set([
-  'shape', 'shape-project', 'first-cut-tasks', 'replan',
+  'shape', 'shape-project', 'replan',
   'start', 'close', 'pending-closeout', 'log-retro', 'declare-live',
   'live-reask', 'different-thing-status', 'harvest', 'mirror', 'book',
 ])
@@ -1110,15 +1111,16 @@ function detectSessionBriefPhase(
   tasks: SessionBriefTask[],
   daysSinceActive: number,
   projectAge: number,
-  hasGoal: boolean,
-  hasMotivation: boolean,
 ): SessionBrief['phase'] {
   const total = tasks.length
   const done = tasks.filter(t => t.done).length
   const progress = total > 0 ? done / total : 0
+  // An empty list is the only "shaping" state now. A project used to be
+  // called unshaped for having no finish line, which described most
+  // ongoing crafts and made the app open by telling them so.
+  if (total === 0) return 'shaping'
   if (daysSinceActive >= 14) return 'stale'
-  if (projectAge <= 3 || total === 0) return 'shaping'
-  if (total <= 3 && !hasGoal && !hasMotivation) return 'shaping'
+  if (projectAge <= 3) return 'fresh'
   if (progress >= 0.75 && total >= 3) return 'closing'
   return 'building'
 }
@@ -1210,13 +1212,7 @@ async function handleSessionBrief(req: VercelRequest, res: VercelResponse) {
     t => t.done && t.completed_at && new Date(t.completed_at).getTime() > sevenDaysAgo,
   )
 
-  const phase = detectSessionBriefPhase(
-    tasks,
-    daysSinceActive,
-    projectAge,
-    !!project.metadata?.end_goal,
-    !!project.metadata?.motivation,
-  )
+  const phase = detectSessionBriefPhase(tasks, daysSinceActive, projectAge)
   const momentum = detectSessionBriefMomentum(daysSinceActive, recentCompletions.length)
 
   const nudgePromise = findSessionBriefKnowledgeNudge(
@@ -1245,7 +1241,7 @@ async function handleSessionBrief(req: VercelRequest, res: VercelResponse) {
 PROJECT: ${project.title}
 ${project.description ? `DESCRIPTION: ${project.description}` : ''}
 ${project.metadata?.motivation ? `WHY: ${project.metadata.motivation}` : ''}
-${project.metadata?.end_goal ? `FINISH LINE: ${project.metadata.end_goal}` : 'FINISH LINE: NOT SET'}
+${project.metadata?.end_goal ? `DONE LOOKS LIKE: ${project.metadata.end_goal}` : 'DONE: not stated — may be an ongoing thing, which is fine'}
 
 PHASE: ${phase} (${SESSION_BRIEF_PHASE_LABELS[phase]})
 MOMENTUM: ${momentum}
@@ -1259,30 +1255,23 @@ ${completionSummary}
 STATE-SPECIFIC INSTRUCTIONS — follow exactly
 ═══════════════════════════════════════════════════════════════════
 
-${!hasGoal ? `THIS PROJECT HAS NO FINISH LINE SET. That's the only thing that matters right now.
-- greeting: Name the problem directly (2 sentences max). "${project.title} doesn't have a finish line yet — so we can't tell when it's done. Let's fix that first."
-- focusSuggestion: "Define what 'done' looks like for ${project.title}."
-- proactiveQuestion: A concrete, grounded question that pulls on what a finished version would look like. Choose the one that fits best:
-    • "When you picture this finished — what are you actually looking at? A shipped site? A working prototype? A published piece?"
-    • "Is this done when YOU can use it, or when someone else can?"
-    • "What's the one artifact that'd let you happily close the tab on this?"
-  Pick ONE question. Don't stack them.
-` : !hasTasks ? `FINISH LINE IS SET BUT NO TASKS YET.
-- greeting: Reference the finish line by name. "Finish line is '[goal]'. Nothing on the task list yet — first move?"
-- focusSuggestion: Name the single most obvious first step given the finish line.
-- proactiveQuestion: "What's the very first thing you need to do to get to '[finish line]'?"
+${!hasTasks ? `NOTHING ON THE LIST YET.
+- greeting: Say that plainly in one line, and name what this project is, so the next line has something to hang off.
+- focusSuggestion: Name the single most obvious first move, from what they've said about it.
+- proactiveQuestion: "What's the first thing that has to exist for ${project.title}?"
+Do NOT ask what done looks like. Plenty of real projects are ongoing and have no "done" — asking makes them invent one.
 ` : phase === 'stale' ? `THEY'VE BEEN AWAY FOR ${daysSinceActive} DAYS.
-- greeting: Acknowledge the gap honestly, reference the finish line, suggest the smallest thing they could do right now.
+- greeting: Acknowledge the gap honestly and name the next step on the list, so picking it up is one decision, not two.
 - focusSuggestion: One tiny concrete thing — not "get back into it" but e.g. "Open the file and read the last paragraph you wrote."
 - proactiveQuestion: "What's actually blocking you from [specific next task]?"
-` : phase === 'closing' ? `HOME STRETCH — ${progressPercent}% done.
-- greeting: Tell them how close they are, name what's left.
+` : phase === 'closing' ? `HOME STRETCH — ${progressPercent}% of the current list done.
+- greeting: Name what's left on the list.
 - focusSuggestion: Name the specific remaining task most likely to close this out.
-- proactiveQuestion: "What's the LAST thing standing between you and done?"
-` : `BUILDING PHASE — tasks in flight toward a set finish line.
-- greeting: Reference what they last did or the next obvious task by name.
-- focusSuggestion: Name the specific task to do this session.
-- proactiveQuestion: ONE practical question. Examples: "Is [next task] actually the right next move, or are you avoiding [harder task]?" / "Does [next task] still fit the finish line, or has that changed?"
+- proactiveQuestion: "What's the last thing on this list you'd want out of the way?"
+` : `BUILDING — steps in flight.
+- greeting: Reference what they last did or the next step by name.
+- focusSuggestion: Name the specific step to do this session.
+- proactiveQuestion: ONE practical question. Examples: "Is [next task] actually the right next move, or are you avoiding [harder task]?" / "Does [next task] still need doing, or has it moved on?"
 `}
 
 Rules for ALL states:
@@ -1290,7 +1279,8 @@ ${CHAT_TURN_RULES}
 ${PLAIN_ENGLISH_RULES}
 - No filler. No "Great to see you", "Welcome back", "Let's dive in", "Let's explore".
 - Short sentences. Say it straight. Second person ("you").
-- Always reference specific tasks or the finish line by name. Never be vague.
+- Always reference specific steps by name. Never be vague.
+- Never ask what done looks like${hasGoal ? '' : ' — this project may be an ongoing thing with no end, and that is fine'}.
 - Don't stack questions with "and".
 
 Return JSON only:
@@ -1316,10 +1306,10 @@ Return JSON only:
     proactiveQuestion = (parsed.proactiveQuestion || '').trim()
   } catch {
     greeting = 'Ready to pick up where you left off.'
-    focusSuggestion = incompleteTasks[0]?.text || 'Define what you want to build.'
-    proactiveQuestion = !project.metadata?.end_goal
-      ? 'What does done actually look like for this?'
-      : 'What would you work on if you had 30 minutes right now?'
+    focusSuggestion = incompleteTasks[0]?.text || 'Say what the first move is and it will plan from there.'
+    proactiveQuestion = incompleteTasks[0]
+      ? 'What would you work on if you had 30 minutes right now?'
+      : `What's the first thing that has to exist for ${project.title}?`
   }
 
   const brief: SessionBrief = {
@@ -1858,15 +1848,16 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
   const resource = req.query.resource as string
 
   // ─── START ──────────────────────────────────────────────────────────
-  // ─── SHAPE-PROJECT (capture: one dump in, a whole project out) ──────
-  // The old path created a project with `tasks: []` and threw the
-  // conversation away, so everything the user had just explained was lost
-  // and the app asked again next session. This keeps all of it: the words
-  // become evidence, the goal becomes the thing the spine plans back from,
-  // and the spine becomes real tasks.
+  // ─── SHAPE-PROJECT (one dump in, a whole project out) ───────────────
+  // ONE call for every creation path: title, what it is, labels, the
+  // finish line IF they said one, and the first steps in order. It used
+  // to be two calls with a gate between them -- extract, and then plan
+  // the steps only when a finish line had been found -- which left every
+  // open-ended project with an empty list and asked "what does done look
+  // like?" at people who were describing an ongoing craft.
   if (resource === 'shape-project') {
     if (req.method !== 'POST') return res.status(405).json({ error: 'POST required' })
-    const { dump, title: givenTitle, end_goal: givenGoal } = req.body || {}
+    const { dump, title: givenTitle } = req.body || {}
     if (typeof dump !== 'string' || !dump.trim()) {
       return res.status(400).json({ error: 'dump required' })
     }
@@ -1886,62 +1877,17 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
       const shaped = await shapeProjectFromDump(dump, existingTags)
       if (!shaped) return res.status(422).json({ error: "Couldn't make sense of that." })
 
-      const title = (typeof givenTitle === 'string' && givenTitle.trim()) || shaped.title
-      // The extraction wins when it found one -- it's checked against the
-      // dump (project-shaping.ts refuses to invent a finish line the user
-      // didn't say), where a caller-supplied value is often just a loose
-      // pitch that hasn't been validated as an actual done-condition at
-      // all. The caller's value is only the fallback for when the dump
-      // genuinely didn't contain one. Precedence used to run the other way,
-      // which meant this whole extraction step never did anything on the
-      // one call site that always supplies both fields.
-      const endGoal = shaped.endGoal || (typeof givenGoal === 'string' && givenGoal.trim()) || null
-
-      // No goal means nothing to plan backwards from, so don't guess a
-      // spine -- hand back the one question instead.
-      const steps = endGoal
-        ? await generateTaskSpine({ title, endGoal, said: [dump] })
-        : []
-
       return res.status(200).json({
-        title,
-        end_goal: endGoal,
+        title: (typeof givenTitle === 'string' && givenTitle.trim()) || shaped.title,
+        end_goal: shaped.endGoal,
         summary: shaped.summary,
         tags: shaped.tags,
-        tasks: toStoredTasks(steps),
-        question: endGoal ? null : shaped.question,
+        tasks: toStoredTasks(shaped.steps),
+        question: shaped.question,
       })
     } catch (e) {
       const message = e instanceof Error ? e.message : 'Could not shape that project.'
       console.error('[utilities/shape-project] failed:', message)
-      return res.status(500).json({ error: message })
-    }
-  }
-
-  // ─── FIRST CUT (3 broad tasks for a brand-new project, no finish line) ─
-  // A new project doesn't get a spine planned backwards from a "done" it
-  // doesn't have — it gets a description-anchored first move, loose on
-  // purpose. Kept separate from shape-project (which still does its own
-  // title/tag extraction for the quick-add path): this resource takes an
-  // already-agreed title and description and only generates the tasks.
-  if (resource === 'first-cut-tasks') {
-    if (req.method !== 'POST') return res.status(405).json({ error: 'POST required' })
-    const { title, description, said } = req.body || {}
-    if (typeof title !== 'string' || !title.trim()) return res.status(400).json({ error: 'title required' })
-    if (typeof description !== 'string' || !description.trim()) {
-      return res.status(200).json({ tasks: [] })
-    }
-
-    try {
-      const steps = await generateFirstCutTasks({
-        title: title.trim(),
-        description: description.trim(),
-        said: Array.isArray(said) ? said.filter((x: unknown): x is string => typeof x === 'string') : [],
-      })
-      return res.status(200).json({ tasks: toStoredTasks(steps) })
-    } catch (e) {
-      const message = e instanceof Error ? e.message : 'Could not shape the first tasks.'
-      console.error('[utilities/first-cut-tasks] failed:', message)
       return res.status(500).json({ error: message })
     }
   }
@@ -1978,12 +1924,21 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
       ].filter((t): t is string => typeof t === 'string' && t.trim().length > 0)
 
       const existingTasks: any[] = Array.isArray(metadata.tasks) ? metadata.tasks : []
-      const steps = await generateTaskSpine({
-        title: project.title,
-        endGoal: metadata.end_goal ?? null,
-        said,
-        existingSteps: existingTasks.filter(t => !t?.done).map(t => t?.text).filter(Boolean),
-      })
+      // Backwards from the finish line when the user gave one; forwards
+      // from what the project is and where it got to when they didn't.
+      // A project with no "done" is not a project that can't be planned.
+      const steps = metadata.end_goal
+        ? await generateTaskSpine({
+            title: project.title,
+            endGoal: metadata.end_goal,
+            said,
+            existingSteps: existingTasks.filter(t => !t?.done).map(t => t?.text).filter(Boolean),
+          })
+        : await generateFirstCutTasks({
+            title: project.title,
+            description: project.description || '',
+            said,
+          })
 
       if (steps.length === 0) {
         return res.status(200).json({ tasks: existingTasks, added: 0 })
@@ -2439,21 +2394,28 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
     let finish: { reached: boolean; reason: string } | null = null
     const openLeft = tasks.filter(t => t && !t.done).length
     const endGoal = typeof currentMetadata?.end_goal === 'string' ? currentMetadata.end_goal.trim() : ''
-    if (tasksChanged && openLeft === 0 && endGoal && markedDoneTexts.length > 0) {
-      const { data: closeoutRows } = await supabase
-        .from('sessions')
-        .select('closeout_text')
-        .eq('project_id', session.project_id)
-        .eq('user_id', userId)
-        .not('closeout_text', 'is', null)
-        .order('ended_at', { ascending: false })
-        .limit(6)
-      finish = await judgeFinishLine({
-        title: projRow?.title || 'this project',
-        endGoal,
-        doneTasks: normalizeTaskOrder(tasks).filter(t => t?.done && typeof t.text === 'string').map(t => t.text),
-        closeouts: (closeoutRows || []).map(r => r.closeout_text as string).filter(Boolean),
-      })
+    if (tasksChanged && openLeft === 0 && markedDoneTexts.length > 0) {
+      if (endGoal) {
+        const { data: closeoutRows } = await supabase
+          .from('sessions')
+          .select('closeout_text')
+          .eq('project_id', session.project_id)
+          .eq('user_id', userId)
+          .not('closeout_text', 'is', null)
+          .order('ended_at', { ascending: false })
+          .limit(6)
+        finish = await judgeFinishLine({
+          title: projRow?.title || 'this project',
+          endGoal,
+          doneTasks: normalizeTaskOrder(tasks).filter(t => t?.done && typeof t.text === 'string').map(t => t.text),
+          closeouts: (closeoutRows || []).map(r => r.closeout_text as string).filter(Boolean),
+        })
+      } else {
+        // No stated finish line, so there is nothing to judge against --
+        // but the list emptying is still worth saying, as a fact. The
+        // next session plans the next steps either way.
+        finish = { reached: false, reason: "That's everything on the list." }
+      }
     }
 
     // A brief receipt of what actually happened to the task list -- shown

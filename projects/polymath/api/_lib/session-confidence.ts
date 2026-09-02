@@ -20,10 +20,14 @@
 export type Confidence = 'thin' | 'partial' | 'known'
 
 export interface ConfidenceInput {
-  /** metadata.end_goal -- what done looks like, in the user's words. */
+  /** metadata.end_goal -- what done looks like, in the user's words.
+   *  Often null, and legitimately so: an ongoing craft has no "done". */
   endGoal: string | null
   /** metadata.end_goal_source -- set when a person wrote or confirmed it. */
   endGoalSource: string | null
+  /** What the project is, in the user's words. Stands in for the finish
+   *  line when there isn't one. */
+  description?: string | null
   /** projects.last_closeout_text + last_session_ended_at. */
   lastCloseout: string | null
   lastSessionEndedAt: string | null
@@ -44,9 +48,13 @@ const STALE_CLOSEOUT_DAYS = 45
 export function confidenceScore(input: ConfidenceInput, now: Date = new Date()): number {
   let score = 0
 
-  // A finish line is the single most useful thing to reason backwards from,
-  // and worth more when a person wrote it rather than a model guessing.
+  // Knowing what the project IS. A stated finish line is the strongest
+  // form of it (and worth more when a person wrote it), but a described
+  // project with no "done" is not an unknown one -- plenty of real
+  // projects are ongoing, and scoring them as thin made the app refuse to
+  // say anything specific about the ones it knew best.
   if (input.endGoal?.trim()) score += input.endGoalSource ? 2 : 1
+  else if (input.description?.trim()) score += 1
 
   if (input.lastCloseout?.trim()) {
     const endedAt = input.lastSessionEndedAt ? new Date(input.lastSessionEndedAt) : null

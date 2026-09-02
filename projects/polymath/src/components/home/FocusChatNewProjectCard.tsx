@@ -52,8 +52,8 @@ export function FocusChatNewProjectCard({ proposal, resolved, dismissed, onResol
         .filter(Boolean)
         .join('\n')
 
-      // One call: extract the shape, then plan the steps backwards from
-      // whatever finish line it found. Falls back to the proposal's own
+      // One call: the shape and the first steps, in order, out of what was
+      // actually said in the thread. Falls back to the proposal's own
       // fields if it can't — a project the user asked for always gets
       // created, it just arrives thinner.
       let shaped: {
@@ -64,7 +64,6 @@ export function FocusChatNewProjectCard({ proposal, resolved, dismissed, onResol
         shaped = (await api.post('utilities?resource=shape-project', {
           dump,
           title: proposal.title,
-          end_goal: proposal.pitch,
         })) as typeof shaped
       } catch (err) {
         console.warn('[FocusChat] shaping failed, creating with what we have:', err)
@@ -92,9 +91,11 @@ export function FocusChatNewProjectCard({ proposal, resolved, dismissed, onResol
           // answer card — which is exactly why it looked like it saved and
           // then vanished.
           is_shaped: tasks.length > 0,
-          end_goal: shaped.end_goal ?? proposal.pitch,
-          end_goal_source: 'guide',
-          project_mode: 'completion',
+          // Only when the conversation actually said what done looks
+          // like. The pitch was being stored as a finish line, which is a
+          // sales line, not a done-condition.
+          ...(shaped.end_goal ? { end_goal: shaped.end_goal, end_goal_source: 'guide' as const } : {}),
+          project_mode: shaped.end_goal ? 'completion' : 'recurring',
           ...(shaped.tags?.length ? { tags: shaped.tags } : {}),
           // Kept verbatim: the shaper reads the user's turns back as
           // evidence, so the project stays explainable months later.

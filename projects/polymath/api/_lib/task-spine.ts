@@ -22,7 +22,6 @@
  *     born -- a spine is the thing every later session cites.
  */
 
-import type { SupabaseClient } from '@supabase/supabase-js'
 import { generateText } from './gemini-chat.js'
 import { PLAIN_ENGLISH_RULES } from './plain-english.js'
 import { filterGrounded, type Evidence } from './session-grounding.js'
@@ -287,14 +286,6 @@ export async function generateTaskSpine(input: SpineInput): Promise<SpineStep[]>
     console.error('[task-spine] generation failed:', e)
     return []
   }
-}
-
-/** Convenience for the create paths: spine straight into stored tasks. */
-export async function generateStoredSpine(
-  _supabase: SupabaseClient | null,
-  input: SpineInput,
-): Promise<StoredTask[]> {
-  return toStoredTasks(await generateTaskSpine(input))
 }
 
 /**

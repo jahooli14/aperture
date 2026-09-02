@@ -881,7 +881,12 @@ export function ProjectDetailPage() {
                 </button>
               )}
 
-              {/* Finish Line */}
+              {/* What done looks like — only when the user has actually
+                  said. An empty "What does done look like?" box on every
+                  project is the question this app doesn't ask: plenty of
+                  real projects are ongoing and have no end. Tap the label
+                  under the title to add one if you want it. */}
+              {(project.metadata?.end_goal || editingGoal) && (
               <div
                 data-finish-line
                 className="p-5 sm:p-6 rounded-2xl transition-all duration-700"
@@ -892,7 +897,7 @@ export function ProjectDetailPage() {
                 }}
               >
                 <span className="text-[11px] font-medium tracking-wide mb-2 flex items-center gap-1.5 lowercase" style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.5 }}>
-                  <Target className="h-3 w-3" /> finish line
+                  <Target className="h-3 w-3" /> done when
                   {project.metadata?.end_goal_source === 'guide' && (
                     <span style={{ opacity: 0.7 }}>· via guide</span>
                   )}
@@ -922,11 +927,12 @@ export function ProjectDetailPage() {
                     </div>
                   ) : (
                     <p className="text-[15px] sm:text-base font-medium leading-relaxed italic font-serif text-center" style={{ color: 'var(--brand-text-primary)', opacity: 0.6 }}>
-                      {project.metadata?.end_goal || <span style={{ opacity: 0.4 }}>What does done look like?</span>}
+                      {project.metadata?.end_goal}
                     </p>
                   )}
                 </div>
               </div>
+              )}
 
               {/* "A new angle" — the Mode 2b reshape, generated nightly for dormant
                   projects from post-original signals. Only shows when there's a real
@@ -988,44 +994,47 @@ export function ProjectDetailPage() {
                   boxShadow: flashTarget === 'tasks' ? '0 0 0 1px rgba(var(--brand-primary-rgb),0.4), 0 0 24px rgba(var(--brand-primary-rgb),0.15)' : 'none',
                 }}
               >
-                {/* All Tasks Complete Banner */}
-                {tasks.length > 0 && tasks.every((t: any) => t.done) && (
-                  <div className="mb-5 p-5 rounded-2xl text-center" style={{ background: 'rgba(var(--brand-primary-rgb),0.06)', border: '1px solid rgba(var(--brand-primary-rgb),0.12)' }}>
-                    <p className="text-[15px] font-bold text-brand-primary mb-1">All tasks complete</p>
-                    <p className="text-[13px] mb-4" style={{ color: 'var(--brand-text-secondary)', opacity: 0.5 }}>Every task is done. Mark this project complete?</p>
-                    <button
-                      onClick={() => handleStatusChange('completed')}
-                      className="px-5 py-2.5 rounded-xl text-[12px] font-semibold transition-all active:scale-95"
-                      style={{ background: 'rgba(var(--brand-primary-rgb),0.1)', border: '1px solid rgba(var(--brand-primary-rgb),0.2)', color: 'rgb(var(--brand-primary-rgb))' }}
-                    >
-                      Mark Complete
-                    </button>
-                  </div>
-                )}
-
-                {/* Offered when the plan is spent — every step ticked, or
-                    there was never one. A project with a finish line and
-                    nothing to do next is the state where people quietly
-                    stop opening it. */}
+                {/* The plan is spent — every step ticked, or there was
+                    never one. One statement, one action, one quiet way
+                    out: a finished LIST is not a finished PROJECT, so
+                    planning what's next leads and finishing is the quiet
+                    option underneath, never two buttons competing. */}
                 {(() => {
                   const allTasks = project.metadata?.tasks || []
                   const spent = allTasks.length === 0 || allTasks.every((t: any) => t?.done)
                   if (!spent || project.status === 'completed' || project.status === 'graveyard') return null
+                  const everDid = allTasks.length > 0
                   return (
-                    <button
-                      onClick={handleReplan}
-                      disabled={replanning}
-                      className="w-full py-3 rounded-2xl text-[12px] font-semibold uppercase tracking-widest transition-all active:scale-[0.99] disabled:opacity-50"
-                      style={{
-                        background: 'rgba(var(--brand-primary-rgb),0.10)',
-                        border: '1px solid rgba(var(--brand-primary-rgb),0.28)',
-                        color: 'rgb(var(--brand-primary-rgb))',
-                      }}
-                    >
-                      {replanning
-                        ? 'Working back from the finish line…'
-                        : allTasks.length === 0 ? 'Plan the steps' : 'Plan what comes next'}
-                    </button>
+                    <div className="mb-5 space-y-2">
+                      {everDid && (
+                        <p className="text-[13px] text-center" style={{ color: 'var(--brand-text-secondary)', opacity: 0.55 }}>
+                          Everything on the list is done.
+                        </p>
+                      )}
+                      <button
+                        onClick={handleReplan}
+                        disabled={replanning}
+                        className="w-full py-3 rounded-2xl text-[12px] font-semibold uppercase tracking-widest transition-all active:scale-[0.99] disabled:opacity-50"
+                        style={{
+                          background: 'rgba(var(--brand-primary-rgb),0.10)',
+                          border: '1px solid rgba(var(--brand-primary-rgb),0.28)',
+                          color: 'rgb(var(--brand-primary-rgb))',
+                        }}
+                      >
+                        {replanning
+                          ? 'Working out what comes next…'
+                          : everDid ? 'Plan what comes next' : 'Plan the steps'}
+                      </button>
+                      {everDid && (
+                        <button
+                          onClick={() => handleStatusChange('completed')}
+                          className="w-full text-[12px] py-1"
+                          style={{ color: 'var(--brand-text-secondary)', opacity: 0.5 }}
+                        >
+                          or mark it finished
+                        </button>
+                      )}
+                    </div>
                   )
                 })()}
 

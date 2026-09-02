@@ -135,9 +135,14 @@ Decomposition is the value, not history. History makes it faster, not real.
 You never write a to-do list. One planning model, three altitudes, and a session is
 only ever the bottom one:
 
-1. **The finish line** — what done looks like, in the user's words. Every creation
-   path keeps it or asks the one question that gets it.
-2. **The steps** — the spine (`task-spine.ts`), planned backwards from the finish line,
+1. **What done looks like** — in the user's words, and **never asked for**. Plenty of
+   real projects are ongoing (DJing, a sketchbook habit) and have no "done"; asking
+   makes people invent one and then rewrite it forever. It is kept when volunteered
+   and used to plan backwards; when it's absent the steps are planned *forwards* from
+   what the project is and where it got to. Its absence is never a gate, a warning,
+   or an empty field on a card.
+2. **The steps** — the spine (`task-spine.ts`), planned backwards from the finish line
+   when there is one and forwards from the description when there isn't,
    each declaring what it comes `after`. A topological sort enforces that, so "peel the
    stencil off" can never sit above "cut the stencil". Every stored task carries an
    explicit `order` (`task-order.ts`); what a close-out says comes *next* goes to the
@@ -150,8 +155,23 @@ only ever the bottom one:
    bench. Saying what's wrong with the list reshapes it by voice, and every line the
    reshape returns must cite a real step or the words just spoken.
 
-An empty list with a finish line gets *planned* (the spine, run again over everything
-learned since), not padded. An empty list with no finish line gets the one question.
+An empty list gets *planned* — the same pass that built it, run again over everything
+learned since — not padded with session-sized invention. Only when there is genuinely
+nothing to plan from does it ask, and it asks for the first real thing
+(`session-gap.ts`), never for a finish line.
+
+### Making a project (one call)
+
+Capture is one screen, not three: say it (voice, listening on open), and the assistant
+asks **at most one question**, only when it can't plan a step from what's been said.
+Then a single `shape-project` call returns the title, what it is, the labels, the
+finish line *if they said one*, and the first steps in order — all editable in place
+before anything is saved. The conversation is stored on the project, so later sessions
+cite what was said instead of asking again.
+
+What creation no longer asks for: a finish line, a project type (`type` is legacy and
+labels are the grouping axis), a finish-or-habit toggle (derived from whether a finish
+line exists), or a separate "first step" field.
 
 ### Seeding MVS
 
@@ -206,10 +226,13 @@ one lives on the task (`progress_note`) and is the re-entry line for that step n
 time, so a session never restarts a step from the top. Ticking every piece of a split
 step finishes it; ticking some of them is progress, recorded as such.
 
-When the last open step is ticked, one capped call reads the finish line against what
-has actually been made (`finish-line.ts`) and the receipt says which it is: *that's the
-finish line* → one action, mark it finished; or *plan's done, project isn't* → the next
-session starts by planning the rest. "All tasks ticked" is never assumed to mean done.
+When the last open step is ticked and the user has stated a finish line, one capped
+call reads it against what has actually been made (`finish-line.ts`) and the receipt
+says which it is: *that's the finish line* → one action, mark it finished; or *plan's
+done, project isn't* → the next session starts by planning the rest. With no stated
+finish line the receipt just says the list is clear. "All tasks ticked" is never
+assumed to mean done, and the project page leads with *plan what comes next*, with
+*mark it finished* as the quiet second option.
 
 **Never say "incomplete."** 22 minutes with item one done is a good session. The framing
 decides whether the app gets opened next week.
