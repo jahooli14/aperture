@@ -566,6 +566,15 @@ export function SessionContract({
           </p>
         )}
 
+        {/* The plan just changed: the step you were due couldn't be
+            started until something else was done. Said plainly, because
+            it rewrote the list -- never a silent reshuffle. */}
+        {plan?.unblocked && (
+          <p className="text-[12.5px] leading-snug" style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.8 }}>
+            {plan.unblocked.added ? 'Added a step that had to come first' : 'Moved a step up'} — “{plan.unblocked.before}” needs “{plan.unblocked.text}” done before it.
+          </p>
+        )}
+
         {/* The setup step, when this project genuinely has one -- shown
             above the real tasks since it comes first, but visually
             distinct so it doesn't read as one of them. */}

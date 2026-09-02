@@ -134,6 +134,10 @@ export interface PlanDraft {
   /** Steps the app planned onto the project first, because its list was
    *  empty -- said out loud, since it just rewrote the plan. */
   planned: number
+  /** Set when the next step couldn't be started yet, so the plan changed:
+   *  a step moved up from further down, or a missing one written in
+   *  before it. Said out loud for the same reason. */
+  unblocked: { text: string; before: string; added: boolean } | null
 }
 
 interface SessionState {
@@ -179,6 +183,7 @@ interface ShapeResponse {
   friction: FrictionLine | null
   truncated_count: number
   planned: number
+  unblocked: { text: string; before: string; added: boolean } | null
 }
 
 function draftFrom(projectId: string, windowMinutes: number | null, data: ShapeResponse): PlanDraft {
@@ -189,7 +194,7 @@ function draftFrom(projectId: string, windowMinutes: number | null, data: ShapeR
     source: data.source, needsInput: data.needs_input ?? null,
     gapKind: data.gap_kind ?? null, slotName: data.slot_name ?? null,
     friction: data.friction ?? null, truncatedCount: data.truncated_count ?? 0,
-    planned: data.planned ?? 0,
+    planned: data.planned ?? 0, unblocked: data.unblocked ?? null,
   }
 }
 

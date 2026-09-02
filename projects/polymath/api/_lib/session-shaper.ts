@@ -41,6 +41,7 @@ import { pickGap, genericGapQuestion, type Gap } from './session-gap.js'
 import { openTasksInOrder, selectByBudget, type BudgetTask } from './session-budget.js'
 import { nearestEstimate, type EstimateMinutes } from './session-estimate.js'
 import { splitStep, doneLineForSteps, sanitizeDoneLooksLike } from './session-split.js'
+import { checkReady } from './session-ready.js'
 import { generateTaskSpine, generateFirstCutTasks, toStoredTasks } from './task-spine.js'
 import { normalizeTaskOrder } from './task-order.js'
 
@@ -260,6 +261,11 @@ export interface ShapeResult {
   truncatedCount: number
   /** Steps planned onto the project first because its list was empty. */
   planned: number
+  /** Set when the next step couldn't be started until something else was
+   *  done, and the plan was changed to say so -- either a step moved up
+   *  from further down the list, or one written in that was missing
+   *  entirely. Said out loud, because it rewrote the plan. */
+  unblocked: { text: string; before: string; added: boolean } | null
 }
 
 const OPEN_TASK_LIMIT = 24
@@ -421,7 +427,7 @@ export async function shapeSession(
   })
 
   const { evidence, taskIdByEvidenceId } = buildEvidence(ctx)
-  const base = { confidence, truncatedCount, planned, gap: null, needsInput: null, friction: null }
+  const base = { confidence, truncatedCount, planned, gap: null, needsInput: null, friction: null, unblocked: null }
 
   // ── Reshape: the user said what's wrong ───────────────────────────
   if (instruction) {
@@ -475,9 +481,69 @@ export async function shapeSession(
     }
   }
 
+  // ── Can the next step actually be started? ────────────────────────
+  // The list being in order doesn't mean nothing is missing from it. A
+  // spine is a handful of steps for a whole project, so a real
+  // prerequisite can simply never have been written down -- and sitting
+  // down to a step you can't start is the worst thing a rare hour can
+  // produce. When one is found, the PLAN changes, not just this session:
+  // a step already further down moves up, and a missing one is written
+  // in front of the step it blocks. Skipped when the step is already
+  // part-done, which settles the question by itself.
+  let steps = openTasks
+  let unblocked: ShapeResult['unblocked'] = null
+  const top = steps[0]
+  if (top && !top.progressNote) {
+    const readiness = await checkReady({
+      title: project.title,
+      step: top,
+      laterSteps: steps.slice(1),
+      evidence,
+    })
+    if (readiness.kind !== 'ready') {
+      const now = new Date()
+      const nextTasks = [...normalizeTaskOrder(allTasks)]
+      const blockedAt = () => nextTasks.findIndex(t => t?.id === top.id)
+
+      if (readiness.kind === 'move') {
+        const from = nextTasks.findIndex(t => t?.id === readiness.taskId)
+        if (from !== -1 && blockedAt() !== -1) {
+          const [moved] = nextTasks.splice(from, 1)
+          nextTasks.splice(blockedAt(), 0, moved)
+          unblocked = { text: readiness.text, before: top.text, added: false }
+        }
+      } else {
+        const at = blockedAt()
+        nextTasks.splice(at === -1 ? 0 : at, 0, {
+          id: `t-${now.getTime()}-pre`,
+          text: readiness.item.text,
+          done: false,
+          created_at: now.toISOString(),
+          order: 0,
+          origin: 'session',
+          source: readiness.item.source,
+          estimated_minutes: readiness.minutes,
+          estimate_set: true,
+        })
+        unblocked = { text: readiness.item.text, before: top.text, added: true }
+      }
+
+      if (unblocked) {
+        allTasks = normalizeTaskOrder(nextTasks)
+        steps = toOpenSteps(allTasks)
+        const { error: saveErr } = await supabase
+          .from('projects')
+          .update({ metadata: { ...metadata, tasks: allTasks } })
+          .eq('id', projectId)
+          .eq('user_id', userId)
+        if (saveErr) console.warn('[session-shaper] could not save the reordered plan:', saveErr.message)
+      }
+    }
+  }
+
   // ── The next steps, in order, as many as fit ──────────────────────
   const count = itemCountForWindow(windowMinutes)
-  const { selected } = selectByBudget(openTasks, windowMinutes, count)
+  const { selected } = selectByBudget(steps, windowMinutes, count)
   const first = selected[0]
 
   // The next step is bigger than the sitting: split it, once.
@@ -490,7 +556,7 @@ export async function shapeSession(
       evidence,
     })
     if (split) {
-      return { ...base, items: split.moves, doneLooksLike: split.doneLooksLike ?? doneLineForSteps(split.moves), source: 'split' }
+      return { ...base, unblocked, items: split.moves, doneLooksLike: split.doneLooksLike ?? doneLineForSteps(split.moves), source: 'split' }
     }
   }
 
@@ -500,5 +566,5 @@ export async function shapeSession(
     taskId: t.id,
     partial: false,
   }))
-  return { ...base, items, doneLooksLike: doneLineForSteps(selected), source: 'tasks' }
+  return { ...base, unblocked, items, doneLooksLike: doneLineForSteps(selected), source: 'tasks' }
 }
