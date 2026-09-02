@@ -56,7 +56,16 @@ export interface StoryStats {
   daysSinceLastLine: number | null
   longestGapDays: number
   averageWordsPerLine: number
-  streak: { current: number; longest: number }
+  streak: Streak
+}
+
+export interface Streak {
+  current: number
+  longest: number
+  activeToday: boolean
+  /** Hours left before the streak lapses, when it's alive but today's line
+   *  isn't in yet. Null once today is covered, or when there's no streak. */
+  hoursLeft: number | null
 }
 
 export interface StorySummary extends Story {
@@ -64,6 +73,7 @@ export interface StorySummary extends Story {
   last_line: { author_id: string; body: string; display_name: string } | null
   whose_turn: string | null
   can_write: boolean
+  streak: Streak
 }
 
 export interface StoryDetail {

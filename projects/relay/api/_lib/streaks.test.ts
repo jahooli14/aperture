@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { computeStreak, localDateKey, localHour } from './streaks.js'
+import { computeStreak, localDateKey, localHour, streakHoursLeft } from './streaks.js'
 
 const at = (day: string, time = '12:00:00') => `${day}T${time}.000Z`
 
@@ -62,6 +62,25 @@ describe('computeStreak', () => {
     const result = computeStreak(lines, at('2026-08-07', '18:00:00'))
     expect(result.current).toBe(2)
     expect(result.longest).toBe(2)
+  })
+})
+
+describe('streakHoursLeft', () => {
+  it('is null when nothing is running', () => {
+    expect(streakHoursLeft({ current: 0, activeToday: false }, at('2026-08-20', '12:00:00'))).toBeNull()
+  })
+
+  it('is null once today is already covered', () => {
+    expect(streakHoursLeft({ current: 3, activeToday: true }, at('2026-08-20', '12:00:00'))).toBeNull()
+  })
+
+  it('counts the hours left before UTC midnight when a streak is at risk', () => {
+    expect(streakHoursLeft({ current: 2, activeToday: false }, at('2026-08-20', '18:00:00'))).toBe(6)
+    expect(streakHoursLeft({ current: 2, activeToday: false }, at('2026-08-20', '00:30:00'))).toBe(23)
+  })
+
+  it('never goes negative right at the boundary', () => {
+    expect(streakHoursLeft({ current: 2, activeToday: false }, at('2026-08-20', '23:59:59'))).toBe(0)
   })
 })
 

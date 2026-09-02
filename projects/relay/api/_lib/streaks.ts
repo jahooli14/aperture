@@ -71,6 +71,24 @@ export function computeStreak(lineTimestamps: string[], now: string = new Date()
   return { current, longest, activeToday: gapToToday === 0 }
 }
 
+/**
+ * Hours left before the current streak lapses — the countdown a writer sees
+ * when it's alive but today's line isn't in yet. Null when there's nothing
+ * to protect: no streak running, or today's line already landed. Counted
+ * against UTC midnight, same as the streak itself, so both writers see the
+ * same number rather than one keyed to whoever's asking.
+ */
+export function streakHoursLeft(
+  streak: Pick<StreakInfo, 'current' | 'activeToday'>,
+  now: string = new Date().toISOString()
+): number | null {
+  if (streak.current === 0 || streak.activeToday) return null
+  const nowMs = Date.parse(now)
+  const d = new Date(nowMs)
+  const nextUtcMidnight = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + 1)
+  return Math.max(0, Math.floor((nextUtcMidnight - nowMs) / (60 * 60 * 1000)))
+}
+
 /** The hour (0-23) it currently is in `timeZone`, for deciding when to nudge. */
 export function localHour(now: Date, timeZone: string): number {
   const hour = new Intl.DateTimeFormat('en-GB', { timeZone, hour: 'numeric', hourCycle: 'h23' }).format(now)

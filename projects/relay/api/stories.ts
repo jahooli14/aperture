@@ -14,6 +14,7 @@ import { cleanText, fail, firstParam, handleErrors } from './_lib/http.js'
 import { ensureProfile, loadProfiles, loadStory } from './_lib/stories.js'
 import { canWrite, nextInRotation, whoseTurn, type TurnMode } from './_lib/turns.js'
 import { summarise, type StatLine } from './_lib/stats.js'
+import { computeStreak, streakHoursLeft } from './_lib/streaks.js'
 
 const TURN_MODES: TurnMode[] = ['rotation', 'open']
 
@@ -75,13 +76,19 @@ async function listStories(res: VercelResponse, supabase: Client, userId: string
 
   const names = await loadProfiles(supabase, (members ?? []).map((m) => m.user_id as string))
   const lastByStory = new Map<string, { author_id: string; body: string }>()
+  const createdAtsByStory = new Map<string, string[]>()
   for (const line of recentLines ?? []) {
     if (!lastByStory.has(line.story_id)) lastByStory.set(line.story_id, line)
+    const dates = createdAtsByStory.get(line.story_id) ?? []
+    dates.push(line.created_at)
+    createdAtsByStory.set(line.story_id, dates)
   }
 
+  const now = new Date().toISOString()
   const payload = (stories ?? []).map((story) => {
     const storyMembers = (members ?? []).filter((m) => m.story_id === story.id)
     const last = lastByStory.get(story.id) ?? null
+    const streak = computeStreak(createdAtsByStory.get(story.id) ?? [], now)
     return {
       ...story,
       members: storyMembers.map((m) => ({ ...m, display_name: names[m.user_id] ?? 'Writer' })),
@@ -98,6 +105,7 @@ async function listStories(res: VercelResponse, supabase: Client, userId: string
         lastAuthorId: last?.author_id ?? null,
         userId,
       }),
+      streak: { ...streak, hoursLeft: streakHoursLeft(streak, now) },
     }
   })
 

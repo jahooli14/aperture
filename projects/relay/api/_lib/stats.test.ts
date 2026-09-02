@@ -74,7 +74,19 @@ describe('summarise', () => {
       line({ position: 2, created_at: '2026-01-02T09:00:00.000Z' }),
       line({ position: 3, created_at: '2026-01-03T09:00:00.000Z' }),
     ]
-    expect(summarise(streaky, '2026-01-03T20:00:00.000Z').streak).toEqual({ current: 3, longest: 3 })
+    expect(summarise(streaky, '2026-01-03T20:00:00.000Z').streak).toEqual({
+      current: 3, longest: 3, activeToday: true, hoursLeft: null,
+    })
+  })
+
+  it('counts down to UTC midnight once the streak is at risk', () => {
+    const lines = [
+      line({ position: 1, created_at: '2026-01-01T09:00:00.000Z' }),
+      line({ position: 2, created_at: '2026-01-02T09:00:00.000Z' }),
+    ]
+    expect(summarise(lines, '2026-01-03T18:00:00.000Z').streak).toEqual({
+      current: 2, longest: 2, activeToday: false, hoursLeft: 6,
+    })
   })
 
   it('handles a story with no lines yet', () => {
