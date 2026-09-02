@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { gapLabel, initials } from './format'
+import { gapLabel, hoursLeftLabel, initials, replyTimeLabel } from './format'
 
 const at = (iso: string) => new Date(iso).toISOString()
 
@@ -27,6 +27,33 @@ describe('gapLabel', () => {
   it('ignores lines that arrive out of order or with bad dates', () => {
     expect(gapLabel(at('2026-01-05T09:00:00Z'), at('2026-01-01T09:00:00Z'))).toBeNull()
     expect(gapLabel('not a date', at('2026-01-01T09:00:00Z'))).toBeNull()
+  })
+})
+
+describe('hoursLeftLabel', () => {
+  it('names an hour count', () => {
+    expect(hoursLeftLabel(6)).toBe('6h left')
+    expect(hoursLeftLabel(1)).toBe('1h left')
+  })
+
+  it('says "under an hour" rather than "0h left"', () => {
+    expect(hoursLeftLabel(0)).toBe('under an hour')
+  })
+})
+
+describe('replyTimeLabel', () => {
+  it('says "under an hour" for anything below one', () => {
+    expect(replyTimeLabel(0.4)).toBe('under an hour')
+  })
+
+  it('rounds to hours under most of a day', () => {
+    expect(replyTimeLabel(4.2)).toBe('4h')
+    expect(replyTimeLabel(15)).toBe('15h')
+  })
+
+  it('switches to days once it is genuinely a day or more', () => {
+    expect(replyTimeLabel(25)).toBe('1 day')
+    expect(replyTimeLabel(40)).toBe('2 days')
   })
 })
 

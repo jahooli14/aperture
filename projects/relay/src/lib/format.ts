@@ -53,6 +53,21 @@ export function duration(days: number): string {
   return `${Math.round(days / 365)} years`
 }
 
+/** "5h left", "under an hour" — the streak countdown, Duolingo-style. */
+export function hoursLeftLabel(hours: number): string {
+  if (hours < 1) return 'under an hour'
+  return `${hours}h left`
+}
+
+/** "under an hour", "6h", "2 days" — how long a writer typically takes to
+ *  reply, rounded to whatever unit reads plainly at that scale. */
+export function replyTimeLabel(hours: number): string {
+  if (hours < 1) return 'under an hour'
+  if (hours < 20) return `${Math.round(hours)}h`
+  const days = Math.max(1, Math.round(hours / 24))
+  return days === 1 ? '1 day' : `${days} days`
+}
+
 const GAP_THRESHOLD_DAYS = 3
 
 /**

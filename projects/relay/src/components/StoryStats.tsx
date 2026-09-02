@@ -1,7 +1,8 @@
 import { Link } from 'react-router-dom'
 import { Avatar } from './Avatar'
-import { duration } from '../lib/format'
+import { duration, hoursLeftLabel, replyTimeLabel } from '../lib/format'
 import { PeakTimes } from './PeakTimes'
+import { computeWritingStyle, findLongestLine } from '../lib/writingStyle'
 import type { Line, Member, StoryStats as Stats } from '../lib/types'
 
 /** The story so far — all of it derived from the lines, none of it guessed at. */
@@ -10,18 +11,19 @@ export function StoryStats({
   members,
   lines,
   printHref,
-  onJumpToChapter,
+  onJumpToLine,
   onClose,
 }: {
   stats: Stats
   members: Member[]
   lines: Line[]
   printHref: string
-  onJumpToChapter: (position: number) => void
+  onJumpToLine: (position: number) => void
   onClose: () => void
 }) {
   const byUser = new Map(members.map((m) => [m.user_id, m]))
-  const busiest = stats.authors[0]?.lines ?? 1
+  const writingStyle = computeWritingStyle(lines)
+  const longestLine = findLongestLine(lines)
 
   return (
     <div className="fixed inset-0 z-40 flex items-end justify-center bg-black/45 sm:items-center">
@@ -48,37 +50,48 @@ export function StoryStats({
           />
         </dl>
 
-        {stats.authors.length > 0 && (
+        {stats.streak.hoursLeft !== null && (
+          <p className="-mt-3 mb-6 text-xs font-medium text-amber-700 dark:text-amber-400">
+            {hoursLeftLabel(stats.streak.hoursLeft)} before the streak resets — get a line in.
+          </p>
+        )}
+
+        {writingStyle.length > 0 && (
           <section className="mb-6">
-            <h3 className="label">Who wrote what</h3>
+            <h3 className="label">Writing style</h3>
             <ul className="space-y-2.5">
-              {stats.authors.map((author) => {
-                const member = byUser.get(author.user_id)
+              {writingStyle.map((writer) => {
+                const member = byUser.get(writer.user_id)
                 return (
-                  <li key={author.user_id}>
-                    <div className="flex items-center gap-2 text-sm">
-                      <Avatar
-                        name={member?.display_name ?? 'Writer'}
-                        turnOrder={member?.turn_order ?? 0}
-                        size={22}
-                      />
-                      <span className="flex-1">{member?.display_name ?? 'Writer'}</span>
-                      <span className="text-muted">
-                        {author.lines} {author.lines === 1 ? 'line' : 'lines'} ·{' '}
-                        {author.words.toLocaleString()} words
-                      </span>
-                    </div>
-                    <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-rule">
-                      <div
-                        className="h-full rounded-full bg-accent"
-                        style={{ width: `${Math.round((author.lines / busiest) * 100)}%` }}
-                      />
-                    </div>
+                  <li key={writer.user_id} className="flex items-center gap-2 text-sm">
+                    <Avatar
+                      name={member?.display_name ?? 'Writer'}
+                      turnOrder={member?.turn_order ?? 0}
+                      size={22}
+                    />
+                    <span className="flex-1">{member?.display_name ?? 'Writer'}</span>
+                    <span className="text-muted">
+                      {writer.avgWords} words/line
+                      {writer.medianReplyHours !== null && ` · replies in ~${replyTimeLabel(writer.medianReplyHours)}`}
+                    </span>
                   </li>
                 )
               })}
             </ul>
           </section>
+        )}
+
+        {longestLine && (
+          <button
+            className="mb-6 flex w-full items-center justify-between gap-3 rounded-lg border border-rule p-3 text-left text-sm hover:bg-paper"
+            onClick={() => onJumpToLine(longestLine.position)}
+          >
+            <span>
+              Longest line: <strong>{longestLine.words} words</strong>, by{' '}
+              {byUser.get(longestLine.user_id)?.display_name ?? 'Writer'}
+            </span>
+            <span className="whitespace-nowrap text-xs text-muted">line {longestLine.position}</span>
+          </button>
         )}
 
         <PeakTimes timestamps={lines.map((l) => l.created_at)} />
@@ -95,7 +108,7 @@ export function StoryStats({
                 <li key={chapter.position}>
                   <button
                     className="w-full rounded px-2 py-2 text-left font-story hover:bg-paper"
-                    onClick={() => onJumpToChapter(chapter.position)}
+                    onClick={() => onJumpToLine(chapter.position)}
                   >
                     {chapter.title}
                     <span className="ml-2 text-xs text-muted">line {chapter.position}</span>

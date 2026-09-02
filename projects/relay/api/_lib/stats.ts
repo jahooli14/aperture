@@ -2,7 +2,7 @@
  * "The story so far" — everything derived from the lines themselves.
  * Pure, so the same numbers render on the client without a second call.
  */
-import { computeStreak } from './streaks.js'
+import { computeStreak, streakHoursLeft } from './streaks.js'
 
 export interface StatLine {
   author_id: string
@@ -29,7 +29,7 @@ export interface StoryStats {
   daysSinceLastLine: number | null
   longestGapDays: number
   averageWordsPerLine: number
-  streak: { current: number; longest: number }
+  streak: { current: number; longest: number; activeToday: boolean; hoursLeft: number | null }
 }
 
 const DAY = 86_400_000
@@ -83,8 +83,8 @@ export function summarise(lines: StatLine[], now: string = new Date().toISOStrin
     longestGapDays,
     averageWordsPerLine: ordered.length ? Math.round(wordCount / ordered.length) : 0,
     streak: (() => {
-      const { current, longest } = computeStreak(ordered.map((l) => l.created_at), now)
-      return { current, longest }
+      const streak = computeStreak(ordered.map((l) => l.created_at), now)
+      return { ...streak, hoursLeft: streakHoursLeft(streak, now) }
     })(),
   }
 }

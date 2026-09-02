@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { api } from '../lib/api'
 import { useAuth } from '../lib/useAuth'
-import { timeAgo } from '../lib/format'
+import { hoursLeftLabel, timeAgo } from '../lib/format'
 import { Avatar } from '../components/Avatar'
 import { NewStoryForm } from '../components/NewStoryForm'
 import { isPushSupported, isSubscribed } from '../lib/push'
@@ -78,49 +78,69 @@ export default function StoriesPage() {
         )}
 
         <ul className="space-y-3">
-          {stories?.map((story) => (
-            <li key={story.id}>
-              <Link to={`/story/${story.id}`} className="surface block p-4 transition-colors hover:border-accent/60">
-                <div className="flex items-start justify-between gap-3">
-                  <h2 className="display text-[1.15rem] font-semibold leading-snug">{story.title}</h2>
-                  {story.can_write && (
-                    <span
-                      className="pill shrink-0"
-                      style={{ background: 'rgb(var(--accent))', color: 'rgb(var(--accent-ink))' }}
-                    >
-                      Your turn
-                    </span>
-                  )}
-                </div>
-
-                {story.last_line ? (
-                  <p className="prose-story mt-2 line-clamp-3 text-[0.95rem]" style={{ color: 'rgb(var(--muted))' }}>
-                    {story.last_line.body}
-                  </p>
-                ) : (
-                  <p className="mt-2 text-sm text-muted">No lines yet — you go first.</p>
-                )}
-
-                <div className="mt-3 flex items-center gap-2">
-                  <div className="flex -space-x-1.5">
-                    {story.members.map((member) => (
-                      <Avatar
-                        key={member.user_id}
-                        name={member.display_name}
-                        turnOrder={member.turn_order}
-                        size={22}
-                        dim={story.whose_turn !== null && story.whose_turn !== member.user_id}
-                      />
-                    ))}
+          {stories?.map((story) => {
+            const waitingOn = story.members.find((m) => m.user_id === story.whose_turn)?.display_name ?? 'them'
+            return (
+              <li key={story.id}>
+                <Link to={`/story/${story.id}`} className="surface block p-4 transition-colors hover:border-accent/60">
+                  <div className="flex items-start justify-between gap-3">
+                    <h2 className="display text-[1.15rem] font-semibold leading-snug">{story.title}</h2>
+                    <div className="flex shrink-0 items-center gap-1.5">
+                      {story.streak.current > 0 && (
+                        <span className="pill border border-rule" style={{ color: 'rgb(var(--accent))' }}>
+                          {story.streak.current}-day streak
+                        </span>
+                      )}
+                      {story.can_write && (
+                        <span
+                          className="pill"
+                          style={{ background: 'rgb(var(--accent))', color: 'rgb(var(--accent-ink))' }}
+                        >
+                          Your turn
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  <span className="text-xs text-muted">
-                    {story.members.length} {story.members.length === 1 ? 'writer' : 'writers'} ·{' '}
-                    {timeAgo(story.last_line_at)}
-                  </span>
-                </div>
-              </Link>
-            </li>
-          ))}
+
+                  {story.last_line ? (
+                    <p
+                      className="prose-story mt-2 line-clamp-3 text-[0.95rem]"
+                      style={{ color: 'rgb(var(--muted))' }}
+                    >
+                      {story.last_line.body}
+                    </p>
+                  ) : (
+                    <p className="mt-2 text-sm text-muted">No lines yet — you go first.</p>
+                  )}
+
+                  {story.streak.hoursLeft !== null && (
+                    <p className="mt-2 text-xs font-medium text-amber-700 dark:text-amber-400">
+                      {hoursLeftLabel(story.streak.hoursLeft)} to keep the streak —{' '}
+                      {story.can_write ? "it's your turn" : `waiting on ${waitingOn}`}
+                    </p>
+                  )}
+
+                  <div className="mt-3 flex items-center gap-2">
+                    <div className="flex -space-x-1.5">
+                      {story.members.map((member) => (
+                        <Avatar
+                          key={member.user_id}
+                          name={member.display_name}
+                          turnOrder={member.turn_order}
+                          size={22}
+                          dim={story.whose_turn !== null && story.whose_turn !== member.user_id}
+                        />
+                      ))}
+                    </div>
+                    <span className="text-xs text-muted">
+                      {story.members.length} {story.members.length === 1 ? 'writer' : 'writers'} ·{' '}
+                      {timeAgo(story.last_line_at)}
+                    </span>
+                  </div>
+                </Link>
+              </li>
+            )
+          })}
         </ul>
       </main>
     </div>

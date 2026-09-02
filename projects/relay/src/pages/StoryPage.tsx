@@ -260,7 +260,7 @@ export default function StoryPage() {
           members={members}
           lines={lines}
           printHref={`/story/${story.id}/print`}
-          onJumpToChapter={jumpToLine}
+          onJumpToLine={jumpToLine}
           onClose={() => setSheet('none')}
         />
       )}
