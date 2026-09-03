@@ -44,6 +44,7 @@ import { splitStep, doneLineForSteps, sanitizeDoneLooksLike } from './session-sp
 import { checkReady } from './session-ready.js'
 import { generateTaskSpine, generateFirstCutTasks, toStoredTasks } from './task-spine.js'
 import { normalizeTaskOrder } from './task-order.js'
+import { parseEmbedding } from './project-ideas/seed-picker.js'
 
 export { isAdminItem, sanitizeItems, sanitizeRawItems, dedupeSimilar } from './session-items.js'
 
@@ -91,9 +92,38 @@ export interface ShapeContext {
   pastCloseouts: { text: string; date: string | null }[]
   shapingTurns: string[]
   fragments: { text: string; date: string | null; role?: string | null }[]
+  /** Recent captures that connect to this project but never got attached to
+   *  it (below fragments.ts's attach threshold, or claimed by another
+   *  project first). Corpus-wide recall, not project-scoped like `fragments`. */
+  recalled: { text: string; date: string | null }[]
+  /** Days since the project was last touched -- same formula
+   *  project-maintenance.ts uses for the dormant-reshape threshold, and the
+   *  same number TodaysAnswerCard already shows as a "going quiet" badge. */
+  dormancyDays: number
+  /** metabolism.ts's own plain-English reason a project's heat just moved,
+   *  when there is one -- already citable as-is. */
+  heatReason: string | null
+  /** One line of tone-setting from what they've recently added to a list or
+   *  highlighted while reading -- NOT run through the evidence/citation
+   *  system, so it can never become a generated step (see buildReshapePrompt). */
+  identityLine: string | null
   /** What the user just said was wrong with the current list, if anything. */
   instruction?: string | null
   currentItems?: string[]
+}
+
+/** Plain, no analyst voice -- same bucketing as forgotten.ts's
+ *  forgottenSparkText, but returning just the duration phrase so callers can
+ *  build their own sentence around it. */
+export function humanizeDuration(days: number): string {
+  const months = Math.floor(days / 30)
+  if (months >= 12) {
+    const years = Math.floor(months / 12)
+    return years === 1 ? 'a year' : `${years} years`
+  }
+  if (months >= 2) return `${months} months`
+  const weeks = Math.floor(days / 7)
+  return weeks <= 1 ? 'a week' : `${weeks} weeks`
 }
 
 export interface BuiltEvidence {
@@ -133,6 +163,10 @@ export function buildEvidence(ctx: ShapeContext): BuiltEvidence {
   ctx.fragments.forEach(f =>
     add(f.date ? `from your note on ${f.date}` : 'from one of your notes', f.text),
   )
+  ctx.recalled.forEach(m =>
+    add(m.date ? `a capture from ${m.date} that connects` : 'a capture that connects', m.text),
+  )
+  if (ctx.heatReason) add('something new since you were last here', ctx.heatReason)
   ctx.doneTasks.forEach(t =>
     add(t.date ? `you finished this on ${t.date}` : 'already finished', t.text),
   )
@@ -167,8 +201,8 @@ export function buildReshapePrompt(
   return `You are reshaping one work session on a creative project. The user has ${windowText}
 and is about to start.
 
-Project: "${ctx.title}"
-
+Project: "${ctx.title}"${ctx.dormancyDays >= 7 ? ` — it's been ${humanizeDuration(ctx.dormancyDays)} since the last session` : ''}
+${ctx.identityLine ? `\n${ctx.identityLine}\n` : ''}
 EVERYTHING KNOWN ABOUT THIS PROJECT:
 ${evidence.length
   ? evidence.map(e => `[${e.id}] ${e.text}`).join('\n')
@@ -301,7 +335,7 @@ export async function shapeSession(
   // exist fails the whole select.
   const { data: project, error } = await supabase
     .from('projects')
-    .select('title, description, metadata, slots, last_closeout_text, last_session_ended_at')
+    .select('title, description, metadata, slots, last_closeout_text, last_session_ended_at, last_active, created_at, embedding, heat_reason')
     .eq('id', projectId)
     .eq('user_id', userId)
     .single()
@@ -316,10 +350,19 @@ export async function shapeSession(
   let allTasks: any[] = Array.isArray(metadata.tasks) ? metadata.tasks : []
   const goal: string | null = metadata.end_goal || project.description || null
 
-  const [{ data: fragmentRows }, { data: sessionRows }] = await Promise.all([
+  // Recent captures that connect to this project by meaning but never got
+  // attached to it (fragments.ts only attaches above a 0.5 similarity bar,
+  // and only to whichever single project scored highest) -- corpus recall,
+  // reusing the same match_memories RPC and query shape memories.ts's own
+  // similarity search already uses, just with the project's embedding as
+  // the query vector instead of a memory's.
+  const projectEmbedding = parseEmbedding(project.embedding)
+  const recallEmbeddingStr = projectEmbedding ? `[${projectEmbedding.join(',')}]` : null
+
+  const [{ data: fragmentRows }, { data: sessionRows }, recallRpc, { data: listItemRows }, { data: highlightRows }] = await Promise.all([
     supabase
       .from('fragments')
-      .select('text, created_at, role')
+      .select('text, created_at, role, memory_id')
       .eq('project_id', projectId)
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
@@ -332,7 +375,62 @@ export async function shapeSession(
       .not('closeout_text', 'is', null)
       .order('ended_at', { ascending: false })
       .limit(5),
+    recallEmbeddingStr
+      ? supabase.rpc('match_memories', {
+          query_embedding: recallEmbeddingStr,
+          filter_user_id: userId,
+          match_threshold: 0.4,
+          match_count: 8,
+        })
+      : Promise.resolve({ data: [] as any[] }),
+    // Identity-signal tone (see `identityLine` below) -- most recent item
+    // added to any list, same shape project-ideas/gather.ts already reads.
+    supabase
+      .from('list_items')
+      .select('content, created_at')
+      .eq('user_id', userId)
+      .in('status', ['pending', 'active'])
+      .order('created_at', { ascending: false })
+      .limit(1),
+    supabase
+      .from('article_highlights')
+      .select('created_at, reading_queue!inner(title)')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(1),
   ])
+
+  // Never permanently attached (still visible next time via `fragments`
+  // once/if it clears the threshold), so this is soft recall only -- drop
+  // anything already covered by `fragments` above, and anything not recent.
+  const attachedMemoryIds = new Set((fragmentRows || []).map((f: any) => f.memory_id).filter(Boolean))
+  const twentyOneDaysAgo = Date.now() - 21 * 86_400_000
+  const recalled = ((recallRpc as { data: any[] | null }).data || [])
+    .filter((m: any) => m.id && !attachedMemoryIds.has(m.id))
+    .filter((m: any) => m.created_at && new Date(m.created_at).getTime() > twentyOneDaysAgo)
+    .slice(0, 3)
+    .map((m: any) => ({ text: (m.body || m.title || '').trim(), date: shortDate(m.created_at) }))
+    .filter(m => m.text)
+
+  const dormancyDays = Math.floor(
+    (Date.now() - new Date(project.last_active || project.created_at || Date.now()).getTime()) / 86_400_000,
+  )
+
+  // One line, freshest of the two sources, never both -- this is ambient
+  // tone, not a digest (see buildReshapePrompt: never run through the
+  // evidence/citation system, so it can't leak into a generated step).
+  const identityCandidates: { text: string; ts: number }[] = []
+  if (listItemRows?.[0]?.content) {
+    identityCandidates.push({ text: listItemRows[0].content, ts: new Date(listItemRows[0].created_at).getTime() })
+  }
+  const highlightTitle = (highlightRows?.[0] as any)?.reading_queue?.title
+  if (highlightTitle) {
+    identityCandidates.push({ text: highlightTitle, ts: new Date((highlightRows![0] as any).created_at).getTime() })
+  }
+  identityCandidates.sort((a, b) => b.ts - a.ts)
+  const identityLine = identityCandidates[0]
+    ? `Just for tone, not something to plan around: they've recently been into "${identityCandidates[0].text}".`
+    : null
 
   const pastCloseouts = (sessionRows || [])
     .filter(r => r.closeout_text && r.closeout_text !== project.last_closeout_text)
@@ -406,6 +504,10 @@ export async function shapeSession(
     pastCloseouts,
     shapingTurns,
     fragments,
+    recalled,
+    dormancyDays,
+    heatReason: project.heat_reason || null,
+    identityLine,
     instruction,
     currentItems,
   }
