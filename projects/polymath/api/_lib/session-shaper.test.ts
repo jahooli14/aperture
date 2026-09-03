@@ -7,6 +7,7 @@ import {
   buildEvidence,
   sanitizeFriction,
   dedupeSimilar,
+  humanizeDuration,
   type ShapeContext,
 } from './session-shaper.js'
 
@@ -111,6 +112,10 @@ const base: ShapeContext = {
   pastCloseouts: [],
   shapingTurns: [],
   fragments: [],
+  recalled: [],
+  dormancyDays: 0,
+  heatReason: null,
+  identityLine: null,
 }
 
 describe('buildEvidence', () => {
@@ -154,6 +159,49 @@ describe('buildEvidence', () => {
     const match = evidence.find(e => e.text.includes('listen to the song'))
     expect(match).toBeDefined()
     expect(match!.label).toBe('what you just said')
+  })
+
+  it('cites a recalled capture that never got attached to this project', () => {
+    const { evidence } = buildEvidence({
+      ...base,
+      recalled: [{ text: 'Bought a new mic for the vocal booth', date: '5 Sep' }],
+    })
+    const match = evidence.find(e => e.text === 'Bought a new mic for the vocal booth')
+    expect(match).toBeDefined()
+    expect(match!.label).toBe('a capture from 5 Sep that connects')
+  })
+
+  it('cites heat_reason as evidence when the project has a fresh signal', () => {
+    const { evidence } = buildEvidence({
+      ...base,
+      heatReason: 'you mentioned this recently — "the new riff idea"',
+    })
+    const match = evidence.find(e => e.text === 'you mentioned this recently — "the new riff idea"')
+    expect(match).toBeDefined()
+    expect(match!.label).toBe('something new since you were last here')
+  })
+
+  it('says nothing about freshness when there is none to cite', () => {
+    const { evidence } = buildEvidence(base)
+    expect(evidence.find(e => e.label === 'something new since you were last here')).toBeUndefined()
+    expect(evidence.find(e => e.label.includes('that connects'))).toBeUndefined()
+  })
+})
+
+describe('humanizeDuration', () => {
+  it('says weeks under two months', () => {
+    expect(humanizeDuration(7)).toBe('a week')
+    expect(humanizeDuration(21)).toBe('3 weeks')
+  })
+
+  it('says months under a year', () => {
+    expect(humanizeDuration(75)).toBe('2 months')
+    expect(humanizeDuration(300)).toBe('10 months')
+  })
+
+  it('says years at a year and beyond', () => {
+    expect(humanizeDuration(365)).toBe('a year')
+    expect(humanizeDuration(800)).toBe('2 years')
   })
 })
 
@@ -214,6 +262,25 @@ describe('buildReshapePrompt', () => {
     expect(p).toContain('A made-up setup step is worse than none')
   })
 
+  it('names how long it has been quiet once it is a week or more', () => {
+    expect(prompt()).not.toContain('since the last session')
+    expect(prompt({ ...ctx, dormancyDays: 3 })).not.toContain('since the last session')
+    expect(prompt({ ...ctx, dormancyDays: 21 })).toContain("it's been 3 weeks since the last session")
+  })
+
+  it('carries the identity line as tone, never inside the evidence block', () => {
+    const withIdentity = { ...ctx, identityLine: 'Just for tone, not something to plan around: they’ve recently been into "Flowers for Algernon".' }
+    const p = prompt(withIdentity)
+    expect(p).toContain('Just for tone, not something to plan around')
+    expect(p.indexOf('Just for tone')).toBeLessThan(p.indexOf('EVERYTHING KNOWN ABOUT THIS PROJECT'))
+    // Never citable: buildEvidence never turns identityLine into an [eN] entry.
+    expect(buildEvidence(withIdentity).evidence.some(e => e.text.includes('Flowers for Algernon'))).toBe(false)
+  })
+
+  it('says nothing extra when there is no identity signal', () => {
+    expect(prompt()).not.toContain('Just for tone')
+  })
+
   it('sizes the list to the window', () => {
     expect(prompt()).toContain('Up to 5 items')
     expect(prompt({ ...ctx, windowMinutes: 20 })).toContain('Up to 3 items')
@@ -234,6 +301,7 @@ function stubClient(opts: {
   project?: Record<string, unknown> | null
   projectError?: { message: string } | null
   fragments?: { text: string }[]
+  recalled?: { id: string; body?: string; title?: string; created_at: string }[]
   onSelect?: (table: string, columns: string) => void
   onUpdate?: (payload: Record<string, unknown>) => void
 }) {
@@ -251,8 +319,13 @@ function stubClient(opts: {
         },
         eq: () => chain,
         not: () => chain,
+        in: () => chain,
         order: () => chain,
-        limit: () => Promise.resolve({ data: opts.fragments ?? [], error: null }),
+        // fragments/sessions/list_items/article_highlights all resolve through
+        // here -- `opts.fragments` doubles as whichever table's rows the test
+        // cares about; the others default to empty, which the shaper already
+        // treats as "nothing to add" for recall/identity.
+        limit: () => Promise.resolve({ data: table === 'fragments' ? (opts.fragments ?? []) : [], error: null }),
         single: () =>
           Promise.resolve({
             data: opts.projectError ? null : opts.project ?? null,
@@ -261,6 +334,8 @@ function stubClient(opts: {
       }
       return chain
     },
+    rpc: (_fn: string, _params: Record<string, unknown>) =>
+      Promise.resolve({ data: opts.recalled ?? [], error: null }),
   } as any
 }
 
@@ -283,7 +358,7 @@ describe('shapeSession', () => {
     const known = new Set([
       'id', 'user_id', 'title', 'description', 'type', 'status', 'metadata',
       'slots', 'last_closeout_text', 'last_session_ended_at', 'mvs_minutes',
-      'state', 'last_active',
+      'state', 'last_active', 'created_at', 'embedding', 'heat_reason',
     ])
     expect(seen).toHaveLength(1)
     for (const col of seen[0].split(',').map(c => c.trim())) {
@@ -386,6 +461,19 @@ describe('shapeSession', () => {
     expect(updates).toHaveLength(0)
     expect(result.source).toBe('derived')
     expect(result.planned).toBe(0)
+  })
+
+  it('takes the semantic-recall path without throwing when the project has an embedding', async () => {
+    // Exercises the match_memories RPC branch (recallEmbeddingStr set) rather
+    // than the no-embedding fallback every other test above takes.
+    const withEmbedding = { ...project, embedding: [0.1, 0.2, 0.3] }
+    const recentUnattached = { id: 'm1', body: 'Bought a new mic', created_at: new Date().toISOString() }
+    const { shapeSession } = await import('./session-shaper.js')
+    const result = await shapeSession(
+      stubClient({ project: withEmbedding, recalled: [recentUnattached] }),
+      'u1', 'p1', 60,
+    )
+    expect(result.source).toBe('tasks')
   })
 
   it('reports how much of the backlog was truncated rather than silently dropping it', async () => {
