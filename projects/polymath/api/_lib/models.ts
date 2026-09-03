@@ -25,6 +25,11 @@ export const MODELS = {
   // enough headroom for reasoning + the answer (see generator.ts fast path).
   DEFAULT_CHAT: 'gemini-flash-lite-latest',       // bulk + default everywhere
   FLASH_CHAT: 'gemini-flash-lite-latest',         // Seam: set to 'gemini-flash-latest' for full Flash
+  // Full Flash, not Lite: the spine is the plan for the whole project,
+  // written once at creation/replan — worth the extra cost and thinking
+  // depth "Record the vocals" not "make the album" needs, unlike the
+  // every-session reshape calls in session-shaper.ts which stay on Lite.
+  TASK_SPINE_CHAT: 'gemini-flash-latest',
   FLASH_LIVE: 'gemini-3.1-flash-live-preview',    // Live API audio-to-audio (onboarding); pinned — no GA -latest alias
   PRO: 'gemini-pro-latest',                       // Reserved — high-stakes reasoning, off by default
   DEFAULT_EMBEDDING: 'gemini-embedding-001',      // PINNED — aliasing would break stored vectors

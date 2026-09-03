@@ -28,6 +28,7 @@ import { filterGrounded, type Evidence } from './session-grounding.js'
 import { isAdminItem } from './session-items.js'
 import { ESTIMATE_MINUTES, nearestEstimate, type EstimateMinutes } from './session-estimate.js'
 import { orderSteps } from './task-order.js'
+import { MODELS } from './models.js'
 
 export const MIN_SPINE_STEPS = 4
 export const MAX_SPINE_STEPS = 8
@@ -267,6 +268,7 @@ export async function generateTaskSpine(input: SpineInput): Promise<SpineStep[]>
 
   try {
     const response = await generateText(buildSpinePrompt(input, evidence), {
+      model: MODELS.TASK_SPINE_CHAT,
       responseFormat: 'json',
       // Low, like the session shaper: this is reading a stated goal and
       // working back from it, not inventing a project.
@@ -379,6 +381,7 @@ export async function generateFirstCutTasks(input: FirstCutInput): Promise<Spine
 
   try {
     const response = await generateText(buildFirstCutPrompt(input, evidence), {
+      model: MODELS.TASK_SPINE_CHAT,
       responseFormat: 'json',
       temperature: 0.4,
       maxTokens: 800,
