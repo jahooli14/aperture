@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import {
   itemCountForWindow,
   isAdminItem,
@@ -10,6 +10,15 @@ import {
   humanizeDuration,
   type ShapeContext,
 } from './session-shaper.js'
+
+// Real checkReady always fails closed in this test env (no GEMINI_API_KEY),
+// which is exactly what every existing shapeSession test below already
+// relies on -- so the mock's default matches that real-world behaviour and
+// only individual tests that need a specific verdict override it.
+vi.mock('./session-ready.js', () => ({
+  checkReady: vi.fn(async () => ({ kind: 'ready' as const, sizeMinutes: null, compound: false })),
+}))
+import { checkReady } from './session-ready.js'
 
 describe('itemCountForWindow', () => {
   it('gives a short window a short list', () => {
@@ -461,6 +470,64 @@ describe('shapeSession', () => {
     expect(updates).toHaveLength(0)
     expect(result.source).toBe('derived')
     expect(result.planned).toBe(0)
+  })
+
+  it('corrects a never-estimated top step\'s stored minutes from checkReady\'s own fresh read', async () => {
+    // The reported bug: a compound task with no real estimate defaults to
+    // 20 minutes (session-budget.ts) and never trips the split threshold.
+    // checkReady's fresh read of the same step text is what corrects it.
+    vi.mocked(checkReady).mockResolvedValueOnce({ kind: 'ready', sizeMinutes: 60, compound: true })
+    const unestimated = {
+      ...project,
+      metadata: {
+        end_goal: 'released',
+        tasks: [{ id: 't0', text: 'Remix the vocal, write a new riff, and write a distribution plan', done: false, order: 0 }],
+      },
+    }
+    const updates: Record<string, unknown>[] = []
+    const { shapeSession } = await import('./session-shaper.js')
+    await shapeSession(stubClient({ project: unestimated, onUpdate: p => updates.push(p) }), 'u1', 'p1', 60)
+    expect(updates).toHaveLength(1)
+    const savedTask = (updates[0].metadata as any).tasks[0]
+    expect(savedTask.estimated_minutes).toBe(60)
+    expect(savedTask.estimate_set).toBe(true)
+  })
+
+  it('never downgrades a deliberately-set estimate that just happens to be smaller than checkReady\'s read', async () => {
+    vi.mocked(checkReady).mockResolvedValueOnce({ kind: 'ready', sizeMinutes: 20, compound: false })
+    const deliberate = {
+      ...project,
+      metadata: {
+        end_goal: 'released',
+        tasks: [{ id: 't0', text: 'A big deliberate step', done: false, order: 0, estimated_minutes: 45, estimate_set: true }],
+      },
+    }
+    const updates: Record<string, unknown>[] = []
+    const { shapeSession } = await import('./session-shaper.js')
+    await shapeSession(stubClient({ project: deliberate, onUpdate: p => updates.push(p) }), 'u1', 'p1', 60)
+    expect(updates).toHaveLength(0)
+  })
+
+  it('splits a step checkReady flags as compound even when its (ladder-snapped) size ties the window', async () => {
+    // A step judged "really more like 90 minutes" snaps to 60 on the
+    // shared estimate ladder -- exactly tying a 60-minute window under
+    // strict `>`, which is why `compound` is a separate, independent
+    // split trigger rather than relying on the number alone.
+    vi.mocked(checkReady).mockResolvedValueOnce({ kind: 'ready', sizeMinutes: 60, compound: true })
+    const compoundStep = {
+      ...project,
+      metadata: {
+        end_goal: 'released',
+        tasks: [{ id: 't0', text: 'Remix the vocal, write a new riff, and write a distribution plan', done: false, order: 0 }],
+      },
+    }
+    const { shapeSession } = await import('./session-shaper.js')
+    const result = await shapeSession(stubClient({ project: compoundStep }), 'u1', 'p1', 60)
+    // Split itself fails closed in this test env (no model), so the
+    // fallback is the whole (now correctly-sized) step -- same fallback
+    // shape the existing "falls back to whole step" test already covers.
+    expect(result.source).toBe('tasks')
+    expect(result.items.map(i => i.text)).toEqual(['Remix the vocal, write a new riff, and write a distribution plan'])
   })
 
   it('takes the semantic-recall path without throwing when the project has an embedding', async () => {

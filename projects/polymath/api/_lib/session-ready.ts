@@ -50,12 +50,31 @@ export interface ReadyInput {
   evidence: Evidence[]
 }
 
-export type Readiness =
+type ReadinessVerdict =
   | { kind: 'ready' }
   /** The prerequisite is already on the list -- move it above the step. */
   | { kind: 'move'; taskId: string; text: string }
   /** The prerequisite isn't on the list -- write it in before the step. */
   | { kind: 'add'; item: GroundedItem; minutes: EstimateMinutes }
+
+/** Sizing rides alongside the ready/blocked verdict rather than as a
+ *  variant of it -- a step can be perfectly startable and still be
+ *  wrongly sized, so this is a second, independent judgment from the same
+ *  call, not a fourth `kind`. See buildReadyPrompt's size_minutes/compound
+ *  fields: the same question every other estimate in the app answers
+ *  ("how long is one sitting of this"), asked here because this is the
+ *  one place the model already looks at the step's own text every
+ *  session -- not a second Gemini call bolted on just to size things. */
+export type Readiness = ReadinessVerdict & {
+  /** The model's own honest read of how long ONE SITTING of everything
+   *  this step describes would take -- independent of whatever estimate
+   *  (or default) is already stored. Null when the check didn't run. */
+  sizeMinutes: EstimateMinutes | null
+  /** True only when the step plainly bundles more than one separately-
+   *  schedulable job (different skills, different deliverables) -- not
+   *  two verbs describing one continuous physical move. */
+  compound: boolean
+}
 
 export function buildReadyPrompt(input: ReadyInput): string {
   const { step, laterSteps } = input
@@ -102,6 +121,20 @@ give a rough one-sitting time.
 Name no tool, brand, model number, format, setting, person or place that
 doesn't appear word for word above.
 
+Separately from all of that -- how big is the step ITSELF, as written?
+"size_minutes" is how long ONE SITTING of everything the step describes
+would actually take, picked from exactly this list: 5, 10, 15, 20, 30,
+45, 60. "compound" is true only when the step plainly bundles more than
+one separately-schedulable job -- different skills, different
+deliverables -- not just two verbs describing one continuous move.
+
+  NOT compound: "Design and cut the stencil" -- one material, one
+    continuous move. size_minutes sized for that whole move.
+  COMPOUND: "Remix the track with a cleaner vocal, a new riff, and write
+    a distribution plan" -- three different jobs (an audio fix, writing
+    a new part, a business document). compound: true, size_minutes sized
+    for the whole bundle, not just the first piece.
+
 ${PLAIN_ENGLISH_RULES}
 
 The step is "Pour the paint over the stencil":
@@ -114,7 +147,9 @@ The step is "Pour the paint over the stencil":
 Respond with JSON only:
 {
   "verdict": "ready" | "blocked",
-  "blocker": { "text": "...", "evidence": ["e1"], "existing_task_id": null, "estimated_minutes": 15 } | null
+  "blocker": { "text": "...", "evidence": ["e1"], "existing_task_id": null, "estimated_minutes": 15 } | null,
+  "size_minutes": 20,
+  "compound": false
 }`
 }
 
@@ -124,7 +159,14 @@ Respond with JSON only:
  * written into the user's permanent task list.
  */
 export function sanitizeReadiness(raw: unknown, input: ReadyInput): Readiness {
-  const ready: Readiness = { kind: 'ready' }
+  // Sizing is a judgment about the step itself, independent of whether the
+  // blocker (if any) parses or grounds -- extracted once, up front, and
+  // carried onto every return below rather than only the happy path.
+  const rawObj = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : null
+  const sizeMinutes = typeof rawObj?.size_minutes === 'number' ? nearestEstimate(rawObj.size_minutes) : null
+  const compound = rawObj?.compound === true
+
+  const ready: Readiness = { kind: 'ready', sizeMinutes, compound }
   if (!raw || typeof raw !== 'object') return ready
   const parsed = raw as { verdict?: unknown; blocker?: any }
   if (parsed.verdict !== 'blocked' || !parsed.blocker || typeof parsed.blocker !== 'object') return ready
@@ -134,7 +176,7 @@ export function sanitizeReadiness(raw: unknown, input: ReadyInput): Readiness {
   // Already on the list further down: reorder rather than duplicate.
   const citedId = typeof parsed.blocker.existing_task_id === 'string' ? parsed.blocker.existing_task_id : null
   const cited = citedId ? input.laterSteps.find(t => t.id === citedId) : undefined
-  if (cited) return { kind: 'move', taskId: cited.id, text: cited.text }
+  if (cited) return { kind: 'move', taskId: cited.id, text: cited.text, sizeMinutes, compound }
 
   if (!text || text.length > 140) return ready
   // Admin dressed as a prerequisite is the failure mode this whole check
@@ -144,7 +186,7 @@ export function sanitizeReadiness(raw: unknown, input: ReadyInput): Readiness {
   if (sharesSubstantialWording(text, input.step.text)) return ready
   // The model didn't cite it, but it's on the list anyway -- move it.
   const already = input.laterSteps.find(t => sharesSubstantialWording(text, t.text))
-  if (already) return { kind: 'move', taskId: already.id, text: already.text }
+  if (already) return { kind: 'move', taskId: already.id, text: already.text, sizeMinutes, compound }
 
   // Same grounding gates as any other written line -- plus a stricter
   // one. filterGrounded lets an UNCITED item through when it asserts
@@ -165,6 +207,8 @@ export function sanitizeReadiness(raw: unknown, input: ReadyInput): Readiness {
     kind: 'add',
     item: { text: kept[0].text, source: `needed before: ${input.step.text}`, taskId: null },
     minutes: typeof rawMinutes === 'number' ? nearestEstimate(rawMinutes) : DEFAULT_ESTIMATE_MINUTES,
+    sizeMinutes,
+    compound,
   }
 }
 
@@ -174,7 +218,7 @@ export function sanitizeReadiness(raw: unknown, input: ReadyInput): Readiness {
  * knowing the project.
  */
 export async function checkReady(input: ReadyInput): Promise<Readiness> {
-  if (input.evidence.length === 0) return { kind: 'ready' }
+  if (input.evidence.length === 0) return { kind: 'ready', sizeMinutes: null, compound: false }
   try {
     const response = await generateText(buildReadyPrompt(input), {
       responseFormat: 'json',
@@ -186,6 +230,6 @@ export async function checkReady(input: ReadyInput): Promise<Readiness> {
     return sanitizeReadiness(JSON.parse(response), input)
   } catch (e) {
     console.warn('[session-ready] check failed, taking the step as-is:', e instanceof Error ? e.message : e)
-    return { kind: 'ready' }
+    return { kind: 'ready', sizeMinutes: null, compound: false }
   }
 }

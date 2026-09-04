@@ -76,6 +76,14 @@ describe('buildSpinePrompt', () => {
     for (const v of ['research', 'decide', 'brainstorm', 'think about']) expect(p).toContain(v)
   })
 
+  it('distinguishes one job with two verbs from two different jobs bundled into one step', () => {
+    const p = prompt()
+    expect(p).toContain('Design and cut the')
+    expect(p).toContain('is one job -- one material, one continuous move')
+    expect(p).toContain('vocal, write a new riff, and write a distribution plan" is three')
+    expect(p).toContain("it's two steps")
+  })
+
   it('keeps steps the user already agreed to when re-planning', () => {
     const p = prompt({ ...INPUT, existingSteps: ['Record the second verse'] })
     expect(p).toContain('STEPS ALREADY AGREED')
@@ -179,6 +187,13 @@ describe('buildFirstCutPrompt', () => {
     const p = prompt()
     expect(p).toContain('does NOT appear verbatim above')
     for (const v of ['research', 'decide', 'brainstorm']) expect(p).toContain(v)
+  })
+
+  it('says broad is not the same as bundled, with a worked example', () => {
+    const p = prompt()
+    expect(p).toContain('Broad is not the same as bundled')
+    expect(p).toContain('Remix the vocal, write a new riff, and write a')
+    expect(p).toContain('distribution plan" isn\'t broad')
   })
 })
 
