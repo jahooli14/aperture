@@ -147,6 +147,11 @@ export async function splitStep(input: SplitInput): Promise<SplitResult | null> 
       responseFormat: 'json',
       temperature: 0.3,
       maxTokens: 900,
+      // Without a cap, an uncapped thinking model can spend the whole
+      // maxTokens budget reasoning before writing any JSON, leaving
+      // nothing to parse. Carving a fixed step into a piece of itself
+      // isn't open-ended prose -- 'low' matches checkReady's own choice.
+      thinkingLevel: 'low',
     })
     const parsed = JSON.parse(response)
     const { kept, rejected } = groundMoves(parsed?.moves, input.step, input.evidence, input.title)
