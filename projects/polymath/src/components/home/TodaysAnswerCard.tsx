@@ -37,7 +37,7 @@ import { useNavigate } from 'react-router-dom'
 import {
   useProjectStore,
   usePriorityProject,
-  useMostRecentNonPriorityProject,
+  useFocusProject,
 } from '../../stores/useProjectStore'
 import { useSessionContextStore } from '../../stores/useSessionContextStore'
 import { useFocusChatStore } from '../../stores/useFocusChatStore'
@@ -67,7 +67,6 @@ export function TodaysAnswerCard() {
   const projects = useProjectStore(s => s.projects)
   const createProject = useProjectStore(s => s.createProject)
   const priorityProject = usePriorityProject()
-  const recentProject = useMostRecentNonPriorityProject()
   const feeling = useSessionContextStore(s => s.feeling)
 
   // A chip tap — or confirming a new-project proposal from inside the
@@ -83,32 +82,14 @@ export function TodaysAnswerCard() {
   // only pays off if the app opens pre-loaded on the day without asking
   // again. is_priority stays as the fallback so the card still has an
   // anchor before a live project has ever been declared.
-  const liveProject = useMemo(() => {
-    const today = new Date().toISOString().slice(0, 10)
-    // Same active-and-shaped filter every other project selector uses.
-    // Without it, sending the live project to the graveyard left it sitting
-    // here as today's answer forever — the graveyard looked broken because
-    // the one place it mattered wasn't checking status.
-    const eligible = allProjects.filter(
-      p => ['active', 'upcoming'].includes(p.status ?? '') && p.metadata?.is_shaped !== false,
-    )
-    const booked = eligible.find(
-      p => p.booked_session_at?.slice(0, 10) === today && p.state !== 'harvested',
-    )
-    return booked ?? eligible.find(p => p.state === 'live') ?? null
-  }, [allProjects])
-
-  const focusProject = useMemo(
-    () => (overrideProjectId && allProjects.find(
-        p => p.id === overrideProjectId &&
-          ['active', 'upcoming'].includes(p.status ?? ''),
-      ))
-      || liveProject
-      || priorityProject
-      || recentProject
-      || null,
-    [overrideProjectId, allProjects, liveProject, priorityProject, recentProject],
-  )
+  // The whole chain (override -> booked today -> live -> star -> most
+  // recent) lives in useProjectStore as resolveFocusProjectId, because
+  // "everything else" has to exclude exactly whatever this resolves to.
+  // It used to be inlined here and the row only excluded the STAR, so any
+  // time this card showed something else — every ▶ tap on a mini card,
+  // which sets an override rather than re-starring — the same project
+  // appeared in both places.
+  const focusProject = useFocusProject()
 
   // Drop the override the moment the REAL priority changes to something
   // else — without this, a chip pick from earlier in the session would
