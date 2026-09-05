@@ -138,6 +138,10 @@ export interface PlanDraft {
    *  a step moved up from further down, or a missing one written in
    *  before it. Said out loud for the same reason. */
   unblocked: { text: string; before: string; added: boolean } | null
+  /** Steps taken off the project for good on a reshape instruction --
+   *  deleted from the plan, not just left out of today's session. Said
+   *  out loud for the same reason `unblocked` is. */
+  removed: { text: string }[]
 }
 
 interface SessionState {
@@ -184,6 +188,7 @@ interface ShapeResponse {
   truncated_count: number
   planned: number
   unblocked: { text: string; before: string; added: boolean } | null
+  removed: { text: string }[]
 }
 
 function draftFrom(projectId: string, windowMinutes: number | null, data: ShapeResponse): PlanDraft {
@@ -195,6 +200,7 @@ function draftFrom(projectId: string, windowMinutes: number | null, data: ShapeR
     gapKind: data.gap_kind ?? null, slotName: data.slot_name ?? null,
     friction: data.friction ?? null, truncatedCount: data.truncated_count ?? 0,
     planned: data.planned ?? 0, unblocked: data.unblocked ?? null,
+    removed: data.removed ?? [],
   }
 }
 

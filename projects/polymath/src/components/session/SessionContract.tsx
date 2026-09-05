@@ -59,7 +59,7 @@ function ReEntry({ project }: { project: Project }) {
   )
 }
 
-type Phase = 'window' | 'planning' | 'running' | 'closeout' | 'receipt' | 'done'
+export type Phase = 'window' | 'planning' | 'running' | 'closeout' | 'receipt' | 'done'
 
 export function SessionContract({
   project,
@@ -68,6 +68,7 @@ export function SessionContract({
   source = 'live',
   surface = 'card',
   presetWindowMinutes = null,
+  onPhaseChange,
 }: {
   project: Project
   onDone: () => void
@@ -88,6 +89,10 @@ export function SessionContract({
    *  window is a gate on the plan -- it just doesn't have to be asked
    *  twice when the card above already asked it. */
   presetWindowMinutes?: number | null
+  /** Lets a 'bare' parent know which phase this is in, so it can swap its
+   *  own chrome (e.g. to true black once a session is actually running)
+   *  without this component reaching outside itself to do it. */
+  onPhaseChange?: (phase: Phase) => void
 }) {
   // In 'bare' mode the parent supplies padding and background.
   const shell = (extra: string) => (surface === 'bare' ? extra : `glass-card p-6 ${extra}`)
@@ -98,11 +103,15 @@ export function SessionContract({
   } = useSessionStore()
 
   const [phase, setPhase] = useState<Phase>(presetWindowMinutes != null ? 'planning' : 'window')
+  useEffect(() => { onPhaseChange?.(phase) }, [phase, onPhaseChange])
   const [windowMinutes, setWindowMinutes] = useState<number | null>(presetWindowMinutes)
   const [planLeft, setPlanLeft] = useState<number | null>(null)
   const [elapsedSec, setElapsedSec] = useState(0)
   const [ticked, setTicked] = useState<Set<number>>(new Set())
   const [steer, setSteer] = useState('')
+  // Owned focus tint for the steer field, since inline `style.border`
+  // always wins over a Tailwind `focus:` class on the same property.
+  const [steerFocused, setSteerFocused] = useState(false)
   const [closeoutText, setCloseoutText] = useState('')
   const [mvsSeedMinutes, setMvsSeedMinutes] = useState<number | null>(null)
   const [closeResult, setCloseResult] = useState<CloseResult | null>(null)
@@ -425,6 +434,9 @@ export function SessionContract({
   // ─── running ───────────────────────────────────────────────────────
   if (phase === 'running' && active) {
     const remaining = windowMinutes != null ? windowMinutes * 60 - elapsedSec : elapsedSec
+    // The one thing you're actually meant to be doing right now --
+    // everything after it is later, not now.
+    const currentIndex = active.shapes.findIndex((_, i) => !ticked.has(i))
     return (
       <div className={shell('space-y-4')}>
         <div className="flex items-center justify-between">
@@ -443,6 +455,7 @@ export function SessionContract({
         <ul className="space-y-1">
           {active.shapes.map((shape, i) => {
             const done = ticked.has(i)
+            const isCurrent = i === currentIndex
             return (
               <li key={i}>
                 <button
@@ -454,19 +467,25 @@ export function SessionContract({
                       return next
                     })
                   }}
-                  className="w-full flex items-start gap-2.5 text-left py-2 px-2 -mx-2 rounded-lg transition-colors hover:bg-white/[0.04]"
+                  className="w-full flex items-start gap-2.5 text-left py-2.5 px-3 -mx-3 rounded-lg transition-colors hover:bg-white/[0.04]"
+                  style={isCurrent ? {
+                    background: 'rgba(var(--brand-primary-rgb),0.09)',
+                    boxShadow: 'inset 3px 0 0 rgba(var(--brand-primary-rgb),0.6)',
+                  } : undefined}
                 >
                   <span
                     className="mt-0.5 h-4 w-4 rounded-[5px] flex-shrink-0 flex items-center justify-center border"
                     style={done
                       ? { background: 'rgba(var(--brand-primary-rgb),0.9)', borderColor: 'rgba(var(--brand-primary-rgb),0.9)' }
-                      : { borderColor: 'var(--glass-border-bold)' }}
+                      : { borderColor: isCurrent ? 'rgba(var(--brand-primary-rgb),0.7)' : 'var(--glass-border-bold)' }}
                   >
                     {done && <Check size={11} strokeWidth={3} style={{ color: '#0b1220' }} />}
                   </span>
                   <span
                     className="text-sm leading-snug flex-1"
-                    style={done ? { ...secondaryTextStyle, textDecoration: 'line-through', opacity: 0.45 } : undefined}
+                    style={done
+                      ? { ...secondaryTextStyle, textDecoration: 'line-through', opacity: 0.45 }
+                      : isCurrent ? { fontWeight: 600 } : { ...secondaryTextStyle, opacity: 0.55 }}
                   >
                     {shape.text}
                     {shape.partial && (
@@ -572,6 +591,15 @@ export function SessionContract({
         {plan?.unblocked && (
           <p className="text-[12.5px] leading-snug" style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.8 }}>
             {plan.unblocked.added ? 'Added a step that had to come first' : 'Moved a step up'} — “{plan.unblocked.before}” needs “{plan.unblocked.text}” done before it.
+          </p>
+        )}
+
+        {/* A step just got taken off the project for good, not just off
+            today's list -- said plainly for the same reason `unblocked`
+            is: this rewrote the permanent plan. */}
+        {plan?.removed && plan.removed.length > 0 && (
+          <p className="text-[12.5px] leading-snug" style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.8 }}>
+            Taken off the project — {plan.removed.map(r => `“${r.text}”`).join(', ')}.
           </p>
         )}
 
@@ -708,7 +736,11 @@ export function SessionContract({
         ) : (
           <div
             className="flex items-center gap-2 rounded-xl px-3 py-1.5 border"
-            style={borderStyle}
+            style={{
+              borderColor: steerFocused ? 'rgba(var(--brand-primary-rgb),0.32)' : 'var(--glass-border-bold)',
+              boxShadow: steerFocused ? '0 0 0 3px rgba(var(--brand-primary-rgb),0.10)' : 'none',
+              transition: 'border-color 0.15s ease, box-shadow 0.15s ease',
+            }}
           >
             <button
               type="button"
@@ -722,6 +754,8 @@ export function SessionContract({
             <input
               value={steer}
               onChange={e => setSteer(e.target.value)}
+              onFocus={() => setSteerFocused(true)}
+              onBlur={() => setSteerFocused(false)}
               onKeyDown={e => { if (e.key === 'Enter') submitSteer() }}
               placeholder={needsInput ? 'Tell it what you\u2019re doing\u2026' : 'Too much for an hour\u2026'}
               disabled={shaping}

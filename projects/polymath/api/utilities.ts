@@ -2047,6 +2047,7 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
         truncated_count: result.truncatedCount,
         planned: result.planned,
         unblocked: result.unblocked,
+        removed: result.removed,
       })
     } catch (e) {
       const message = e instanceof Error ? e.message : 'Could not shape the session.'

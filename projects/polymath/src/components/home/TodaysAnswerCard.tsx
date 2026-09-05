@@ -47,7 +47,7 @@ import { toPortfolioSummaries, buildOpeningLine } from './focusChatOps'
 import { formatRelativeTime, KeepGoingEmpty } from './KeepGoingEmpty'
 import { ProjectIdeasHome } from './ProjectIdeasHome'
 import { FocusChat } from './FocusChat'
-import { SessionContract } from '../session/SessionContract'
+import { SessionContract, type Phase } from '../session/SessionContract'
 import { WINDOW_PRESETS, useSessionStore } from '../../stores/useSessionStore'
 import { FeelingPill } from './FeelingPill'
 import { useDifferentThingNudge } from './useDifferentThingNudge'
@@ -142,6 +142,12 @@ export function TodaysAnswerCard() {
   // started, so the whole flow (window → shapes → timer → close-out)
   // happens in the one box rather than on a second screen.
   const [contractOpen, setContractOpen] = useState(false)
+  // Tracked so the wrapper below can go true black once a session is
+  // actually running -- the one screen you stare at for the length of an
+  // hour, where the hero gradient's glow costs real OLED battery for no
+  // reason. Every other phase (window/planning/closeout/receipt/done) is
+  // brief, so it keeps the richer look.
+  const [sessionPhase, setSessionPhase] = useState<Phase | null>(null)
   // How long you've got. A control ON the card, never a gate in front of it
   // -- most opens aren't sessions (capture, browse, logging a close-out),
   // and asking those a time question first blocks them for nothing. Picking
@@ -369,11 +375,21 @@ export function TodaysAnswerCard() {
   // contract. It keeps the hero's gradient and glow (surface="bare", so the
   // wrapper below owns the surface): dropping to a flat panel at the exact
   // moment you commit to working reads as a demotion, which is backwards.
+  //
+  // Once you're actually running, that changes: this is the one screen
+  // you're staring at for the length of an hour, not a few seconds like
+  // every other phase, so the gradient/glow that reads as premium
+  // elsewhere just costs OLED battery here for nothing. True black, no
+  // glow, current task pulled forward instead (SessionContract's own job).
   if (contractOpen) {
+    const isRunning = sessionPhase === 'running'
     return (
       <div
         className="rounded-2xl p-5 relative overflow-hidden"
-        style={{
+        style={isRunning ? {
+          background: '#000',
+          border: '1px solid rgba(255,255,255,0.08)',
+        } : {
           background: 'linear-gradient(155deg, rgba(var(--brand-primary-rgb),0.10) 0%, rgba(15,24,41,0.65) 60%)',
           backdropFilter: 'blur(32px) saturate(190%)',
           WebkitBackdropFilter: 'blur(32px) saturate(190%)',
@@ -381,16 +397,20 @@ export function TodaysAnswerCard() {
           boxShadow: '0 0 42px rgba(var(--brand-primary-rgb),0.22), 0 12px 36px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.06)',
         }}
       >
-        <div
-          className="absolute top-0 left-0 right-0 h-px"
-          style={{ background: 'linear-gradient(90deg, transparent, rgba(var(--brand-primary-rgb),0.45), transparent)' }}
-        />
+        {!isRunning && (
+          <div
+            className="absolute top-0 left-0 right-0 h-px"
+            style={{ background: 'linear-gradient(90deg, transparent, rgba(var(--brand-primary-rgb),0.45), transparent)' }}
+          />
+        )}
         <SessionContract
           project={focusProject}
           surface="bare"
           presetWindowMinutes={windowMinutes}
+          onPhaseChange={setSessionPhase}
           onDone={() => {
             setContractOpen(false)
+            setSessionPhase(null)
             // Pull the project back down so the card's re-entry line shows
             // the close-out that was just recorded, not the previous one.
             void useProjectStore.getState().fetchProjects()
@@ -648,6 +668,10 @@ function SteerPanel({
   showDeck: boolean
   onToggleDeck: () => void
 }) {
+  // Inline `style.border` always wins over a Tailwind `focus:` class on
+  // the same property, so the subtle focus tint has to be computed here
+  // rather than as a class -- otherwise it would silently never show.
+  const [steerFocused, setSteerFocused] = useState(false)
   return (
     <motion.div
       initial={{ opacity: 0, height: 0 }}
@@ -724,11 +748,20 @@ function SteerPanel({
             placeholder={hasThread ? 'Reply…' : STEER_PROMPT}
             value={steerText}
             onChange={e => onSteerTextChange(e.target.value)}
-            onFocus={handleInputFocus}
+            onFocus={e => { handleInputFocus(e); setSteerFocused(true) }}
+            onBlur={() => setSteerFocused(false)}
             onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); onSubmitSteer() } }}
             autoComplete="off"
-            className="flex-1 px-4 py-3 rounded-xl text-[15px] focus:outline-none focus:ring-0"
-            style={{ color: 'var(--brand-text-primary)', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.06)' }}
+            className="flex-1 px-4 py-3 rounded-xl text-[15px] outline-none"
+            style={{
+              color: 'var(--brand-text-primary)',
+              background: 'rgba(255,255,255,0.03)',
+              border: `1px solid ${steerFocused ? 'rgba(var(--brand-primary-rgb),0.32)' : 'rgba(255,255,255,0.06)'}`,
+              boxShadow: steerFocused
+                ? 'inset 0 1px 0 rgba(255,255,255,0.06), 0 0 0 3px rgba(var(--brand-primary-rgb),0.10)'
+                : 'inset 0 1px 0 rgba(255,255,255,0.06)',
+              transition: 'border-color 0.15s ease, box-shadow 0.15s ease',
+            }}
           />
           <button
             type="button"
