@@ -79,6 +79,34 @@ BAD: "Your multifaceted engagement with constraint-based creation unlocks transf
 GOOD: "You keep coming back to limits as a creative tool. This project fits that."`
 
 /**
+ * Extra rules for prompts that write ACTIONS -- a session step, a task on
+ * the spine, a move to try -- as opposed to prose about a project.
+ *
+ * This is a different failure from the one PLAIN_ENGLISH_RULES catches.
+ * That one is about pretension ("multifaceted engagement with
+ * constraint-based creation"). This one is about opacity: craft shorthand
+ * that is perfectly ordinary to someone in the trade and meaningless to
+ * the person reading it at 9pm. "Re-record verse two, don't comp yet" is
+ * plain, short, concrete -- and useless if you don't happen to know that
+ * comping means joining the best bits of several takes together.
+ *
+ * BANNED_WORDS can't enumerate this: every craft has its own ("comp",
+ * "bounce", "gesso", "key the surface", "kerf", "proof", "block in"), and
+ * the same word is fine when the user says it themselves. So the rule is
+ * a test rather than a list -- could you do this if you'd never done it
+ * before? -- with the corpus as the arbiter of which shorthand is theirs.
+ *
+ * A step you have to decode is worse than no step: it stops the hour
+ * before it starts, which is the exact cost this app exists to remove.
+ */
+export const CLEAR_STEP_RULES = `Every step has to be doable without decoding it.
+- Say what to physically DO. Someone who has never done this before should be able to follow it.
+- Craft shorthand is only allowed if that exact word appears in the evidence above, in their words. Otherwise say the long version.
+- No abbreviations the evidence doesn't use.
+BAD:  "Re-record verse two, don't comp yet." -- "comp" is studio shorthand and nothing above uses it.
+GOOD: "Record verse two three times through. Don't join the best bits together yet."`
+
+/**
  * Shared turn-taking rules for back-and-forth chat prompts (the project
  * Guide, shaping conversations, session-brief openers). Every conversational
  * prompt was re-deriving its own slightly different version of these —

@@ -17,6 +17,10 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { generateText } from './gemini-chat.js'
 import { PLAIN_ENGLISH_RULES } from './plain-english.js'
 import type { SparkType } from './spark-types.js'
+import { pickCrossingPair, type CrossingProject } from './spark-crossing.js'
+import { SPARK_PROJECT_COOLDOWN_DAYS, recentlySparkedProjectIds, preferUnsparked } from './spark-rotation.js'
+import { pickSparkSubject, type SubjectCandidate } from './spark-subject.js'
+import { pickGap, genericGapQuestion } from './session-gap.js'
 import {
   selectForgottenProject,
   forgottenSparkText,
@@ -119,32 +123,75 @@ async function generateTransferredConstraint(supabase: SupabaseClient, userId: s
   }
   if (byProject.size < 2) return null
 
-  const summary = [...byProject.entries()]
-    .map(([, fs]) => `${fs[0].projects?.title ?? 'a project'}: ${fs.slice(0, 3).map(f => `"${f.text}"`).join(', ')}`)
-    .join('\n')
+  // Labels are what make this a polymath question rather than an
+  // adjacency one -- a rule carried from woodwork into a song has to be
+  // re-derived to survive the trip, and what survives is the part only
+  // this user could have made. Two music projects would be neither.
+  const { data: projectRows } = await supabase
+    .from('projects')
+    .select('id, title, metadata')
+    .eq('user_id', userId)
+    .in('id', [...byProject.keys()])
 
-  const prompt = `Here's what the user has captured, grouped by project:
-${summary}
+  const candidates: CrossingProject[] = (projectRows ?? []).map((p: any) => ({
+    id: p.id,
+    title: p.title,
+    tags: Array.isArray(p.metadata?.tags) ? p.metadata.tags.filter((t: unknown) => typeof t === 'string') : [],
+    fragmentCount: byProject.get(p.id)?.length ?? 0,
+  }))
+  if (candidates.length < 2) return null
 
-Find a RULE or CONSTRAINT that shows up clearly in one project's captures, and ask whether it
-applies to a different project too. Import the rule, don't invent a new connection -- the rule
-has to actually be visible in what's quoted above.
+  const pair = pickCrossingPair(
+    candidates,
+    await recentlySparkedProjectIds(supabase, userId, SPARK_PROJECT_COOLDOWN_DAYS),
+  )
+  if (!pair) return null
+
+  const quote = (id: string) =>
+    (byProject.get(id) ?? []).slice(0, 4).map(f => `- "${f.text}"`).join('\n') || '- (nothing captured)'
+
+  const distance = pair.crossesDisciplines
+    ? `These two are from different parts of their life${pair.from.tags.length && pair.to.tags.length ? ` (${pair.from.tags.join('/')} and ${pair.to.tags.join('/')})` : ''}. That distance is the point -- a rule that survives the trip is worth more than one that never had to travel.`
+    : `These two are close to each other${pair.sharedTags.length ? ` (both ${pair.sharedTags.join(', ')})` : ''}, so the connection has to be genuinely non-obvious to be worth saying at all.`
+
+  const prompt = `What the user has captured about "${pair.from.title}":
+${quote(pair.from.id)}
+
+And about "${pair.to.title}":
+${quote(pair.to.id)}
+
+${distance}
+
+Find a RULE or CONSTRAINT that shows up clearly in the "${pair.from.title}" captures, and ask
+whether it applies to "${pair.to.title}". Import the rule, don't invent a new connection -- the
+rule has to actually be visible in what's quoted above. Name both, so they can tell what's being
+carried where.
 
 ${PLAIN_ENGLISH_RULES}
 ${SILENCE_INSTRUCTION}
 
-Respond with JSON only: { "spark": "..." | null, "target_project_title": "..." | null }`
+Respond with JSON only: { "spark": "..." | null }`
 
   const raw = await askForSpark(prompt)
   if (!raw) return null
-  return { type: 'transferred_constraint', text: raw, project_id: null, expires_at: expiresAt(SPARK_SHELF_LIFE_HOURS) }
+  // Attributed to the project being carried INTO -- that's what the spark
+  // asks them to think about, and what the project rotation records so the
+  // same project isn't the subject two sparks running.
+  return { type: 'transferred_constraint', text: raw, project_id: pair.to.id, expires_at: expiresAt(SPARK_SHELF_LIFE_HOURS) }
 }
 
 async function generateUnfinishedThought(supabase: SupabaseClient, userId: string): Promise<BakedSpark | null> {
   const fragments = await fetchRecentFragments(supabase, userId)
   const obstacles = fragments.filter(f => f.role === 'obstacle' || f.role === 'constraint')
   if (obstacles.length === 0) return null
-  const pick = obstacles[Math.floor(Math.random() * obstacles.length)]
+  // Spread the subject across projects: an unanswered thought about the
+  // shelf is worth as much as a third one about the song, and rotating is
+  // what keeps the rest of the shelf warm enough to cross-reference.
+  const eligible = preferUnsparked(
+    obstacles,
+    await recentlySparkedProjectIds(supabase, userId, SPARK_PROJECT_COOLDOWN_DAYS),
+  )
+  const pick = eligible[Math.floor(Math.random() * eligible.length)]
 
   const prompt = `The user once said, about their project "${pick.projects?.title ?? 'a project'}":
 "${pick.text}"
@@ -184,14 +231,12 @@ Respond with JSON only: { "spark": "..." | null }`
 }
 
 async function generateScaleJump(supabase: SupabaseClient, userId: string): Promise<BakedSpark | null> {
-  const { data: projects } = await supabase
-    .from('projects')
-    .select('id, title, description')
-    .eq('user_id', userId)
-    .neq('state', 'harvested')
-    .limit(20)
-  if (!projects || projects.length === 0) return null
-  const pick = projects[Math.floor(Math.random() * projects.length)]
+  // Same subject rule as the gap: follow what's actually moving this week,
+  // and swerve to something quieter every few sparks rather than circling
+  // one project until it's the only one left warm enough to spark at all.
+  const subject = await chooseSubject(supabase, userId)
+  if (!subject) return null
+  const pick = subject.row
 
   const prompt = `Project: "${pick.title}" -- ${pick.description || 'no description yet'}
 
@@ -213,7 +258,11 @@ async function generateMaterialFact(supabase: SupabaseClient, userId: string): P
   const fragments = await fetchRecentFragments(supabase, userId)
   const materials = fragments.filter(f => f.role === 'material')
   if (materials.length === 0) return null
-  const pick = materials[Math.floor(Math.random() * materials.length)]
+  const eligible = preferUnsparked(
+    materials,
+    await recentlySparkedProjectIds(supabase, userId, SPARK_PROJECT_COOLDOWN_DAYS),
+  )
+  const pick = eligible[Math.floor(Math.random() * eligible.length)]
 
   return {
     type: 'material_fact',
@@ -331,8 +380,131 @@ async function generateForgotten(supabase: SupabaseClient, userId: string): Prom
   }
 }
 
+
+/** How far back "this week" reaches when reading momentum. A little over a
+ *  week, so a project worked on last Sunday still counts on Tuesday. */
+const MOMENTUM_WINDOW_DAYS = 10
+
+interface SubjectRow extends SubjectCandidate {
+  description: string | null
+  metadata: any
+  slots: any
+  last_closeout_text: string | null
+}
+
+/**
+ * Which project today's spark is about: mostly whatever has real movement
+ * behind it this week, with a deliberate swerve to something quieter every
+ * few sparks (spark-subject.ts). Shared by every type whose choice is
+ * genuinely "which project", rather than "which fragment".
+ */
+async function chooseSubject(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<{ row: SubjectRow; deviation: boolean } | null> {
+  const since = new Date(Date.now() - MOMENTUM_WINDOW_DAYS * 86_400_000).toISOString()
+  const [{ data: projects }, { data: frags }, { data: sessions }, { data: recentSubjects }] = await Promise.all([
+    supabase
+      .from('projects')
+      .select('id, title, description, metadata, slots, last_closeout_text, last_active, last_session_ended_at, created_at')
+      .eq('user_id', userId)
+      .neq('state', 'harvested')
+      .in('status', ['active', 'upcoming', 'dormant'])
+      .limit(30),
+    supabase.from('fragments').select('project_id').eq('user_id', userId).gte('created_at', since),
+    supabase.from('sessions').select('project_id').eq('user_id', userId).gte('started_at', since),
+    // Most-recent-first: the subject rotation reads the run, not just the
+    // last one, to decide when a swerve is owed.
+    supabase
+      .from('sparks')
+      .select('project_id, created_at')
+      .eq('user_id', userId)
+      .not('project_id', 'is', null)
+      .order('created_at', { ascending: false })
+      .limit(6),
+  ])
+  if (!projects || projects.length === 0) return null
+
+  const countBy = (rows: any[] | null, key = 'project_id') => {
+    const m = new Map<string, number>()
+    for (const r of rows ?? []) {
+      if (r?.[key]) m.set(r[key], (m.get(r[key]) ?? 0) + 1)
+    }
+    return m
+  }
+  const fragCounts = countBy(frags)
+  const sessionCounts = countBy(sessions)
+
+  const candidates: SubjectRow[] = projects.map((p: any) => ({
+    id: p.id,
+    title: p.title,
+    recentFragments: fragCounts.get(p.id) ?? 0,
+    recentSessions: sessionCounts.get(p.id) ?? 0,
+    lastTouchedAt: [p.last_session_ended_at, p.last_active, p.created_at].filter(Boolean).sort().pop() ?? null,
+    description: p.description ?? null,
+    metadata: p.metadata ?? {},
+    slots: p.slots,
+    last_closeout_text: p.last_closeout_text ?? null,
+  }))
+
+  const choice = pickSparkSubject(
+    candidates,
+    (recentSubjects ?? []).map((s: any) => s.project_id),
+  )
+  if (!choice) return null
+  const row = candidates.find(c => c.id === choice.project.id)
+  return row ? { row, deviation: choice.deviation } : null
+}
+
+/**
+ * The gap: the one thing the app genuinely doesn't know about a project,
+ * asked at the only moment it isn't an interruption.
+ *
+ * pickGap (session-gap.ts) already ranks these deterministically -- no
+ * model call, because a model asked what it doesn't know goes back to
+ * guessing. It was only ever reachable mid-session-shaping, i.e. exactly
+ * when you'd sat down to WORK and the app couldn't build you a plan. That
+ * is the worst possible moment for a question. This is the right one.
+ */
+async function generateGap(supabase: SupabaseClient, userId: string): Promise<BakedSpark | null> {
+  const subject = await chooseSubject(supabase, userId)
+  if (!subject) return null
+  const { row } = subject
+
+  const openTaskCount = Array.isArray(row.metadata?.tasks)
+    ? row.metadata.tasks.filter((t: any) => t && !t.done).length
+    : 0
+  const gap = pickGap({
+    title: row.title,
+    endGoal: row.metadata?.end_goal ?? null,
+    lastCloseout: row.last_closeout_text,
+    openTaskCount,
+    unfilledSlots: (Array.isArray(row.slots) ? row.slots : [])
+      .filter((sl: any) => sl && !sl.filled)
+      .map((sl: any) => sl?.name)
+      .filter(Boolean),
+  })
+
+  // No real gap means the app understands this project well enough, and a
+  // manufactured question is worse than silence -- the generic fallback is
+  // only for a project it has almost nothing on.
+  if (!gap) {
+    const barelyKnown = !row.last_closeout_text?.trim() && openTaskCount === 0 && !row.description?.trim()
+    if (!barelyKnown) return null
+    return {
+      type: 'gap',
+      text: genericGapQuestion(row.title),
+      project_id: row.id,
+      expires_at: expiresAt(SPARK_SHELF_LIFE_HOURS),
+    }
+  }
+
+  return { type: 'gap', text: gap.question, project_id: row.id, expires_at: expiresAt(SPARK_SHELF_LIFE_HOURS) }
+}
+
 const GENERATORS: Record<SparkType, (supabase: SupabaseClient, userId: string) => Promise<BakedSpark | null>> = {
   noticing: generateNoticing,
+  gap: generateGap,
   transferred_constraint: generateTransferredConstraint,
   unfinished_thought: generateUnfinishedThought,
   contradiction: generateContradiction,

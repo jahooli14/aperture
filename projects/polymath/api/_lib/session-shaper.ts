@@ -45,11 +45,14 @@ import {
 import { sanitizeRawItems, dedupeSimilar } from './session-items.js'
 import { confidenceFor, reasoningLicence, type Confidence } from './session-confidence.js'
 import { pickGap, genericGapQuestion, type Gap } from './session-gap.js'
-import { openTasksInOrder, selectByBudget, sumMinutes, type BudgetTask } from './session-budget.js'
+import { openTasksInOrder, selectByBudget, sumMinutes, workingMinutes, type BudgetTask } from './session-budget.js'
 import { nearestEstimate, type EstimateMinutes } from './session-estimate.js'
 import { splitStep, doneLineForSteps, sanitizeDoneLooksLike } from './session-split.js'
 import { checkReady } from './session-ready.js'
 import { topUpSession } from './session-topup.js'
+import { briefSession, isUsableExitNote } from './session-briefing.js'
+import { sparkForSession, sparkMinutesCap, type WeekSignal } from './session-spark.js'
+import { readPrebake, isPrebakeFresh } from './session-prebake.js'
 import { generateTaskSpine, generateFirstCutTasks, toStoredTasks } from './task-spine.js'
 import { normalizeTaskOrder } from './task-order.js'
 import { parseEmbedding } from './project-ideas/seed-picker.js'
@@ -102,6 +105,49 @@ export function sanitizeRemovals(raw: unknown, taskIdByEvidenceId: Record<string
     if (taskId) ids.add(taskId)
   }
   return [...ids]
+}
+
+/**
+ * Setting up and clearing away are facts about the PROJECT, not about
+ * tonight: a project that needs the paint got out will need it every time.
+ * Once observed, it's stored and reused, so it costs one inference rather
+ * than one per session -- and so the fast, no-model path can subtract it
+ * too.
+ */
+export function readStoredFriction(raw: unknown): FrictionLine | null {
+  if (!raw || typeof raw !== 'object') return null
+  const text = typeof (raw as any).text === 'string' ? (raw as any).text.trim() : ''
+  const minutes = (raw as any).minutes
+  if (!text || typeof minutes !== 'number' || minutes <= 0) return null
+  return { text, minutes: nearestEstimate(minutes) }
+}
+
+/** Only writes when something actually changed -- this runs on every
+ *  briefing, and a no-op update per session is a wasted round trip. */
+export function frictionChanged(
+  stored: unknown, next: FrictionLine | null,
+): boolean {
+  const before = readStoredFriction(stored)
+  if (!before && !next) return false
+  if (!before || !next) return true
+  return before.text !== next.text || before.minutes !== next.minutes
+}
+
+async function persistFriction(
+  supabase: SupabaseClient,
+  projectId: string,
+  userId: string,
+  metadata: any,
+  setup: FrictionLine | null,
+  packdown: FrictionLine | null,
+): Promise<void> {
+  if (!frictionChanged(metadata?.setup, setup) && !frictionChanged(metadata?.packdown, packdown)) return
+  const { error } = await supabase
+    .from('projects')
+    .update({ metadata: { ...metadata, setup, packdown } })
+    .eq('id', projectId)
+    .eq('user_id', userId)
+  if (error) console.warn('[session-shaper] could not save setup/pack-down:', error.message)
 }
 
 export interface OpenStep extends BudgetTask {
@@ -329,13 +375,20 @@ export interface ShapeResult {
   doneLooksLike: string | null
   /** 'tasks' — the plan is the project's own next steps, verbatim.
    *  'split' — the next step was bigger than the window; this is the first
-   *  piece of it. 'ai' — reshaped on the user's instruction. 'derived' —
-   *  nothing to plan from; a placeholder rather than an invention. */
-  source: 'tasks' | 'split' | 'ai' | 'derived'
+   *  piece of it. 'ai' — reshaped on the user's instruction. 'briefing' —
+   *  the project's own steps, ordered and worded by the user's own exit
+   *  note. 'derived' — nothing to plan from; a placeholder rather than an
+   *  invention. */
+  source: 'tasks' | 'split' | 'ai' | 'briefing' | 'derived'
   needsInput: string | null
   gap: Gap | null
   confidence: Confidence
   friction: FrictionLine | null
+  /** Clearing away at the other end -- cleaning brushes, putting the gear
+   *  back. Real minutes spent inside the window, so it is subtracted from
+   *  the working time the same way setup is, and shown last rather than
+   *  first. Null when the project genuinely doesn't need one. */
+  packdown: FrictionLine | null
   /** Open steps beyond what was even considered, so the app can say so. */
   truncatedCount: number
   /** Steps planned onto the project first because its list was empty. */
@@ -398,6 +451,50 @@ export async function shapeSession(
 
   const metadata = project.metadata ?? {}
   let allTasks: any[] = Array.isArray(metadata.tasks) ? metadata.tasks : []
+
+  // ── Already baked? Then this costs nothing ────────────────────────
+  // An hour appears and the app has to be useful in the first two
+  // seconds. A stored plan is served whole, above even the corpus
+  // queries -- but only while it still matches what it was built from
+  // (session-prebake.ts), and never on a reshape, where the user is
+  // asking for something new by definition.
+  if (!instruction) {
+    const bake = readPrebake(metadata)
+    if (isPrebakeFresh(bake, allTasks, project.last_closeout_text) && bake) {
+      // A shorter window than the bake was built for just takes fewer
+      // items off the front: they're already in priority order, so this
+      // is a pure trim rather than a reason to re-shape.
+      const room = itemCountForWindow(windowMinutes)
+      const items = windowMinutes != null && windowMinutes < bake.windowMinutes
+        ? bake.items.slice(0, room)
+        : bake.items
+      return {
+        confidence: confidenceFor({
+          endGoal: metadata.end_goal ?? null,
+          endGoalSource: metadata.end_goal_source ?? null,
+          description: project.description ?? null,
+          lastCloseout: project.last_closeout_text ?? null,
+          lastSessionEndedAt: project.last_session_ended_at ?? null,
+          movedSessionCount: 0,
+          doneTaskCount: allTasks.filter((t: any) => t?.done).length,
+          openTaskCount: allTasks.filter((t: any) => t && !t.done).length,
+          recentFragmentCount: 0,
+          shapingChatTurns: 0,
+        }),
+        items,
+        doneLooksLike: bake.doneLooksLike,
+        source: bake.source,
+        needsInput: null,
+        gap: null,
+        friction: bake.friction,
+        packdown: bake.packdown,
+        truncatedCount: bake.truncatedCount,
+        planned: 0,
+        unblocked: null,
+        removed: [],
+      }
+    }
+  }
   const goal: string | null = metadata.end_goal || project.description || null
 
   // Recent captures that connect to this project by meaning but never got
@@ -433,21 +530,23 @@ export async function shapeSession(
           match_count: 8,
         })
       : Promise.resolve({ data: [] as any[] }),
-    // Identity-signal tone (see `identityLine` below) -- most recent item
-    // added to any list, same shape project-ideas/gather.ts already reads.
+    // Identity signal: what they've recently added to a list and what
+    // they've been highlighting, same shape project-ideas/gather.ts reads.
+    // The freshest one sets ambient tone (`identityLine`); the handful
+    // feeds the "while you're in there" spark (session-spark.ts).
     supabase
       .from('list_items')
       .select('content, created_at')
       .eq('user_id', userId)
       .in('status', ['pending', 'active'])
       .order('created_at', { ascending: false })
-      .limit(1),
+      .limit(6),
     supabase
       .from('article_highlights')
       .select('created_at, reading_queue!inner(title)')
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
-      .limit(1),
+      .limit(6),
   ])
 
   // Never permanently attached (still visible next time via `fragments`
@@ -481,6 +580,27 @@ export async function shapeSession(
   const identityLine = identityCandidates[0]
     ? `Just for tone, not something to plan around: they've recently been into "${identityCandidates[0].text}".`
     : null
+
+  // The same material, but citable: what the week has actually been made
+  // of, each entry carrying the plain phrase that will appear under the
+  // spark as its receipt. Recent only -- a list item from March says
+  // nothing about who's sitting down tonight.
+  const fourteenDaysAgo = Date.now() - 14 * 86_400_000
+  const weekSignals: WeekSignal[] = []
+  const addSignal = (text: string, source: string, ts: number) => {
+    if (!text?.trim() || ts < fourteenDaysAgo || weekSignals.length >= 8) return
+    weekSignals.push({ id: `w${weekSignals.length + 1}`, label: source, text: text.trim(), source })
+  }
+  ;(listItemRows || []).forEach((r: any) => {
+    if (r?.content) addSignal(r.content, `you added "${r.content}" to a list`, new Date(r.created_at).getTime())
+  })
+  ;(highlightRows || []).forEach((r: any) => {
+    const t = r?.reading_queue?.title
+    if (t) addSignal(t, `you've been reading "${t}"`, new Date(r.created_at).getTime())
+  })
+  // Captures that never landed on any project -- the half-asleep idea
+  // that's been sitting in the corpus doing nothing.
+  recalled.forEach(m => addSignal(m.text, 'a note of yours that never got filed', Date.now()))
 
   const pastCloseouts = (sessionRows || [])
     .filter(r => r.closeout_text && r.closeout_text !== project.last_closeout_text)
@@ -579,7 +699,7 @@ export async function shapeSession(
   })
 
   const { evidence, taskIdByEvidenceId } = buildEvidence(ctx)
-  const base = { confidence, truncatedCount, planned, gap: null, needsInput: null, friction: null, unblocked: null, removed: [] as { text: string }[] }
+  const base = { confidence, truncatedCount, planned, gap: null, needsInput: null, friction: null, packdown: null, unblocked: null, removed: [] as { text: string }[] }
 
   // ── Reshape: the user said what's wrong ───────────────────────────
   if (instruction) {
@@ -755,9 +875,91 @@ export async function shapeSession(
     }
   }
 
-  // ── The next steps, in order, as many as fit ──────────────────────
+  let setup: FrictionLine | null = readStoredFriction(metadata.setup)
+  let packdown: FrictionLine | null = readStoredFriction(metadata.packdown)
+
+  // ── One thing to try, from what the week has been made of ─────────
+  // Appended last on any path, and only when the real work has left room
+  // for it: the spark is the colour, never the spine. Skipped entirely on
+  // a reshape (the user is steering; adding an uninvited idea mid-steer
+  // is the app talking over them).
+  const sparkFor = async (planned: GroundedItem[]): Promise<GroundedItem | null> => {
+    if (weekSignals.length === 0 || planned.length >= itemCountForWindow(windowMinutes)) return null
+    // Room is checked against the same working minutes everything else is
+    // budgeted from, so a punt can never be what makes the hour overrun.
+    if (windowMinutes != null) {
+      const plannedMinutes = planned.reduce((total, i) => {
+        const step = steps.find(st => st.id === i.taskId)
+        return total + (step?.minutes ?? 0)
+      }, 0)
+      const left = (workingMinutes(windowMinutes, setup?.minutes, packdown?.minutes) ?? 0) - plannedMinutes
+      if (left < sparkMinutesCap(windowMinutes)) return null
+    }
+    return sparkForSession({
+      title: project.title,
+      projectEvidence: evidence,
+      weekSignals,
+      currentItems: planned.map(i => i.text),
+      windowMinutes,
+    })
+  }
+
+  // ── What the hour is actually worth ───────────────────────────────
+  // Setting up and clearing away are spent inside the window, not around
+  // it. Read from the project first: needing the paint got out is a fact
+  // about the project, not about tonight, so once it's known it's reused
+  // rather than re-inferred (and re-charged for) every single session.
   const count = itemCountForWindow(windowMinutes)
-  const { selected, rest } = selectByBudget(steps, windowMinutes, count)
+
+  // ── The briefing: their own exit note, as this session's path ──────
+  // Only when there's a real exit note to build on. Anything less and
+  // this falls through to the verbatim list below, which is what shipped
+  // before and is never worse than a thin briefing.
+  if (isUsableExitNote(ctx.lastCloseout)) {
+    const briefing = await briefSession({
+      title: project.title,
+      exitNote: ctx.lastCloseout as string,
+      openSteps: steps.map(s => ({ id: s.id, text: s.text })),
+      windowMinutes,
+      maxItems: count,
+      evidence,
+      taskIdByEvidenceId,
+      confidence,
+      knownSetup: setup,
+      knownPackdown: packdown,
+    })
+    if (briefing) {
+      const learnedSetup = sanitizeFriction(briefing.rawSetup, evidence, project.title)
+      const learnedPackdown = sanitizeFriction(briefing.rawPackdown, evidence, project.title)
+      if (learnedSetup) setup = learnedSetup
+      if (learnedPackdown) packdown = learnedPackdown
+      await persistFriction(supabase, projectId, userId, metadata, setup, packdown)
+
+      // The model was asked to under-reach and told the ceiling, but the
+      // budget is the thing that actually has to hold: trim in order
+      // against the minutes really available, using each item's own
+      // source-step estimate.
+      const minutesByTaskId = new Map(steps.map(s => [s.id, s.minutes]))
+      const budgeted = selectByBudget(
+        briefing.items.map(i => ({ item: i, minutes: minutesByTaskId.get(i.taskId as string) ?? 20 })),
+        workingMinutes(windowMinutes, setup?.minutes, packdown?.minutes),
+        count,
+      )
+      const items = budgeted.selected.map(b => b.item)
+      const spark = await sparkFor(items)
+      return {
+        ...base, unblocked, friction: setup, packdown,
+        items: spark ? [...items, spark] : items,
+        doneLooksLike: briefing.doneLooksLike,
+        source: 'briefing',
+      }
+    }
+  }
+
+  // ── The next steps, in order, as many as fit ──────────────────────
+  const { selected, rest } = selectByBudget(
+    steps, workingMinutes(windowMinutes, setup?.minutes, packdown?.minutes), count,
+  )
   const first = selected[0]
 
   // The next step is bigger than the sitting -- either the numbers say so,
@@ -795,9 +997,11 @@ export async function shapeSession(
             maxItems: Math.max(0, count - split.moves.length),
           })
         : []
+      const splitItems = [...split.moves, ...splitTopUp]
+      const splitSpark = await sparkFor(splitItems)
       return {
-        ...base, unblocked,
-        items: [...split.moves, ...splitTopUp],
+        ...base, unblocked, friction: setup, packdown,
+        items: splitSpark ? [...splitItems, splitSpark] : splitItems,
         doneLooksLike: split.doneLooksLike ?? doneLineForSteps(split.moves),
         source: 'split',
       }
@@ -818,7 +1022,8 @@ export async function shapeSession(
   // from", and topping THAT up would risk padding around a step that's
   // still genuinely too big rather than genuinely short a plan.
   if (rest.length === 0 && windowMinutes != null && !oversized && !flaggedCompound) {
-    const remainingMinutes = windowMinutes - sumMinutes(selected)
+    const remainingMinutes = (workingMinutes(windowMinutes, setup?.minutes, packdown?.minutes) ?? windowMinutes)
+      - sumMinutes(selected)
     if (remainingMinutes >= 15) {
       const topUpItems = await topUpSession({
         title: project.title,
@@ -831,5 +1036,11 @@ export async function shapeSession(
     }
   }
 
-  return { ...base, unblocked, items, doneLooksLike: doneLineForSteps(selected), source: 'tasks' }
+  const spark = await sparkFor(items)
+  if (spark) items.push(spark)
+
+  return {
+    ...base, unblocked, friction: setup, packdown,
+    items, doneLooksLike: doneLineForSteps(selected), source: 'tasks',
+  }
 }

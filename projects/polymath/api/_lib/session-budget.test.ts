@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { openTasksInOrder, selectByBudget, sumMinutes } from './session-budget.js'
+import { openTasksInOrder, selectByBudget, sumMinutes, workingMinutes } from './session-budget.js'
 
 describe('openTasksInOrder', () => {
   it('drops done tasks and anything missing an id or text', () => {
@@ -80,5 +80,29 @@ describe('sumMinutes', () => {
 
   it('is zero for an empty list', () => {
     expect(sumMinutes([])).toBe(0)
+  })
+})
+
+describe('workingMinutes', () => {
+  it('takes setting up and clearing away out of the window, because both happen inside it', () => {
+    expect(workingMinutes(60, 10, 10)).toBe(40)
+  })
+
+  it('handles a project that needs one end but not the other', () => {
+    expect(workingMinutes(60, 15, null)).toBe(45)
+    expect(workingMinutes(60, null, 5)).toBe(55)
+  })
+
+  it('is just the window when the project needs neither', () => {
+    expect(workingMinutes(60)).toBe(60)
+    expect(workingMinutes(60, null, null)).toBe(60)
+  })
+
+  it('stays null when the window is unknown, rather than inventing one', () => {
+    expect(workingMinutes(null, 10, 10)).toBeNull()
+  })
+
+  it('floors at five rather than going to zero, so a swallowed window still gets one small thing', () => {
+    expect(workingMinutes(20, 15, 15)).toBe(5)
   })
 })

@@ -2044,6 +2044,7 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
         slot_name: result.gap?.slotName ?? null,
         confidence: result.confidence,
         friction: result.friction,
+        packdown: result.packdown,
         truncated_count: result.truncatedCount,
         planned: result.planned,
         unblocked: result.unblocked,
@@ -2096,13 +2097,18 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
     // to close time so a tick can mark that task done without depending on
     // the model's session-item wording matching the task's stored text.
     const rawItems = Array.isArray(req.body?.items) ? req.body.items : []
-    type AgreedItem = { text: string; taskId: string | null; partial: boolean }
+    type AgreedItem = { text: string; taskId: string | null; partial: boolean; spark: boolean }
     const agreedRaw: AgreedItem[] = rawItems
       .map((entry: unknown) => {
-        if (typeof entry === 'string') return { text: entry, taskId: null, partial: false }
+        if (typeof entry === 'string') return { text: entry, taskId: null, partial: false, spark: false }
         if (entry && typeof entry === 'object' && typeof (entry as any).text === 'string') {
           const e = entry as any
-          return { text: e.text, taskId: typeof e.taskId === 'string' ? e.taskId : null, partial: e.partial === true }
+          return {
+            text: e.text,
+            taskId: typeof e.taskId === 'string' ? e.taskId : null,
+            partial: e.partial === true,
+            spark: e.spark === true,
+          }
         }
         return null
       })
@@ -2114,12 +2120,14 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
     // if it was actually ticked -- not the instant Start is tapped. A
     // "pending-" id marks it as provisional through the running session;
     // resource=close is what makes it real.
-    const agreed: AgreedItem[] = agreedRaw.map(({ text, taskId, partial }, i) => (
-      taskId ? { text, taskId, partial } : { text, taskId: `pending-${Date.now()}-${i}`, partial }
+    const agreed: AgreedItem[] = agreedRaw.map(({ text, taskId, partial, spark }, i) => (
+      taskId ? { text, taskId, partial, spark } : { text, taskId: `pending-${Date.now()}-${i}`, partial, spark }
     ))
 
     const shapes: SessionShape[] = agreed.length > 0
-      ? agreed.map(({ text, taskId, partial }) => ({ text, source: 'shaped' as const, partial, taskId }))
+      ? agreed.map(({ text, taskId, partial, spark }) => ({
+          text, source: spark ? ('spark' as const) : ('shaped' as const), partial, taskId,
+        }))
       : deriveSessionShapes({
           lastClosingText: project.last_closeout_text ?? null,
           slots,
@@ -2814,7 +2822,29 @@ async function handleExecutionSparks(req: VercelRequest, res: VercelResponse) {
       // Module not available — ignore
     }
 
-    return res.status(200).json({ ok: true })
+    // Which project this lands on, so the app can say what answering just
+    // did rather than swallowing it. The claim is real: the answer goes
+    // through the same pipeline as any capture, and the session briefing
+    // reads both attached fragments and corpus-wide recall, so it genuinely
+    // shows up the next time this project is planned.
+    let projectTitle: string | null = null
+    const { data: sparkRow } = await supabase
+      .from('sparks')
+      .select('project_id')
+      .eq('id', spark_id)
+      .eq('user_id', userId)
+      .maybeSingle()
+    if (sparkRow?.project_id) {
+      const { data: proj } = await supabase
+        .from('projects')
+        .select('title')
+        .eq('id', sparkRow.project_id)
+        .eq('user_id', userId)
+        .maybeSingle()
+      projectTitle = proj?.title ?? null
+    }
+
+    return res.status(200).json({ ok: true, project_title: projectTitle })
   }
 
   return res.status(404).json({ error: `Unknown resource: ${resource}` })

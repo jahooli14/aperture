@@ -21,7 +21,7 @@
 
 import { generateText } from './gemini-chat.js'
 import { MODELS } from './models.js'
-import { PLAIN_ENGLISH_RULES } from './plain-english.js'
+import { PLAIN_ENGLISH_RULES, CLEAR_STEP_RULES } from './plain-english.js'
 import {
   evidenceHaystack, hasOnlyKnownSpecifics, extractSpecifics,
   type Evidence, type GroundedItem,
@@ -76,6 +76,8 @@ not from the top.
 - One line each. No sub-bullets, no time estimates, no explanation.
 
 ${PLAIN_ENGLISH_RULES}
+
+${CLEAR_STEP_RULES}
 
 Say the step is "Design and cut the stencil" and they have 20 minutes:
   BAD:  "Set up your cutting mat and X-Acto knife under good light."

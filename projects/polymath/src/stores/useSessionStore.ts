@@ -18,7 +18,7 @@ import { isOnline } from '../lib/network'
 
 export interface SessionShape {
   text: string
-  source: 'closeout' | 'slot' | 'decomposition' | 'start' | 'ignition' | 'shaped' | 'friction'
+  source: 'closeout' | 'slot' | 'decomposition' | 'start' | 'ignition' | 'shaped' | 'friction' | 'spark'
   partial: boolean
   /** The task this shape is grounded in, when it has one. Sending this
    *  back at close time is what lets a tick mark the real task done,
@@ -80,6 +80,7 @@ export interface ActiveSession {
     source: string
     items: PlanItem[]
     friction: FrictionLine | null
+    packdown: FrictionLine | null
     started_at: string
   }
 }
@@ -120,9 +121,13 @@ export interface PlanItem {
   /** True when this is a piece of a bigger step, not the whole of it --
    *  ticking it records progress on the step, never completion. */
   partial?: boolean
+  /** The "while you're in there" punt from the week's corpus, not a step
+   *  on the project. Sent to resource=start so the running list can keep
+   *  showing it as what it is rather than as an ordinary step. */
+  spark?: boolean
 }
 
-export type PlanSource = 'tasks' | 'split' | 'ai' | 'derived' | 'offline'
+export type PlanSource = 'tasks' | 'split' | 'ai' | 'briefing' | 'derived' | 'offline'
 
 export interface PlanDraft {
   projectId: string
@@ -140,14 +145,20 @@ export interface PlanDraft {
   slotName: string | null
   /** 'tasks' — the project's own next steps, verbatim. 'split' — the next
    *  step was bigger than the window, this is the first piece of it.
-   *  'ai' — reshaped on what the user said. 'derived' — nothing to plan
-   *  from, a placeholder rather than an invention. 'offline' — the network
+   *  'ai' — reshaped on what the user said. 'briefing' — the project's own
+   *  steps, ordered and worded by your own exit note from last time.
+   *  'derived' — nothing to plan from, a placeholder rather than an
+   *  invention. 'offline' — the network
    *  call failed; drawn client-side from the cached project's own next
    *  steps, same as 'tasks' but with no reshape/split/top-up available. */
   source: PlanSource
-  /** Null on the verbatim, no-model-call path -- there's nothing to ask
-   *  about friction when nothing was generated. */
+  /** The physical setting-up this project needs before you can start,
+   *  when it has one. Its minutes are already subtracted from what the
+   *  session was planned against. */
   friction: FrictionLine | null
+  /** Clearing away at the other end -- cleaning brushes, putting the gear
+   *  back. Shown last so the hour actually closes instead of overrunning. */
+  packdown: FrictionLine | null
   /** How much of the real backlog wasn't even considered for this plan
    *  (the 24-task ceiling), so it can be said rather than silently eaten. */
   truncatedCount: number
@@ -186,7 +197,7 @@ interface SessionState {
   reshapePlan: (instruction: string) => Promise<void>
   clearPlan: () => void
 
-  startSession: (projectId: string, windowMinutes: number | null, source?: string, items?: PlanItem[], friction?: FrictionLine | null) => Promise<void>
+  startSession: (projectId: string, windowMinutes: number | null, source?: string, items?: PlanItem[], friction?: FrictionLine | null, packdown?: FrictionLine | null) => Promise<void>
   /** Answers the app's "I don't know enough" question. Saves the answer to
    *  the project so it's evidence next time, then re-shapes on it. */
   answerPlanQuestion: (answer: string) => Promise<void>
@@ -205,6 +216,7 @@ interface ShapeResponse {
   gap_kind: string | null
   slot_name: string | null
   friction: FrictionLine | null
+  packdown: FrictionLine | null
   truncated_count: number
   planned: number
   unblocked: { text: string; before: string; added: boolean } | null
@@ -218,7 +230,8 @@ function draftFrom(projectId: string, windowMinutes: number | null, data: ShapeR
     doneLooksLike: data.done_looks_like ?? null,
     source: data.source, needsInput: data.needs_input ?? null,
     gapKind: data.gap_kind ?? null, slotName: data.slot_name ?? null,
-    friction: data.friction ?? null, truncatedCount: data.truncated_count ?? 0,
+    friction: data.friction ?? null, packdown: data.packdown ?? null,
+    truncatedCount: data.truncated_count ?? 0,
     planned: data.planned ?? 0, unblocked: data.unblocked ?? null,
     removed: data.removed ?? [],
   }
@@ -256,6 +269,22 @@ async function postJson<T>(url: string, body: unknown): Promise<T> {
     throw new Error(payload.error || `Request failed: ${res.status}`)
   }
   return res.json()
+}
+
+/** Setting up goes first and clearing away goes last, because that is when
+ *  they happen -- and a session that ends without the pack-down on screen
+ *  is the one that overruns. Neither is ever sent to resource=start as a
+ *  real item, so neither can be promoted into a task the way a plan item
+ *  can; ticking them does nothing at close but feel good. */
+function withBookends(
+  shapes: SessionShape[],
+  friction?: FrictionLine | null,
+  packdown?: FrictionLine | null,
+): SessionShape[] {
+  const out = [...shapes]
+  if (friction) out.unshift({ text: friction.text, source: 'friction', partial: false, taskId: null })
+  if (packdown) out.push({ text: packdown.text, source: 'friction', partial: false, taskId: null })
+  return out
 }
 
 export const useSessionStore = create<SessionState>((set, get) => ({
@@ -346,7 +375,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     await get().shapePlan(plan.projectId, plan.windowMinutes)
   },
 
-  startSession: async (projectId, windowMinutes, source = 'live', items, friction) => {
+  startSession: async (projectId, windowMinutes, source = 'live', items, friction, packdown) => {
     set({ starting: true, error: null })
     try {
       const data = await postJson<{ session: any; shapes: SessionShape[]; ask_mvs_seed: boolean }>(
@@ -356,9 +385,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       // Friction never goes to the server as a real plan item -- it's
       // added to the running list client-side, so it can never be
       // promoted into a task the way an invented item can.
-      const shapes = friction
-        ? [{ text: friction.text, source: 'friction' as const, partial: false, taskId: null }, ...data.shapes]
-        : data.shapes
+      const shapes = withBookends(data.shapes, friction, packdown)
       set({
         active: {
           id: data.session.id,
@@ -381,13 +408,11 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       const agreedItems = (items ?? []).slice(0, 6)
       const shaped: SessionShape[] = agreedItems.map((item, i) => ({
         text: item.text,
-        source: 'shaped' as const,
+        source: item.spark ? ('spark' as const) : ('shaped' as const),
         partial: item.partial ?? false,
         taskId: item.taskId ?? `pending-${Date.now()}-${i}`,
       }))
-      const shapes = friction
-        ? [{ text: friction.text, source: 'friction' as const, partial: false, taskId: null }, ...shaped]
-        : shaped
+      const shapes = withBookends(shaped, friction, packdown)
       set({
         active: {
           id: `local-${crypto.randomUUID()}`,
@@ -403,6 +428,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
             source,
             items: agreedItems,
             friction: friction ?? null,
+            packdown: packdown ?? null,
             started_at: startedAt,
           },
         },

@@ -20,6 +20,13 @@
 
 export const SPARK_TYPES = [
   'noticing',
+  // The one type that asks rather than offers: pickGap (session-gap.ts)
+  // already works out the single thing the app doesn't know about a
+  // project, and it used to be reachable only when you'd sat down to work
+  // and it couldn't build a plan. A question is the weakest thing the app
+  // can say, so it belongs at the moment you CAN'T work, not the moment
+  // you're trying to.
+  'gap',
   'transferred_constraint',
   'unfinished_thought',
   'contradiction',

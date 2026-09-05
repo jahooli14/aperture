@@ -113,6 +113,7 @@ export function buildOfflinePlan(project: Project, windowMinutes: number | null)
     slotName: null,
     source: 'offline',
     friction: null,
+    packdown: null,
     truncatedCount: Math.max(0, openTasks.length - selected.length),
     planned: 0,
     unblocked: null,

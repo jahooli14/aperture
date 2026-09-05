@@ -352,6 +352,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
       }
 
+      // 9. Bake tomorrow's sessions for the projects most likely to be
+      // opened. The whole product is "an hour appears and the app is
+      // useful in two seconds" -- a spinner at that moment is the faffing
+      // this is meant to remove. Last in the daily bundle on purpose: it
+      // reads the task lists everything above may have just rewritten.
+      if (userId) {
+        try {
+          console.log('[cron/jobs/daily] Baking next sessions...')
+          const { prebakeForUser } = await import('../_lib/session-prebake.js')
+          const bakeResult = await prebakeForUser(supabase, userId)
+          results.tasks.session_prebake = { success: true, ...bakeResult }
+          console.log(`[cron/jobs/daily] Baked ${bakeResult.baked}/${bakeResult.considered} session(s)`)
+        } catch (error) {
+          console.error('[cron/jobs/daily] Session pre-bake failed:', error)
+          results.tasks.session_prebake = {
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error'
+          }
+        }
+      }
+
       // Evolution events (evolution_events table) are generated once daily
       // by the GitHub Actions cron at 08:00 UTC via POST
       // /api/projects?resource=evolve — not here. This job used to also call

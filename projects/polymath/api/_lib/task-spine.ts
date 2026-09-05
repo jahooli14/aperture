@@ -23,7 +23,7 @@
  */
 
 import { generateText } from './gemini-chat.js'
-import { PLAIN_ENGLISH_RULES } from './plain-english.js'
+import { PLAIN_ENGLISH_RULES, CLEAR_STEP_RULES } from './plain-english.js'
 import { filterGrounded, type Evidence } from './session-grounding.js'
 import { isAdminItem } from './session-items.js'
 import { ESTIMATE_MINUTES, nearestEstimate, type EstimateMinutes } from './session-estimate.js'
@@ -147,6 +147,8 @@ step if it spans several sessions, just a realistic single sitting. Pick
 the closest value from EXACTLY this list: ${ESTIMATE_MINUTES.join(', ')}.
 
 ${PLAIN_ENGLISH_RULES}
+
+${CLEAR_STEP_RULES}
 
 Respond with JSON only:
 { "steps": [ { "text": "...", "evidence": ["e1"], "after": [], "estimated_minutes": 20 } ] }`
@@ -379,6 +381,8 @@ For each, also guess how long it takes in one sitting. Pick the closest
 value from EXACTLY this list: ${ESTIMATE_MINUTES.join(', ')}.
 
 ${PLAIN_ENGLISH_RULES}
+
+${CLEAR_STEP_RULES}
 
 Respond with JSON only:
 { "steps": [ { "text": "...", "evidence": ["e1"], "estimated_minutes": 15 } ] }`
