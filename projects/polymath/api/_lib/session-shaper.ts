@@ -52,6 +52,7 @@ import { checkReady } from './session-ready.js'
 import { topUpSession } from './session-topup.js'
 import { briefSession, isUsableExitNote } from './session-briefing.js'
 import { sparkForSession, sparkMinutesCap, type WeekSignal } from './session-spark.js'
+import { readPrebake, isPrebakeFresh } from './session-prebake.js'
 import { generateTaskSpine, generateFirstCutTasks, toStoredTasks } from './task-spine.js'
 import { normalizeTaskOrder } from './task-order.js'
 import { parseEmbedding } from './project-ideas/seed-picker.js'
@@ -450,6 +451,50 @@ export async function shapeSession(
 
   const metadata = project.metadata ?? {}
   let allTasks: any[] = Array.isArray(metadata.tasks) ? metadata.tasks : []
+
+  // ── Already baked? Then this costs nothing ────────────────────────
+  // An hour appears and the app has to be useful in the first two
+  // seconds. A stored plan is served whole, above even the corpus
+  // queries -- but only while it still matches what it was built from
+  // (session-prebake.ts), and never on a reshape, where the user is
+  // asking for something new by definition.
+  if (!instruction) {
+    const bake = readPrebake(metadata)
+    if (isPrebakeFresh(bake, allTasks, project.last_closeout_text) && bake) {
+      // A shorter window than the bake was built for just takes fewer
+      // items off the front: they're already in priority order, so this
+      // is a pure trim rather than a reason to re-shape.
+      const room = itemCountForWindow(windowMinutes)
+      const items = windowMinutes != null && windowMinutes < bake.windowMinutes
+        ? bake.items.slice(0, room)
+        : bake.items
+      return {
+        confidence: confidenceFor({
+          endGoal: metadata.end_goal ?? null,
+          endGoalSource: metadata.end_goal_source ?? null,
+          description: project.description ?? null,
+          lastCloseout: project.last_closeout_text ?? null,
+          lastSessionEndedAt: project.last_session_ended_at ?? null,
+          movedSessionCount: 0,
+          doneTaskCount: allTasks.filter((t: any) => t?.done).length,
+          openTaskCount: allTasks.filter((t: any) => t && !t.done).length,
+          recentFragmentCount: 0,
+          shapingChatTurns: 0,
+        }),
+        items,
+        doneLooksLike: bake.doneLooksLike,
+        source: bake.source,
+        needsInput: null,
+        gap: null,
+        friction: bake.friction,
+        packdown: bake.packdown,
+        truncatedCount: bake.truncatedCount,
+        planned: 0,
+        unblocked: null,
+        removed: [],
+      }
+    }
+  }
   const goal: string | null = metadata.end_goal || project.description || null
 
   // Recent captures that connect to this project by meaning but never got
