@@ -17,6 +17,8 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { generateText } from './gemini-chat.js'
 import { PLAIN_ENGLISH_RULES } from './plain-english.js'
 import type { SparkType } from './spark-types.js'
+import { pickCrossingPair, type CrossingProject } from './spark-crossing.js'
+import { SPARK_PROJECT_COOLDOWN_DAYS, recentlySparkedProjectIds, preferUnsparked } from './spark-rotation.js'
 import {
   selectForgottenProject,
   forgottenSparkText,
@@ -119,32 +121,75 @@ async function generateTransferredConstraint(supabase: SupabaseClient, userId: s
   }
   if (byProject.size < 2) return null
 
-  const summary = [...byProject.entries()]
-    .map(([, fs]) => `${fs[0].projects?.title ?? 'a project'}: ${fs.slice(0, 3).map(f => `"${f.text}"`).join(', ')}`)
-    .join('\n')
+  // Labels are what make this a polymath question rather than an
+  // adjacency one -- a rule carried from woodwork into a song has to be
+  // re-derived to survive the trip, and what survives is the part only
+  // this user could have made. Two music projects would be neither.
+  const { data: projectRows } = await supabase
+    .from('projects')
+    .select('id, title, metadata')
+    .eq('user_id', userId)
+    .in('id', [...byProject.keys()])
 
-  const prompt = `Here's what the user has captured, grouped by project:
-${summary}
+  const candidates: CrossingProject[] = (projectRows ?? []).map((p: any) => ({
+    id: p.id,
+    title: p.title,
+    tags: Array.isArray(p.metadata?.tags) ? p.metadata.tags.filter((t: unknown) => typeof t === 'string') : [],
+    fragmentCount: byProject.get(p.id)?.length ?? 0,
+  }))
+  if (candidates.length < 2) return null
 
-Find a RULE or CONSTRAINT that shows up clearly in one project's captures, and ask whether it
-applies to a different project too. Import the rule, don't invent a new connection -- the rule
-has to actually be visible in what's quoted above.
+  const pair = pickCrossingPair(
+    candidates,
+    await recentlySparkedProjectIds(supabase, userId, SPARK_PROJECT_COOLDOWN_DAYS),
+  )
+  if (!pair) return null
+
+  const quote = (id: string) =>
+    (byProject.get(id) ?? []).slice(0, 4).map(f => `- "${f.text}"`).join('\n') || '- (nothing captured)'
+
+  const distance = pair.crossesDisciplines
+    ? `These two are from different parts of their life${pair.from.tags.length && pair.to.tags.length ? ` (${pair.from.tags.join('/')} and ${pair.to.tags.join('/')})` : ''}. That distance is the point -- a rule that survives the trip is worth more than one that never had to travel.`
+    : `These two are close to each other${pair.sharedTags.length ? ` (both ${pair.sharedTags.join(', ')})` : ''}, so the connection has to be genuinely non-obvious to be worth saying at all.`
+
+  const prompt = `What the user has captured about "${pair.from.title}":
+${quote(pair.from.id)}
+
+And about "${pair.to.title}":
+${quote(pair.to.id)}
+
+${distance}
+
+Find a RULE or CONSTRAINT that shows up clearly in the "${pair.from.title}" captures, and ask
+whether it applies to "${pair.to.title}". Import the rule, don't invent a new connection -- the
+rule has to actually be visible in what's quoted above. Name both, so they can tell what's being
+carried where.
 
 ${PLAIN_ENGLISH_RULES}
 ${SILENCE_INSTRUCTION}
 
-Respond with JSON only: { "spark": "..." | null, "target_project_title": "..." | null }`
+Respond with JSON only: { "spark": "..." | null }`
 
   const raw = await askForSpark(prompt)
   if (!raw) return null
-  return { type: 'transferred_constraint', text: raw, project_id: null, expires_at: expiresAt(SPARK_SHELF_LIFE_HOURS) }
+  // Attributed to the project being carried INTO -- that's what the spark
+  // asks them to think about, and what the project rotation records so the
+  // same project isn't the subject two sparks running.
+  return { type: 'transferred_constraint', text: raw, project_id: pair.to.id, expires_at: expiresAt(SPARK_SHELF_LIFE_HOURS) }
 }
 
 async function generateUnfinishedThought(supabase: SupabaseClient, userId: string): Promise<BakedSpark | null> {
   const fragments = await fetchRecentFragments(supabase, userId)
   const obstacles = fragments.filter(f => f.role === 'obstacle' || f.role === 'constraint')
   if (obstacles.length === 0) return null
-  const pick = obstacles[Math.floor(Math.random() * obstacles.length)]
+  // Spread the subject across projects: an unanswered thought about the
+  // shelf is worth as much as a third one about the song, and rotating is
+  // what keeps the rest of the shelf warm enough to cross-reference.
+  const eligible = preferUnsparked(
+    obstacles,
+    await recentlySparkedProjectIds(supabase, userId, SPARK_PROJECT_COOLDOWN_DAYS),
+  )
+  const pick = eligible[Math.floor(Math.random() * eligible.length)]
 
   const prompt = `The user once said, about their project "${pick.projects?.title ?? 'a project'}":
 "${pick.text}"
@@ -191,7 +236,12 @@ async function generateScaleJump(supabase: SupabaseClient, userId: string): Prom
     .neq('state', 'harvested')
     .limit(20)
   if (!projects || projects.length === 0) return null
-  const pick = projects[Math.floor(Math.random() * projects.length)]
+  const eligible = preferUnsparked(
+    projects as any[],
+    await recentlySparkedProjectIds(supabase, userId, SPARK_PROJECT_COOLDOWN_DAYS),
+    (p: any) => p.id,
+  )
+  const pick = eligible[Math.floor(Math.random() * eligible.length)]
 
   const prompt = `Project: "${pick.title}" -- ${pick.description || 'no description yet'}
 
@@ -213,7 +263,11 @@ async function generateMaterialFact(supabase: SupabaseClient, userId: string): P
   const fragments = await fetchRecentFragments(supabase, userId)
   const materials = fragments.filter(f => f.role === 'material')
   if (materials.length === 0) return null
-  const pick = materials[Math.floor(Math.random() * materials.length)]
+  const eligible = preferUnsparked(
+    materials,
+    await recentlySparkedProjectIds(supabase, userId, SPARK_PROJECT_COOLDOWN_DAYS),
+  )
+  const pick = eligible[Math.floor(Math.random() * eligible.length)]
 
   return {
     type: 'material_fact',

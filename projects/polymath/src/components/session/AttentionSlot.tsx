@@ -251,23 +251,49 @@ function ForgottenSlot({ spark, onResolved }: { spark: Spark; onResolved: () => 
   )
 }
 
+/** How long the "here's what that did" line stays up before the slot
+ *  clears itself. Long enough to read, short enough that it never becomes
+ *  another thing to dismiss. */
+const SPARK_RECEIPT_MS = 4000
+
 function SparkSlot({ spark, onResolved }: { spark: Spark; onResolved: () => void }) {
   const [text, setText] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [receipt, setReceipt] = useState<string | null>(null)
 
   const respond = async () => {
     if (!text.trim()) return
     setSubmitting(true)
     try {
-      await fetch('/api/utilities?resource=respond', {
+      const res = await fetch('/api/utilities?resource=respond', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ spark_id: spark.id, response_text: text }),
       })
-    } finally {
+      const data = await res.json().catch(() => ({}))
+      // Say what answering actually did. Not a streak, not a point -- the
+      // real mechanism: it goes in the corpus, and the session briefing
+      // reads the corpus, so the next sitting on that project starts
+      // somewhere different because of this. Only names a project when the
+      // spark actually had one; otherwise it stays quiet rather than
+      // dressing up a vaguer claim.
+      setReceipt(data?.project_title
+        ? `In. It'll be there next time you sit down with ${data.project_title}.`
+        : 'In.')
+      setSubmitting(false)
+      setTimeout(onResolved, SPARK_RECEIPT_MS)
+    } catch {
       setSubmitting(false)
       onResolved()
     }
+  }
+
+  if (receipt) {
+    return (
+      <div className="glass-card p-6">
+        <p className="text-sm" style={secondaryTextStyle}>{receipt}</p>
+      </div>
+    )
   }
 
   return (

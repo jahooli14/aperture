@@ -2822,7 +2822,29 @@ async function handleExecutionSparks(req: VercelRequest, res: VercelResponse) {
       // Module not available — ignore
     }
 
-    return res.status(200).json({ ok: true })
+    // Which project this lands on, so the app can say what answering just
+    // did rather than swallowing it. The claim is real: the answer goes
+    // through the same pipeline as any capture, and the session briefing
+    // reads both attached fragments and corpus-wide recall, so it genuinely
+    // shows up the next time this project is planned.
+    let projectTitle: string | null = null
+    const { data: sparkRow } = await supabase
+      .from('sparks')
+      .select('project_id')
+      .eq('id', spark_id)
+      .eq('user_id', userId)
+      .maybeSingle()
+    if (sparkRow?.project_id) {
+      const { data: proj } = await supabase
+        .from('projects')
+        .select('title')
+        .eq('id', sparkRow.project_id)
+        .eq('user_id', userId)
+        .maybeSingle()
+      projectTitle = proj?.title ?? null
+    }
+
+    return res.status(200).json({ ok: true, project_title: projectTitle })
   }
 
   return res.status(404).json({ error: `Unknown resource: ${resource}` })
