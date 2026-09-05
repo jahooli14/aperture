@@ -18,7 +18,13 @@
  *   3. if the very next step is bigger than the window, ONE model call
  *      splits that step into the first piece of it that fits
  *      (session-split.ts) -- nothing else is ever generated
- *   4. one line saying what "done today" looks like
+ *   4. if the real backlog runs out before the window does, one narrower
+ *      model call (session-topup.ts) may propose a small, evidence-cited
+ *      top-up -- capped, labelled as a suggestion, and empty rather than
+ *      invented when nothing grounds. Not the old bench: this only fires
+ *      when there's genuinely nothing left to draw from, never to pad a
+ *      list that already has real steps left over
+ *   5. one line saying what "done today" looks like
  *
  * Saying what's wrong with the list still reshapes it by voice, and that
  * path is model-written -- but every item it returns must cite a real
@@ -38,10 +44,11 @@ import {
 import { sanitizeRawItems, dedupeSimilar } from './session-items.js'
 import { confidenceFor, reasoningLicence, type Confidence } from './session-confidence.js'
 import { pickGap, genericGapQuestion, type Gap } from './session-gap.js'
-import { openTasksInOrder, selectByBudget, type BudgetTask } from './session-budget.js'
+import { openTasksInOrder, selectByBudget, sumMinutes, type BudgetTask } from './session-budget.js'
 import { nearestEstimate, type EstimateMinutes } from './session-estimate.js'
 import { splitStep, doneLineForSteps, sanitizeDoneLooksLike } from './session-split.js'
 import { checkReady } from './session-ready.js'
+import { topUpSession } from './session-topup.js'
 import { generateTaskSpine, generateFirstCutTasks, toStoredTasks } from './task-spine.js'
 import { normalizeTaskOrder } from './task-order.js'
 import { parseEmbedding } from './project-ideas/seed-picker.js'
@@ -594,6 +601,11 @@ export async function shapeSession(
   // part-done, which settles the question by itself.
   let steps = openTasks
   let unblocked: ShapeResult['unblocked'] = null
+  // Set from the same checkReady call below -- true only when the top
+  // step's own text plainly bundles more than one separately-schedulable
+  // job. Independent of readiness, so it's read after the fact rather
+  // than folded into the unblocked/reorder branch.
+  let topCompound = false
   const top = steps[0]
   if (top && !top.progressNote) {
     const readiness = await checkReady({
@@ -602,9 +614,30 @@ export async function shapeSession(
       laterSteps: steps.slice(1),
       evidence,
     })
+    topCompound = readiness.compound
+
+    let nextTasks = normalizeTaskOrder(allTasks)
+    let resized = false
+
+    // Sizing is independent of the ready/blocked verdict -- a step can be
+    // perfectly startable and still be wrongly sized. Corrects a stored
+    // estimate that was never really set (openTasksInOrder's
+    // DEFAULT_ESTIMATE_MINUTES fallback, session-budget.ts) or was set
+    // too low against the model's own fresh read of this exact step
+    // text -- never overwrites a deliberately-set number downward.
+    const rawTop = nextTasks.find(t => t?.id === top.id) as any
+    if (
+      readiness.sizeMinutes != null && rawTop &&
+      (!rawTop.estimate_set || readiness.sizeMinutes > (rawTop.estimated_minutes ?? 0))
+    ) {
+      nextTasks = nextTasks.map(t =>
+        t?.id === top.id ? { ...t, estimated_minutes: readiness.sizeMinutes, estimate_set: true } : t,
+      )
+      resized = true
+    }
+
     if (readiness.kind !== 'ready') {
       const now = new Date()
-      const nextTasks = [...normalizeTaskOrder(allTasks)]
       const blockedAt = () => nextTasks.findIndex(t => t?.id === top.id)
 
       if (readiness.kind === 'move') {
@@ -629,27 +662,34 @@ export async function shapeSession(
         })
         unblocked = { text: readiness.item.text, before: top.text, added: true }
       }
+    }
 
-      if (unblocked) {
-        allTasks = normalizeTaskOrder(nextTasks)
-        steps = toOpenSteps(allTasks)
-        const { error: saveErr } = await supabase
-          .from('projects')
-          .update({ metadata: { ...metadata, tasks: allTasks } })
-          .eq('id', projectId)
-          .eq('user_id', userId)
-        if (saveErr) console.warn('[session-shaper] could not save the reordered plan:', saveErr.message)
-      }
+    if (unblocked || resized) {
+      allTasks = normalizeTaskOrder(nextTasks)
+      steps = toOpenSteps(allTasks)
+      const { error: saveErr } = await supabase
+        .from('projects')
+        .update({ metadata: { ...metadata, tasks: allTasks } })
+        .eq('id', projectId)
+        .eq('user_id', userId)
+      if (saveErr) console.warn('[session-shaper] could not save the reordered plan:', saveErr.message)
     }
   }
 
   // ── The next steps, in order, as many as fit ──────────────────────
   const count = itemCountForWindow(windowMinutes)
-  const { selected } = selectByBudget(steps, windowMinutes, count)
+  const { selected, rest } = selectByBudget(steps, windowMinutes, count)
   const first = selected[0]
 
-  // The next step is bigger than the sitting: split it, once.
-  if (first && windowMinutes != null && first.minutes > windowMinutes) {
+  // The next step is bigger than the sitting -- either the numbers say so,
+  // or checkReady already flagged it as bundling more than one job. The
+  // compound flag matters on its own: nearestEstimate snaps to a ladder
+  // topping out at 60, so a step judged "really more like 90 minutes"
+  // still reads as exactly 60 after snapping and would tie (never split)
+  // against a 60-minute window under strict `>` alone.
+  const oversized = first && windowMinutes != null && first.minutes > windowMinutes
+  const flaggedCompound = first && topCompound && first.id === top.id
+  if (first && windowMinutes != null && (oversized || flaggedCompound)) {
     const split = await splitStep({
       title: project.title,
       step: first,
@@ -668,5 +708,26 @@ export async function shapeSession(
     taskId: t.id,
     partial: false,
   }))
+
+  // The real backlog ran out before the window did -- never when there's
+  // real material left over (`rest.length === 0`), and never on top of an
+  // oversized/compound step that already tried (and, here, failed) to
+  // split: that's a "couldn't split" fallback, not "nothing left to draw
+  // from", and topping THAT up would risk padding around a step that's
+  // still genuinely too big rather than genuinely short a plan.
+  if (rest.length === 0 && windowMinutes != null && !oversized && !flaggedCompound) {
+    const remainingMinutes = windowMinutes - sumMinutes(selected)
+    if (remainingMinutes >= 15) {
+      const topUpItems = await topUpSession({
+        title: project.title,
+        evidence,
+        currentItems: items.map(i => i.text),
+        remainingMinutes,
+        maxItems: Math.max(0, count - selected.length),
+      })
+      items.push(...topUpItems)
+    }
+  }
+
   return { ...base, unblocked, items, doneLooksLike: doneLineForSteps(selected), source: 'tasks' }
 }

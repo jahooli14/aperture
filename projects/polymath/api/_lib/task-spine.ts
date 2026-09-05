@@ -108,6 +108,13 @@ WHAT EACH STEP MUST BE:
 - Roughly one to three sittings of work. Not a whole phase, not five
   minutes. "Record the vocals" not "make the album" and not "plug the mic in".
 - Written so that in six weeks' time they'd still know what it meant.
+- ONE job, even when it takes two verbs to say it. "Design and cut the
+  stencil" is one job -- one material, one continuous move. "Remix the
+  vocal, write a new riff, and write a distribution plan" is three --
+  different skills, different deliverables, and nobody sits down to a
+  session expecting all three to be "one thing" on their plan. If a step
+  needs "and" to join two DIFFERENT jobs rather than two verbs describing
+  the same motion, it's two steps.
 
 WHAT NONE OF THEM MAY BE:
 - Admin pretending to be building: research, plan, outline, decide, list,
@@ -118,6 +125,7 @@ WHAT NONE OF THEM MAY BE:
   id each step comes from; if you can't cite it, you can't say it.
 - A step that only makes sense if you assume how they work. You do not
   know what software they use or what they own.
+- More than one separately-schedulable job bundled into one line.
 
 Give ${MIN_SPINE_STEPS}-${MAX_SPINE_STEPS} steps, in the order they'd be done, first one first.
 Fewer, honest steps beat a long list you had to invent to fill.
@@ -348,6 +356,11 @@ WHAT EACH MOVE MUST BE:
   loop in C minor at 120bpm" — the second one invents specifics nobody
   gave you.
 - Something that could plausibly happen in one sitting, today.
+- Broad is not the same as bundled. "Sketch a rough loop" is broad -- one
+  open-ended job. "Remix the vocal, write a new riff, and write a
+  distribution plan" isn't broad, it's three different jobs wearing one
+  sentence. Each of the ${FIRST_CUT_STEPS} moves is its own single job,
+  even a loosely-scoped one.
 
 WHAT NONE OF THEM MAY BE:
 - Admin pretending to be building: research, plan, outline, decide, list,
@@ -356,6 +369,7 @@ WHAT NONE OF THEM MAY BE:
   does NOT appear verbatim above.
 - A finish line, a deadline, or a description of what "done" looks like —
   that's not what's being asked for here.
+- More than one separately-schedulable job bundled into one move.
 
 Give exactly ${FIRST_CUT_STEPS} moves, in the order they'd make sense to do.
 Cite the evidence id each one comes from; a move that names nothing beyond

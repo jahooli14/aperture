@@ -46,11 +46,20 @@ describe('buildReadyPrompt', () => {
     expect(p).toContain("doesn't appear word for word above")
     expect(p).toContain('you invented it, and the answer is ready')
   })
+
+  it('asks for a size and a compound judgment on the step itself, with a worked both-ways example', () => {
+    expect(p).toContain('size_minutes')
+    expect(p).toContain('compound')
+    expect(p).toContain('"Design and cut the stencil"')
+    expect(p).toContain('Remix the track with a cleaner vocal, a new riff, and write')
+    expect(p).toContain('a distribution plan')
+  })
 })
 
 describe('sanitizeReadiness', () => {
   it('is ready when the model says ready', () => {
-    expect(sanitizeReadiness({ verdict: 'ready', blocker: null }, INPUT)).toEqual({ kind: 'ready' })
+    expect(sanitizeReadiness({ verdict: 'ready', blocker: null }, INPUT))
+      .toEqual({ kind: 'ready', sizeMinutes: null, compound: false })
   })
 
   it('keeps a real, grounded blocker and marks it as needed before the step', () => {
@@ -66,6 +75,8 @@ describe('sanitizeReadiness', () => {
         taskId: null,
       },
       minutes: 10,
+      sizeMinutes: null,
+      compound: false,
     })
   })
 
@@ -74,7 +85,7 @@ describe('sanitizeReadiness', () => {
       { verdict: 'blocked', blocker: { text: 'anything', existing_task_id: 't3' } },
       INPUT,
     )
-    expect(out).toEqual({ kind: 'move', taskId: 't3', text: 'Let it dry and peel the stencil off' })
+    expect(out).toEqual({ kind: 'move', taskId: 't3', text: 'Let it dry and peel the stencil off', sizeMinutes: null, compound: false })
   })
 
   it('moves an existing step up even when the model forgot to cite its id', () => {
@@ -90,7 +101,7 @@ describe('sanitizeReadiness', () => {
       expect(sanitizeReadiness(
         { verdict: 'blocked', blocker: { text, evidence: ['e1'] } },
         INPUT,
-      ), text).toEqual({ kind: 'ready' })
+      ), text).toEqual({ kind: 'ready', sizeMinutes: null, compound: false })
     }
   })
 
@@ -98,31 +109,31 @@ describe('sanitizeReadiness', () => {
     expect(sanitizeReadiness(
       { verdict: 'blocked', blocker: { text: 'Pour paint over the stencil', evidence: ['e1'] } },
       INPUT,
-    )).toEqual({ kind: 'ready' })
+    )).toEqual({ kind: 'ready', sizeMinutes: null, compound: false })
   })
 
   it('refuses a blocker that invents gear nobody mentioned', () => {
     expect(sanitizeReadiness(
       { verdict: 'blocked', blocker: { text: 'Lay down the Olfa cutting mat', evidence: ['e1'] } },
       INPUT,
-    )).toEqual({ kind: 'ready' })
+    )).toEqual({ kind: 'ready', sizeMinutes: null, compound: false })
   })
 
   it('refuses an uncited blocker that asserts something specific', () => {
     expect(sanitizeReadiness(
       { verdict: 'blocked', blocker: { text: 'Prime the plywood board with gesso', evidence: [] } },
       INPUT,
-    )).toEqual({ kind: 'ready' })
+    )).toEqual({ kind: 'ready', sizeMinutes: null, compound: false })
   })
 
   it('refuses junk, an essay, or a missing blocker', () => {
-    expect(sanitizeReadiness(null, INPUT)).toEqual({ kind: 'ready' })
-    expect(sanitizeReadiness({ verdict: 'blocked' }, INPUT)).toEqual({ kind: 'ready' })
-    expect(sanitizeReadiness({ verdict: 'blocked', blocker: { text: '' } }, INPUT)).toEqual({ kind: 'ready' })
+    expect(sanitizeReadiness(null, INPUT)).toEqual({ kind: 'ready', sizeMinutes: null, compound: false })
+    expect(sanitizeReadiness({ verdict: 'blocked' }, INPUT)).toEqual({ kind: 'ready', sizeMinutes: null, compound: false })
+    expect(sanitizeReadiness({ verdict: 'blocked', blocker: { text: '' } }, INPUT)).toEqual({ kind: 'ready', sizeMinutes: null, compound: false })
     expect(sanitizeReadiness(
       { verdict: 'blocked', blocker: { text: 'x'.repeat(200), evidence: ['e1'] } },
       INPUT,
-    )).toEqual({ kind: 'ready' })
+    )).toEqual({ kind: 'ready', sizeMinutes: null, compound: false })
   })
 
   it('falls back to the neutral estimate when the model gives none', () => {
@@ -132,16 +143,50 @@ describe('sanitizeReadiness', () => {
     )
     expect(out).toMatchObject({ kind: 'add', minutes: 20 })
   })
+
+  it('carries a size and compound judgment even on a ready verdict -- sizing is independent of the blocker check', () => {
+    const out = sanitizeReadiness({ verdict: 'ready', blocker: null, size_minutes: 90, compound: true }, INPUT)
+    expect(out).toEqual({ kind: 'ready', sizeMinutes: 60, compound: true })
+  })
+
+  it('snaps size_minutes to the nearest rung on the shared estimate ladder', () => {
+    expect(sanitizeReadiness({ verdict: 'ready', blocker: null, size_minutes: 22 }, INPUT).sizeMinutes).toBe(20)
+  })
+
+  it('defaults sizeMinutes to null and compound to false when absent or malformed', () => {
+    expect(sanitizeReadiness({ verdict: 'ready', blocker: null }, INPUT)).toEqual({ kind: 'ready', sizeMinutes: null, compound: false })
+    expect(sanitizeReadiness({ verdict: 'ready', blocker: null, size_minutes: 'a lot', compound: 'yes' }, INPUT))
+      .toEqual({ kind: 'ready', sizeMinutes: null, compound: false })
+  })
+
+  it('carries the size and compound judgment alongside a move or add verdict too', () => {
+    const moved = sanitizeReadiness(
+      { verdict: 'blocked', blocker: { text: 'anything', existing_task_id: 't3' }, size_minutes: 45, compound: true },
+      INPUT,
+    )
+    expect(moved).toMatchObject({ kind: 'move', sizeMinutes: 45, compound: true })
+
+    const added = sanitizeReadiness(
+      {
+        verdict: 'blocked',
+        blocker: { text: 'Tape the stencil down to the board', evidence: ['e2'], estimated_minutes: 10 },
+        size_minutes: 30,
+        compound: true,
+      },
+      INPUT,
+    )
+    expect(added).toMatchObject({ kind: 'add', sizeMinutes: 30, compound: true })
+  })
 })
 
 describe('checkReady', () => {
   it('is ready when there is no evidence to check against — never a guess', async () => {
-    expect(await checkReady({ ...INPUT, evidence: [] })).toEqual({ kind: 'ready' })
+    expect(await checkReady({ ...INPUT, evidence: [] })).toEqual({ kind: 'ready', sizeMinutes: null, compound: false })
   })
 
   it('is ready when the model is unreachable', async () => {
     // No GEMINI_API_KEY in the test env. A missed prerequisite costs one
     // awkward session; an invented one rewrites the plan.
-    expect(await checkReady(INPUT)).toEqual({ kind: 'ready' })
+    expect(await checkReady(INPUT)).toEqual({ kind: 'ready', sizeMinutes: null, compound: false })
   })
 })
