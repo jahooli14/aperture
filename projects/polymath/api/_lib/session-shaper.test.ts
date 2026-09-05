@@ -20,6 +20,23 @@ vi.mock('./session-ready.js', () => ({
 }))
 import { checkReady } from './session-ready.js'
 
+// Real splitStep/topUpSession also fail closed in this test env (no
+// GEMINI_API_KEY) -- same reasoning as checkReady above. Only splitStep
+// itself is mocked (real doneLineForSteps/sanitizeDoneLooksLike are pure
+// and used throughout the non-split paths too, so they come through
+// unmocked via importOriginal); the default matches real-world behaviour,
+// and only the test that needs to reach past a split overrides it.
+vi.mock('./session-split.js', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('./session-split.js')>()),
+  splitStep: vi.fn(async () => null),
+}))
+import { splitStep } from './session-split.js'
+
+vi.mock('./session-topup.js', () => ({
+  topUpSession: vi.fn(async () => []),
+}))
+import { topUpSession } from './session-topup.js'
+
 describe('itemCountForWindow', () => {
   it('gives a short window a short list', () => {
     expect(itemCountForWindow(20)).toBe(3)
@@ -528,6 +545,67 @@ describe('shapeSession', () => {
     // shape the existing "falls back to whole step" test already covers.
     expect(result.source).toBe('tasks')
     expect(result.items.map(i => i.text)).toEqual(['Remix the vocal, write a new riff, and write a distribution plan'])
+  })
+
+  it('tops up a successful split too, when nothing else real is left in the backlog', async () => {
+    // See the mockClear note further down this file -- the shared
+    // topUpSession mock's call history persists across tests.
+    vi.mocked(topUpSession).mockClear()
+    vi.mocked(checkReady).mockResolvedValueOnce({ kind: 'ready', sizeMinutes: 60, compound: true })
+    vi.mocked(splitStep).mockResolvedValueOnce({
+      moves: [
+        { text: 'Bounce a cleaner vocal take', source: 'part of: the compound step', taskId: 't0', partial: true },
+        { text: 'Try a different riff', source: 'part of: the compound step', taskId: 't0', partial: true },
+      ],
+      doneLooksLike: null,
+    })
+    vi.mocked(topUpSession).mockResolvedValueOnce([
+      { text: 'Sketch out the distribution plan', source: 'a possible next move — not committed yet', taskId: null },
+    ])
+    const compoundStep = {
+      ...project,
+      metadata: {
+        end_goal: 'released',
+        tasks: [{ id: 't0', text: 'Remix the vocal, write a new riff, and write a distribution plan', done: false, order: 0 }],
+      },
+    }
+    const { shapeSession } = await import('./session-shaper.js')
+    const result = await shapeSession(stubClient({ project: compoundStep }), 'u1', 'p1', 60)
+
+    expect(result.source).toBe('split')
+    expect(result.items.map(i => i.text)).toEqual([
+      'Bounce a cleaner vocal take',
+      'Try a different riff',
+      'Sketch out the distribution plan',
+    ])
+    // Split moves carry no numeric estimate by design -- the top-up call
+    // is trusted to judge for itself rather than being handed a guess.
+    expect(vi.mocked(topUpSession).mock.calls[0][0]).toMatchObject({ remainingMinutes: null })
+  })
+
+  it('never tops up a split when real backlog is still waiting behind it', async () => {
+    // Other tests in this file may have already called the shared
+    // topUpSession mock -- clear its call history so `not.toHaveBeenCalled`
+    // below reflects only this test's run, not accumulated history.
+    vi.mocked(topUpSession).mockClear()
+    vi.mocked(checkReady).mockResolvedValueOnce({ kind: 'ready', sizeMinutes: 60, compound: true })
+    vi.mocked(splitStep).mockResolvedValueOnce({
+      moves: [{ text: 'Bounce a cleaner vocal take', source: 'part of: the compound step', taskId: 't0', partial: true }],
+      doneLooksLike: null,
+    })
+    const withMoreBacklog = {
+      ...project,
+      metadata: {
+        end_goal: 'released',
+        tasks: [
+          { id: 't0', text: 'Remix the vocal, write a new riff, and write a distribution plan', done: false, order: 0 },
+          { id: 't1', text: 'Master the final mix', done: false, order: 1, estimated_minutes: 20, estimate_set: true },
+        ],
+      },
+    }
+    const { shapeSession } = await import('./session-shaper.js')
+    await shapeSession(stubClient({ project: withMoreBacklog }), 'u1', 'p1', 60)
+    expect(topUpSession).not.toHaveBeenCalled()
   })
 
   it('takes the semantic-recall path without throwing when the project has an embedding', async () => {

@@ -27,9 +27,15 @@ export const MODELS = {
   FLASH_CHAT: 'gemini-flash-lite-latest',         // Seam: set to 'gemini-flash-latest' for full Flash
   // Full Flash, not Lite: the spine is the plan for the whole project,
   // written once at creation/replan — worth the extra cost and thinking
-  // depth "Record the vocals" not "make the album" needs, unlike the
-  // every-session reshape calls in session-shaper.ts which stay on Lite.
+  // depth "Record the vocals" not "make the album" needs.
   TASK_SPINE_CHAT: 'gemini-flash-latest',
+  // Full Flash, not Lite: this is the plan the user is looking at right
+  // now, being reasoned about live -- readiness, sizing, splitting,
+  // reshaping and topping up (session-ready.ts, session-split.ts,
+  // session-shaper.ts's reshape, session-topup.ts) all happen here. Was
+  // Lite; moved after Lite let a bundled task through as one item for an
+  // hour and then couldn't reliably act on "add more" once split.
+  SESSION_SHAPE_CHAT: 'gemini-flash-latest',
   FLASH_LIVE: 'gemini-3.1-flash-live-preview',    // Live API audio-to-audio (onboarding); pinned — no GA -latest alias
   PRO: 'gemini-pro-latest',                       // Reserved — high-stakes reasoning, off by default
   DEFAULT_EMBEDDING: 'gemini-embedding-001',      // PINNED — aliasing would break stored vectors
