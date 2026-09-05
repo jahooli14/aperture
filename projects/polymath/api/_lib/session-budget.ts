@@ -77,3 +77,27 @@ export function selectByBudget<T extends { minutes: number }>(
 export function sumMinutes(tasks: { minutes: number }[]): number {
   return tasks.reduce((total, t) => total + t.minutes, 0)
 }
+
+/**
+ * The hour you actually get to work in.
+ *
+ * Some projects cannot be started cold. Painting needs the paint got out,
+ * a surface covered and, at the other end, brushes cleaned before you can
+ * walk away. That time is real and it is spent inside the window, so an
+ * hour with ten minutes of setting up and ten of clearing away is a
+ * forty-minute session. Planning it as sixty guarantees it overruns, which
+ * is the specific way a rare hour gets lost.
+ *
+ * Floored at 5 rather than 0: a window swallowed whole by its own setup
+ * still gets one small thing to do, and the caller can say the window is
+ * too short for this project rather than showing an empty plan.
+ */
+export function workingMinutes(
+  windowMinutes: number | null,
+  setupMinutes?: number | null,
+  packdownMinutes?: number | null,
+): number | null {
+  if (windowMinutes == null) return null
+  const overhead = (setupMinutes ?? 0) + (packdownMinutes ?? 0)
+  return Math.max(5, windowMinutes - overhead)
+}

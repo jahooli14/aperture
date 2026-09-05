@@ -142,7 +142,7 @@ export function SessionContract({
 
   const beginWork = useCallback(async () => {
     const items = plan?.items?.length ? plan.items : undefined
-    await startSession(project.id, windowMinutes, source, items, plan?.friction ?? null)
+    await startSession(project.id, windowMinutes, source, items, plan?.friction ?? null, plan?.packdown ?? null)
     // startSession can fail outright (covers both a real error and the rare
     // case where even the offline local-session fallback didn't run) --
     // only advance once there's actually something to run.
@@ -475,8 +475,23 @@ export function SessionContract({
           {active.shapes.map((shape, i) => {
             const done = ticked.has(i)
             const isCurrent = i === currentIndex
+            // Two labels, not a re-layout: the one thing you're doing this
+            // minute, then everything that isn't yet. Ticking promotes the
+            // next item into "Right now" on its own.
+            const label = isCurrent ? 'Right now' : i === currentIndex + 1 ? 'Then' : null
             return (
               <li key={i}>
+                {label && (
+                  <p
+                    className="text-[10px] uppercase tracking-[0.14em] mt-3 mb-1 first:mt-0"
+                    style={{
+                      color: isCurrent ? 'rgba(var(--brand-primary-rgb),0.75)' : 'var(--brand-text-secondary)',
+                      opacity: isCurrent ? 1 : 0.4,
+                    }}
+                  >
+                    {label}
+                  </p>
+                )}
                 <button
                   onClick={() => {
                     haptic.light()
@@ -546,6 +561,11 @@ export function SessionContract({
   // order IS the plan; the one way to change it is to say so.
   if (phase === 'planning') {
     const items = plan?.projectId === project.id ? plan.items : []
+    // The spine is the real work. The spark is one punt from the week's
+    // corpus -- shown apart from the numbered steps so it reads as an
+    // extra you can ignore, never as another task you owe.
+    const steps = items.filter(i => !i.spark)
+    const sparkItem = items.find(i => i.spark) ?? null
     const needsInput = plan?.projectId === project.id ? plan.needsInput : null
     const reEntry = project.last_closeout_text?.trim() || null
     const elapsedFrac = planLeft == null ? 0 : 1 - planLeft / planningSecondsFor(windowMinutes)
@@ -654,7 +674,7 @@ export function SessionContract({
           </div>
         ) : (
           <ol className="space-y-0.5" style={shaping ? { opacity: 0.45 } : undefined}>
-            {items.map((item, i) => (
+            {steps.map((item, i) => (
               <li key={`${i}-${item.text}`} className="flex items-start gap-2.5 py-2">
                 <span
                   className="mt-0.5 text-[11px] tabular-nums font-semibold flex-shrink-0 w-4"
@@ -681,6 +701,36 @@ export function SessionContract({
               </li>
             ))}
           </ol>
+        )}
+
+        {/* One thing to try that came out of the week, not out of the
+            project. Set apart from the numbered steps on purpose: it's a
+            punt with a time box on it, and ignoring it costs nothing. */}
+        {sparkItem && (
+          <div
+            className="rounded-xl px-3.5 py-3 space-y-1"
+            style={{
+              background: 'rgba(var(--brand-primary-rgb),0.05)',
+              border: '1px dashed rgba(var(--brand-primary-rgb),0.28)',
+            }}
+          >
+            <p className="text-sm leading-snug">{sparkItem.text}</p>
+            {sparkItem.source && (
+              <p className="text-[10.5px] leading-tight" style={{ ...secondaryTextStyle, opacity: 0.55 }}>
+                {sparkItem.source}
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* Clearing away is part of the hour, so it's on screen as part of
+            the hour rather than remembered at the end of it. */}
+        {plan?.packdown && (
+          <div className="flex items-center gap-2 text-sm" style={secondaryTextStyle}>
+            <Wrench size={13} className="flex-shrink-0" style={{ opacity: 0.5 }} />
+            <span>Then, to finish: {plan.packdown.text}</span>
+            <span className="text-xs flex-shrink-0" style={{ opacity: 0.5 }}>{plan.packdown.minutes}m</span>
+          </div>
         )}
 
         {/* What exists at the end of the hour if the list lands -- the
@@ -713,7 +763,9 @@ export function SessionContract({
           </div>
         ) : items.length > 0 ? (
           <p className="text-xs" style={{ ...secondaryTextStyle, opacity: 0.45 }}>
-            {plan?.source === 'offline'
+            {plan?.source === 'briefing'
+              ? 'Picked up from where you left off last time.'
+              : plan?.source === 'offline'
               ? 'Planned from your list — offline, so it’s not reshaped. Reconnect to make changes.'
               : plan?.source === 'derived'
                 ? 'Offline list — built from your last close-out, not shaped.'

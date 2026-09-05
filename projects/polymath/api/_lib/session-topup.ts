@@ -26,7 +26,7 @@
 
 import { generateText } from './gemini-chat.js'
 import { MODELS } from './models.js'
-import { PLAIN_ENGLISH_RULES } from './plain-english.js'
+import { PLAIN_ENGLISH_RULES, CLEAR_STEP_RULES } from './plain-english.js'
 import { filterGrounded, type Evidence, type GroundedItem } from './session-grounding.js'
 import { sanitizeRawItems, dedupeSimilar } from './session-items.js'
 
@@ -92,6 +92,8 @@ What none of them may be:
 - One line each. No sub-bullets, no time estimates, no explanation.
 
 ${PLAIN_ENGLISH_RULES}
+
+${CLEAR_STEP_RULES}
 
 Say the evidence has: "[e1] Next: fix the transition out of track two."
 and the plan already has "Fix the transition out of track two" on it.

@@ -34,7 +34,7 @@ export interface ShapeInput {
 
 export interface SessionShape {
   text: string
-  source: 'closeout' | 'slot' | 'decomposition' | 'start' | 'ignition' | 'shaped'
+  source: 'closeout' | 'slot' | 'decomposition' | 'start' | 'ignition' | 'shaped' | 'spark'
   /** True when this shape is a deliberately partial piece of a bigger move. */
   partial: boolean
   /** The real id of the open task this shape is grounded in, when it has
