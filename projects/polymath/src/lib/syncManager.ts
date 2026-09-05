@@ -347,6 +347,55 @@ async function processOperation(operation: QueuedOperation): Promise<boolean> {
         return true
       }
 
+      case 'complete_offline_session': {
+        // Mirrors capture_media's two-call-in-sequence pattern: a session
+        // begun offline never got a real row, so start and close are both
+        // replayed here, in order, against the real timestamps captured at
+        // the time (see api/utilities.ts's started_at/ended_at overrides --
+        // without them this would record a near-zero duration at sync time
+        // instead of how long the session actually ran).
+        let sessionId = operation.data.session_id
+
+        if (!sessionId) {
+          const startRes = await fetch('/api/utilities?resource=start', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              project_id: operation.data.project_id,
+              window_minutes: operation.data.window_minutes,
+              source: operation.data.source,
+              items: operation.data.items,
+              started_at: operation.data.started_at,
+            }),
+          })
+          if (!startRes.ok) throw new Error(`Offline session start failed during sync: ${startRes.status}`)
+          const { session } = await startRes.json()
+          sessionId = session.id
+
+          // Persist the real session id onto the queued op immediately --
+          // if the close call below then fails, a retry must skip straight
+          // to closing rather than starting a second, duplicate session.
+          if (operation.id != null) {
+            await persistOperationData(operation.id, { ...operation.data, session_id: sessionId })
+          }
+        }
+
+        const closeRes = await fetch('/api/utilities?resource=close', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            session_id: sessionId,
+            closeout_text: operation.data.closeout_text,
+            mvs_seed_minutes: operation.data.mvs_seed_minutes,
+            done_items: operation.data.done_items,
+            ended_at: operation.data.ended_at,
+          }),
+        })
+        if (!closeRes.ok) throw new Error(`Offline session close failed during sync: ${closeRes.status}`)
+
+        return true
+      }
+
       default:
         console.error('[SyncManager] Unknown operation type:', operation.type)
         return false

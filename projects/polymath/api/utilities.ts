@@ -2058,8 +2058,16 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
 
   if (resource === 'start') {
     if (req.method !== 'POST') return res.status(405).json({ error: 'POST required' })
-    const { project_id, window_minutes, source } = req.body || {}
+    const { project_id, window_minutes, source, started_at } = req.body || {}
     if (!project_id) return res.status(400).json({ error: 'project_id required' })
+
+    // A session queued offline and synced hours later must record when it
+    // actually started, not when the sync happened to run -- otherwise the
+    // duration computed at close time (and everything measuredMvs() derives
+    // from it) is nonsense. Only trusted when it parses to a real date.
+    const startedAtOverride = typeof started_at === 'string' && !isNaN(Date.parse(started_at))
+      ? started_at
+      : null
 
     const { data: project, error: projectErr } = await supabase
       .from('projects')
@@ -2127,6 +2135,7 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
         window_minutes: window_minutes ?? null,
         items: shapes,
         source: source ?? 'live',
+        ...(startedAtOverride ? { started_at: startedAtOverride } : {}),
       })
       .select()
       .single()
@@ -2146,7 +2155,7 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
   // ─── CLOSE ──────────────────────────────────────────────────────────
   if (resource === 'close') {
     if (req.method !== 'POST') return res.status(405).json({ error: 'POST required' })
-    const { session_id, closeout_text, mvs_seed_minutes, done_items } = req.body || {}
+    const { session_id, closeout_text, mvs_seed_minutes, done_items, ended_at } = req.body || {}
     if (!session_id) return res.status(400).json({ error: 'session_id required' })
 
     const { data: session, error: sessionErr } = await supabase
@@ -2158,7 +2167,11 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
 
     if (sessionErr || !session) return res.status(404).json({ error: 'session not found' })
 
-    const endedAt = new Date()
+    // A deferred start+close pair synced back-to-back would otherwise
+    // compute a near-zero duration regardless of how long the session
+    // actually ran -- polluting measuredMvs()'s estimate data. Only trusted
+    // when it parses to a real date.
+    const endedAt = typeof ended_at === 'string' && !isNaN(Date.parse(ended_at)) ? new Date(ended_at) : new Date()
     const startedAt = new Date(session.started_at)
     const durationMinutes = Math.max(1, Math.round((endedAt.getTime() - startedAt.getTime()) / 60000))
 

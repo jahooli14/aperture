@@ -30,6 +30,7 @@ import { VoiceInput } from '../VoiceInput'
 import { useSessionStore, WINDOW_PRESETS, planningSecondsFor, type CloseResult } from '../../stores/useSessionStore'
 import { useVoicePreference } from '../../stores/useVoicePreference'
 import { useProjectStore } from '../../stores/useProjectStore'
+import { useOnlineStatus } from '../../hooks/useOnlineStatus'
 import { haptic } from '../../utils/haptics'
 import type { Project } from '../../types'
 
@@ -126,6 +127,7 @@ export function SessionContract({
   const prefersText = useVoicePreference(s => s.prefersText)
   const setPrefersText = useVoicePreference(s => s.setPrefersText)
   const voiceTurn = !prefersText
+  const { isOnline: online } = useOnlineStatus()
 
   // ─── The plan ──────────────────────────────────────────────────────
   // Fetched once per (project, window). A reshape replaces it in place.
@@ -141,9 +143,14 @@ export function SessionContract({
   const beginWork = useCallback(async () => {
     const items = plan?.items?.length ? plan.items : undefined
     await startSession(project.id, windowMinutes, source, items, plan?.friction ?? null)
-    setElapsedSec(0)
-    setTicked(new Set())
-    setPhase('running')
+    // startSession can fail outright (covers both a real error and the rare
+    // case where even the offline local-session fallback didn't run) --
+    // only advance once there's actually something to run.
+    if (useSessionStore.getState().active) {
+      setElapsedSec(0)
+      setTicked(new Set())
+      setPhase('running')
+    }
   }, [plan, project.id, windowMinutes, source, startSession])
 
   // The planning clock runs from the moment there's a list to react to.
@@ -164,8 +171,10 @@ export function SessionContract({
   // call has nothing to "shape" -- the two-minute ritual exists to cover a
   // model call in flight and a list worth double-checking, neither of
   // which applies here. Reviewing it at your own pace beats a countdown
-  // pressuring you through a list you didn't even need the AI for.
-  const skipTimer = plan?.source === 'tasks'
+  // pressuring you through a list you didn't even need the AI for. Same
+  // reasoning covers 'offline': no model call happened, and reshape is
+  // disabled anyway with no connection to run it on.
+  const skipTimer = plan?.source === 'tasks' || plan?.source === 'offline'
   useEffect(() => {
     if (phase !== 'planning' || skipTimer) return
     if (!plan || plan.projectId !== project.id) return
@@ -228,6 +237,14 @@ export function SessionContract({
       .map(sh => ({ text: sh.text, taskId: sh.taskId ?? null, partial: sh.partial }))
     const result = await closeSession(closeoutText, mvsSeedMinutes ?? undefined, doneItems)
     if (!result) return
+    // No real reconciliation ran yet -- there's nothing honest to show in
+    // a receipt (the debrief matching, the finish-line judgement, all of
+    // it is server-side and hasn't happened). Say so plainly and stop here.
+    if (result.pendingSync) {
+      setCloseResult(result)
+      setPhase('done')
+      return
+    }
     // A brief receipt of what the task list just did, rather than a silent
     // rewrite discovered weeks later -- skipped only when there's genuinely
     // nothing to show (an empty close-out with nothing ticked).
@@ -253,7 +270,9 @@ export function SessionContract({
   if (phase === 'done') {
     return (
       <div className={shell('text-center space-y-3')}>
-        <p className="text-base">Logged.</p>
+        <p className="text-base">
+          {closeResult?.pendingSync ? 'Logged — will finish syncing once you’re back online.' : 'Logged.'}
+        </p>
         <button className="text-sm underline" style={{ color: 'rgb(var(--brand-primary-rgb))' }} onClick={onDone}>
           Close
         </button>
@@ -694,13 +713,15 @@ export function SessionContract({
           </div>
         ) : items.length > 0 ? (
           <p className="text-xs" style={{ ...secondaryTextStyle, opacity: 0.45 }}>
-            {plan?.source === 'derived'
-              ? 'Offline list — built from your last close-out, not shaped.'
-              : plan?.source === 'tasks'
-                ? 'The next steps on your list, in order.'
-                : plan?.source === 'split'
-                  ? `The next step, cut to fit ${windowLabel}.`
-                  : 'Say what\u2019s off and it\u2019ll redo the list.'}
+            {plan?.source === 'offline'
+              ? 'Planned from your list — offline, so it’s not reshaped. Reconnect to make changes.'
+              : plan?.source === 'derived'
+                ? 'Offline list — built from your last close-out, not shaped.'
+                : plan?.source === 'tasks'
+                  ? 'The next steps on your list, in order.'
+                  : plan?.source === 'split'
+                    ? `The next step, cut to fit ${windowLabel}.`
+                    : 'Say what\u2019s off and it\u2019ll redo the list.'}
           </p>
         ) : null}
 
@@ -713,8 +734,22 @@ export function SessionContract({
         {/* Voice by default, listening the moment there's a list to react
             to; typing is what you opt into. Remounted on every new list
             (the key) so it starts listening again each time it's your
-            turn, rather than only once at the very first render. */}
-        {voiceTurn ? (
+            turn, rather than only once at the very first render. Offline,
+            reshape has nowhere to go -- a disabled placeholder beats a
+            mic or a submit that fails pointlessly. */}
+        {!online ? (
+          <div
+            className="flex items-center gap-2 rounded-xl px-3 py-1.5 border opacity-50"
+            style={borderStyle}
+          >
+            <input
+              disabled
+              placeholder="Reconnect to reshape the list"
+              className="flex-1 bg-transparent text-sm outline-none py-1.5"
+              style={{ color: 'var(--brand-text-primary)' }}
+            />
+          </div>
+        ) : voiceTurn ? (
           <div className="space-y-1.5">
             <VoiceInput
               key={items.map(i => i.text).join('|')}

@@ -10,6 +10,11 @@
  */
 
 import { create } from 'zustand'
+import { useProjectStore } from './useProjectStore'
+import { buildOfflinePlan } from '../lib/offline/offlinePlan'
+import { queueOperation } from '../lib/offlineQueue'
+import { useOfflineStore } from './useOfflineStore'
+import { isOnline } from '../lib/network'
 
 export interface SessionShape {
   text: string
@@ -64,6 +69,19 @@ export interface ActiveSession {
   window_minutes: number | null
   shapes: SessionShape[]
   askMvsSeed: boolean
+  /** Set when the start call couldn't reach the server -- this session
+   *  exists only locally. `stashedStart` carries what's needed to replay
+   *  start+close for real, either immediately at close (if connectivity is
+   *  back by then) or via the sync queue. */
+  offline?: boolean
+  stashedStart?: {
+    project_id: string
+    window_minutes: number | null
+    source: string
+    items: PlanItem[]
+    friction: FrictionLine | null
+    started_at: string
+  }
 }
 
 export interface PendingCloseout {
@@ -104,7 +122,7 @@ export interface PlanItem {
   partial?: boolean
 }
 
-export type PlanSource = 'tasks' | 'split' | 'ai' | 'derived'
+export type PlanSource = 'tasks' | 'split' | 'ai' | 'derived' | 'offline'
 
 export interface PlanDraft {
   projectId: string
@@ -123,7 +141,9 @@ export interface PlanDraft {
   /** 'tasks' — the project's own next steps, verbatim. 'split' — the next
    *  step was bigger than the window, this is the first piece of it.
    *  'ai' — reshaped on what the user said. 'derived' — nothing to plan
-   *  from, a placeholder rather than an invention. */
+   *  from, a placeholder rather than an invention. 'offline' — the network
+   *  call failed; drawn client-side from the cached project's own next
+   *  steps, same as 'tasks' but with no reshape/split/top-up available. */
   source: PlanSource
   /** Null on the verbatim, no-model-call path -- there's nothing to ask
    *  about friction when nothing was generated. */
@@ -218,6 +238,11 @@ export interface CloseResult {
   /** Set when the last open step was just ticked: is the finish line
    *  actually reached, and in one sentence why or why not. */
   finish: { reached: boolean; reason: string } | null
+  /** Set when the close-out couldn't reach the server and was queued
+   *  instead -- everything else here is a locally-synthesized best guess,
+   *  since the real reconciliation (debrief matching, finish-line
+   *  judgement) hasn't run yet. */
+  pendingSync?: boolean
 }
 
 async function postJson<T>(url: string, body: unknown): Promise<T> {
@@ -260,7 +285,17 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       // Raw transport errors ("Request failed: 404") are not something to
       // read two minutes before you start. Log them, say the plain thing.
       console.error('[session] shape failed:', e)
-      set({ shaping: false, error: 'Could not shape a list just now.' })
+      // The project is already sitting in the persisted store from an
+      // earlier fetch -- draw a real, honest plan from its own next steps
+      // rather than a bare error. Only falls through to the generic error
+      // if the project itself isn't cached, which shouldn't happen since
+      // you navigated to it.
+      const project = useProjectStore.getState().allProjects.find(p => p.id === projectId)
+      if (project) {
+        set({ plan: buildOfflinePlan(project, windowMinutes), error: null, shaping: false })
+      } else {
+        set({ shaping: false, error: 'Could not shape a list just now.' })
+      }
     }
   },
 
@@ -337,7 +372,43 @@ export const useSessionStore = create<SessionState>((set, get) => ({
         starting: false,
       })
     } catch (e) {
-      set({ starting: false, error: e instanceof Error ? e.message : 'Could not start the session.' })
+      // Build a local session that starts running now and gets resolved
+      // for real later -- same shape synthesis resource=start does for an
+      // item with no grounded taskId, ported here so a session begun
+      // offline reads identically once it does sync.
+      console.warn('[session] start failed, falling back to a local session:', e)
+      const startedAt = new Date().toISOString()
+      const agreedItems = (items ?? []).slice(0, 6)
+      const shaped: SessionShape[] = agreedItems.map((item, i) => ({
+        text: item.text,
+        source: 'shaped' as const,
+        partial: item.partial ?? false,
+        taskId: item.taskId ?? `pending-${Date.now()}-${i}`,
+      }))
+      const shapes = friction
+        ? [{ text: friction.text, source: 'friction' as const, partial: false, taskId: null }, ...shaped]
+        : shaped
+      set({
+        active: {
+          id: `local-${crypto.randomUUID()}`,
+          project_id: projectId,
+          started_at: startedAt,
+          window_minutes: windowMinutes,
+          shapes,
+          askMvsSeed: false,
+          offline: true,
+          stashedStart: {
+            project_id: projectId,
+            window_minutes: windowMinutes,
+            source,
+            items: agreedItems,
+            friction: friction ?? null,
+            started_at: startedAt,
+          },
+        },
+        plan: null,
+        starting: false,
+      })
     }
   },
 
@@ -345,6 +416,89 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     const active = get().active
     if (!active) return null
     set({ closing: true, error: null })
+
+    if (active.offline) {
+      const endedAt = new Date().toISOString()
+
+      // Reconnected mid-session -- resolve for real now rather than
+      // waiting for a background sync to catch up.
+      if (active.stashedStart) {
+        try {
+          const online = await isOnline()
+          if (online) {
+            const startData = await postJson<{ session: any }>(
+              '/api/utilities?resource=start',
+              { ...active.stashedStart, started_at: active.stashedStart.started_at }
+            )
+            const result = await postJson<{
+              ok: boolean; moved: boolean | null; duration_minutes: number
+              marked_done?: string[]; created?: string[]; next_added?: string[]
+              progress_noted?: string[]; finish?: { reached: boolean; reason: string } | null
+            }>(
+              '/api/utilities?resource=close',
+              {
+                session_id: startData.session.id,
+                closeout_text: closeoutText,
+                mvs_seed_minutes: mvsSeedMinutes,
+                done_items: doneItems,
+                ended_at: endedAt,
+              }
+            )
+            set({ active: null, closing: false })
+            return {
+              moved: result.moved,
+              duration_minutes: result.duration_minutes,
+              markedDone: result.marked_done ?? [],
+              created: result.created ?? [],
+              nextAdded: result.next_added ?? [],
+              progressNoted: result.progress_noted ?? [],
+              finish: result.finish ?? null,
+            }
+          }
+        } catch (e) {
+          console.warn('[session] resolve-for-real failed, queuing for later sync:', e)
+        }
+      }
+
+      // Still offline (or the resolve attempt above failed) -- tick the
+      // local cache now, so a second offline session on the same project
+      // doesn't re-offer an already-finished step, and defer the real
+      // reconciliation to the sync queue.
+      const project = useProjectStore.getState().allProjects.find(p => p.id === active.project_id)
+      const realTaskIds = (doneItems ?? [])
+        .map(d => d.taskId)
+        .filter((id): id is string => !!id && !id.startsWith('pending-'))
+      if (project && realTaskIds.length > 0) {
+        const ids = new Set(realTaskIds)
+        const tasks: any[] = Array.isArray(project.metadata?.tasks) ? project.metadata!.tasks : []
+        const updatedTasks = tasks.map(t => (t && ids.has(t.id) ? { ...t, done: true } : t))
+        await useProjectStore.getState().updateProject(project.id, {
+          metadata: { ...project.metadata, tasks: updatedTasks },
+        })
+      }
+
+      await queueOperation('complete_offline_session', {
+        ...active.stashedStart,
+        closeout_text: closeoutText,
+        mvs_seed_minutes: mvsSeedMinutes,
+        done_items: doneItems,
+        ended_at: endedAt,
+      })
+      await useOfflineStore.getState().updateQueueSize()
+
+      set({ active: null, closing: false })
+      return {
+        moved: null,
+        duration_minutes: Math.max(1, Math.round((Date.now() - new Date(active.started_at).getTime()) / 60000)),
+        markedDone: (doneItems ?? []).map(d => d.text),
+        created: [],
+        nextAdded: [],
+        progressNoted: [],
+        finish: null,
+        pendingSync: true,
+      }
+    }
+
     try {
       const result = await postJson<{
         ok: boolean; moved: boolean | null; duration_minutes: number
