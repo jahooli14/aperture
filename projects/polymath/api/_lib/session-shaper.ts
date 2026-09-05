@@ -36,6 +36,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { generateText } from './gemini-chat.js'
+import { MODELS } from './models.js'
 import { PLAIN_ENGLISH_RULES } from './plain-english.js'
 import {
   filterGrounded, evidenceHaystack, hasOnlyKnownSpecifics,
@@ -541,6 +542,7 @@ export async function shapeSession(
   // ── Reshape: the user said what's wrong ───────────────────────────
   if (instruction) {
     const response = await generateText(buildReshapePrompt(ctx, evidence, confidence), {
+      model: MODELS.SESSION_SHAPE_CHAT,
       responseFormat: 'json',
       temperature: 0.3,
       maxTokens: 1400,
@@ -698,7 +700,30 @@ export async function shapeSession(
       evidence,
     })
     if (split) {
-      return { ...base, unblocked, items: split.moves, doneLooksLike: split.doneLooksLike ?? doneLineForSteps(split.moves), source: 'split' }
+      // A split is deliberately conservative (session-split.ts:
+      // "Under-reach. Too small is fine; too big means stopping
+      // mid-thing.") -- the right instinct against overcommitting one
+      // step, but it means the moves alone often won't fill the window.
+      // Top up the same way the plain task-list path does, but only when
+      // there's genuinely nothing else real behind this step to save it
+      // for (`rest.length === 0`) -- split's moves carry no numeric
+      // estimate by design, so there's no exact minutes to hand the
+      // top-up call; pass `null` and let it judge for itself.
+      const splitTopUp = rest.length === 0
+        ? await topUpSession({
+            title: project.title,
+            evidence,
+            currentItems: split.moves.map(m => m.text),
+            remainingMinutes: null,
+            maxItems: Math.max(0, count - split.moves.length),
+          })
+        : []
+      return {
+        ...base, unblocked,
+        items: [...split.moves, ...splitTopUp],
+        doneLooksLike: split.doneLooksLike ?? doneLineForSteps(split.moves),
+        source: 'split',
+      }
     }
   }
 

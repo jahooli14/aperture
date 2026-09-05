@@ -30,7 +30,7 @@ describe('buildTopupPrompt', () => {
   })
 
   it('says an empty list is the right, honest answer far more often than not', () => {
-    expect(p).toContain('An empty list is the right, honest answer')
+    expect(p).toContain('empty list is the right, honest answer')
   })
 
   it('bans admin, invented specifics, and repeating the plan', () => {
@@ -47,6 +47,13 @@ describe('buildTopupPrompt', () => {
 
   it('says plainly when there is nothing on the plan yet', () => {
     expect(buildTopupPrompt({ ...input, currentItems: [] })).toContain('(nothing yet)')
+  })
+
+  it('trusts the model\'s own judgment instead of a guessed number when remainingMinutes is null -- the after-a-split case', () => {
+    const afterSplit = buildTopupPrompt({ ...input, remainingMinutes: null })
+    expect(afterSplit).toContain('not a precise amount')
+    expect(afterSplit).toContain('use your judgment')
+    expect(afterSplit).not.toContain('25 minutes')
   })
 })
 

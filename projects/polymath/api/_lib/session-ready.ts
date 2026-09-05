@@ -31,6 +31,7 @@
  */
 
 import { generateText } from './gemini-chat.js'
+import { MODELS } from './models.js'
 import { PLAIN_ENGLISH_RULES } from './plain-english.js'
 import {
   filterGrounded, sharesSubstantialWording,
@@ -221,6 +222,7 @@ export async function checkReady(input: ReadyInput): Promise<Readiness> {
   if (input.evidence.length === 0) return { kind: 'ready', sizeMinutes: null, compound: false }
   try {
     const response = await generateText(buildReadyPrompt(input), {
+      model: MODELS.SESSION_SHAPE_CHAT,
       responseFormat: 'json',
       temperature: 0.2,
       // Checking a stated step against a fixed evidence list, not composing.

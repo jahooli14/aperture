@@ -20,6 +20,7 @@
  */
 
 import { generateText } from './gemini-chat.js'
+import { MODELS } from './models.js'
 import { PLAIN_ENGLISH_RULES } from './plain-english.js'
 import {
   evidenceHaystack, hasOnlyKnownSpecifics, extractSpecifics,
@@ -142,6 +143,7 @@ export function doneLineForSteps(steps: { text: string }[]): string | null {
 export async function splitStep(input: SplitInput): Promise<SplitResult | null> {
   try {
     const response = await generateText(buildSplitPrompt(input), {
+      model: MODELS.SESSION_SHAPE_CHAT,
       responseFormat: 'json',
       temperature: 0.3,
       maxTokens: 900,

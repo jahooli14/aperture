@@ -25,6 +25,7 @@
  */
 
 import { generateText } from './gemini-chat.js'
+import { MODELS } from './models.js'
 import { PLAIN_ENGLISH_RULES } from './plain-english.js'
 import { filterGrounded, type Evidence, type GroundedItem } from './session-grounding.js'
 import { sanitizeRawItems, dedupeSimilar } from './session-items.js'
@@ -41,9 +42,16 @@ export interface TopupInput {
    *  repeat it, and so a near-duplicate can still be caught mechanically
    *  afterward (dedupeSimilar), same backstop the reshape path uses. */
   currentItems: string[]
-  /** Real minutes left in the window after the already-selected items. */
-  remainingMinutes: number
-  /** itemCountForWindow's own ceiling, minus what's already selected. */
+  /** Real minutes left in the window after the already-selected items,
+   *  when it's known exactly (the plain task-list path). Null when it
+   *  isn't -- e.g. after a split, whose moves deliberately carry no
+   *  numeric estimate (session-split.ts). Null still means "there is
+   *  probably real time left," just not a number to be precise about;
+   *  the model is trusted to judge how much is actually worth proposing
+   *  rather than being handed a guessed figure to anchor on. */
+  remainingMinutes: number | null
+  /** itemCountForWindow's own ceiling, minus what's already selected --
+   *  the hard structural cap regardless of how the model reads the time. */
   maxItems: number
 }
 
@@ -52,9 +60,12 @@ export function buildTopupPrompt(input: TopupInput): string {
   const current = currentItems.length
     ? currentItems.map((t, i) => `${i + 1}. ${t}`).join('\n')
     : '(nothing yet)'
+  const timeLeft = remainingMinutes != null
+    ? `about ${remainingMinutes} minutes left`
+    : 'some real time left, though not a precise amount -- the last step just got cut down to fit, so use your judgment on how much more, if anything, actually belongs in this sitting'
 
-  return `Someone is ${remainingMinutes} minutes into a session on "${title}" with real time
-still left after the steps already on their plan.
+  return `Someone is partway into a session on "${title}", with ${timeLeft}
+after the steps already on their plan.
 
 EVERYTHING KNOWN ABOUT THIS PROJECT:
 ${evidence.length
@@ -67,11 +78,10 @@ ALREADY ON THE PLAN FOR THIS SESSION -- don't repeat these:
 ${current}
 
 Is there a REAL next move against the work -- something the evidence
-above actually supports -- that would fill some of the remaining
-${remainingMinutes} minutes? Up to ${maxItems} more items, each citing the
-evidence id it comes from. An empty list is the right, honest answer far
-more often than a full one -- only propose something you can actually
-cite.
+above actually supports -- that would fill some of what's left? Up to
+${maxItems} more items, each citing the evidence id it comes from. An
+empty list is the right, honest answer far more often than a full one --
+only propose something you can actually cite.
 
 What none of them may be:
 - Admin dressed as building: research, plan, outline, decide, list,
@@ -106,6 +116,7 @@ export async function topUpSession(input: TopupInput): Promise<GroundedItem[]> {
   if (input.maxItems <= 0 || input.evidence.length === 0) return []
   try {
     const response = await generateText(buildTopupPrompt(input), {
+      model: MODELS.SESSION_SHAPE_CHAT,
       responseFormat: 'json',
       temperature: 0.3,
       maxTokens: 700,
