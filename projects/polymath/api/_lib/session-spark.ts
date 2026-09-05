@@ -30,7 +30,7 @@
 import { generateText } from './gemini-chat.js'
 import { MODELS } from './models.js'
 import { PLAIN_ENGLISH_RULES, CLEAR_STEP_RULES } from './plain-english.js'
-import { filterGrounded, type Evidence, type GroundedItem } from './session-grounding.js'
+import { evidenceHaystack, hasOnlyKnownSpecifics, type Evidence, type GroundedItem } from './session-grounding.js'
 import { sanitizeRawItems, dedupeSimilar } from './session-items.js'
 import { nearestEstimate } from './session-estimate.js'
 
@@ -143,18 +143,29 @@ export async function sparkForSession(input: SparkInput): Promise<GroundedItem |
     const cleaned = sanitizeRawItems(raw, 1)
     if (cleaned.length === 0) return null
 
-    // Grounded against the union: the spark is legitimately a bridge
-    // between the project and the week, so either side may supply the
-    // specifics it names -- but something outside both is still invention.
-    const allEvidence = [...input.projectEvidence, ...input.weekSignals]
-    const { kept, rejected } = filterGrounded(cleaned, allEvidence, input.title)
-    if (rejected.length > 0) {
-      console.warn(`[session-spark] dropped an ungrounded spark for "${input.title}":`,
-        rejected.map(r => `"${r.text}" — ${r.reason}`))
-    }
-    const deduped = dedupeSimilar(kept, input.currentItems.map(text => ({ text })))
+    // Deliberately NOT filterGrounded. Its second gate requires an item to
+    // share vocabulary with the evidence it cites, which is right for a
+    // plan item -- a step claiming to come from a note had better use some
+    // of the note's words -- and exactly wrong here. A spark IS a
+    // translation out of one domain into another: "chop a vocal into a
+    // stutter" is a good answer to a week spent listening to garage
+    // precisely because it doesn't repeat the word "garage" back. Running
+    // it through that gate rejected essentially every real spark.
+    //
+    // So the two guarantees are kept separately, and both are mechanical:
+    //   1. no invented specifics -- gear codes, brands, proper nouns and
+    //      numbers-with-units are checked against the union of the project
+    //      and the week, so "add a Roland TR-909 shuffle" still dies.
+    //   2. it must cite a real week signal, resolved below by id, which is
+    //      what makes the visible source line true by construction.
+    const haystack = evidenceHaystack([...input.projectEvidence, ...input.weekSignals], input.title)
+    const deduped = dedupeSimilar(cleaned, input.currentItems.map(text => ({ text })))
     const item = deduped[0]
     if (!item) return null
+    if (!hasOnlyKnownSpecifics(item.text, haystack)) {
+      console.warn(`[session-spark] dropped a spark naming something unknown for "${input.title}": "${item.text}"`)
+      return null
+    }
 
     // The signal it actually cited decides the visible source line, so the
     // receipt is true by construction rather than by the model's word.
