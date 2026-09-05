@@ -30,6 +30,7 @@ import { VoiceInput } from '../VoiceInput'
 import { useSessionStore, WINDOW_PRESETS, planningSecondsFor, type CloseResult } from '../../stores/useSessionStore'
 import { useVoicePreference } from '../../stores/useVoicePreference'
 import { useProjectStore } from '../../stores/useProjectStore'
+import { useOnlineStatus } from '../../hooks/useOnlineStatus'
 import { haptic } from '../../utils/haptics'
 import type { Project } from '../../types'
 
@@ -59,7 +60,7 @@ function ReEntry({ project }: { project: Project }) {
   )
 }
 
-type Phase = 'window' | 'planning' | 'running' | 'closeout' | 'receipt' | 'done'
+export type Phase = 'window' | 'planning' | 'running' | 'closeout' | 'receipt' | 'done'
 
 export function SessionContract({
   project,
@@ -68,6 +69,7 @@ export function SessionContract({
   source = 'live',
   surface = 'card',
   presetWindowMinutes = null,
+  onPhaseChange,
 }: {
   project: Project
   onDone: () => void
@@ -88,6 +90,10 @@ export function SessionContract({
    *  window is a gate on the plan -- it just doesn't have to be asked
    *  twice when the card above already asked it. */
   presetWindowMinutes?: number | null
+  /** Lets a 'bare' parent know which phase this is in, so it can swap its
+   *  own chrome (e.g. to true black once a session is actually running)
+   *  without this component reaching outside itself to do it. */
+  onPhaseChange?: (phase: Phase) => void
 }) {
   // In 'bare' mode the parent supplies padding and background.
   const shell = (extra: string) => (surface === 'bare' ? extra : `glass-card p-6 ${extra}`)
@@ -98,11 +104,15 @@ export function SessionContract({
   } = useSessionStore()
 
   const [phase, setPhase] = useState<Phase>(presetWindowMinutes != null ? 'planning' : 'window')
+  useEffect(() => { onPhaseChange?.(phase) }, [phase, onPhaseChange])
   const [windowMinutes, setWindowMinutes] = useState<number | null>(presetWindowMinutes)
   const [planLeft, setPlanLeft] = useState<number | null>(null)
   const [elapsedSec, setElapsedSec] = useState(0)
   const [ticked, setTicked] = useState<Set<number>>(new Set())
   const [steer, setSteer] = useState('')
+  // Owned focus tint for the steer field, since inline `style.border`
+  // always wins over a Tailwind `focus:` class on the same property.
+  const [steerFocused, setSteerFocused] = useState(false)
   const [closeoutText, setCloseoutText] = useState('')
   const [mvsSeedMinutes, setMvsSeedMinutes] = useState<number | null>(null)
   const [closeResult, setCloseResult] = useState<CloseResult | null>(null)
@@ -117,6 +127,7 @@ export function SessionContract({
   const prefersText = useVoicePreference(s => s.prefersText)
   const setPrefersText = useVoicePreference(s => s.setPrefersText)
   const voiceTurn = !prefersText
+  const { isOnline: online } = useOnlineStatus()
 
   // ─── The plan ──────────────────────────────────────────────────────
   // Fetched once per (project, window). A reshape replaces it in place.
@@ -132,9 +143,14 @@ export function SessionContract({
   const beginWork = useCallback(async () => {
     const items = plan?.items?.length ? plan.items : undefined
     await startSession(project.id, windowMinutes, source, items, plan?.friction ?? null)
-    setElapsedSec(0)
-    setTicked(new Set())
-    setPhase('running')
+    // startSession can fail outright (covers both a real error and the rare
+    // case where even the offline local-session fallback didn't run) --
+    // only advance once there's actually something to run.
+    if (useSessionStore.getState().active) {
+      setElapsedSec(0)
+      setTicked(new Set())
+      setPhase('running')
+    }
   }, [plan, project.id, windowMinutes, source, startSession])
 
   // The planning clock runs from the moment there's a list to react to.
@@ -155,8 +171,10 @@ export function SessionContract({
   // call has nothing to "shape" -- the two-minute ritual exists to cover a
   // model call in flight and a list worth double-checking, neither of
   // which applies here. Reviewing it at your own pace beats a countdown
-  // pressuring you through a list you didn't even need the AI for.
-  const skipTimer = plan?.source === 'tasks'
+  // pressuring you through a list you didn't even need the AI for. Same
+  // reasoning covers 'offline': no model call happened, and reshape is
+  // disabled anyway with no connection to run it on.
+  const skipTimer = plan?.source === 'tasks' || plan?.source === 'offline'
   useEffect(() => {
     if (phase !== 'planning' || skipTimer) return
     if (!plan || plan.projectId !== project.id) return
@@ -219,6 +237,14 @@ export function SessionContract({
       .map(sh => ({ text: sh.text, taskId: sh.taskId ?? null, partial: sh.partial }))
     const result = await closeSession(closeoutText, mvsSeedMinutes ?? undefined, doneItems)
     if (!result) return
+    // No real reconciliation ran yet -- there's nothing honest to show in
+    // a receipt (the debrief matching, the finish-line judgement, all of
+    // it is server-side and hasn't happened). Say so plainly and stop here.
+    if (result.pendingSync) {
+      setCloseResult(result)
+      setPhase('done')
+      return
+    }
     // A brief receipt of what the task list just did, rather than a silent
     // rewrite discovered weeks later -- skipped only when there's genuinely
     // nothing to show (an empty close-out with nothing ticked).
@@ -244,7 +270,9 @@ export function SessionContract({
   if (phase === 'done') {
     return (
       <div className={shell('text-center space-y-3')}>
-        <p className="text-base">Logged.</p>
+        <p className="text-base">
+          {closeResult?.pendingSync ? 'Logged — will finish syncing once you’re back online.' : 'Logged.'}
+        </p>
         <button className="text-sm underline" style={{ color: 'rgb(var(--brand-primary-rgb))' }} onClick={onDone}>
           Close
         </button>
@@ -425,6 +453,9 @@ export function SessionContract({
   // ─── running ───────────────────────────────────────────────────────
   if (phase === 'running' && active) {
     const remaining = windowMinutes != null ? windowMinutes * 60 - elapsedSec : elapsedSec
+    // The one thing you're actually meant to be doing right now --
+    // everything after it is later, not now.
+    const currentIndex = active.shapes.findIndex((_, i) => !ticked.has(i))
     return (
       <div className={shell('space-y-4')}>
         <div className="flex items-center justify-between">
@@ -443,6 +474,7 @@ export function SessionContract({
         <ul className="space-y-1">
           {active.shapes.map((shape, i) => {
             const done = ticked.has(i)
+            const isCurrent = i === currentIndex
             return (
               <li key={i}>
                 <button
@@ -454,19 +486,25 @@ export function SessionContract({
                       return next
                     })
                   }}
-                  className="w-full flex items-start gap-2.5 text-left py-2 px-2 -mx-2 rounded-lg transition-colors hover:bg-white/[0.04]"
+                  className="w-full flex items-start gap-2.5 text-left py-2.5 px-3 -mx-3 rounded-lg transition-colors hover:bg-white/[0.04]"
+                  style={isCurrent ? {
+                    background: 'rgba(var(--brand-primary-rgb),0.09)',
+                    boxShadow: 'inset 3px 0 0 rgba(var(--brand-primary-rgb),0.6)',
+                  } : undefined}
                 >
                   <span
                     className="mt-0.5 h-4 w-4 rounded-[5px] flex-shrink-0 flex items-center justify-center border"
                     style={done
                       ? { background: 'rgba(var(--brand-primary-rgb),0.9)', borderColor: 'rgba(var(--brand-primary-rgb),0.9)' }
-                      : { borderColor: 'var(--glass-border-bold)' }}
+                      : { borderColor: isCurrent ? 'rgba(var(--brand-primary-rgb),0.7)' : 'var(--glass-border-bold)' }}
                   >
                     {done && <Check size={11} strokeWidth={3} style={{ color: '#0b1220' }} />}
                   </span>
                   <span
                     className="text-sm leading-snug flex-1"
-                    style={done ? { ...secondaryTextStyle, textDecoration: 'line-through', opacity: 0.45 } : undefined}
+                    style={done
+                      ? { ...secondaryTextStyle, textDecoration: 'line-through', opacity: 0.45 }
+                      : isCurrent ? { fontWeight: 600 } : { ...secondaryTextStyle, opacity: 0.55 }}
                   >
                     {shape.text}
                     {shape.partial && (
@@ -575,6 +613,15 @@ export function SessionContract({
           </p>
         )}
 
+        {/* A step just got taken off the project for good, not just off
+            today's list -- said plainly for the same reason `unblocked`
+            is: this rewrote the permanent plan. */}
+        {plan?.removed && plan.removed.length > 0 && (
+          <p className="text-[12.5px] leading-snug" style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.8 }}>
+            Taken off the project — {plan.removed.map(r => `“${r.text}”`).join(', ')}.
+          </p>
+        )}
+
         {/* The setup step, when this project genuinely has one -- shown
             above the real tasks since it comes first, but visually
             distinct so it doesn't read as one of them. */}
@@ -666,13 +713,15 @@ export function SessionContract({
           </div>
         ) : items.length > 0 ? (
           <p className="text-xs" style={{ ...secondaryTextStyle, opacity: 0.45 }}>
-            {plan?.source === 'derived'
-              ? 'Offline list — built from your last close-out, not shaped.'
-              : plan?.source === 'tasks'
-                ? 'The next steps on your list, in order.'
-                : plan?.source === 'split'
-                  ? `The next step, cut to fit ${windowLabel}.`
-                  : 'Say what\u2019s off and it\u2019ll redo the list.'}
+            {plan?.source === 'offline'
+              ? 'Planned from your list — offline, so it’s not reshaped. Reconnect to make changes.'
+              : plan?.source === 'derived'
+                ? 'Offline list — built from your last close-out, not shaped.'
+                : plan?.source === 'tasks'
+                  ? 'The next steps on your list, in order.'
+                  : plan?.source === 'split'
+                    ? `The next step, cut to fit ${windowLabel}.`
+                    : 'Say what\u2019s off and it\u2019ll redo the list.'}
           </p>
         ) : null}
 
@@ -685,8 +734,22 @@ export function SessionContract({
         {/* Voice by default, listening the moment there's a list to react
             to; typing is what you opt into. Remounted on every new list
             (the key) so it starts listening again each time it's your
-            turn, rather than only once at the very first render. */}
-        {voiceTurn ? (
+            turn, rather than only once at the very first render. Offline,
+            reshape has nowhere to go -- a disabled placeholder beats a
+            mic or a submit that fails pointlessly. */}
+        {!online ? (
+          <div
+            className="flex items-center gap-2 rounded-xl px-3 py-1.5 border opacity-50"
+            style={borderStyle}
+          >
+            <input
+              disabled
+              placeholder="Reconnect to reshape the list"
+              className="flex-1 bg-transparent text-sm outline-none py-1.5"
+              style={{ color: 'var(--brand-text-primary)' }}
+            />
+          </div>
+        ) : voiceTurn ? (
           <div className="space-y-1.5">
             <VoiceInput
               key={items.map(i => i.text).join('|')}
@@ -708,7 +771,11 @@ export function SessionContract({
         ) : (
           <div
             className="flex items-center gap-2 rounded-xl px-3 py-1.5 border"
-            style={borderStyle}
+            style={{
+              borderColor: steerFocused ? 'rgba(var(--brand-primary-rgb),0.32)' : 'var(--glass-border-bold)',
+              boxShadow: steerFocused ? '0 0 0 3px rgba(var(--brand-primary-rgb),0.10)' : 'none',
+              transition: 'border-color 0.15s ease, box-shadow 0.15s ease',
+            }}
           >
             <button
               type="button"
@@ -722,6 +789,8 @@ export function SessionContract({
             <input
               value={steer}
               onChange={e => setSteer(e.target.value)}
+              onFocus={() => setSteerFocused(true)}
+              onBlur={() => setSteerFocused(false)}
               onKeyDown={e => { if (e.key === 'Enter') submitSteer() }}
               placeholder={needsInput ? 'Tell it what you\u2019re doing\u2026' : 'Too much for an hour\u2026'}
               disabled={shaping}

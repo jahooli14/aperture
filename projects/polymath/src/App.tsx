@@ -20,6 +20,7 @@ import { useTheme } from './hooks/useTheme'
 import { setupAutoSync } from './lib/syncManager'
 import { dataSynchronizer } from './lib/sync/DataSynchronizer'
 import { useOfflineStore } from './stores/useOfflineStore'
+import { isOnline as checkIsOnline, onNetworkChange } from './lib/network'
 import './App.css'
 import './styles/theme.css'
 import './styles/design-tokens.css'
@@ -183,43 +184,41 @@ export default function App() {
     const { setOnlineStatus, setSyncResult, updateQueueSize } = useOfflineStore.getState()
 
     // Initial online status
-    setOnlineStatus(navigator.onLine)
+    let initialSyncTimer: ReturnType<typeof setTimeout> | undefined
+    checkIsOnline().then((online) => {
+      setOnlineStatus(online)
+      // Delay initial sync so pages can load from Dexie cache first
+      // Pages show cached data instantly; this background sync refreshes it
+      if (online) {
+        initialSyncTimer = setTimeout(() => {
+          console.log('[App] Triggering initial background sync...')
+          dataSynchronizer.sync().catch(err => {
+            console.warn('[App] Initial sync failed, app will use cached data:', err)
+          })
+        }, 5000)
+      }
+    })
     updateQueueSize()
 
     // Start periodic data sync (pull updates)
     dataSynchronizer.startPeriodicSync()
 
-    // Delay initial sync so pages can load from Dexie cache first
-    // Pages show cached data instantly; this background sync refreshes it
-    let initialSyncTimer: ReturnType<typeof setTimeout> | undefined
-    if (navigator.onLine) {
-      initialSyncTimer = setTimeout(() => {
-        console.log('[App] Triggering initial background sync...')
-        dataSynchronizer.sync().catch(err => {
-          console.warn('[App] Initial sync failed, app will use cached data:', err)
-        })
-      }, 5000)
-    }
-
     // Track online/offline status
-    const handleOnline = () => {
-      console.log('[App] Connection restored')
-      setOnlineStatus(true)
-      // Delay reconnection sync to prevent rapid repeated syncs if connection is flaky
-      setTimeout(() => {
-        dataSynchronizer.sync().catch(err => {
-          console.warn('[App] Sync after reconnection failed:', err)
-        })
-      }, 3000)
-    }
-
-    const handleOffline = () => {
-      console.log('[App] Connection lost')
-      setOnlineStatus(false)
-    }
-
-    window.addEventListener('online', handleOnline)
-    window.addEventListener('offline', handleOffline)
+    const unsubscribeNetwork = onNetworkChange((online) => {
+      if (online) {
+        console.log('[App] Connection restored')
+        setOnlineStatus(true)
+        // Delay reconnection sync to prevent rapid repeated syncs if connection is flaky
+        setTimeout(() => {
+          dataSynchronizer.sync().catch(err => {
+            console.warn('[App] Sync after reconnection failed:', err)
+          })
+        }, 3000)
+      } else {
+        console.log('[App] Connection lost')
+        setOnlineStatus(false)
+      }
+    })
 
     // Setup auto-sync (push pending changes) when connection is restored
     setupAutoSync((result) => {
@@ -239,8 +238,7 @@ export default function App() {
 
     return () => {
       if (initialSyncTimer) clearTimeout(initialSyncTimer)
-      window.removeEventListener('online', handleOnline)
-      window.removeEventListener('offline', handleOffline)
+      unsubscribeNetwork()
       window.removeEventListener('memories-synced', handleMemoriesSynced)
       dataSynchronizer.stopPeriodicSync()
     }

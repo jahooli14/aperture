@@ -382,6 +382,15 @@
     transition: transform 0.05s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
+  /* Mobile WebViews (Android Chrome, the Capacitor app) paint their own
+     tap/focus highlight on text inputs unless this is set explicitly --
+     the same treatment buttons already get above. Without it, focusing a
+     field can show a stray highlight no component's own CSS put there. */
+  input,
+  textarea {
+    -webkit-tap-highlight-color: transparent;
+  }
+
   /* Subtle hover lift - Enhanced with GPU acceleration */
   .hover-lift {
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);

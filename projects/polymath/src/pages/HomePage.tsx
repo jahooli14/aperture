@@ -49,6 +49,7 @@ import { useProjectStore, useRecentNonPriorityProjects, useUpNextMiniProjects } 
 import { useMemoryStore } from '../stores/useMemoryStore'
 import { useContextEngineStore } from '../stores/useContextEngineStore'
 import { useJourneyStore } from '../stores/useJourneyStore'
+import { useSessionStore } from '../stores/useSessionStore'
 import { useAuthContext } from '../contexts/AuthContext'
 import { SubtleBackground } from '../components/SubtleBackground'
 import { TodaysAnswerCard } from '../components/home/TodaysAnswerCard'
@@ -76,6 +77,11 @@ export function HomePage() {
   const recentMini = useRecentNonPriorityProjects(2)
   const upNextMini = useUpNextMiniProjects()
   const hasEverythingElse = recentMini.length > 0 || upNextMini.length > 0
+  // While a session is actually running, the rest of the page is other
+  // projects competing for attention against the one thing you sat down
+  // to do -- hidden until it ends, same reasoning as the answer card
+  // itself going OLED-black for the running phase.
+  const sessionRunning = useSessionStore(s => s.active != null)
 
   const [error, setError] = useState<string | null>(null)
 
@@ -237,74 +243,83 @@ export function HomePage() {
             <TodaysAnswerCard />
           </motion.div>
 
-          {/* The attention budget (SPEC.md) — at most ONE of: a deferred
-              close-out, the monthly mirror, the live-project re-ask, a
-              composite/morph proposal, today's spark, or the different-thing
-              nudge. Renders nothing on most opens.
-
-              It sits directly under the answer box, not above the masthead
-              where the first cut put it (which read as broken chrome), and
-              never as a competing hero — the answer box is the one thing
-              you act on; this is the one thing the app gets to say back. */}
-          <motion.div {...stackTransition(2)}>
-            <AttentionSlot />
-          </motion.div>
-
-          {/* Section 2 — Everything else. Still warm projects then queued
-              ones, one swipeable row. Header + seam only when there's
-              something to show, so we never strand a heading over an
-              empty row. */}
-          {hasEverythingElse && (
+          {/* Everything below is other projects and other things to look at
+              — exactly what a running session is meant to hold your
+              attention against, so all of it hides until the session ends.
+              Same reasoning as the answer card itself going OLED-black for
+              the running phase, just at the page level. */}
+          {!sessionRunning && (
             <>
-              <div className="section-seam" aria-hidden />
-              <h2 className="section-header" style={{ margin: '0 0 10px' }}>everything <span>else</span></h2>
+              {/* The attention budget (SPEC.md) — at most ONE of: a deferred
+                  close-out, the monthly mirror, the live-project re-ask, a
+                  composite/morph proposal, today's spark, or the different-thing
+                  nudge. Renders nothing on most opens.
+
+                  It sits directly under the answer box, not above the masthead
+                  where the first cut put it (which read as broken chrome), and
+                  never as a competing hero — the answer box is the one thing
+                  you act on; this is the one thing the app gets to say back. */}
               <motion.div {...stackTransition(2)}>
-                <EverythingElseMini />
+                <AttentionSlot />
+              </motion.div>
+
+              {/* Section 2 — Everything else. Still warm projects then queued
+                  ones, one swipeable row. Header + seam only when there's
+                  something to show, so we never strand a heading over an
+                  empty row. */}
+              {hasEverythingElse && (
+                <>
+                  <div className="section-seam" aria-hidden />
+                  <h2 className="section-header" style={{ margin: '0 0 10px' }}>everything <span>else</span></h2>
+                  <motion.div {...stackTransition(2)}>
+                    <EverythingElseMini />
+                  </motion.div>
+                </>
+              )}
+
+              {/* "Worth a look" (ReviewRotation) removed by the execution
+                  rebuild — resurfacing a forgotten project is the mull
+                  channel's job now (sparks, and the composite proposals that
+                  gate on exactly the same "stalled" condition the rotation was
+                  approximating with time-since-touched). Two mechanisms
+                  competing to resurface the same projects is what made the page
+                  read as unrelated sections. The rotation's component and its
+                  API resources are now deleted rather than left dormant —
+                  a second resurfacing mechanism sitting unused is exactly the
+                  fragmentation this rebuild is clearing out. */}
+
+              <div className="section-seam" aria-hidden />
+
+              {/* Section 3 — Now consuming. Identity layer.
+                  Non-article lists in the top strip; Saved reads + New reads
+                  dropdowns hold articles from the reading queue and RSS feeds.
+                  Deferred: it fetches the reading queue + RSS on mount, so we
+                  hold it back until it's near the viewport rather than letting
+                  it compete with the first paint. */}
+              <h2 className="section-header" style={{ margin: '0 0 10px' }}>now <span>consuming</span></h2>
+              <motion.div {...stackTransition(4)}>
+                <DeferMount minHeight={120}>
+                  <ConsumingWidget />
+                </DeferMount>
+              </motion.div>
+
+              <div className="section-seam" aria-hidden />
+
+              {/* Section 4 — Thought of the day. An earlier cut of the rebuild
+                  removed this as "the spark channel already does quotes from
+                  your past", which was wrong: a spark ASKS you something and
+                  wants a voice answer back, this just shows you something you
+                  said and asks nothing. Different job, and it's the page's
+                  closer rather than a competing interruption. Component renders
+                  its own section-header internally; deferred because it fetches
+                  a batch of resurfaced memories on mount. */}
+              <motion.div {...stackTransition(5)}>
+                <DeferMount minHeight={160}>
+                  <ThoughtOfTheDay />
+                </DeferMount>
               </motion.div>
             </>
           )}
-
-          {/* "Worth a look" (ReviewRotation) removed by the execution
-              rebuild — resurfacing a forgotten project is the mull
-              channel's job now (sparks, and the composite proposals that
-              gate on exactly the same "stalled" condition the rotation was
-              approximating with time-since-touched). Two mechanisms
-              competing to resurface the same projects is what made the page
-              read as unrelated sections. The rotation's component and its
-              API resources are now deleted rather than left dormant —
-              a second resurfacing mechanism sitting unused is exactly the
-              fragmentation this rebuild is clearing out. */}
-
-          <div className="section-seam" aria-hidden />
-
-          {/* Section 3 — Now consuming. Identity layer.
-              Non-article lists in the top strip; Saved reads + New reads
-              dropdowns hold articles from the reading queue and RSS feeds.
-              Deferred: it fetches the reading queue + RSS on mount, so we
-              hold it back until it's near the viewport rather than letting
-              it compete with the first paint. */}
-          <h2 className="section-header" style={{ margin: '0 0 10px' }}>now <span>consuming</span></h2>
-          <motion.div {...stackTransition(4)}>
-            <DeferMount minHeight={120}>
-              <ConsumingWidget />
-            </DeferMount>
-          </motion.div>
-
-          <div className="section-seam" aria-hidden />
-
-          {/* Section 4 — Thought of the day. An earlier cut of the rebuild
-              removed this as "the spark channel already does quotes from
-              your past", which was wrong: a spark ASKS you something and
-              wants a voice answer back, this just shows you something you
-              said and asks nothing. Different job, and it's the page's
-              closer rather than a competing interruption. Component renders
-              its own section-header internally; deferred because it fetches
-              a batch of resurfaced memories on mount. */}
-          <motion.div {...stackTransition(5)}>
-            <DeferMount minHeight={160}>
-              <ThoughtOfTheDay />
-            </DeferMount>
-          </motion.div>
 
           {/* Quiet exit to Settings — small, centred, low-contrast.
               Lives at the very bottom so it never competes with content. */}

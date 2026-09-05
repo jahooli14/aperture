@@ -9,7 +9,15 @@
  * failure and our own abort into `NetworkError`, so callers can tell "the
  * network isn't there" (safe to queue and retry later) apart from "the
  * server rejected this" (a real error to surface).
+ *
+ * `isOnline`/`onNetworkChange` are Capacitor-aware connectivity checks.
+ * navigator.onLine is unreliable on Android (it can report true on a
+ * captive-portal or dead wifi connection), so native platforms use
+ * @capacitor/network's real status instead. Web keeps the old behaviour.
  */
+
+import { Network } from '@capacitor/network'
+import { isNative } from './platform'
 
 export class NetworkError extends Error {
   constructor(message = 'Network error') {
@@ -31,5 +39,47 @@ export async function fetchWithTimeout(
     throw new NetworkError(error instanceof Error ? error.message : 'Network error')
   } finally {
     clearTimeout(timeoutId)
+  }
+}
+
+export async function isOnline(): Promise<boolean> {
+  if (isNative()) {
+    const status = await Network.getStatus()
+    return status.connected
+  }
+  return navigator.onLine
+}
+
+/**
+ * Subscribe to connectivity changes. Returns an unsubscribe function.
+ */
+export function onNetworkChange(cb: (online: boolean) => void): () => void {
+  if (isNative()) {
+    let removed = false
+    let handle: { remove: () => void } | undefined
+
+    Network.addListener('networkStatusChange', (status) => {
+      if (!removed) cb(status.connected)
+    }).then((h) => {
+      if (removed) {
+        h.remove()
+      } else {
+        handle = h
+      }
+    })
+
+    return () => {
+      removed = true
+      handle?.remove()
+    }
+  }
+
+  const handleOnline = () => cb(true)
+  const handleOffline = () => cb(false)
+  window.addEventListener('online', handleOnline)
+  window.addEventListener('offline', handleOffline)
+  return () => {
+    window.removeEventListener('online', handleOnline)
+    window.removeEventListener('offline', handleOffline)
   }
 }

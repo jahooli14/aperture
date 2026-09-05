@@ -6,6 +6,7 @@ import {
   buildReshapePrompt,
   buildEvidence,
   sanitizeFriction,
+  sanitizeRemovals,
   dedupeSimilar,
   humanizeDuration,
   type ShapeContext,
@@ -36,6 +37,18 @@ vi.mock('./session-topup.js', () => ({
   topUpSession: vi.fn(async () => []),
 }))
 import { topUpSession } from './session-topup.js'
+
+// Real generateText always fails closed too (no GEMINI_API_KEY) -- this
+// only affects session-shaper.ts's own direct call (the reshape branch);
+// session-ready/session-split/session-topup are mocked wholesale above,
+// so their own generateText calls never run for real regardless. Default
+// throws, matching every existing shapeSession test (none pass an
+// instruction, so reshape never runs for them); only the reshape/removal
+// tests below override it.
+vi.mock('./gemini-chat.js', () => ({
+  generateText: vi.fn(async () => { throw new Error('GEMINI_API_KEY environment variable is not configured') }),
+}))
+import { generateText } from './gemini-chat.js'
 
 describe('itemCountForWindow', () => {
   it('gives a short window a short list', () => {
@@ -109,6 +122,32 @@ describe('sanitizeFriction', () => {
 
   it('is null when the model correctly says there is nothing to set up', () => {
     expect(sanitizeFriction(null, evidence, 'DJ mix')).toBeNull()
+  })
+})
+
+describe('sanitizeRemovals', () => {
+  const taskIdByEvidenceId = { e2: 'task-real', e5: 'task-other' }
+
+  it('resolves a cited evidence id to the real task id it came from', () => {
+    expect(sanitizeRemovals(['e2'], taskIdByEvidenceId)).toEqual(['task-real'])
+  })
+
+  it('drops an evidence id that never mapped to a real step -- a close-out or the finish line, not "already on the project"', () => {
+    expect(sanitizeRemovals(['e1'], taskIdByEvidenceId)).toEqual([])
+  })
+
+  it('never invents a task id out of junk input', () => {
+    expect(sanitizeRemovals(null, taskIdByEvidenceId)).toEqual([])
+    expect(sanitizeRemovals('e2', taskIdByEvidenceId)).toEqual([])
+    expect(sanitizeRemovals([42, {}, 'e2'], taskIdByEvidenceId)).toEqual(['task-real'])
+  })
+
+  it('dedupes when the same task is cited more than once', () => {
+    expect(sanitizeRemovals(['e2', 'e2'], taskIdByEvidenceId)).toEqual(['task-real'])
+  })
+
+  it('can resolve more than one real removal at once', () => {
+    expect(sanitizeRemovals(['e2', 'e5'], taskIdByEvidenceId).sort()).toEqual(['task-other', 'task-real'])
   })
 })
 
@@ -260,7 +299,7 @@ describe('buildReshapePrompt', () => {
 
   it('lets the model reorder, split and drop, but never invent a step', () => {
     const p = prompt()
-    expect(p).toContain('Reorder, drop, or keep')
+    expect(p).toContain("Reorder, drop from today's list, or keep")
     expect(p).toContain('Split one step')
     expect(p).toContain('Invent a step')
     expect(p).toContain("If you can't cite it, you can't say it")
@@ -315,6 +354,19 @@ describe('buildReshapePrompt', () => {
 
   it('carries the plain-English rules', () => {
     expect(prompt().toLowerCase()).toContain('plain english')
+  })
+
+  it('lets the model take a step off the project for good, distinct from just skipping it today', () => {
+    const p = prompt()
+    expect(p).toContain('Take a step off the project ENTIRELY')
+    expect(p).toContain('"remove"')
+    expect(p).toContain('step for today is not the same as this')
+  })
+
+  it('carries a worked example of a real removal and a non-removal, both grounded', () => {
+    const p = prompt()
+    expect(p).toContain('"remove": ["e5"]')
+    expect(p).toContain('"remove": []')
   })
 })
 
@@ -642,5 +694,70 @@ describe('shapeSession', () => {
     await expect(
       shapeSession(stubClient({ project }), 'u1', 'p1', 60, 'too much', ['mix it']),
     ).rejects.toThrow()
+  })
+
+  it('takes a task off the project for good when the reshape cites it in "remove"', async () => {
+    // No description/end_goal on this fixture, so evidence numbering is
+    // predictable: e1 is the instruction ("what you just said"), e2 is
+    // the one open task ("already on the project") -- exactly what the
+    // model would cite to remove it.
+    const bare = {
+      title: 'Graham song',
+      description: null,
+      metadata: { tasks: [{ id: 't0', text: 'Write a distribution plan', done: false, order: 0 }] },
+      slots: [],
+      last_closeout_text: null,
+    }
+    vi.mocked(generateText).mockResolvedValueOnce(JSON.stringify({
+      items: [],
+      done_looks_like: null,
+      friction: null,
+      remove: ['e2'],
+    }))
+    const updates: Record<string, unknown>[] = []
+    const { shapeSession } = await import('./session-shaper.js')
+    const result = await shapeSession(
+      stubClient({ project: bare, onUpdate: p => updates.push(p) }),
+      'u1', 'p1', 60, "no, don't do that, I'm not writing a distribution plan", ['Write a distribution plan'],
+    )
+
+    expect(result.removed).toEqual([{ text: 'Write a distribution plan' }])
+    expect(result.items).toEqual([])
+    expect(updates).toHaveLength(1)
+    expect((updates[0].metadata as any).tasks).toEqual([])
+  })
+
+  it('never lets a removed task also stand as a session item, even if the model listed both', async () => {
+    const bare = {
+      title: 'Graham song',
+      description: null,
+      metadata: {
+        tasks: [
+          { id: 't0', text: 'Write a distribution plan', done: false, order: 0 },
+          { id: 't1', text: 'Bounce a cleaner vocal take', done: false, order: 1, estimated_minutes: 20, estimate_set: true },
+        ],
+      },
+      slots: [],
+      last_closeout_text: null,
+    }
+    // e1: instruction, e2: "Write a distribution plan", e3: "Bounce a
+    // cleaner vocal take" -- cites e2 in both "items" (by mistake, or a
+    // model that didn't fully honour the "may not do" rule) and "remove".
+    vi.mocked(generateText).mockResolvedValueOnce(JSON.stringify({
+      items: [
+        { text: 'Write a distribution plan', evidence: ['e2'] },
+        { text: 'Bounce a cleaner vocal take', evidence: ['e3'] },
+      ],
+      done_looks_like: null,
+      friction: null,
+      remove: ['e2'],
+    }))
+    const { shapeSession } = await import('./session-shaper.js')
+    const result = await shapeSession(
+      stubClient({ project: bare }),
+      'u1', 'p1', 60, "don't do the distribution plan", ['Write a distribution plan', 'Bounce a cleaner vocal take'],
+    )
+    expect(result.items.map(i => i.text)).toEqual(['Bounce a cleaner vocal take'])
+    expect(result.removed).toEqual([{ text: 'Write a distribution plan' }])
   })
 })

@@ -84,6 +84,26 @@ export function sanitizeFriction(raw: unknown, evidence: Evidence[], projectTitl
   return { text, minutes: nearestEstimate(minutes) }
 }
 
+/**
+ * Taking a step off the project for good, not just off today's session.
+ * The model never sees a real task id -- only evidence ids -- so this is
+ * the same resolve-through-the-server-built-map pattern as the readiness
+ * "add" branch's citation check: an evidence id that isn't in
+ * taskIdByEvidenceId (i.e. didn't come from an "already on the project"
+ * entry) can't name a real step, so it's silently dropped rather than
+ * removing nothing or, worse, guessing.
+ */
+export function sanitizeRemovals(raw: unknown, taskIdByEvidenceId: Record<string, string>): string[] {
+  if (!Array.isArray(raw)) return []
+  const ids = new Set<string>()
+  for (const entry of raw) {
+    if (typeof entry !== 'string') continue
+    const taskId = taskIdByEvidenceId[entry]
+    if (taskId) ids.add(taskId)
+  }
+  return [...ids]
+}
+
 export interface OpenStep extends BudgetTask {
   progressNote: string | null
 }
@@ -232,9 +252,18 @@ throw out items they didn't complain about. Up to ${count} items, sized to
 ${windowText}. Finishable, not aspirational: under-reach when unsure.
 
 What you may do:
-- Reorder, drop, or keep the steps that are already on the project.
+- Reorder, drop from today's list, or keep the steps that are already on
+  the project. Dropping a step from today's list just leaves it for a
+  later session -- it's still on the project.
 - Split one step into the first piece of it that fits the time.
 - Add exactly what they just asked for, citing "what you just said".
+- Take a step off the project ENTIRELY, not just today's list, when
+  they're plainly asking to be rid of it for good ("don't do that", "drop
+  that from the plan", "I'm not doing the distribution plan"). Cite its
+  evidence id in "remove". Only ever a step marked "already on the
+  project" -- never a close-out, a note, or the finish line. Skipping a
+  step for today is not the same as this; only use "remove" when they
+  clearly mean gone, not "not now".
 What you may not do:
 - Invent a step. Every item cites the step it belongs to or the words they
   just said. If you can't cite it, you can't say it.
@@ -267,11 +296,19 @@ Say the note has: "Next: fix the transition out of track two."
   GOOD: "Play track two from the top and find where the transition breaks."
         — cites the note, adds nothing that wasn't in it.
 
+Say [e5] is "already on the project: write a distribution plan" and the
+user says "no, don't do that, I'm not writing a distribution plan":
+  GOOD: "remove": ["e5"] — they plainly want it gone, not skipped for now.
+Say they instead say "not today, too much for an hour":
+  GOOD: "remove": [] — that's asking to skip it this session, not delete
+        it. Just leave it off "items".
+
 Respond with JSON only:
 {
   "items": [ { "text": "...", "evidence": ["e1"] } ],
   "done_looks_like": "...",
-  "friction": { "text": "...", "minutes": 5 } | null
+  "friction": { "text": "...", "minutes": 5 } | null,
+  "remove": ["e5"]
 }`
 }
 
@@ -308,6 +345,11 @@ export interface ShapeResult {
    *  from further down the list, or one written in that was missing
    *  entirely. Said out loud, because it rewrote the plan. */
   unblocked: { text: string; before: string; added: boolean } | null
+  /** Steps taken off the project for good on a reshape instruction --
+   *  deleted from metadata.tasks, not just left out of today's session.
+   *  Said out loud for the same reason `unblocked` is: this rewrote the
+   *  permanent plan, not just what's on screen. Empty outside a reshape. */
+  removed: { text: string }[]
 }
 
 const OPEN_TASK_LIMIT = 24
@@ -537,7 +579,7 @@ export async function shapeSession(
   })
 
   const { evidence, taskIdByEvidenceId } = buildEvidence(ctx)
-  const base = { confidence, truncatedCount, planned, gap: null, needsInput: null, friction: null, unblocked: null }
+  const base = { confidence, truncatedCount, planned, gap: null, needsInput: null, friction: null, unblocked: null, removed: [] as { text: string }[] }
 
   // ── Reshape: the user said what's wrong ───────────────────────────
   if (instruction) {
@@ -560,14 +602,42 @@ export async function shapeSession(
       console.warn(`[session-shaper] dropped ${rejected.length} ungrounded item(s) on reshape for ${projectId}:`,
         rejected.map(r => `"${r.text}" — ${r.reason}`))
     }
+    // A step taken off the project entirely can't also stand as a session
+    // item -- filtered out here regardless of whether the model also (or
+    // instead) listed it in "items", since removal always wins.
+    const removedTaskIds = sanitizeRemovals(parsed?.remove, taskIdByEvidenceId)
     const stepText = new Map(openTasks.map(t => [t.id, t.text.toLowerCase().trim()]))
-    const items = dedupeSimilar(kept).map(k => ({
-      ...k,
-      partial: !!k.taskId && stepText.get(k.taskId) !== k.text.toLowerCase().trim(),
-    }))
-    if (items.length < MIN_TRUSTWORTHY_ITEMS && items.length < openTasks.length) {
+    const items = dedupeSimilar(kept)
+      .filter(k => !k.taskId || !removedTaskIds.includes(k.taskId))
+      .map(k => ({
+        ...k,
+        partial: !!k.taskId && stepText.get(k.taskId) !== k.text.toLowerCase().trim(),
+      }))
+    // A removal legitimately shrinks how many items there could even be --
+    // the backlog it's measured against has to be the post-removal count,
+    // or taking the only other step off the project would look exactly
+    // like the model failing to ground anything.
+    const remainingOpenCount = openTasks.filter(t => !removedTaskIds.includes(t.id)).length
+    if (items.length < MIN_TRUSTWORTHY_ITEMS && items.length < remainingOpenCount) {
       throw new Error("Couldn't make a list out of that.")
     }
+
+    // Persisted for good, not just left off today's list -- deleted from
+    // metadata.tasks outright rather than marked done, since a rejected
+    // step was never finished and marking it done would surface as false
+    // "you finished this" evidence later.
+    let removed: { text: string }[] = []
+    if (removedTaskIds.length > 0) {
+      removed = openTasks.filter(t => removedTaskIds.includes(t.id)).map(t => ({ text: t.text }))
+      const remainingTasks = allTasks.filter((t: any) => !(t && removedTaskIds.includes(t.id)))
+      const { error: saveErr } = await supabase
+        .from('projects')
+        .update({ metadata: { ...metadata, tasks: remainingTasks } })
+        .eq('id', projectId)
+        .eq('user_id', userId)
+      if (saveErr) console.warn('[session-shaper] could not save the removal:', saveErr.message)
+    }
+
     const haystack = evidenceHaystack(evidence, project.title)
     return {
       ...base,
@@ -575,6 +645,7 @@ export async function shapeSession(
       doneLooksLike: sanitizeDoneLooksLike(parsed?.done_looks_like, haystack) ?? doneLineForSteps(items),
       source: 'ai',
       friction: sanitizeFriction(parsed?.friction, evidence, project.title),
+      removed,
     }
   }
 
