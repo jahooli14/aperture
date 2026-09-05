@@ -45,7 +45,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { useProjectStore, useRecentNonPriorityProjects, useUpNextMiniProjects } from '../stores/useProjectStore'
+import { useProjectStore } from '../stores/useProjectStore'
 import { useMemoryStore } from '../stores/useMemoryStore'
 import { useContextEngineStore } from '../stores/useContextEngineStore'
 import { useJourneyStore } from '../stores/useJourneyStore'
@@ -71,12 +71,11 @@ export function HomePage() {
   const setContext = useContextEngineStore(s => s.setContext)
   const onboardingCompletedAt = useJourneyStore(s => s.onboardingCompletedAt)
   const startSession = useJourneyStore(s => s.startSession)
-  // Mirror EverythingElseMini's selectors here so we can drop the section
-  // header + seam when the row would be empty — a bare "everything else"
-  // header over nothing reads as a bug, not a quiet state.
-  const recentMini = useRecentNonPriorityProjects(2)
-  const upNextMini = useUpNextMiniProjects()
-  const hasEverythingElse = recentMini.length > 0 || upNextMini.length > 0
+  // The row used to be hidden when it had no projects, because a bare
+  // "everything else" header over nothing reads as a bug. It always ends
+  // with the "suggest a project" card now, so it is never empty — and a
+  // shelf with nothing warm on it is exactly when that card earns its
+  // place most.
   // While a session is actually running, the rest of the page is other
   // projects competing for attention against the one thing you sat down
   // to do -- hidden until it ends, same reasoning as the answer card
@@ -264,18 +263,15 @@ export function HomePage() {
               </motion.div>
 
               {/* Section 2 — Everything else. Still warm projects then queued
-                  ones, one swipeable row. Header + seam only when there's
-                  something to show, so we never strand a heading over an
-                  empty row. */}
-              {hasEverythingElse && (
-                <>
-                  <div className="section-seam" aria-hidden />
-                  <h2 className="section-header" style={{ margin: '0 0 10px' }}>everything <span>else</span></h2>
-                  <motion.div {...stackTransition(2)}>
-                    <EverythingElseMini />
-                  </motion.div>
-                </>
-              )}
+                  ones, one swipeable row, ending in "suggest a project" —
+                  which is why there's no emptiness gate here any more: the
+                  row always has that last card, so the heading is never
+                  stranded over nothing. */}
+              <div className="section-seam" aria-hidden />
+              <h2 className="section-header" style={{ margin: '0 0 10px' }}>everything <span>else</span></h2>
+              <motion.div {...stackTransition(2)}>
+                <EverythingElseMini />
+              </motion.div>
 
               {/* "Worth a look" (ReviewRotation) removed by the execution
                   rebuild — resurfacing a forgotten project is the mull
