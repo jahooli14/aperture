@@ -323,7 +323,7 @@ export function FloatingNav() {
       >
         <div className="mx-auto max-w-2xl px-2 sm:px-4 relative">
           <div
-            className="flex items-center gap-0"
+            className="flex items-center gap-0 floating-nav-panel"
             style={{
               position: 'relative',
               borderRadius: '999px',

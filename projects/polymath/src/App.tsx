@@ -20,6 +20,7 @@ import { useTheme } from './hooks/useTheme'
 import { setupAutoSync } from './lib/syncManager'
 import { dataSynchronizer } from './lib/sync/DataSynchronizer'
 import { useOfflineStore } from './stores/useOfflineStore'
+import { useSessionStore } from './stores/useSessionStore'
 import { isOnline as checkIsOnline, onNetworkChange } from './lib/network'
 import './App.css'
 import './styles/theme.css'
@@ -178,6 +179,26 @@ export default function App() {
 
   // Warm nav-destination chunks during idle for instant tab switches
   useIdleRoutePrefetch()
+
+  // ─── OLED blackout while a session runs ────────────────────────────
+  // A session is the one time the app is deliberately left open and lit
+  // for an hour, and on an OLED panel a black pixel is an off pixel. The
+  // normal ground is a full-screen fixed gradient plus two radial glows,
+  // so blacking only the session card (the first cut) saved almost
+  // nothing. This drops the whole screen to true #000 — see App.css's
+  // .session-blackout.
+  //
+  // Driven off the store rather than the card's own phase so it covers
+  // the standalone /session route too, and cleaned up on unmount so a
+  // crash mid-session can't leave the app stuck black.
+  const sessionRunning = useSessionStore(s => s.active != null)
+  useEffect(() => {
+    document.body.classList.toggle('session-blackout', sessionRunning)
+    if (isNative()) {
+      StatusBar.setBackgroundColor({ color: sessionRunning ? '#000000' : '#0f1829' }).catch(() => {})
+    }
+    return () => { document.body.classList.remove('session-blackout') }
+  }, [sessionRunning])
 
   // Setup online/offline tracking and auto-sync
   useEffect(() => {

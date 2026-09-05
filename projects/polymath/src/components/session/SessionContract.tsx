@@ -175,15 +175,22 @@ export function SessionContract({
   // reasoning covers 'offline': no model call happened, and reshape is
   // disabled anyway with no connection to run it on.
   const skipTimer = plan?.source === 'tasks' || plan?.source === 'offline'
+  // The clock is time to react to the list, so it can't start before the
+  // list is on the screen. A plan object exists a beat before it has
+  // anything in it, and a shape that came back empty has none at all --
+  // in both cases the countdown was already running against something the
+  // user could not yet see, and at 0:00 it flips itself into a session
+  // they never got an outline for.
+  const outlineShown = !!plan && plan.projectId === project.id && plan.items.length > 0
   useEffect(() => {
     if (phase !== 'planning' || skipTimer) return
-    if (!plan || plan.projectId !== project.id) return
+    if (!outlineShown) return
     if (planLeft == null) { setPlanLeft(planningSecondsFor(windowMinutes)); return }
     if (planBusy) return
     if (planLeft <= 0) { void beginWork(); return }
     const t = window.setTimeout(() => setPlanLeft(v => (v == null ? null : v - 1)), 1000)
     return () => window.clearTimeout(t)
-  }, [phase, plan, project.id, planLeft, planBusy, beginWork, skipTimer, windowMinutes])
+  }, [phase, outlineShown, planLeft, planBusy, beginWork, skipTimer, windowMinutes])
 
   // ─── The session clock ─────────────────────────────────────────────
   useEffect(() => {
@@ -807,7 +814,7 @@ export function SessionContract({
               key={items.map(i => i.text).join('|')}
               onTranscript={t => { void sendToPlan(t) }}
               onRecordingChange={setRecording}
-              autoStart
+              autoStart={outlineShown}
               autoSubmit
               maxDuration={30}
             />

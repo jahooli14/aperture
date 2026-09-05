@@ -145,6 +145,90 @@
     z-index: 0;
   }
 
+  /* The WebView's own focus ring is a hard, saturated blue rectangle that
+     ignores the app's palette and its rounded corners entirely. Every
+     field that wants a focus state draws its own (a tinted border and a
+     soft ring), so the native one is pure noise on top of it.
+
+     Only the outline is dropped — never the box-shadow, which is what our
+     own focus styling is drawn with. Focus stays visible; it just looks
+     like the rest of the app. */
+  input:focus,
+  input:focus-visible,
+  textarea:focus,
+  textarea:focus-visible,
+  select:focus,
+  select:focus-visible,
+  [contenteditable]:focus,
+  [contenteditable]:focus-visible {
+    outline: none !important;
+    outline-offset: 0 !important;
+  }
+
+  /* ── OLED blackout, while a session is running ──────────────────────
+     On an OLED panel a black pixel is an OFF pixel, so "dark theme" and
+     "costs no battery" are not the same thing at all. The app's normal
+     ground is a full-screen fixed gradient (#111a2c -> #0d1525) plus two
+     radial glows in body::before, and that lights every pixel on the
+     display whatever the card on top of it is doing. Painting only the
+     session card black — which is what the first cut did — saves almost
+     nothing, because the card is a fraction of the screen.
+
+     A session is the one time the app is deliberately left open and
+     staring at you for an hour, so it's the one time this is worth doing
+     properly: the whole ground goes to true #000 and every glow, blur and
+     translucent panel over it is switched off. Everything stays legible;
+     it just stops emitting.
+
+     !important throughout because the surfaces being overridden (the nav
+     panel, the glass cards) set these inline, and an inline style loses
+     to an important declaration but beats a plain one. */
+  body.session-blackout {
+    background-color: #000 !important;
+    background-image: none !important;
+  }
+
+  body.session-blackout::before {
+    display: none !important;
+  }
+
+  body.session-blackout .glass-card,
+  body.session-blackout .premium-card,
+  body.session-blackout .premium-glass {
+    background: #000 !important;
+    background-image: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    box-shadow: none !important;
+    border-color: rgba(255, 255, 255, 0.08) !important;
+  }
+
+  /* The nav is a lit bar across the full width, permanently on screen.
+     Kept usable — a hairline and the icons — rather than hidden, since
+     dropping navigation mid-session would be a worse trade than the
+     handful of pixels it costs. */
+  body.session-blackout .floating-nav-panel {
+    background: #000 !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    box-shadow: none !important;
+    border-color: rgba(255, 255, 255, 0.10) !important;
+  }
+
+  /* The capture button is the brightest thing on the screen by some way:
+     a filled disc plus two glow rings. Outlined instead, so it's still
+     obviously the primary action and still tappable. */
+  body.session-blackout .floating-nav-capture-glow {
+    display: none !important;
+  }
+
+  body.session-blackout .floating-nav-capture {
+    background: #000 !important;
+    box-shadow: none !important;
+    border: 1.5px solid rgba(var(--brand-primary-rgb), 0.55) !important;
+    color: rgb(var(--brand-primary-rgb)) !important;
+  }
+
   /* Material You typography scale */
   h1 {
     font-family: var(--md-sys-typescale-display-large-font);
