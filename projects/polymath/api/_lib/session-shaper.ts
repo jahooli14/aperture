@@ -546,6 +546,12 @@ export async function shapeSession(
       responseFormat: 'json',
       temperature: 0.3,
       maxTokens: 1400,
+      // Without a cap, an uncapped thinking model can spend the entire
+      // maxTokens budget reasoning before writing any JSON, leaving
+      // nothing to parse. This is reorder/split/cite against a closed
+      // list, not open-ended prose -- 'low' matches checkReady's own
+      // choice for the same reason.
+      thinkingLevel: 'low',
     })
     const parsed = JSON.parse(response)
     const cleaned = sanitizeRawItems(parsed?.items, itemCountForWindow(windowMinutes))

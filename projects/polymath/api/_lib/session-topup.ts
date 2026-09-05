@@ -120,6 +120,11 @@ export async function topUpSession(input: TopupInput): Promise<GroundedItem[]> {
       responseFormat: 'json',
       temperature: 0.3,
       maxTokens: 700,
+      // Without a cap, an uncapped thinking model can spend the whole
+      // maxTokens budget reasoning before writing any JSON, leaving
+      // nothing to parse. Proposing 0-2 grounded lines isn't open-ended
+      // prose -- 'low' matches checkReady's own choice.
+      thinkingLevel: 'low',
     })
     const parsed = JSON.parse(response)
     const cleaned = sanitizeRawItems(parsed?.items, input.maxItems)
