@@ -41,6 +41,35 @@ function formatClock(seconds: number): string {
   return `${seconds < 0 ? '+' : ''}${m}:${s.toString().padStart(2, '0')}`
 }
 
+/** Which items you've ticked, kept against the session id.
+ *
+ *  Ticks used to live only in this component's state, so stepping off home
+ *  mid-session -- to capture the thought the work just gave you, which is
+ *  the single most likely reason to leave -- unmounted the card and lost
+ *  every tick. sessionStorage because it's a fact about this sitting: it
+ *  must survive a remount and must not survive the day. */
+function ticksKey(sessionId: string) {
+  return `aperture-session-ticks:${sessionId}`
+}
+
+function loadTicks(sessionId: string): Set<number> {
+  try {
+    const raw = sessionStorage.getItem(ticksKey(sessionId))
+    const parsed = raw ? JSON.parse(raw) : null
+    return new Set(Array.isArray(parsed) ? parsed.filter((n: unknown) => typeof n === 'number') : [])
+  } catch {
+    return new Set()
+  }
+}
+
+function saveTicks(sessionId: string, ticked: Set<number>) {
+  try {
+    sessionStorage.setItem(ticksKey(sessionId), JSON.stringify([...ticked]))
+  } catch {
+    // Storage unavailable -- the ticks still work for this mount.
+  }
+}
+
 const secondaryTextStyle = { color: 'var(--brand-text-secondary)', opacity: 0.7 }
 const borderStyle = { borderColor: 'var(--glass-border-bold)' }
 const primaryButtonStyle = {
@@ -103,12 +132,30 @@ export function SessionContract({
     answerPlanQuestion,
   } = useSessionStore()
 
-  const [phase, setPhase] = useState<Phase>(presetWindowMinutes != null ? 'planning' : 'window')
+  // A session already running on this project when we mount is one we're
+  // rejoining, not one to plan again -- the store keeps it, only this
+  // component's phase was lost. Without this, coming back to home mid-hour
+  // showed a fresh "Start session" card while the page below stayed
+  // hidden, and starting again opened a second session on the same
+  // project.
+  const resuming = active != null && active.project_id === project.id
+
+  const [phase, setPhase] = useState<Phase>(
+    resuming ? 'running' : presetWindowMinutes != null ? 'planning' : 'window'
+  )
   useEffect(() => { onPhaseChange?.(phase) }, [phase, onPhaseChange])
-  const [windowMinutes, setWindowMinutes] = useState<number | null>(presetWindowMinutes)
+  const [windowMinutes, setWindowMinutes] = useState<number | null>(
+    (resuming ? active?.window_minutes ?? null : null) ?? presetWindowMinutes
+  )
   const [planLeft, setPlanLeft] = useState<number | null>(null)
-  const [elapsedSec, setElapsedSec] = useState(0)
-  const [ticked, setTicked] = useState<Set<number>>(new Set())
+  // The clock reads off the session's own started_at rather than counting
+  // its own ticks. A phone that locks mid-session suspends timers -- an
+  // hour of actual work came back reading four minutes, on exactly the
+  // screen the whole product is about not losing the hour.
+  const [nowMs, setNowMs] = useState(() => Date.now())
+  const [ticked, setTicked] = useState<Set<number>>(() =>
+    resuming && active ? loadTicks(active.id) : new Set()
+  )
   const [steer, setSteer] = useState('')
   // Owned focus tint for the steer field, since inline `style.border`
   // always wins over a Tailwind `focus:` class on the same property.
@@ -147,7 +194,7 @@ export function SessionContract({
     // case where even the offline local-session fallback didn't run) --
     // only advance once there's actually something to run.
     if (useSessionStore.getState().active) {
-      setElapsedSec(0)
+      setNowMs(Date.now())
       setTicked(new Set())
       setPhase('running')
     }
@@ -193,11 +240,36 @@ export function SessionContract({
   }, [phase, outlineShown, planLeft, planBusy, beginWork, skipTimer, windowMinutes])
 
   // ─── The session clock ─────────────────────────────────────────────
+  // A ticking wall clock, not an accumulator: the interval only nudges a
+  // re-render, and the number on screen is always (now - started_at). It
+  // re-reads the moment the tab comes back too, so unlocking the phone
+  // shows the real time left rather than the time the browser felt like
+  // counting.
   useEffect(() => {
     if (phase !== 'running') return
-    const t = window.setInterval(() => setElapsedSec(s => s + 1), 1000)
-    return () => window.clearInterval(t)
+    const tick = () => setNowMs(Date.now())
+    tick()
+    const t = window.setInterval(tick, 1000)
+    const onVisible = () => { if (!document.hidden) tick() }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => {
+      window.clearInterval(t)
+      document.removeEventListener('visibilitychange', onVisible)
+    }
   }, [phase])
+
+  // Ticks belong to the session id, restored when we rejoin one and saved
+  // as they change so leaving the page never costs them.
+  const activeSessionId = active?.id ?? null
+  const restoredTicksFor = useRef<string | null>(resuming ? activeSessionId : null)
+  useEffect(() => {
+    if (!activeSessionId || restoredTicksFor.current === activeSessionId) return
+    restoredTicksFor.current = activeSessionId
+    setTicked(loadTicks(activeSessionId))
+  }, [activeSessionId])
+  useEffect(() => {
+    if (activeSessionId) saveTicks(activeSessionId, ticked)
+  }, [activeSessionId, ticked])
 
   const handlePickWindow = (minutes: number) => {
     haptic.light()
@@ -227,8 +299,12 @@ export function SessionContract({
     // is never empty at the exact moment attention is lowest.
     // Items already end in a full stop, so trim before joining — "from the
     // top.. Bounce the vocal." reads like a typo in your own words.
-    const tickedShapes = (active?.shapes ?? []).filter((_, i) => ticked.has(i))
-    const done = tickedShapes.map(s => s.text.trim().replace(/[.!?]+$/, ''))
+    // Setup and pack-down are ticked like everything else but they are not
+    // what you did -- "Did: Got the paints out. Cleaned the brushes." is a
+    // worse answer than saying nothing.
+    const done = (active?.shapes ?? [])
+      .filter((sh, i) => ticked.has(i) && sh.source !== 'friction')
+      .map(sh => sh.text.trim().replace(/[.!?]+$/, ''))
     if (done.length > 0) setCloseoutText(`Did: ${done.join('. ')}.`)
     setPhase('closeout')
   }
@@ -498,6 +574,17 @@ export function SessionContract({
         >
           {closing ? 'Saving…' : closeoutText ? 'Done' : 'Skip — nothing to report'}
         </button>
+        {/* Stop is a full-width button you tap with the phone in one hand,
+            and it used to end the session outright with no way back. The
+            clock reads off started_at, so going back picks up the real
+            time remaining rather than resuming from where it froze. */}
+        <button
+          className="w-full text-xs"
+          style={{ ...secondaryTextStyle, opacity: 0.5 }}
+          onClick={() => { haptic.light(); setPhase('running') }}
+        >
+          Not done yet — back to it
+        </button>
         {error && <p className="text-xs text-red-400">{error}</p>}
       </div>
     )
@@ -505,10 +592,26 @@ export function SessionContract({
 
   // ─── running ───────────────────────────────────────────────────────
   if (phase === 'running' && active) {
+    const elapsedSec = Math.max(0, Math.floor((nowMs - new Date(active.started_at).getTime()) / 1000))
     const remaining = windowMinutes != null ? windowMinutes * 60 - elapsedSec : elapsedSec
+    // The spark is a punt, not a step you owe -- it keeps the apartness it
+    // had in planning instead of becoming item five, and it can never be
+    // promoted to "Right now" just because the real work is done.
+    const shapes = active.shapes
+    const workIndexes = shapes.map((_, i) => i).filter(i => shapes[i].source !== 'spark')
+    const sparkIndex = shapes.findIndex(sh => sh.source === 'spark')
     // The one thing you're actually meant to be doing right now --
     // everything after it is later, not now.
-    const currentIndex = active.shapes.findIndex((_, i) => !ticked.has(i))
+    const currentIndex = workIndexes.find(i => !ticked.has(i)) ?? -1
+    const currentPos = workIndexes.indexOf(currentIndex)
+    const toggle = (i: number) => {
+      haptic.light()
+      setTicked(prev => {
+        const next = new Set(prev)
+        if (next.has(i)) next.delete(i); else next.add(i)
+        return next
+      })
+    }
     return (
       <div className={shell('space-y-4')}>
         <div className="flex items-center justify-between">
@@ -525,13 +628,14 @@ export function SessionContract({
         {/* The list is on screen for the whole session. A timer with
             nothing under it is just pressure. */}
         <ul className="space-y-1">
-          {active.shapes.map((shape, i) => {
+          {workIndexes.map((i, pos) => {
+            const shape = shapes[i]
             const done = ticked.has(i)
             const isCurrent = i === currentIndex
             // Two labels, not a re-layout: the one thing you're doing this
             // minute, then everything that isn't yet. Ticking promotes the
             // next item into "Right now" on its own.
-            const label = isCurrent ? 'Right now' : i === currentIndex + 1 ? 'Then' : null
+            const label = isCurrent ? 'Right now' : pos === currentPos + 1 ? 'Then' : null
             return (
               <li key={i}>
                 {label && (
@@ -546,14 +650,7 @@ export function SessionContract({
                   </p>
                 )}
                 <button
-                  onClick={() => {
-                    haptic.light()
-                    setTicked(prev => {
-                      const next = new Set(prev)
-                      if (next.has(i)) next.delete(i); else next.add(i)
-                      return next
-                    })
-                  }}
+                  onClick={() => toggle(i)}
                   className="w-full flex items-start gap-2.5 text-left py-2.5 px-3 -mx-3 rounded-lg transition-colors hover:bg-white/[0.04]"
                   style={isCurrent ? {
                     background: 'rgba(var(--brand-primary-rgb),0.09)',
@@ -587,6 +684,40 @@ export function SessionContract({
             )
           })}
         </ul>
+
+        {/* The one thing from the week, still set apart and still labelled
+            as what it is. It was agreed to in planning as a punt you can
+            ignore; nothing about starting makes it a task you owe. */}
+        {sparkIndex >= 0 && (
+          <button
+            onClick={() => toggle(sparkIndex)}
+            className="w-full text-left rounded-xl px-3.5 py-3 flex items-start gap-2.5"
+            style={{
+              background: 'rgba(var(--brand-primary-rgb),0.05)',
+              border: '1px dashed rgba(var(--brand-primary-rgb),0.28)',
+            }}
+          >
+            <span
+              className="mt-0.5 h-4 w-4 rounded-[5px] flex-shrink-0 flex items-center justify-center border"
+              style={ticked.has(sparkIndex)
+                ? { background: 'rgba(var(--brand-primary-rgb),0.9)', borderColor: 'rgba(var(--brand-primary-rgb),0.9)' }
+                : { borderColor: 'var(--glass-border-bold)' }}
+            >
+              {ticked.has(sparkIndex) && <Check size={11} strokeWidth={3} style={{ color: '#0b1220' }} />}
+            </span>
+            <span className="flex-1 min-w-0">
+              <span
+                className="text-sm leading-snug block"
+                style={ticked.has(sparkIndex) ? { textDecoration: 'line-through', opacity: 0.45 } : undefined}
+              >
+                {shapes[sparkIndex].text}
+              </span>
+              <span className="text-[10.5px] leading-tight block mt-0.5" style={{ ...secondaryTextStyle, opacity: 0.5 }}>
+                while you're in there — only if you fancy it
+              </span>
+            </span>
+          </button>
+        )}
 
         <button
           className="w-full py-2 rounded-lg border text-sm flex items-center justify-center gap-2"
@@ -917,9 +1048,9 @@ export function SessionContract({
           >
             {starting
               ? 'Starting…'
-              : items.length === 0
+              : steps.length === 0
                 ? 'Start anyway'
-                : `Start \u2014 ${items.length} thing${items.length === 1 ? '' : 's'}`}
+                : `Start \u2014 ${steps.length} thing${steps.length === 1 ? '' : 's'}`}
           </button>
           <button
             className="w-full text-xs"

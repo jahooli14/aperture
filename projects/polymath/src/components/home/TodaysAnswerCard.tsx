@@ -72,6 +72,8 @@ export function TodaysAnswerCard({
   const { addToast } = useToast()
   const allProjects = useProjectStore(s => s.allProjects)
   const projects = useProjectStore(s => s.projects)
+  const projectsLoading = useProjectStore(s => s.loading)
+  const projectsInitialized = useProjectStore(s => s.initialized)
   const createProject = useProjectStore(s => s.createProject)
   const priorityProject = usePriorityProject()
   const feeling = useSessionContextStore(s => s.feeling)
@@ -152,10 +154,33 @@ export function TodaysAnswerCard({
   // engine in the app.
   const startRequestId = useHomeAnswerStore(s => s.startRequestId)
 
+  // Rejoining a session already in flight. `active` lives in the session
+  // store and survives navigation; `contractOpen` is local state and does
+  // not. So stepping off home mid-hour -- to capture the thought the work
+  // just gave you, the most likely reason to leave -- came back to a
+  // normal answer card with a Start button on it, everything below still
+  // hidden because a session was technically running, and no way back into
+  // the hour. Starting again from there opened a second session.
+  const activeSessionProjectId = useSessionStore(s => s.active?.project_id ?? null)
+
   const pickWindow = (m: number) => {
     haptic.light()
     setWindowMinutes(windowMinutes === m ? null : m)
   }
+
+  useEffect(() => {
+    if (!activeSessionProjectId) return
+    if (focusProject?.id === activeSessionProjectId) {
+      setContractOpen(true)
+      return
+    }
+    // The session is on a project this card didn't resolve to (started
+    // from a mini card, then the page remounted). Point the card at the
+    // session rather than showing an unrelated answer beside it.
+    if (allProjects.some(p => p.id === activeSessionProjectId)) {
+      useHomeAnswerStore.getState().setOverride(activeSessionProjectId)
+    }
+  }, [activeSessionProjectId, focusProject?.id, allProjects])
 
   useEffect(() => {
     if (!startRequestId) return
@@ -260,6 +285,19 @@ export function TodaysAnswerCard({
   // projects at all) points at capture instead of an empty projects list;
   // otherwise the generic "nothing active" empty state.
   if (!focusProject) {
+    // Mid-first-load there are no projects yet because none have arrived,
+    // not because none exist — a returning user opening on a new device
+    // was told "nothing here yet" for as long as the fetch took. Say
+    // nothing until it lands.
+    if (projects.length === 0 && (projectsLoading || !projectsInitialized)) {
+      return (
+        <div
+          className="rounded-2xl p-5 h-[132px]"
+          style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}
+          aria-hidden
+        />
+      )
+    }
     if (projects.length === 0) {
       return (
         <KeepGoingEmpty
@@ -322,7 +360,16 @@ export function TodaysAnswerCard({
   // Re-entry playback — the user's own words from the end of the last
   // session. This is the line that makes a cold project cheap to restart,
   // so it outranks any generated plan text when it exists.
-  const reEntry = focusProject.last_closeout_text?.trim() || null
+  //
+  // Only when it's actually a path, though. "Done." and "good session" are
+  // acknowledgements, and showing one as the whole answer meant a project
+  // with a real next step on its list said nothing about it. Same 25-char
+  // floor the briefing uses to decide an exit note is worth planning from
+  // (MIN_USEFUL_EXIT_NOTE in api/_lib/session-briefing.ts — repeated
+  // rather than imported, since shipped src/ never reaches into api/_lib).
+  const MIN_USEFUL_CLOSEOUT = 25
+  const closeout = focusProject.last_closeout_text?.trim() || null
+  const reEntry = closeout && closeout.length >= MIN_USEFUL_CLOSEOUT ? closeout : null
 
   // The next step on the project's own list, in plan order — the exact
   // thing the session will open with. This used to be a separate Power
