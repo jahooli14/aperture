@@ -343,7 +343,7 @@ export function VoiceFAB({
       {/* Soft halo behind the FAB — tightened so it reads as a glow, not a bloom. */}
       <div
         aria-hidden
-        className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full pointer-events-none"
+        className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full pointer-events-none floating-nav-capture-glow"
         style={{
           width: '72px',
           height: '72px',
@@ -370,7 +370,7 @@ export function VoiceFAB({
         onPointerLeave={onLeave}
         onPointerCancel={onSystemCancel}
         className={cn(
-          'relative',
+          'relative floating-nav-capture',
           'h-[54px] w-[54px] md:h-[58px] md:w-[58px] rounded-full',
           'flex items-center justify-center',
           'group overflow-hidden touch-none',

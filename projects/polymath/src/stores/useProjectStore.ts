@@ -15,6 +15,8 @@ import { api, ApiError } from '../lib/apiClient'
 import { logger } from '../lib/logger'
 import { v4 as uuidv4 } from 'uuid'
 import { queueOperation } from '../lib/offlineQueue'
+import { useHomeAnswerStore } from './useHomeAnswerStore'
+import { isActiveShaped, recentExcluding, resolveFocusProjectId } from './focusProjectOps'
 import { useOfflineStore } from './useOfflineStore'
 import { scheduleAIEnrichment } from '../lib/aiEnrichmentManager'
 
@@ -761,27 +763,11 @@ export const useUnshapedProjects = () =>
   useProjectStore(useShallow(state => state.allProjects.filter(p => p.metadata?.is_shaped === false)))
 
 // Active, shaped projects only.
-const isActiveShaped = (p: { status?: string; metadata?: { is_shaped?: boolean } }) =>
-  ['active', 'upcoming'].includes(p.status ?? '') && p.metadata?.is_shaped !== false
-
 // How many projects the "Still warm" row shows. The queue excludes these so a
 // project you recently touched never sits in both rows — recency wins.
 export const RECENT_ROW_LIMIT = 2
 
-const byRecency = (a: Project, b: Project) => {
-  const aTime = new Date(a.last_active || a.updated_at || 0).getTime()
-  const bTime = new Date(b.last_active || b.updated_at || 0).getTime()
-  return bTime - aTime
-}
-
-// Active, shaped projects (minus the priority), most-recently-touched first.
-// Includes queued projects: a project you just worked on is "warm" even if it
-// also sits in Up Next — it drops out of the queue below.
-const recentNonPriority = (projects: Project[]): Project[] => {
-  const active = projects.filter(isActiveShaped)
-  const priorityId = active.find(p => p.is_priority)?.id
-  return active.filter(p => p.id !== priorityId).sort(byRecency)
-}
+export { resolveFocusProjectId } from './focusProjectOps'
 
 // The starred project, if one is set. Drives the "priority" home section.
 export const usePriorityProject = () =>
@@ -792,12 +778,29 @@ export const usePriorityProject = () =>
 // The most-recently-touched active project that isn't the priority.
 // Drives the "still warm" home section's empty-state fallback.
 export const useMostRecentNonPriorityProject = () =>
-  useProjectStore(useShallow(state => recentNonPriority(state.allProjects)[0] ?? null))
+  useProjectStore(useShallow(state => {
+    const priorityId = state.allProjects.filter(isActiveShaped).find(p => p.is_priority)?.id
+    return recentExcluding(state.allProjects, priorityId)[0] ?? null
+  }))
+
+/** The id of the project the answer card is showing. Reads both stores, so
+ *  a surface excluding it re-renders when the focus moves. */
+export const useFocusProjectId = (): string | null => {
+  const overrideProjectId = useHomeAnswerStore(s => s.overrideProjectId)
+  return useProjectStore(state => resolveFocusProjectId(state.allProjects, overrideProjectId))
+}
+
+export const useFocusProject = (): Project | null => {
+  const focusId = useFocusProjectId()
+  return useProjectStore(useShallow(state => state.allProjects.find(p => p.id === focusId) ?? null))
+}
 
 // The N most-recently-touched active projects that aren't the priority.
 // Drives the "recently active" home row.
-export const useRecentNonPriorityProjects = (limit = RECENT_ROW_LIMIT) =>
-  useProjectStore(useShallow(state => recentNonPriority(state.allProjects).slice(0, limit)))
+export const useRecentNonPriorityProjects = (limit = RECENT_ROW_LIMIT) => {
+  const focusId = useFocusProjectId()
+  return useProjectStore(useShallow(state => recentExcluding(state.allProjects, focusId).slice(0, limit)))
+}
 
 // Up Next shelf: every queued project, sorted by position asc. Used by the
 // full, editable queue shelf (reorder / unpin) — shows the complete queue.
@@ -812,13 +815,14 @@ export const useUpNextProjects = () =>
 // already shown in the "Still warm" row. A project you recently touched belongs
 // in "warm", not waiting in the queue — so it drops out here to avoid showing
 // twice on the home stack. (The full shelf above still lists it.)
-export const useUpNextMiniProjects = () =>
-  useProjectStore(useShallow(state => {
+export const useUpNextMiniProjects = () => {
+  const focusId = useFocusProjectId()
+  return useProjectStore(useShallow(state => {
     const warmIds = new Set(
-      recentNonPriority(state.allProjects).slice(0, RECENT_ROW_LIMIT).map(p => p.id)
+      recentExcluding(state.allProjects, focusId).slice(0, RECENT_ROW_LIMIT).map(p => p.id)
     )
-    const priorityId = state.allProjects.filter(isActiveShaped).find(p => p.is_priority)?.id
     return state.allProjects
-      .filter(p => p.up_next_position != null && p.id !== priorityId && !warmIds.has(p.id))
+      .filter(p => p.up_next_position != null && p.id !== focusId && !warmIds.has(p.id))
       .sort((a, b) => (a.up_next_position ?? 99) - (b.up_next_position ?? 99))
   }))
+}
