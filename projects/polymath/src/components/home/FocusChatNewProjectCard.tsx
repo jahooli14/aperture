@@ -59,6 +59,7 @@ export function FocusChatNewProjectCard({ proposal, resolved, dismissed, onResol
       let shaped: {
         title?: string; end_goal?: string | null; summary?: string
         tags?: string[]; tasks?: any[]; question?: string | null
+        cycle?: { unit: string; done: number; history: [] } | null
       } = {}
       try {
         shaped = (await api.post('utilities?resource=shape-project', {
@@ -95,7 +96,10 @@ export function FocusChatNewProjectCard({ proposal, resolved, dismissed, onResol
           // like. The pitch was being stored as a finish line, which is a
           // sales line, not a done-condition.
           ...(shaped.end_goal ? { end_goal: shaped.end_goal, end_goal_source: 'guide' as const } : {}),
-          project_mode: shaped.end_goal ? 'completion' : 'recurring',
+          // A repeating project HAS a finish line -- one unit of the work,
+          // not the whole series -- so the mode isn't end_goal's absence.
+          ...(shaped.cycle ? { cycle: shaped.cycle } : {}),
+          project_mode: (shaped.cycle || !shaped.end_goal) ? 'recurring' : 'completion',
           ...(shaped.tags?.length ? { tags: shaped.tags } : {}),
           // Kept verbatim: the shaper reads the user's turns back as
           // evidence, so the project stays explainable months later.

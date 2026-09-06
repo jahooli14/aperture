@@ -54,6 +54,7 @@ import { debriefSession, type DebriefOpenTask } from './_lib/debrief-matcher.js'
 import { bumpEstimate } from './_lib/session-estimate.js'
 import { insertAfterDone, normalizeTaskOrder } from './_lib/task-order.js'
 import { judgeFinishLine } from './_lib/finish-line.js'
+import { readCycleState, cycleLabel, rollToNextCycle, lastCycleSteps } from './_lib/project-cycles.js'
 import { pickNextSparkType, type SparkHistoryEntry } from './_lib/spark-types.js'
 import { generateSpark } from './_lib/spark-generator.js'
 import { canMorphProject, anyProjectMorphedToday, MORPH_COOLDOWN_DAYS } from './_lib/morph.js'
@@ -1884,6 +1885,9 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
         tags: shaped.tags,
         tasks: toStoredTasks(shaped.steps),
         question: shaped.question,
+        // Only when they actually said it works this way. Null for
+        // almost every project -- see project-cycles.ts.
+        cycle: shaped.repeatUnit ? { unit: shaped.repeatUnit, done: 0, history: [] } : null,
       })
     } catch (e) {
       const message = e instanceof Error ? e.message : 'Could not shape that project.'
@@ -2441,6 +2445,20 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
       }
     }
 
+    // On a project whose finish line repeats, reaching it doesn't complete
+    // anything -- it completes THIS ONE. So the verdict is re-read as a
+    // cycle landing: "Mix 5 done", and an offer to line the next one up,
+    // rather than "mark it finished", which would be the wrong question
+    // forever. The finish verdict itself is dropped, because leaving both
+    // on screen would put two competing endings in one receipt.
+    const cycleState = readCycleState(currentMetadata)
+    let cycle: { n: number; label: string; unit: string; reason: string } | null = null
+    if (cycleState && finish?.reached) {
+      const n = cycleState.done + 1
+      cycle = { n, label: cycleLabel(cycleState.unit, n), unit: cycleState.unit, reason: finish.reason }
+      finish = null
+    }
+
     // A brief receipt of what actually happened to the task list -- shown
     // for a beat before "Logged." rather than a silent rewrite the user
     // only discovers weeks later.
@@ -2453,6 +2471,7 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
       next_added: nextAddedTexts,
       progress_noted: progressNoted,
       finish,
+      cycle,
     })
   }
 
@@ -2541,6 +2560,79 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
   }
 
   // ─── DECLARE LIVE ───────────────────────────────────────────────────
+  // ─── NEXT CYCLE ─────────────────────────────────────────────────────
+  // "That's mix 5. Line up the next one." Files what the finished one
+  // actually took, then plans the next from that shape rather than from
+  // scratch -- so a project that repeats gets better at itself instead of
+  // being reinvented every time its list empties.
+  if (resource === 'next-cycle') {
+    if (req.method !== 'POST') return res.status(405).json({ error: 'POST required' })
+    const { project_id, closeout } = req.body || {}
+    if (!project_id) return res.status(400).json({ error: 'project_id required' })
+
+    const { data: project, error: fetchErr } = await supabase
+      .from('projects')
+      .select('id, title, description, metadata, last_closeout_text')
+      .eq('id', project_id)
+      .eq('user_id', userId)
+      .single()
+    if (fetchErr || !project) return res.status(404).json({ error: 'project not found' })
+
+    const metadata = project.metadata ?? {}
+    const before = readCycleState(metadata)
+    if (!before) return res.status(400).json({ error: 'this project does not repeat' })
+
+    const rolled = rollToNextCycle(metadata, {
+      closeout: typeof closeout === 'string' && closeout.trim()
+        ? closeout.trim()
+        : project.last_closeout_text ?? null,
+    })
+    const after = readCycleState(rolled)!
+
+    // Plan the next one from the last one. The end goal is the UNIT ("a
+    // recorded mix"), so this is the ordinary backwards-planning path --
+    // it just starts from a shape that has already worked rather than
+    // from nothing.
+    const endGoal = typeof rolled.end_goal === 'string' ? rolled.end_goal.trim() : ''
+    let planned = 0
+    if (endGoal) {
+      const steps = await generateTaskSpine({
+        title: project.title,
+        endGoal,
+        said: [project.description, project.last_closeout_text].filter((t): t is string => !!t),
+        existingSteps: [],
+        previousCycle: lastCycleSteps(after),
+      })
+      if (steps.length > 0) {
+        const openTasks: any[] = Array.isArray(rolled.tasks) ? rolled.tasks : []
+        rolled.tasks = normalizeTaskOrder([...openTasks, ...toStoredTasks(steps, new Date(), openTasks.length)])
+        planned = steps.length
+      }
+    }
+
+    // A new cycle invalidates any baked session: it was built against the
+    // finished one's list.
+    delete rolled.session_prebake
+
+    const { error: saveErr } = await supabase
+      .from('projects')
+      .update({ metadata: rolled })
+      .eq('id', project_id)
+      .eq('user_id', userId)
+    if (saveErr) {
+      console.error('[utilities/sessions] next-cycle save failed:', saveErr)
+      return res.status(500).json({ error: saveErr.message })
+    }
+
+    return res.status(200).json({
+      ok: true,
+      done: after.done,
+      label: cycleLabel(after.unit, after.done),
+      next_label: cycleLabel(after.unit, after.done + 1),
+      planned,
+    })
+  }
+
   if (resource === 'declare-live') {
     if (req.method !== 'POST') return res.status(405).json({ error: 'POST required' })
     const { project_id } = req.body || {}

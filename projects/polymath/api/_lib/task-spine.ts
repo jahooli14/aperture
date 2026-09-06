@@ -53,6 +53,11 @@ export interface SpineInput {
   /** Steps already on the project, so a re-plan extends rather than
    *  silently replaces work they've already agreed to. */
   existingSteps?: string[]
+  /** On a project whose finish line repeats (project-cycles.ts), the steps
+   *  the LAST one actually took. Planning the fifth mix from the shape of
+   *  the fourth is both better and cheaper than planning it from nothing,
+   *  and it means the shape sharpens each time instead of being reinvented. */
+  previousCycle?: string[]
 }
 
 export interface SpineStep {
@@ -90,6 +95,9 @@ ${evidence.length
   : '(nothing yet)'}
 
 That list is the whole of it. Anything not in it, you do not know.
+${input.previousCycle?.length
+  ? `\nTHIS PROJECT REPEATS, and the last one took these steps, in this order:\n${input.previousCycle.map(s => `- ${s}`).join('\n')}\n\nStart from that shape. It already worked. Keep what's still right, drop\nwhat the notes above say went wrong or turned out unnecessary, and only\nadd a step if something has actually changed. A near-identical list is\nthe correct answer here -- this is the same job again, not a new one.\n`
+  : ''}
 ${input.existingSteps?.length
   ? `\nSTEPS ALREADY AGREED — keep these, in this order, and fill in around them:\n${input.existingSteps.map(s => `- ${s}`).join('\n')}\n`
   : ''}

@@ -257,13 +257,22 @@ export function SessionContract({
     // nothing to show (an empty close-out with nothing ticked).
     if (
       result.markedDone.length > 0 || result.created.length > 0 || result.nextAdded.length > 0 ||
-      result.progressNoted.length > 0 || result.finish
+      result.progressNoted.length > 0 || result.finish || result.cycle
     ) {
       setCloseResult(result)
       setPhase('receipt')
     } else {
       setPhase('done')
     }
+  }
+
+  const [rollingCycle, setRollingCycle] = useState(false)
+  const handleNextCycle = async () => {
+    haptic.medium()
+    setRollingCycle(true)
+    await useSessionStore.getState().startNextCycle(project.id)
+    setRollingCycle(false)
+    setPhase('done')
   }
 
   const handleFinish = async () => {
@@ -330,6 +339,25 @@ export function SessionContract({
               </ul>
             </div>
           )}
+          {/* A repeating project just landed one. Not "is this finished?"
+              -- it is, and the next one hasn't started. The count is a
+              real number of real things made, never a streak: there is
+              no cadence here to fall behind on. */}
+          {closeResult.cycle && (
+            <div
+              className="rounded-xl px-3.5 py-3 space-y-1"
+              style={{
+                background: 'rgba(var(--brand-primary-rgb),0.06)',
+                border: '1px solid rgba(var(--brand-primary-rgb),0.20)',
+              }}
+            >
+              <p className="text-[11px] uppercase tracking-wide flex items-center gap-1.5" style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.7 }}>
+                <Flag size={11} /> {closeResult.cycle.label} done
+              </p>
+              <p className="text-sm leading-snug">{closeResult.cycle.reason}</p>
+            </div>
+          )}
+
           {/* The last step just got ticked. A fact, then one action: the
               finish line is reached and this can be marked finished, or
               it isn't and the next session plans what's left. Never a
@@ -354,7 +382,25 @@ export function SessionContract({
             </div>
           )}
         </div>
-        {closeResult.finish?.reached ? (
+        {closeResult.cycle ? (
+          <div className="space-y-2">
+            <button
+              className="w-full py-2.5 rounded-lg text-sm font-semibold disabled:opacity-50"
+              style={primaryButtonStyle}
+              disabled={rollingCycle}
+              onClick={() => { void handleNextCycle() }}
+            >
+              {rollingCycle ? 'Lining it up…' : 'Line up the next one'}
+            </button>
+            <button
+              className="w-full text-xs"
+              style={{ ...secondaryTextStyle, opacity: 0.5 }}
+              onClick={() => setPhase('done')}
+            >
+              Leave it for now
+            </button>
+          </div>
+        ) : closeResult.finish?.reached ? (
           <div className="space-y-2">
             <button
               className="w-full py-2.5 rounded-lg text-sm font-semibold"

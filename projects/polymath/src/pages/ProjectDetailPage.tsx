@@ -160,6 +160,20 @@ export function ProjectDetailPage() {
   // Reactive selection from store
   const project = useProjectStore(state => state.allProjects.find(p => p.id === id))
 
+  // "5 mixes so far" on a project whose finish line repeats. Computed here
+  // rather than imported from api/_lib/project-cycles.ts, which is the
+  // source of truth for the shape but is server-side — shipped src code
+  // never reaches across into api/ (only a test does). Kept trivial so the
+  // duplication is a plural rule rather than any real logic.
+  const cycleCount = (() => {
+    const cycle = (project?.metadata as any)?.cycle
+    const unit = typeof cycle?.unit === 'string' ? cycle.unit.trim() : ''
+    const done = typeof cycle?.done === 'number' ? cycle.done : 0
+    if (!unit || done <= 0) return null
+    const plural = done === 1 ? unit : (/(s|x|z|ch|sh)$/i.test(unit) ? `${unit}es` : `${unit}s`)
+    return `${done} ${plural} so far`
+  })()
+
   const [projectMemories, setProjectMemories] = useState<Memory[]>([])
   const [sparkedByMemories, setSparkedByMemories] = useState<Memory[]>([])
 
@@ -926,9 +940,20 @@ export function ProjectDetailPage() {
                       </div>
                     </div>
                   ) : (
-                    <p className="text-[15px] sm:text-base font-medium leading-relaxed italic font-serif text-center" style={{ color: 'var(--brand-text-primary)', opacity: 0.6 }}>
-                      {project.metadata?.end_goal}
-                    </p>
+                    <div className="space-y-1.5">
+                      <p className="text-[15px] sm:text-base font-medium leading-relaxed italic font-serif text-center" style={{ color: 'var(--brand-text-primary)', opacity: 0.6 }}>
+                        {project.metadata?.end_goal}
+                      </p>
+                      {/* On a repeating project the finish line above is ONE
+                          of them, so the count is what says how far this has
+                          actually got. A number of real things made — never a
+                          streak, and nothing to fall behind on. */}
+                      {cycleCount && (
+                        <p className="text-[11px] uppercase tracking-wide text-center" style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.6 }}>
+                          {cycleCount}
+                        </p>
+                      )}
+                    </div>
                   )}
                 </div>
               </div>
