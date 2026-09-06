@@ -3,7 +3,7 @@ import { reorderWithinPhase } from './projectPathOps'
 import type { Task } from '../../types'
 
 const task = (id: string, order: number, phase = 'core', done = false): Task =>
-  ({ id, text: id, order, done, task_type: phase } as Task)
+  ({ id, text: id, order, done, task_type: phase, created_at: '2026-01-01T00:00:00.000Z' } as unknown as Task)
 
 const phaseOf = (t: Task) => (t as any).task_type || 'core'
 const ids = (ts: Task[] | null) => (ts ?? []).map(t => t.id)
