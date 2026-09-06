@@ -343,6 +343,80 @@ describe('Walk 4 — the last step, the finish line, and leaving home', () => {
   })
 })
 
+// ── Walk 4b: the same walk, replayed ─────────────────────────────────
+
+describe('Walk 4b — a close-out that gets replayed does not double up', () => {
+  it('is idempotent, because the offline queue retries', async () => {
+    const row = makeProject({
+      metadata: { tasks: [step('t1', 'Send it to the pressing plant.', 0)] },
+    })
+
+    // An offline session: nothing was grounded, so every line carries a
+    // provisional "pending-" id. Ticking one is what promotes it to a real
+    // task -- and a retry after a timeout must not promote it twice.
+    const sessionItems = [
+      { text: 'Send it to the pressing plant.', taskId: 'pending-1-0', partial: false },
+      { text: 'Email the artwork over.', taskId: 'pending-1-1', partial: false },
+    ]
+    const args = {
+      sessionItems,
+      ticked: parseTicked(sessionItems),
+      endedAt: new Date('2026-09-06T21:00:00.000Z'),
+      windowMinutes: 60,
+      durationMinutes: 45,
+      debrief: null,
+    }
+
+    const first = reconcileCloseout({ ...args, tasks: row.metadata.tasks })
+    // The line that matched an existing step marked it done rather than
+    // adding a second copy of it; the genuinely new one was created.
+    expect(first.tasks).toHaveLength(2)
+    expect(first.tasks.find(t => t.id === 't1').done).toBe(true)
+    expect(first.tasks.filter(t => t.text === 'Email the artwork over.')).toHaveLength(1)
+
+    const replay = reconcileCloseout({ ...args, tasks: first.tasks })
+    expect(replay.tasks).toHaveLength(2)
+    expect(replay.tasks.map(t => t.text).sort()).toEqual(first.tasks.map(t => t.text).sort())
+    expect(replay.tasks.map(t => t.order)).toEqual([0, 1])
+  })
+
+  it('leaves the plan readable when the only change is an estimate nudge', () => {
+    // The window ran out with the step unticked, so its estimate goes up.
+    // That was the one path that set `changed` after the normalise had
+    // already happened, writing gapped orders back to the field the whole
+    // plan is read from.
+    const tasks = [
+      step('t1', 'Master it.', 0, { done: true }),
+      step('t2', 'Send it off.', 7, { estimate_set: true, estimated_minutes: 20 }),
+    ]
+    const out = reconcileCloseout({
+      tasks,
+      sessionItems: [{ text: 'Send it off.', taskId: 't2', partial: false }],
+      ticked: [],
+      endedAt: new Date('2026-09-06T21:00:00.000Z'),
+      windowMinutes: 60,
+      durationMinutes: 60,
+      debrief: null,
+    })
+    expect(out.changed).toBe(true)
+    expect(out.tasks.find(t => t.id === 't2').estimated_minutes).toBe(30)
+    expect(out.tasks.map(t => t.order)).toEqual([0, 1])
+  })
+
+  it('does not claim a write when the estimate is already at the ceiling', () => {
+    const out = reconcileCloseout({
+      tasks: [step('t1', 'Send it off.', 0, { estimate_set: true, estimated_minutes: 60 })],
+      sessionItems: [{ text: 'Send it off.', taskId: 't1', partial: false }],
+      ticked: [],
+      endedAt: new Date('2026-09-06T21:00:00.000Z'),
+      windowMinutes: 60,
+      durationMinutes: 60,
+      debrief: null,
+    })
+    expect(out.changed).toBe(false)
+  })
+})
+
 // ── Walk 5 ───────────────────────────────────────────────────────────
 
 describe('Walk 5 — a finish line that repeats lands one and lines up the next', () => {

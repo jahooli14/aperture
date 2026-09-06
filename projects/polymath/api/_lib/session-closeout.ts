@@ -144,7 +144,18 @@ export function reconcileCloseout(input: CloseoutInput): CloseoutResult {
     origin,
     source,
   })
+  // Creating is the one operation here that isn't naturally idempotent:
+  // marking done finds `!t.done` and no-ops on a second run, but pushing
+  // adds another row every time. The offline queue replays start+close
+  // after a timeout, and a retry where the server had actually succeeded
+  // would leave two identical done tasks on the project. So a text that is
+  // already on the list is marked done instead of added again.
   const createDoneTask = (text: string, origin: string, source: string | null) => {
+    const existing = tasks.findIndex(t => typeof t?.text === 'string' && norm(t.text) === norm(text))
+    if (existing !== -1) {
+      if (!tasks[existing].done) markDoneById(tasks[existing].id)
+      return
+    }
     tasks.push(newTask(text, true, origin, source))
     changed = true
     markedDone.push(text)
@@ -186,8 +197,6 @@ export function reconcileCloseout(input: CloseoutInput): CloseoutResult {
     }
   }
 
-  if (changed) tasks = normalizeTaskOrder(tasks)
-
   // A step that was on this session's plan, never ticked, in a session
   // that ran its full window: real evidence the estimate was too low,
   // cheap to nudge without another model call.
@@ -200,11 +209,24 @@ export function reconcileCloseout(input: CloseoutInput): CloseoutResult {
     if (unfinished.size > 0) {
       tasks = tasks.map(t => {
         if (!unfinished.has(t.id) || !t.estimate_set || typeof t.estimated_minutes !== 'number') return t
+        // The ladder tops out, and an estimate off the ladder can't move at
+        // all -- so check the value actually changed before claiming the
+        // project needs writing. Otherwise every full-window session on a
+        // step already estimated at the ceiling wrote the whole task list
+        // back identical.
+        const bumped = bumpEstimate(t.estimated_minutes as EstimateMinutes)
+        if (bumped === t.estimated_minutes) return t
         changed = true
-        return { ...t, estimated_minutes: bumpEstimate(t.estimated_minutes as EstimateMinutes) }
+        return { ...t, estimated_minutes: bumped }
       })
     }
   }
+
+  // Normalised last, not mid-way: the estimate bump above sets `changed`
+  // too, and when it was the only change the project got written back with
+  // whatever gaps its `order` values already had -- on the one field the
+  // whole plan is read from.
+  if (changed) tasks = normalizeTaskOrder(tasks)
 
   return {
     tasks,
