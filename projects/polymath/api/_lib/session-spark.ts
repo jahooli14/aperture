@@ -2,17 +2,20 @@
  * "While you're in there" — one thing to try, from what this week has
  * actually been made of.
  *
- * The lists, the reading and the captures that never got filed are the
- * identity layer: reading a book about cutting things back makes you a
- * different person at the desk than reading one about maximalism. Until
+ * The lists and the reading are the identity layer: reading a book about
+ * cutting things back makes you a different person at the desk than
+ * reading one about maximalism. Until
  * now that layer reached the session as `identityLine` — one sentence of
  * ambient tone, deliberately held OUT of the evidence/citation system so
  * it could never become a step. That was the right call while the only
  * alternative was letting it leak into the plan unlabelled.
  *
  * This is the labelled alternative. At most ONE item, and it is:
- *   - cited to a real thing from the week -- a list addition, a highlight,
- *     a capture that never landed on a project. No signal, no spark.
+ *   - cited to a real thing from the week -- a list addition or a
+ *     highlight. No signal, no spark. Deliberately NOT the project's own
+ *     recalled captures: those are evidence for the plan, and passing one
+ *     off as a signal from elsewhere is a fake crossing (see
+ *     session-shaper.ts, where `recalled` is kept out of weekSignals).
  *   - carrying no taskId, so it is not a step on the project and only ever
  *     becomes one the way every other ungrounded session item does: at
  *     close-out, and only if actually ticked (api/utilities.ts)

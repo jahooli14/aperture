@@ -385,9 +385,13 @@ export function TodaysAnswerCard({
   // Where they got to on it last time, when a close-out said so.
   const pitch = typeof nextStep?.progress_note === 'string' ? `Last time: ${nextStep.progress_note}` : null
 
-  const dormancyDays = Math.floor(
-    (Date.now() - new Date(focusProject.last_active || focusProject.updated_at || 0).getTime()) / 86_400_000
-  )
+  // No timestamp at all means never touched, not touched in 1970 — the
+  // `|| 0` fallback here dated the project to the epoch and stamped a
+  // brand-new one "long quiet" next to its own "not started yet".
+  const lastTouched = focusProject.last_active || focusProject.updated_at || null
+  const dormancyDays = lastTouched
+    ? Math.floor((Date.now() - new Date(lastTouched).getTime()) / 86_400_000)
+    : 0
   // Amber at both tiers, never red. Red is the destructive/error colour
   // everywhere else in the app, so outlining the hero in it made the one
   // thing you're meant to act on read as something that had gone wrong.

@@ -32,6 +32,13 @@ import { useVoicePreference } from '../../stores/useVoicePreference'
 import { useProjectStore } from '../../stores/useProjectStore'
 import { useOnlineStatus } from '../../hooks/useOnlineStatus'
 import { haptic } from '../../utils/haptics'
+import {
+  loadTicks,
+  saveTicks,
+  elapsedSeconds,
+  partitionRunningShapes,
+  closeoutDraft,
+} from './sessionRunOps'
 import type { Project } from '../../types'
 
 function formatClock(seconds: number): string {
@@ -39,35 +46,6 @@ function formatClock(seconds: number): string {
   const m = Math.floor(abs / 60)
   const s = abs % 60
   return `${seconds < 0 ? '+' : ''}${m}:${s.toString().padStart(2, '0')}`
-}
-
-/** Which items you've ticked, kept against the session id.
- *
- *  Ticks used to live only in this component's state, so stepping off home
- *  mid-session -- to capture the thought the work just gave you, which is
- *  the single most likely reason to leave -- unmounted the card and lost
- *  every tick. sessionStorage because it's a fact about this sitting: it
- *  must survive a remount and must not survive the day. */
-function ticksKey(sessionId: string) {
-  return `aperture-session-ticks:${sessionId}`
-}
-
-function loadTicks(sessionId: string): Set<number> {
-  try {
-    const raw = sessionStorage.getItem(ticksKey(sessionId))
-    const parsed = raw ? JSON.parse(raw) : null
-    return new Set(Array.isArray(parsed) ? parsed.filter((n: unknown) => typeof n === 'number') : [])
-  } catch {
-    return new Set()
-  }
-}
-
-function saveTicks(sessionId: string, ticked: Set<number>) {
-  try {
-    sessionStorage.setItem(ticksKey(sessionId), JSON.stringify([...ticked]))
-  } catch {
-    // Storage unavailable -- the ticks still work for this mount.
-  }
 }
 
 const secondaryTextStyle = { color: 'var(--brand-text-secondary)', opacity: 0.7 }
@@ -299,13 +277,8 @@ export function SessionContract({
     // is never empty at the exact moment attention is lowest.
     // Items already end in a full stop, so trim before joining — "from the
     // top.. Bounce the vocal." reads like a typo in your own words.
-    // Setup and pack-down are ticked like everything else but they are not
-    // what you did -- "Did: Got the paints out. Cleaned the brushes." is a
-    // worse answer than saying nothing.
-    const done = (active?.shapes ?? [])
-      .filter((sh, i) => ticked.has(i) && sh.source !== 'friction')
-      .map(sh => sh.text.trim().replace(/[.!?]+$/, ''))
-    if (done.length > 0) setCloseoutText(`Did: ${done.join('. ')}.`)
+    const draft = closeoutDraft(active?.shapes ?? [], ticked)
+    if (draft) setCloseoutText(draft)
     setPhase('closeout')
   }
 
@@ -592,14 +565,13 @@ export function SessionContract({
 
   // ─── running ───────────────────────────────────────────────────────
   if (phase === 'running' && active) {
-    const elapsedSec = Math.max(0, Math.floor((nowMs - new Date(active.started_at).getTime()) / 1000))
+    const elapsedSec = elapsedSeconds(active.started_at, nowMs)
     const remaining = windowMinutes != null ? windowMinutes * 60 - elapsedSec : elapsedSec
     // The spark is a punt, not a step you owe -- it keeps the apartness it
     // had in planning instead of becoming item five, and it can never be
     // promoted to "Right now" just because the real work is done.
     const shapes = active.shapes
-    const workIndexes = shapes.map((_, i) => i).filter(i => shapes[i].source !== 'spark')
-    const sparkIndex = shapes.findIndex(sh => sh.source === 'spark')
+    const { workIndexes, sparkIndex } = partitionRunningShapes(shapes)
     // The one thing you're actually meant to be doing right now --
     // everything after it is later, not now.
     const currentIndex = workIndexes.find(i => !ticked.has(i)) ?? -1

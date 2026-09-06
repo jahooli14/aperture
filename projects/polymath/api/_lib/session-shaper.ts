@@ -598,9 +598,20 @@ export async function shapeSession(
     const t = r?.reading_queue?.title
     if (t) addSignal(t, `you've been reading "${t}"`, new Date(r.created_at).getTime())
   })
-  // Captures that never landed on any project -- the half-asleep idea
-  // that's been sitting in the corpus doing nothing.
-  recalled.forEach(m => addSignal(m.text, 'a note of yours that never got filed', Date.now()))
+  // `recalled` deliberately does NOT feed the spark. Every entry in it was
+  // matched against THIS project's own embedding, so it is project
+  // evidence -- and it already reaches the plan that way, cited as "a
+  // capture that connects". Offering the same note to the spark as
+  // something from outside the project manufactured exactly the fake
+  // correspondence the spark's own prompt bans: the app noticing a
+  // connection between a project and a note about that project, and
+  // dressing it up as a leap. It also came in with a Date.now()
+  // timestamp, which walked it straight past the fourteen-day gate every
+  // other signal has to clear.
+  //
+  // So the week is the identity layer only: what you added to a list,
+  // what you've been reading. Fewer sparks, and every one of them a real
+  // crossing.
 
   const pastCloseouts = (sessionRows || [])
     .filter(r => r.closeout_text && r.closeout_text !== project.last_closeout_text)
