@@ -71,6 +71,13 @@ export function HomePage() {
   const setContext = useContextEngineStore(s => s.setContext)
   const onboardingCompletedAt = useJourneyStore(s => s.onboardingCompletedAt)
   const startSession = useJourneyStore(s => s.startSession)
+  // One thing on screen at a time. When the answer card is expanded —
+  // the chips, the focus thread, the full deck — everything under it is
+  // a second surface competing with the one the user just opened, so it
+  // goes away until they close it. Same rule a running session already
+  // follows, for the same reason.
+  const [answerExpanded, setAnswerExpanded] = useState(false)
+
   // The row used to be hidden when it had no projects, because a bare
   // "everything else" header over nothing reads as a bug. It always ends
   // with the "suggest a project" card now, so it is never empty — and a
@@ -239,15 +246,20 @@ export function HomePage() {
               — that used to produce two stacked glass cards with duplicate
               headers and duplicate input fields. */}
           <motion.div {...stackTransition(1)}>
-            <TodaysAnswerCard />
+            <TodaysAnswerCard onExpandedChange={setAnswerExpanded} />
           </motion.div>
 
           {/* Everything below is other projects and other things to look at
               — exactly what a running session is meant to hold your
               attention against, so all of it hides until the session ends.
               Same reasoning as the answer card itself going OLED-black for
-              the running phase, just at the page level. */}
-          {!sessionRunning && (
+              the running phase, just at the page level.
+
+              It hides for an expanded answer card too: opening the chips,
+              the focus thread or the deck means you're looking at that,
+              and leaving three more sections under it is the menu the
+              whole stack exists to avoid. */}
+          {!sessionRunning && !answerExpanded && (
             <>
               {/* The attention budget (SPEC.md) — at most ONE of: a deferred
                   close-out, the monthly mirror, the live-project re-ask, a

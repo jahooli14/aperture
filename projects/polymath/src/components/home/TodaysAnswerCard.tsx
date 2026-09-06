@@ -60,7 +60,14 @@ import { handleInputFocus } from '../../utils/keyboard'
 // doesn't swap the question out from under you mid-thought.
 const STEER_PROMPT = "Say what you're actually after…"
 
-export function TodaysAnswerCard() {
+export function TodaysAnswerCard({
+  onExpandedChange,
+}: {
+  /** Fires when the redirect panel opens or closes. The page uses it to
+   *  clear everything below an expanded card — one thing on screen at a
+   *  time, the same rule a running session already follows. */
+  onExpandedChange?: (expanded: boolean) => void
+} = {}) {
   const navigate = useNavigate()
   const { addToast } = useToast()
   const allProjects = useProjectStore(s => s.allProjects)
@@ -105,6 +112,7 @@ export function TodaysAnswerCard() {
   }, [priorityProjectId])
 
   const [engaged, setEngaged] = useState(false)
+  useEffect(() => { onExpandedChange?.(engaged) }, [engaged, onExpandedChange])
   // Shared with ProjectIdeasHome — same cache, same fetch. In practice
   // ProjectIdeasHome's own mount-time load usually wins the race, so
   // tapping "or steer it" here shows chips instantly instead of a spinner;
@@ -664,7 +672,7 @@ function SteerPanel({
     >
       <div className="flex items-center justify-between mb-3">
         <span className="text-[10px] font-bold uppercase tracking-[0.28em]" style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.7 }}>
-          {hasThread ? 'focus' : 'already noticed'}
+          {hasThread ? 'focus' : 'projects worth starting'}
         </span>
         <div className="flex items-center gap-3">
           {/* Close only hides the thread (resumable); start over actually
