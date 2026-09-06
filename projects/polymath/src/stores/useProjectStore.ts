@@ -16,7 +16,7 @@ import { logger } from '../lib/logger'
 import { v4 as uuidv4 } from 'uuid'
 import { queueOperation } from '../lib/offlineQueue'
 import { useHomeAnswerStore } from './useHomeAnswerStore'
-import { isActiveShaped, recentExcluding, resolveFocusProjectId, displacedFocusProjectId } from './focusProjectOps'
+import { isActiveShaped, recentExcluding, resolveFocusProjectId, warmRow, queueRow } from './focusProjectOps'
 import { useOfflineStore } from './useOfflineStore'
 import { scheduleAIEnrichment } from '../lib/aiEnrichmentManager'
 
@@ -797,20 +797,14 @@ export const useFocusProject = (): Project | null => {
 
 // The N most-recently-touched active projects that aren't the priority.
 // Drives the "recently active" home row.
+// Whatever the answer box was showing before a play tap displaced it goes
+// to the FRONT of the row, never sorted on recency where it can fall past
+// the limit and disappear from home entirely. Demotion goes one step --
+// answer box to row -- never straight out of sight.
 export const useRecentNonPriorityProjects = (limit = RECENT_ROW_LIMIT) => {
   const focusId = useFocusProjectId()
   const overrideProjectId = useHomeAnswerStore(s => s.overrideProjectId)
-  return useProjectStore(useShallow(state => {
-    const rest = recentExcluding(state.allProjects, focusId)
-    // Whatever the answer box was showing before a play tap displaced it
-    // goes to the FRONT of the row, never sorted on recency where it can
-    // fall past the limit and disappear from home entirely. Demotion goes
-    // one step -- answer box to row -- never straight out of sight.
-    const displacedId = displacedFocusProjectId(state.allProjects, overrideProjectId)
-    const displaced = displacedId ? rest.find(p => p.id === displacedId) : undefined
-    const ordered = displaced ? [displaced, ...rest.filter(p => p.id !== displaced.id)] : rest
-    return ordered.slice(0, limit)
-  }))
+  return useProjectStore(useShallow(state => warmRow(state.allProjects, focusId, overrideProjectId, limit)))
 }
 
 // Up Next shelf: every queued project, sorted by position asc. Used by the
@@ -822,18 +816,14 @@ export const useUpNextProjects = () =>
       .sort((a, b) => (a.up_next_position ?? 99) - (b.up_next_position ?? 99))
   ))
 
-// Home "queue" mini: queued projects, minus the priority and minus any project
-// already shown in the "Still warm" row. A project you recently touched belongs
-// in "warm", not waiting in the queue — so it drops out here to avoid showing
-// twice on the home stack. (The full shelf above still lists it.)
+// Home "queue" mini: queued projects, minus the focus and minus whatever the
+// warm half of the row is actually showing. A project you recently touched
+// belongs in "warm", not waiting in the queue — so it drops out here rather
+// than appearing twice in one row. (The full shelf above still lists it.)
 export const useUpNextMiniProjects = () => {
   const focusId = useFocusProjectId()
-  return useProjectStore(useShallow(state => {
-    const warmIds = new Set(
-      recentExcluding(state.allProjects, focusId).slice(0, RECENT_ROW_LIMIT).map(p => p.id)
-    )
-    return state.allProjects
-      .filter(p => p.up_next_position != null && p.id !== focusId && !warmIds.has(p.id))
-      .sort((a, b) => (a.up_next_position ?? 99) - (b.up_next_position ?? 99))
-  }))
+  const overrideProjectId = useHomeAnswerStore(s => s.overrideProjectId)
+  return useProjectStore(useShallow(state =>
+    queueRow(state.allProjects, focusId, overrideProjectId, RECENT_ROW_LIMIT)
+  ))
 }

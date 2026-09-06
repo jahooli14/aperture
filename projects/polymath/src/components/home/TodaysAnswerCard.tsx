@@ -114,7 +114,6 @@ export function TodaysAnswerCard({
   }, [priorityProjectId])
 
   const [engaged, setEngaged] = useState(false)
-  useEffect(() => { onExpandedChange?.(engaged) }, [engaged, onExpandedChange])
   // Shared with ProjectIdeasHome — same cache, same fetch. In practice
   // ProjectIdeasHome's own mount-time load usually wins the race, so
   // tapping "or steer it" here shows chips instantly instead of a spinner;
@@ -139,6 +138,14 @@ export function TodaysAnswerCard({
   // reason. Every other phase (window/planning/closeout/receipt/done) is
   // brief, so it keeps the richer look.
   const [sessionPhase, setSessionPhase] = useState<Phase | null>(null)
+
+  // The page clears for an open contract in EVERY phase, not just once the
+  // clock is running. The two-minute planning ritual is exactly when the
+  // rest of home is other projects competing with the one you just
+  // committed to -- and it used to sit right there under the countdown.
+  useEffect(() => {
+    onExpandedChange?.(engaged || contractOpen)
+  }, [engaged, contractOpen, onExpandedChange])
   // How long you've got. A control ON the card, never a gate in front of it
   // -- most opens aren't sessions (capture, browse, logging a close-out),
   // and asking those a time question first blocks them for nothing. Picking

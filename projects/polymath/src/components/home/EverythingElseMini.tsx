@@ -9,7 +9,7 @@
  * pill, an icon) is needed to tell the two groups apart.
  */
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRecentNonPriorityProjects, useUpNextMiniProjects } from '../../stores/useProjectStore'
 import { ProjectMiniCard } from './ProjectMiniCard'
 import { ProjectIdeasHome } from './ProjectIdeasHome'
@@ -25,7 +25,15 @@ function relative(dateStr?: string): string {
   return `${Math.floor(days / 30)}mo ago`
 }
 
-export function EverythingElseMini() {
+export function EverythingElseMini({
+  onExpandedChange,
+}: {
+  /** Fires when the suggestions deck opens or closes, so the page can
+   *  clear what sits below it — same rule the answer card follows. The
+   *  deck is a full surface of its own; leaving two more sections under
+   *  it is the menu the whole stack exists to avoid. */
+  onExpandedChange?: (expanded: boolean) => void
+} = {}) {
   const recent = useRecentNonPriorityProjects(2)
   const upNext = useUpNextMiniProjects().slice(0, 2)
   // "Suggest a project" was three taps down — behind the answer card's
@@ -38,6 +46,7 @@ export function EverythingElseMini() {
   // empty state to hide: a shelf with nothing warm on it is exactly when
   // a suggestion is worth the most.
   const [showIdeas, setShowIdeas] = useState(false)
+  useEffect(() => { onExpandedChange?.(showIdeas) }, [showIdeas, onExpandedChange])
 
   return (
     <div className="space-y-3">
