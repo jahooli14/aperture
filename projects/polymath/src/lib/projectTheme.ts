@@ -4,7 +4,7 @@
  */
 
 import {
-  PenLine, Cpu, Palette, Music, Briefcase, Sparkles, Wand2, BookOpen, Box,
+  PenLine, Cpu, Palette, Music, Briefcase, Compass, Wand2, BookOpen, Box,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -14,7 +14,7 @@ const TYPE_ICONS: Record<string, LucideIcon> = {
   art: Palette,
   music: Music,
   business: Briefcase,
-  life: Sparkles,
+  life: Compass,
   creative: Wand2,
   learning: BookOpen,
 }

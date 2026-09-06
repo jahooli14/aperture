@@ -66,6 +66,9 @@ interface ShapedProject {
   tags: string[]
   tasks: DraftTask[]
   question: string | null
+  /** Set only when they said this finishes the same thing over and over
+   *  (see api/_lib/project-cycles.ts). end_goal is then ONE of them. */
+  cycle: { unit: string; done: number; history: [] } | null
 }
 
 type DialogMode = 'chat' | 'shaping' | 'commit'
@@ -290,7 +293,13 @@ export function CreateProjectDialog({
           // Never asked for: an ongoing craft has no finish line, and
           // forcing one means rewriting it forever.
           ...(shaped?.end_goal ? { end_goal: shaped.end_goal, end_goal_source: 'guide' as const } : {}),
-          project_mode: shaped?.end_goal ? ('completion' as const) : ('recurring' as const),
+          // A repeating project HAS a finish line -- it's just one unit of
+          // the work rather than the whole series -- so the mode can't be
+          // read off end_goal alone any more.
+          ...(shaped?.cycle ? { cycle: shaped.cycle } : {}),
+          project_mode: (shaped?.cycle || !shaped?.end_goal)
+            ? ('recurring' as const)
+            : ('completion' as const),
           ...(shaped?.tags?.length ? { tags: shaped.tags } : {}),
           // The conversation IS the brief. Every later session cites it
           // rather than asking the same things again.

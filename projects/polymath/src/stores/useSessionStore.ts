@@ -206,6 +206,9 @@ interface SessionState {
   closeoutForPending: (closeoutText: string) => Promise<void>
   dismissPendingCloseout: () => void
   declareLive: (projectId: string) => Promise<void>
+  /** "That's mix 5 — line up the next one." Files what the finished one
+   *  took and plans the next from that shape. */
+  startNextCycle: (projectId: string) => Promise<boolean>
 }
 
 interface ShapeResponse {
@@ -251,6 +254,10 @@ export interface CloseResult {
   /** Set when the last open step was just ticked: is the finish line
    *  actually reached, and in one sentence why or why not. */
   finish: { reached: boolean; reason: string } | null
+  /** Set when the last step of a REPEATING project's cycle was just
+   *  ticked (project-cycles.ts). Not "the project is finished" — this one
+   *  is, and the next hasn't started. Mutually exclusive with `finish`. */
+  cycle: { n: number; label: string; unit: string; reason: string } | null
   /** Set when the close-out couldn't reach the server and was queued
    *  instead -- everything else here is a locally-synthesized best guess,
    *  since the real reconciliation (debrief matching, finish-line
@@ -460,6 +467,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
               ok: boolean; moved: boolean | null; duration_minutes: number
               marked_done?: string[]; created?: string[]; next_added?: string[]
               progress_noted?: string[]; finish?: { reached: boolean; reason: string } | null
+              cycle?: { n: number; label: string; unit: string; reason: string } | null
             }>(
               '/api/utilities?resource=close',
               {
@@ -479,6 +487,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
               nextAdded: result.next_added ?? [],
               progressNoted: result.progress_noted ?? [],
               finish: result.finish ?? null,
+              cycle: result.cycle ?? null,
             }
           }
         } catch (e) {
@@ -521,6 +530,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
         nextAdded: [],
         progressNoted: [],
         finish: null,
+        cycle: null,
         pendingSync: true,
       }
     }
@@ -530,6 +540,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
         ok: boolean; moved: boolean | null; duration_minutes: number
         marked_done?: string[]; created?: string[]; next_added?: string[]
         progress_noted?: string[]; finish?: { reached: boolean; reason: string } | null
+        cycle?: { n: number; label: string; unit: string; reason: string } | null
       }>(
         '/api/utilities?resource=close',
         {
@@ -548,6 +559,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
         nextAdded: result.next_added ?? [],
         progressNoted: result.progress_noted ?? [],
         finish: result.finish ?? null,
+        cycle: result.cycle ?? null,
       }
     } catch (e) {
       set({ closing: false, error: e instanceof Error ? e.message : 'Could not save the close-out.' })
@@ -582,5 +594,18 @@ export const useSessionStore = create<SessionState>((set, get) => ({
 
   declareLive: async (projectId) => {
     await postJson('/api/utilities?resource=declare-live', { project_id: projectId })
+  },
+
+  startNextCycle: async (projectId) => {
+    try {
+      await postJson('/api/utilities?resource=next-cycle', { project_id: projectId })
+      // The project's task list has just been rewritten server-side, so the
+      // cached copy is now wrong in a way the next session would inherit.
+      await useProjectStore.getState().fetchProjects()
+      return true
+    } catch (e) {
+      console.error('[session] could not line up the next one:', e)
+      return false
+    }
   },
 }))

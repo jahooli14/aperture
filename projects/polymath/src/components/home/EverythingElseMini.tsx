@@ -10,7 +10,6 @@
  */
 
 import { useState } from 'react'
-import { Sparkles } from 'lucide-react'
 import { useRecentNonPriorityProjects, useUpNextMiniProjects } from '../../stores/useProjectStore'
 import { ProjectMiniCard } from './ProjectMiniCard'
 import { ProjectIdeasHome } from './ProjectIdeasHome'
@@ -42,50 +41,49 @@ export function EverythingElseMini() {
 
   return (
     <div className="space-y-3">
-    // scroll-pl-4 matters: with `snap-mandatory`, the browser snaps the
-    // first card's start edge to the SCROLLPORT edge, which ignores
-    // padding-left — so the row's px-4 got eaten and card one sat flush
-    // against the screen. scroll-padding moves the snap line itself.
-    // items-stretch + h-full on the card (not just the wrapper) is what
-    // keeps a 2-line title and a 1-line title the same height; without it
-    // the wrapper stretched but the card inside stayed content-sized.
-    <div className="flex items-stretch gap-3 overflow-x-auto pb-2 -mx-4 px-4 scroll-pl-4 scroll-pr-4 snap-x snap-mandatory scrollbar-hide">
-      {recent.map(p => (
-        <div key={p.id} className="flex-shrink-0 w-[70vw] max-w-[260px] snap-start flex">
-          <ProjectMiniCard project={p} variant="glass" meta={relative(p.last_active || p.updated_at)} />
-        </div>
-      ))}
-      {upNext.map(p => (
-        <div key={p.id} className="flex-shrink-0 w-[70vw] max-w-[260px] snap-start flex">
-          <ProjectMiniCard
-            project={p}
-            variant="ghost"
-            meta={p.up_next_position != null ? `#${p.up_next_position} in queue` : 'in queue'}
-          />
-        </div>
-      ))}
+      {/* scroll-pl-4 matters: with `snap-mandatory`, the browser snaps the
+          first card's start edge to the SCROLLPORT edge, which ignores
+          padding-left — so the row's px-4 got eaten and card one sat flush
+          against the screen. scroll-padding moves the snap line itself.
+          items-stretch + h-full on the card (not just the wrapper) is what
+          keeps a 2-line title and a 1-line title the same height; without
+          it the wrapper stretched but the card inside stayed content-sized. */}
+      <div className="flex items-stretch gap-3 overflow-x-auto pb-2 -mx-4 px-4 scroll-pl-4 scroll-pr-4 snap-x snap-mandatory scrollbar-hide">
+        {recent.map(p => (
+          <div key={p.id} className="flex-shrink-0 w-[70vw] max-w-[260px] snap-start flex">
+            <ProjectMiniCard project={p} variant="glass" meta={relative(p.last_active || p.updated_at)} />
+          </div>
+        ))}
+        {upNext.map(p => (
+          <div key={p.id} className="flex-shrink-0 w-[70vw] max-w-[260px] snap-start flex">
+            <ProjectMiniCard
+              project={p}
+              variant="ghost"
+              meta={p.up_next_position != null ? `#${p.up_next_position} in queue` : 'in queue'}
+            />
+          </div>
+        ))}
 
-      {/* Dashed rather than glass or ghost: the other cards are projects
-          that exist, this one isn't a project at all yet. */}
-      <div className="flex-shrink-0 w-[70vw] max-w-[260px] snap-start flex">
-        <button
-          onClick={() => setShowIdeas(v => !v)}
-          aria-expanded={showIdeas}
-          className="w-full h-full rounded-2xl px-4 py-4 text-left flex flex-col justify-between transition-colors"
-          style={{
-            border: '1px dashed rgba(var(--brand-primary-rgb), 0.30)',
-            background: showIdeas ? 'rgba(var(--brand-primary-rgb), 0.06)' : 'transparent',
-          }}
-        >
-          <Sparkles size={16} style={{ color: 'rgba(var(--brand-primary-rgb), 0.75)' }} />
-          <span className="text-[15px] leading-snug font-medium">
-            {showIdeas ? 'Hide suggestions' : 'Suggest a project'}
-          </span>
-        </button>
+        {/* Dashed rather than glass or ghost: the other cards are projects
+            that already exist, and this one isn't a project yet. */}
+        <div className="flex-shrink-0 w-[70vw] max-w-[260px] snap-start flex">
+          <button
+            onClick={() => setShowIdeas(v => !v)}
+            aria-expanded={showIdeas}
+            className="w-full h-full rounded-2xl px-4 py-4 text-left flex flex-col justify-end transition-colors"
+            style={{
+              border: '1px dashed rgba(var(--brand-primary-rgb), 0.30)',
+              background: showIdeas ? 'rgba(var(--brand-primary-rgb), 0.06)' : 'transparent',
+            }}
+          >
+            <span className="text-[15px] leading-snug font-medium">
+              {showIdeas ? 'Hide suggestions' : 'Suggest a project'}
+            </span>
+          </button>
+        </div>
       </div>
-        </div>
 
-        {showIdeas && <ProjectIdeasHome startExpanded />}
+      {showIdeas && <ProjectIdeasHome startExpanded />}
     </div>
   )
 }

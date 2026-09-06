@@ -26,10 +26,18 @@ describe('buildShapingPrompt', () => {
     expect(p).toContain("[e1] It's a song for Graham's 40th.")
   })
 
-  it('refuses to invent a finish line, and says an ongoing thing has none', () => {
+  it('refuses to invent a finish line', () => {
     const p = buildShapingPrompt(DUMP, [])
     expect(p).toContain('do not invent a finish line')
-    expect(p).toContain('An ongoing thing')
+  })
+
+  it('offers a repeating unit as the answer for ongoing work, rather than no finish line at all', () => {
+    // This used to say an ongoing thing simply has none. It has one per
+    // cycle now (project-cycles.ts) -- "a recorded mix" rather than the
+    // endless series -- which is what gives it a real ending each time.
+    const p = buildShapingPrompt(DUMP, [])
+    expect(p).toContain('repeat_unit')
+    expect(p).toContain('not the whole endless series')
   })
 
   it('plans backwards when done is known and forwards when it is not, in one prompt', () => {

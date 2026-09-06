@@ -29,8 +29,14 @@ import { sanitizeSteps, assembleSteps, MAX_SPINE_STEPS, FIRST_CUT_STEPS, type Sp
 
 export interface ShapedProject {
   title: string
-  /** What done looks like, in their words. Null unless they said. */
+  /** What done looks like, in their words. Null unless they said. On a
+   *  repeating project this is ONE unit finished ("a recorded mix"), not
+   *  the endless series. */
   endGoal: string | null
+  /** Set when they said this project finishes the same thing over and
+   *  over: the short singular noun for that thing ("mix", "sketch").
+   *  Null for almost every project. See project-cycles.ts. */
+  repeatUnit: string | null
   /** One plain sentence on what this is. */
   summary: string
   tags: string[]
@@ -71,8 +77,15 @@ Pull out:
 - summary: one plain sentence saying what this is.
 - end_goal: what they'll have when it's finished, in their words. ONLY if
   they actually said or clearly implied it. If they didn't, use null --
-  do not invent a finish line. An ongoing thing (DJing, a sketchbook
-  habit) has none, and that's fine.
+  do not invent a finish line.
+- repeat_unit: some projects finish the same thing over and over -- DJing
+  is "record a mix, record a mix", a sketchbook is one drawing after
+  another. When they've said it works like that, give the ONE thing they
+  make each time as a short singular noun, no article: "mix", "sketch",
+  "issue". Then end_goal is that ONE unit finished ("a recorded mix"),
+  not the whole endless series. Otherwise null -- most projects do not
+  repeat, and deciding one does when they never said so turns their
+  project into a treadmill.
 - tags: up to 3 lowercase single-word or hyphenated labels (music,
   woodwork, writing). Reuse theirs where one fits.
 - steps: the first steps, in the order they'd be done.
@@ -119,6 +132,7 @@ Respond with JSON only:
   "title": "...",
   "summary": "...",
   "end_goal": "..." or null,
+  "repeat_unit": "..." or null,
   "tags": ["..."],
   "steps": [ { "text": "...", "evidence": ["e1"], "after": [], "estimated_minutes": 20 } ]
 }`
@@ -150,6 +164,14 @@ export async function shapeProjectFromDump(
     const endGoalRaw = typeof parsed?.end_goal === 'string' ? parsed.end_goal.trim() : ''
     const endGoal = endGoalRaw && endGoalRaw.toLowerCase() !== 'null' ? endGoalRaw : null
 
+    // One short noun, or nothing. A unit that arrives as a sentence is a
+    // misread of the question, and it would be counted in the UI ("Mix
+    // 5"), so anything that can't be counted is dropped rather than shown.
+    const unitRaw = typeof parsed?.repeat_unit === 'string' ? parsed.repeat_unit.trim().toLowerCase() : ''
+    const repeatUnit = unitRaw && unitRaw !== 'null' && unitRaw.length <= 24 && !/\s/.test(unitRaw)
+      ? unitRaw.replace(/^(a|an|the)\s+/, '')
+      : null
+
     const tags = Array.isArray(parsed?.tags)
       ? parsed.tags
           .map((t: unknown) => (typeof t === 'string' ? normalizeTag(t) : null))
@@ -168,6 +190,7 @@ export async function shapeProjectFromDump(
     return {
       title,
       endGoal,
+      repeatUnit,
       summary: typeof parsed?.summary === 'string' ? parsed.summary.trim() : '',
       tags,
       steps,
