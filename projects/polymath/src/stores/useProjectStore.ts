@@ -16,7 +16,7 @@ import { logger } from '../lib/logger'
 import { v4 as uuidv4 } from 'uuid'
 import { queueOperation } from '../lib/offlineQueue'
 import { useHomeAnswerStore } from './useHomeAnswerStore'
-import { isActiveShaped, recentExcluding, resolveFocusProjectId } from './focusProjectOps'
+import { isActiveShaped, recentExcluding, resolveFocusProjectId, displacedFocusProjectId } from './focusProjectOps'
 import { useOfflineStore } from './useOfflineStore'
 import { scheduleAIEnrichment } from '../lib/aiEnrichmentManager'
 
@@ -799,7 +799,18 @@ export const useFocusProject = (): Project | null => {
 // Drives the "recently active" home row.
 export const useRecentNonPriorityProjects = (limit = RECENT_ROW_LIMIT) => {
   const focusId = useFocusProjectId()
-  return useProjectStore(useShallow(state => recentExcluding(state.allProjects, focusId).slice(0, limit)))
+  const overrideProjectId = useHomeAnswerStore(s => s.overrideProjectId)
+  return useProjectStore(useShallow(state => {
+    const rest = recentExcluding(state.allProjects, focusId)
+    // Whatever the answer box was showing before a play tap displaced it
+    // goes to the FRONT of the row, never sorted on recency where it can
+    // fall past the limit and disappear from home entirely. Demotion goes
+    // one step -- answer box to row -- never straight out of sight.
+    const displacedId = displacedFocusProjectId(state.allProjects, overrideProjectId)
+    const displaced = displacedId ? rest.find(p => p.id === displacedId) : undefined
+    const ordered = displaced ? [displaced, ...rest.filter(p => p.id !== displaced.id)] : rest
+    return ordered.slice(0, limit)
+  }))
 }
 
 // Up Next shelf: every queued project, sorted by position asc. Used by the

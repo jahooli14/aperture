@@ -50,7 +50,7 @@ function BlockerField({ blocker, onSave }: { blocker?: string; onSave: (text: st
         className="block mb-2 italic text-xs"
         style={{
           fontFamily: 'var(--brand-font-body)',
-          color: 'rgba(252,211,77,0.75)',
+          color: 'var(--brand-text-secondary)',
           letterSpacing: '0.02em',
         }}
       >
@@ -68,7 +68,7 @@ function BlockerField({ blocker, onSave }: { blocker?: string; onSave: (text: st
               fontFamily: 'var(--brand-font-body)',
               lineHeight: 1.55,
               color: 'var(--brand-text-primary)',
-              borderColor: 'rgba(252,211,77,0.18)',
+              borderColor: 'var(--glass-border-bold)',
             }}
             rows={2}
             onKeyDown={e => {
@@ -88,7 +88,7 @@ function BlockerField({ blocker, onSave }: { blocker?: string; onSave: (text: st
               onClick={handleSave}
               disabled={saving}
               className="px-3.5 py-1.5 text-[11px] font-medium rounded-full transition-all"
-              style={{ background: 'rgba(252,211,77,0.16)', color: 'rgba(252,211,77,0.95)', border: '1px solid rgba(252,211,77,0.3)' }}
+              style={{ background: 'rgba(var(--brand-primary-rgb),0.12)', color: 'rgb(var(--brand-primary-rgb))', border: '1px solid rgba(var(--brand-primary-rgb),0.32)' }}
             >
               {saving ? 'Saving…' : 'Save'}
             </button>
@@ -843,11 +843,10 @@ export function ProjectDetailPage() {
               {project.status}
             </span>
           </span>
-          {project.type && (
-            <span className="text-[11px] font-medium px-2.5 py-1 rounded-lg" style={{ color: 'var(--brand-text-secondary)', opacity: 0.4, background: 'rgba(255,255,255,0.03)' }}>
-              {project.type}
-            </span>
-          )}
+          {/* `type` is legacy and is NOT a grouping axis (see CLAUDE.md) --
+              "hobby" on a project page tells you nothing and reads as a
+              category the app cares about. Labels (metadata.tags) are the
+              real axis. */}
         </div>
       </div>
 

@@ -43,6 +43,25 @@ export const recentExcluding = (projects: Project[], excludeId?: string | null):
  * makes it the focus, so it leaves the row, and whatever was focused
  * before stops being excluded and takes its place.
  */
+/**
+ * The project the answer box would show if nothing were overriding it.
+ *
+ * Tapping play on a card in "everything else" points the box at that
+ * project, which pushes whatever was there out. That one has to land in
+ * the row -- it was, a moment ago, the single most important thing on the
+ * screen. Left to sort on recency it can fall past the row's two-card
+ * limit and vanish from home altogether, which is how a project gets
+ * "lost" without anything having actually happened to it.
+ */
+export function displacedFocusProjectId(
+  projects: Project[],
+  overrideProjectId?: string | null,
+): string | null {
+  if (!overrideProjectId) return null
+  const natural = resolveFocusProjectId(projects, null)
+  return natural && natural !== overrideProjectId ? natural : null
+}
+
 export function resolveFocusProjectId(
   projects: Project[],
   overrideProjectId?: string | null,

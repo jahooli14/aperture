@@ -1264,7 +1264,7 @@ Do NOT ask what done looks like. Plenty of real projects are ongoing and have no
 ` : phase === 'stale' ? `THEY'VE BEEN AWAY FOR ${daysSinceActive} DAYS.
 - greeting: Acknowledge the gap honestly and name the next step on the list, so picking it up is one decision, not two.
 - focusSuggestion: One tiny concrete thing — not "get back into it" but e.g. "Open the file and read the last paragraph you wrote."
-- proactiveQuestion: "What's actually blocking you from [specific next task]?"
+- proactiveQuestion: "What's the next step on [specific next task]?" -- about the work, not about them.
 ` : phase === 'closing' ? `HOME STRETCH — ${progressPercent}% of the current list done.
 - greeting: Name what's left on the list.
 - focusSuggestion: Name the specific remaining task most likely to close this out.
@@ -1272,13 +1272,13 @@ Do NOT ask what done looks like. Plenty of real projects are ongoing and have no
 ` : `BUILDING — steps in flight.
 - greeting: Reference what they last did or the next step by name.
 - focusSuggestion: Name the specific step to do this session.
-- proactiveQuestion: ONE practical question. Examples: "Is [next task] actually the right next move, or are you avoiding [harder task]?" / "Does [next task] still need doing, or has it moved on?"
+- proactiveQuestion: ONE practical question about the WORK. Examples: "Does [next task] still need doing, or has it moved on?" / "Is [next task] one sitting, or does it need splitting?" Never ask whether they're avoiding, resisting or putting something off -- you cannot see that, and guessing at it reads as an accusation.
 `}
 
 Rules for ALL states:
 ${CHAT_TURN_RULES}
 ${PLAIN_ENGLISH_RULES}
-- No filler. No "Great to see you", "Welcome back", "Let's dive in", "Let's explore".
+- No filler. No "Great to see you", "Welcome back", "Let's dive in", "Let's explore", "Time to kick off".
 - Short sentences. Say it straight. Second person ("you").
 - Always reference specific steps by name. Never be vague.
 - Never ask what done looks like${hasGoal ? '' : ' — this project may be an ongoing thing with no end, and that is fine'}.
@@ -2157,6 +2157,16 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
       return res.status(500).json({ error: insertErr.message })
     }
 
+    // Sitting down to it is already enough to call the project active --
+    // waiting for the close would leave "LONG QUIET" on screen for the
+    // whole hour you spend working on it.
+    const { error: touchErr } = await supabase
+      .from('projects')
+      .update({ last_active: new Date().toISOString() })
+      .eq('id', project_id)
+      .eq('user_id', userId)
+    if (touchErr) console.warn('[utilities/sessions] could not mark the project active:', touchErr.message)
+
     return res.status(200).json({
       session,
       shapes,
@@ -2384,10 +2394,20 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
     const projectUpdate: Record<string, unknown> = {}
     if (tasksChanged) projectUpdate.metadata = { ...currentMetadata, tasks }
 
-    if (text) {
-      projectUpdate.last_closeout_text = text
-      projectUpdate.last_session_ended_at = endedAt.toISOString()
-    }
+    // Working on a project is the strongest possible signal that it's
+    // alive, so it has to move `last_active` -- that is the field every
+    // recency and dormancy display actually reads (byRecency, the "1mo
+    // ago" line on a mini card, the shaper's own dormancyDays). It was
+    // never being set here, so an hour's work left the project still
+    // reading as untouched since whenever it was last edited by hand, and
+    // the home card would say "LONG QUIET" the morning after a session.
+    //
+    // The timestamps are also no longer gated on there being close-out
+    // text: a session that ran and was closed with nothing to say still
+    // ran. Only the text itself depends on there being text.
+    projectUpdate.last_active = endedAt.toISOString()
+    projectUpdate.last_session_ended_at = endedAt.toISOString()
+    if (text) projectUpdate.last_closeout_text = text
 
     if (typeof mvs_seed_minutes === 'number' && mvs_seed_minutes > 0) {
       // One-time seed from the user's own estimate, asked only on session one.
