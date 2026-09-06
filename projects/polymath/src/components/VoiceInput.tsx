@@ -104,7 +104,11 @@ export function VoiceInput({
   // both turn amber in the final 15s so the auto-stop isn't a surprise.
   const elapsed = Math.max(0, maxDuration - timeLeft)
   const progressPct = maxDuration > 0 ? Math.min(100, (elapsed / maxDuration) * 100) : 0
-  const lowTime = timeLeft <= 15
+  // Amber means "time is running out", so it can't be on for the whole
+  // recording. A flat 15s threshold was: the window prompt caps at 10s, so
+  // it opened amber and stayed amber, and the 30s reshape spent half its
+  // life warning. It's the last quarter now, and never more than 15s.
+  const lowTime = timeLeft <= Math.min(15, Math.max(2, maxDuration * 0.25))
   // Matches the app's existing amber (FocusSession blocker, priority star).
   // The chrome is cyan-only, so amber is reserved for "time running out".
   const WARN_COLOR = 'rgb(245, 158, 11)'

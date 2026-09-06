@@ -361,6 +361,7 @@ function ReaskSlot({ suggestion, onResolved }: { suggestion: ReaskSuggestion; on
  */
 export function AttentionSlot() {
   const { pendingCloseout, checkPendingCloseout, closeoutForPending } = useSessionStore()
+  const closing = useSessionStore(s => s.closing)
   // During a session there is exactly one thing on screen. The budget is
   // for what the app says on OPEN — interrupting the hour it just helped
   // you start is the worst possible moment for any of it.
@@ -377,6 +378,10 @@ export function AttentionSlot() {
     let cancelled = false
 
     async function resolve() {
+      // Five sequential API calls, and the whole slot renders null during a
+      // session anyway -- there is no reason to spend them competing with
+      // the hour they'd interrupt.
+      if (sessionRunning) return
       await checkPendingCloseout()
       if (cancelled) return
       if (useSessionStore.getState().pendingCloseout) {
@@ -427,7 +432,7 @@ export function AttentionSlot() {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [sessionRunning])
 
   if (sessionRunning || resolved || !kind) return null
 
@@ -437,23 +442,45 @@ export function AttentionSlot() {
         <p className="text-base">
           You did some time on {pendingCloseout.projects?.title ?? 'a project'} — where'd you get to?
         </p>
-        <VoiceInput onTranscript={setCloseoutText} maxDuration={30} />
+        <VoiceInput onTranscript={t => setCloseoutText(c => (c ? `${c} ${t}` : t))} maxDuration={30} />
+        {/* Voice was the only way to answer this. A mic that won't start,
+            a room you can't talk in, or just preferring to type left the
+            question unanswerable — and every other close-out in the app
+            offers the keyboard. */}
+        <textarea
+          value={closeoutText}
+          onChange={e => setCloseoutText(e.target.value)}
+          placeholder="Did: ... Next: ..."
+          rows={2}
+          className="w-full rounded-xl px-3 py-2 text-sm bg-transparent border resize-none outline-none"
+          style={{ ...borderStyle, color: 'var(--brand-text-primary)' }}
+        />
         <div className="flex gap-2">
           <button
             className="flex-1 py-2 rounded-lg text-sm font-medium disabled:opacity-50"
             style={primaryButtonStyle}
-            disabled={!closeoutText}
+            disabled={!closeoutText.trim() || closing}
             onClick={async () => {
-              await closeoutForPending(closeoutText)
+              await closeoutForPending(closeoutText.trim())
               setResolved(true)
             }}
           >
-            Save
+            {closing ? 'Saving…' : 'Save'}
           </button>
+          {/* Skip used to hide this card and nothing else, so the session
+              stayed open on the server and the question came back on the
+              very next home open, and the one after that, until it aged
+              out. Nothing to report IS an answer: it closes the session
+              with an empty close-out, exactly as the contract's own
+              "Skip — nothing to report" does. */}
           <button
-            className="px-4 py-2 rounded-lg border text-sm"
+            className="px-4 py-2 rounded-lg border text-sm disabled:opacity-50"
             style={borderStyle}
-            onClick={() => setResolved(true)}
+            disabled={closing}
+            onClick={async () => {
+              await closeoutForPending('')
+              setResolved(true)
+            }}
           >
             Skip
           </button>
