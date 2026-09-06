@@ -14,7 +14,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Zap, ArrowRight, Book, Lock, RotateCcw, Mic, CheckCircle, Sparkles, TrendingUp } from 'lucide-react'
+import { Zap, ArrowRight, Book, Lock, RotateCcw, Mic, CheckCircle, TrendingUp } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { PostOnboardingFlow } from './PostOnboardingFlow'
 import { useAuthContext } from '../../contexts/AuthContext'
@@ -447,7 +447,6 @@ export function RevealSequence({ analysis, books, transcripts = [], groundingPhr
                         color: 'var(--brand-text-primary)',
                       }}
                     >
-                      <Sparkles className="h-2.5 w-2.5" />
                       Left-field pick
                     </span>
                   )}
