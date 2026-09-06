@@ -124,6 +124,7 @@ export function ProjectDetailPage() {
   // isOnThisProjectsPage there) so the pending session shows inline here
   // instead — same state, one place it's presented.
   const windowMinutes = useSessionStore(s => s.windowMinutes)
+  const activeSessionProjectId = useSessionStore(s => s.active?.project_id ?? null)
   const [sessionOpen, setSessionOpen] = useState(false)
   const [replanning, setReplanning] = useState(false)
 
@@ -239,6 +240,15 @@ export function ProjectDetailPage() {
     loadProjectDetails()
     return () => clearContext()
   }, [id])
+
+  // A session running on this project when the page mounts is one to
+  // rejoin, not to start again. `active` lives in the store and survives
+  // navigation; `sessionOpen` is local state and doesn't — so opening this
+  // page mid-session showed a "Start session" button under the project
+  // record, and pressing it opened a second session on the same project.
+  useEffect(() => {
+    if (activeSessionProjectId && activeSessionProjectId === id) setSessionOpen(true)
+  }, [activeSessionProjectId, id])
 
   useEffect(() => {
     if (project) {
@@ -855,7 +865,7 @@ export function ProjectDetailPage() {
               {/* Guide — primary surface. This is what a project's mid-life
                   view is for: keep the chat that scopes/frames/edits front
                   and center, not just at project creation. */}
-              {project && (
+              {!sessionOpen && project && (
                 <InlineGuide
                   project={project}
                   recentCompletions={recentCompletions}
@@ -893,6 +903,14 @@ export function ProjectDetailPage() {
                   <Zap className="h-3.5 w-3.5 fill-current" /> Start session
                 </button>
               )}
+
+              {/* Everything below is the project's record — the finish
+                  line, the blocker, what sparked it, the whole task list,
+                  the notes. All of it is worth reading BEFORE you sit
+                  down and is a distraction the moment you have. It goes
+                  while the contract is open, exactly as the home page
+                  clears around a session: one thing on screen. */}
+              {!sessionOpen && (<>
 
               {/* What done looks like — only when the user has actually
                   said. An empty "What does done look like?" box on every
@@ -1092,6 +1110,7 @@ export function ProjectDetailPage() {
               >
                 <ProjectNotes projectId={project.id} notesDoc={project.notes_doc} />
               </div>
+              </>)}
       </div>
 
 
