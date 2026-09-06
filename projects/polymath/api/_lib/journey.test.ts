@@ -417,6 +417,79 @@ describe('Walk 4b — a close-out that gets replayed does not double up', () => 
   })
 })
 
+// ── Walk 4c: the shaping edges ───────────────────────────────────────
+
+describe('Walk 4c — what the plan does at its edges', () => {
+  it('reads the progress note back as the re-entry line for that step', async () => {
+    const row = makeProject({
+      metadata: {
+        tasks: [step('t1', 'Mix the record.', 0, { progress_note: 'did: balanced the drums' })],
+      },
+    })
+    const plan = await shapeSession(db(row), 'u1', 'p1', 60)
+    // Not a generic "already on the project" -- your own words about where
+    // you got to, on the step they belong to.
+    expect(plan.items[0].source).toBe('last time: did: balanced the drums')
+    expect(plan.items[0].taskId).toBe('t1')
+  })
+
+  it('asks rather than invents when there is nothing left on the list', async () => {
+    const row = makeProject({
+      metadata: { tasks: [step('t1', 'Master it.', 0, { done: true })] },
+    })
+    const plan = await shapeSession(db(row), 'u1', 'p1', 60)
+    expect(plan.source).toBe('derived')
+    expect(plan.needsInput).toBeTruthy()
+    // Whatever it shows is a placeholder, never a made-up step carrying a
+    // task id it doesn't have.
+    expect(plan.items.every(i => i.taskId === null)).toBe(true)
+  })
+
+  it('says how much of the list it left out rather than silently truncating', async () => {
+    const many = Array.from({ length: 12 }, (_, i) => step(`t${i}`, `Step number ${i}.`, i))
+    const row = makeProject({ metadata: { tasks: many } })
+    const plan = await shapeSession(db(row), 'u1', 'p1', 20)
+    expect(plan.items.length).toBeLessThanOrEqual(3)
+    expect(plan.truncatedCount).toBeGreaterThan(0)
+    expect(plan.items.length + plan.truncatedCount).toBeLessThanOrEqual(12)
+  })
+
+  it('plans against the working time, not the whole window', async () => {
+    // Painting: ten minutes getting the paints out, ten cleaning brushes.
+    // An hour that is really forty minutes has to plan like forty.
+    const tasks = Array.from({ length: 6 }, (_, i) =>
+      step(`t${i}`, `Step number ${i}.`, i, { estimate_set: true, estimated_minutes: 20 }))
+    const plain = makeProject({ metadata: { tasks } })
+    const withFriction = makeProject({
+      metadata: {
+        tasks,
+        setup: { text: 'Get the paints out.', minutes: 10 },
+        packdown: { text: 'Clean the brushes.', minutes: 10 },
+      },
+    })
+    const full = await shapeSession(db(plain), 'u1', 'p1', 60)
+    const trimmed = await shapeSession(db(withFriction), 'u1', 'p1', 60)
+    expect(trimmed.items.length).toBeLessThan(full.items.length)
+    expect(trimmed.friction?.minutes).toBe(10)
+    expect(trimmed.packdown?.minutes).toBe(10)
+  })
+
+  it('never offers a step it has already been told is finished', async () => {
+    const row = makeProject({
+      metadata: {
+        tasks: [
+          step('t1', 'Done thing.', 0, { done: true }),
+          step('t2', 'Open thing.', 1),
+          step('t3', 'Another done thing.', 2, { done: true }),
+          step('t4', 'Another open thing.', 3),
+        ],
+      },
+    })
+    const plan = await shapeSession(db(row), 'u1', 'p1', 60)
+    expect(plan.items.map(i => i.taskId)).toEqual(['t2', 't4'])
+  })
+})
+
 // ── Walk 5 ───────────────────────────────────────────────────────────
 
 describe('Walk 5 — a finish line that repeats lands one and lines up the next', () => {
