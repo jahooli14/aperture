@@ -24,13 +24,15 @@ Pick ONE move and commit before writing:
 
 Do NOT fuse two projects into a hybrid. Motifs (a colour, a mood, a place, a photo) are flavour you may mention — never the project itself. No "broken-glass petrol-station painting."
 
+Lists (films, books, places) are identity signal, not structure — they tell you who this person is, they are not raw material to build a project out of. Do NOT pair two list items (a film + a book, two places) into "reviews of both" or any other double-feature. Pairing two things someone merely liked is the same forced mashup as fusing two projects, just with weaker material.
+
 Never "finish / ship / complete / continue X" for an active project — only a genuinely NEW direction, and the title names the new thing.
 
 Title: six words max, concrete artefact or action. No "exploration", "study", "series", "directory", "newsletter", "podcast", "zine", "meditation on".
 
 Next step: a physical move they can do tonight with what they own. Cut, drill, flash, commit a named file, drive, phone. Not "research", "plan", "sketch", "outline", "decide".
 
-Why now: one true sentence — a real reason this specific thread is worth pulling today. If you can only justify it by pointing back at the well they just rejected, you picked the wrong thread. Find one with its own real reason.`
+Why now: one true sentence — a real reason this specific thread is worth pulling today. If you can only justify it by pointing back at the well they just rejected, you picked the wrong thread. Find one with its own real reason. Never invent a connection between two unrelated things to manufacture urgency ("X and Y haven't crossed paths yet" is not a reason — nothing actually happened).`
 
 /**
  * Brief for the "do a self-contained hour" button — the low-commitment
@@ -56,7 +58,7 @@ Good hour-shapes (examples of SCALE, not a menu to copy): cook one specific dish
 
 Do NOT reach for a dormant project and call reviving it "an hour" — that's a commitment wearing an hour's clothes. The hour thing stands on its own and ends tonight. You may borrow a theme or a taste from their work; you may not hand back a project to restart.
 
-No newsletter, podcast, course, tracker, directory, "study", "series", "exploration". No fusing two interests into a surreal mashup. Motifs (a colour, a place, a mood) are flavour, never the thing.
+No newsletter, podcast, course, tracker, directory, "study", "series", "exploration". No fusing two interests into a surreal mashup, and no pairing two list items (a film + a book) into "reviews of both" — lists are identity signal, never structure. Motifs (a colour, a place, a mood) are flavour, never the thing.
 
 Title: six words max, the finished thing or the act. Concrete.
 Pitch: two sentences. Sentence 1 = what they'll make or do in the hour. Sentence 2 = what "done" looks like at the sixty-minute mark, in one thing you could point at.

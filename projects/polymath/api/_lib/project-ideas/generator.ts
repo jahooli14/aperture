@@ -494,8 +494,9 @@ ${activeBlock || '  (none)'}
 ═══════ RECENT VOICE NOTES (their own words) ═══════
 ${memBlock || '  (none)'}
 
-═══════ LISTS — films / books / places (identity signal: who they're becoming) ═══════
+═══════ LISTS — films / books / places (identity signal: who they're becoming — NEVER structure to build with) ═══════
 ${listBlock || '  (none)'}
+Two list items do not make a project just because they sat near each other. "Pair the film you liked with the book you liked into reviews of both" is a forced mashup, not an idea — NULL that move, don't write it. A list item may season a real idea (a detail, a reference point); it may not BE the idea.
 
 ═══════ READING ═══════
 ${readingBlock || '  (none)'}
@@ -526,7 +527,7 @@ ${ideaBrief}
   "centre_id": "the EXACT project_dormant#<id> OR project_active#<id> this is about, copied verbatim from the lists above. null only for a brand-new 'name' idea.",
   "title": "≤6 words. Names the artefact or the action. For extend-on-active: name the NEW output, not the parent.",
   "pitch": "2 sentences. Sentence 1 = what the project IS. Sentence 2 = what done looks like in one observable test.",
-  "why_now": "ONE sentence. The specific recent capture OR the arc-over-time fact that makes this the right one right now.",
+  "why_now": "ONE sentence. The specific recent capture OR the arc-over-time fact that makes this the right one right now. Never invent a connection to manufacture urgency — 'X and Y haven't crossed paths yet' is not a reason, nothing actually happened.",
   "next_step": "ONE physical action they can do TODAY. Cut, drill, flash, commit a named file with named first content, drive, phone. NOT 'research,' 'plan,' 'sketch,' 'outline,' 'decide.'"
 }
 
