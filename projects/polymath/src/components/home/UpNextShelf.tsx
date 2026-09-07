@@ -7,7 +7,7 @@
  */
 
 import { useState } from 'react'
-import { Reorder, motion, AnimatePresence } from 'framer-motion'
+import { Reorder, motion, AnimatePresence, useDragControls } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import { GripVertical, X } from 'lucide-react'
 import { useUpNextProjects, useProjectStore } from '../../stores/useProjectStore'
@@ -24,6 +24,91 @@ function formatRelativeTime(dateStr?: string): string {
   if (days < 7) return `${days}d ago`
   if (days < 30) return `${Math.floor(days / 7)}w ago`
   return `${Math.floor(days / 30)}mo ago`
+}
+
+interface ShelfRowProps {
+  project: Project
+  position: number
+  onOpen: (id: string) => void
+  onUnpin: (e: React.MouseEvent, id: string) => void
+  onDragEnd: () => void
+}
+
+/**
+ * The drag used to be attached to the whole row with `touch-none`, so any
+ * vertical swipe over the row — the normal way to scroll this drawer — got
+ * captured as a reorder instead. `dragControls` restricts drag start to the
+ * grip handle alone; the row itself keeps native touch scrolling.
+ */
+function ShelfRow({ project, position, onOpen, onUnpin, onDragEnd }: ShelfRowProps) {
+  const theme = getTheme(project.type || 'other', project.title, project.metadata?.tags)
+  const dragControls = useDragControls()
+
+  return (
+    <Reorder.Item
+      value={project}
+      dragListener={false}
+      dragControls={dragControls}
+      onDragEnd={onDragEnd}
+      whileDrag={{ scale: 1.02, boxShadow: '0 12px 32px rgba(0,0,0,0.5)' }}
+    >
+      <motion.div
+        layout
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -8 }}
+        transition={{ duration: 0.2 }}
+        onClick={() => onOpen(project.id)}
+        className="rounded-xl flex items-stretch overflow-hidden cursor-pointer transition-all hover:brightness-110"
+        style={{
+          background: `linear-gradient(135deg, rgba(${theme.rgb}, 0.08), rgba(15,24,41,0.5))`,
+          border: `1px solid rgba(${theme.rgb}, 0.25)`,
+          boxShadow: `0 2px 12px rgba(0,0,0,0.3)`,
+        }}
+      >
+        {/* Drag handle + position badge — the only part that starts a
+            drag, and the only part with touch-action disabled, so
+            scrolling the rest of the row still works. */}
+        <div
+          className="flex flex-col items-center justify-center px-3 py-3 flex-shrink-0 cursor-grab active:cursor-grabbing touch-none"
+          style={{
+            background: `rgba(${theme.rgb}, 0.12)`,
+            borderRight: `1px solid rgba(${theme.rgb}, 0.15)`,
+          }}
+          onClick={(e) => e.stopPropagation()}
+          onPointerDown={(e) => dragControls.start(e)}
+        >
+          <span
+            className="text-[10px] font-black tracking-widest mb-0.5 aperture-header"
+            style={{ color: theme.text }}
+          >
+            {position}
+          </span>
+          <GripVertical className="h-3.5 w-3.5 opacity-50" style={{ color: theme.text }} />
+        </div>
+
+        {/* Project info */}
+        <div className="flex-1 min-w-0 py-3 px-3.5">
+          <h4 className="text-sm font-bold text-[var(--brand-text-primary)] leading-tight aperture-header line-clamp-1">
+            {project.title}
+          </h4>
+          <p className="text-[11px] text-[var(--brand-text-secondary)] opacity-60 mt-0.5">
+            {formatRelativeTime(project.last_active || project.updated_at)}
+          </p>
+        </div>
+
+        {/* Unpin */}
+        <button
+          onClick={(e) => onUnpin(e, project.id)}
+          aria-label={`Remove ${project.title} from Up Next`}
+          className="flex items-center justify-center px-3 flex-shrink-0 transition-colors hover:bg-white/5"
+          style={{ color: 'var(--brand-text-muted)' }}
+        >
+          <X className="h-4 w-4 opacity-60 hover:opacity-100" />
+        </button>
+      </motion.div>
+    </Reorder.Item>
+  )
 }
 
 export function UpNextShelf() {
@@ -83,73 +168,16 @@ export function UpNextShelf() {
         className="flex flex-col gap-2.5"
       >
         <AnimatePresence initial={false}>
-          {displayed.map((project, i) => {
-            const theme = getTheme(project.type || 'other', project.title, project.metadata?.tags)
-            const position = i + 1
-            return (
-              <Reorder.Item
-                key={project.id}
-                value={project}
-                onDragEnd={handleReorderEnd}
-                whileDrag={{ scale: 1.02, boxShadow: '0 12px 32px rgba(0,0,0,0.5)' }}
-                className="touch-none"
-              >
-                <motion.div
-                  layout
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -8 }}
-                  transition={{ duration: 0.2 }}
-                  onClick={() => handleOpen(project.id)}
-                  className="rounded-xl flex items-stretch overflow-hidden cursor-pointer transition-all hover:brightness-110"
-                  style={{
-                    background: `linear-gradient(135deg, rgba(${theme.rgb}, 0.08), rgba(15,24,41,0.5))`,
-                    border: `1px solid rgba(${theme.rgb}, 0.25)`,
-                    boxShadow: `0 2px 12px rgba(0,0,0,0.3)`,
-                  }}
-                >
-                  {/* Drag handle + position badge */}
-                  <div
-                    className="flex flex-col items-center justify-center px-3 py-3 flex-shrink-0 cursor-grab active:cursor-grabbing"
-                    style={{
-                      background: `rgba(${theme.rgb}, 0.12)`,
-                      borderRight: `1px solid rgba(${theme.rgb}, 0.15)`,
-                    }}
-                    onClick={(e) => e.stopPropagation()}
-                    onPointerDown={(e) => e.stopPropagation()}
-                  >
-                    <span
-                      className="text-[10px] font-black tracking-widest mb-0.5 aperture-header"
-                      style={{ color: theme.text }}
-                    >
-                      {position}
-                    </span>
-                    <GripVertical className="h-3.5 w-3.5 opacity-50" style={{ color: theme.text }} />
-                  </div>
-
-                  {/* Project info */}
-                  <div className="flex-1 min-w-0 py-3 px-3.5">
-                    <h4 className="text-sm font-bold text-[var(--brand-text-primary)] leading-tight aperture-header line-clamp-1">
-                      {project.title}
-                    </h4>
-                    <p className="text-[11px] text-[var(--brand-text-secondary)] opacity-60 mt-0.5">
-                      {formatRelativeTime(project.last_active || project.updated_at)}
-                    </p>
-                  </div>
-
-                  {/* Unpin */}
-                  <button
-                    onClick={(e) => handleUnpin(e, project.id)}
-                    aria-label={`Remove ${project.title} from Up Next`}
-                    className="flex items-center justify-center px-3 flex-shrink-0 transition-colors hover:bg-white/5"
-                    style={{ color: 'var(--brand-text-muted)' }}
-                  >
-                    <X className="h-4 w-4 opacity-60 hover:opacity-100" />
-                  </button>
-                </motion.div>
-              </Reorder.Item>
-            )
-          })}
+          {displayed.map((project, i) => (
+            <ShelfRow
+              key={project.id}
+              project={project}
+              position={i + 1}
+              onOpen={handleOpen}
+              onUnpin={handleUnpin}
+              onDragEnd={handleReorderEnd}
+            />
+          ))}
         </AnimatePresence>
       </Reorder.Group>
     </div>

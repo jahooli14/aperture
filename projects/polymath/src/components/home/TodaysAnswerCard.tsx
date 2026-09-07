@@ -469,7 +469,6 @@ export function TodaysAnswerCard({
 
   return (
     <>
-    <FeelingPill />
     <div
       className="rounded-2xl p-5 flex flex-col overflow-hidden relative transition-all duration-700"
       style={{
@@ -593,6 +592,11 @@ export function TodaysAnswerCard({
           {windowMinutes == null ? 'Pick a time first' : 'Start session'}
         </button>
       </div>
+
+      {/* Below the action, not above the whole card — a light touch that
+          feeds the redirect/idea generator's calibration without acting
+          like a second thing to answer before the real one. */}
+      <FeelingPill />
 
       {/* Redirect — stopPropagation so tapping anything in here doesn't
           also fire the card's navigate-to-project click above. */}

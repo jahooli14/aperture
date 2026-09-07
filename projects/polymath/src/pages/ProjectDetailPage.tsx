@@ -5,7 +5,7 @@
 
 import { useEffect, useState, useRef, useMemo, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Loader2, MoreVertical, Check, X, GripVertical, Zap, Target, Star, Sprout, Pin, PinOff, Skull, ArrowLeft } from 'lucide-react'
+import { Loader2, MoreVertical, Check, X, GripVertical, Play, Target, Star, Sprout, Pin, PinOff, Skull, ArrowLeft } from 'lucide-react'
 import { useProjectStore } from '../stores/useProjectStore'
 import { useSessionStore } from '../stores/useSessionStore'
 import { SessionContract } from '../components/session/SessionContract'
@@ -973,7 +973,7 @@ export function ProjectDetailPage() {
                     color: 'rgb(var(--brand-primary-rgb))',
                   }}
                 >
-                  <Zap className="h-3.5 w-3.5 fill-current" /> Start session
+                  <Play className="h-3.5 w-3.5 fill-current" /> Start session
                 </button>
               )}
 

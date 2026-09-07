@@ -645,7 +645,7 @@ export function SessionContract({
                   >
                     {shape.text}
                     {shape.partial && (
-                      <span className="text-xs" style={secondaryTextStyle}> — a first piece, not the whole thing</span>
+                      <span className="text-xs" style={secondaryTextStyle}> — you'll pick up the rest next time</span>
                     )}
                   </span>
                   {shape.source === 'friction' && (
