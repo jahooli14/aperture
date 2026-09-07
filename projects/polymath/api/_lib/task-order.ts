@@ -38,6 +38,17 @@ export function normalizeTaskOrder<T extends OrderedLike>(tasks: T[]): (T & { or
 /**
  * Inserts new open tasks right after the last finished one -- i.e. at the
  * front of the open list. Used for what a close-out says comes next.
+ *
+ * The final renumber is by ARRAY POSITION, not by `normalizeTaskOrder`,
+ * and that distinction is the whole function. normalizeTaskOrder sorts by
+ * whatever `order` a task already carries -- so an incoming task built the
+ * way the close-out builds them, with `order: tasks.length`, sorted itself
+ * straight back to the end and undid the insertion completely. The unit
+ * test above it passed because it hands in a bare `{ id, done }` with no
+ * order at all; the one production caller never does. "What a close-out
+ * says comes next goes to the front of the open list" was true of the
+ * helper in isolation and false of the app, which is the only place it
+ * matters.
  */
 export function insertAfterDone<T extends OrderedLike, U extends OrderedLike>(
   tasks: T[],
@@ -47,7 +58,7 @@ export function insertAfterDone<T extends OrderedLike, U extends OrderedLike>(
   const firstOpen = ordered.findIndex(t => !t.done)
   const at = firstOpen === -1 ? ordered.length : firstOpen
   const next: (T | U)[] = [...ordered.slice(0, at), ...incoming, ...ordered.slice(at)]
-  return normalizeTaskOrder(next)
+  return next.map((t, order) => ({ ...t, order })) as ((T | U) & { order: number })[]
 }
 
 export interface SequencedStep {

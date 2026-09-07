@@ -47,7 +47,6 @@ import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useProjectStore } from '../stores/useProjectStore'
 import { useMemoryStore } from '../stores/useMemoryStore'
-import { useContextEngineStore } from '../stores/useContextEngineStore'
 import { useJourneyStore } from '../stores/useJourneyStore'
 import { useSessionStore } from '../stores/useSessionStore'
 import { useAuthContext } from '../contexts/AuthContext'
@@ -68,19 +67,29 @@ export function HomePage() {
   const fetchProjects = useProjectStore(s => s.fetchProjects)
   const projects = useProjectStore(s => s.projects)
   const fetchMemories = useMemoryStore(s => s.fetchMemories)
-  const setContext = useContextEngineStore(s => s.setContext)
   const onboardingCompletedAt = useJourneyStore(s => s.onboardingCompletedAt)
   const startSession = useJourneyStore(s => s.startSession)
+  // One thing on screen at a time. True whenever the answer card has taken
+  // the screen: the chips, the focus thread, the full deck, or an open
+  // session in ANY of its phases — picking the window, the two minutes of
+  // planning, the hour itself, the close-out. Everything under it is a
+  // second surface competing with the one thing the user just opened.
+  const [cardOwnsScreen, setCardOwnsScreen] = useState(false)
+
   // The row used to be hidden when it had no projects, because a bare
   // "everything else" header over nothing reads as a bug. It always ends
   // with the "suggest a project" card now, so it is never empty — and a
   // shelf with nothing warm on it is exactly when that card earns its
   // place most.
-  // While a session is actually running, the rest of the page is other
-  // projects competing for attention against the one thing you sat down
-  // to do -- hidden until it ends, same reasoning as the answer card
-  // itself going OLED-black for the running phase.
+  // A session running anywhere in the app (the standalone /session route
+  // included) clears the page too, so coming back to home mid-hour never
+  // lands on a wall of other projects.
   const sessionRunning = useSessionStore(s => s.active != null)
+  const clearPage = sessionRunning || cardOwnsScreen
+  // The suggestions deck opens under the "everything else" row and is a
+  // full surface of its own, so what sits BELOW it goes — the row itself
+  // stays, because the deck is anchored to it.
+  const [deckOpen, setDeckOpen] = useState(false)
 
   const [error, setError] = useState<string | null>(null)
 
@@ -102,7 +111,6 @@ export function HomePage() {
 
   useEffect(() => {
     if (!isAuthenticated) return
-    setContext('home', 'home', 'Home')
     if (onboardingCompletedAt) startSession()
   }, [isAuthenticated])
 
@@ -239,15 +247,20 @@ export function HomePage() {
               — that used to produce two stacked glass cards with duplicate
               headers and duplicate input fields. */}
           <motion.div {...stackTransition(1)}>
-            <TodaysAnswerCard />
+            <TodaysAnswerCard onExpandedChange={setCardOwnsScreen} />
           </motion.div>
 
           {/* Everything below is other projects and other things to look at
               — exactly what a running session is meant to hold your
               attention against, so all of it hides until the session ends.
               Same reasoning as the answer card itself going OLED-black for
-              the running phase, just at the page level. */}
-          {!sessionRunning && (
+              the running phase, just at the page level.
+
+              It hides for an expanded answer card too: opening the chips,
+              the focus thread or the deck means you're looking at that,
+              and leaving three more sections under it is the menu the
+              whole stack exists to avoid. */}
+          {!clearPage && (
             <>
               {/* The attention budget (SPEC.md) — at most ONE of: a deferred
                   close-out, the monthly mirror, the live-project re-ask, a
@@ -270,7 +283,7 @@ export function HomePage() {
               <div className="section-seam" aria-hidden />
               <h2 className="section-header" style={{ margin: '0 0 10px' }}>everything <span>else</span></h2>
               <motion.div {...stackTransition(2)}>
-                <EverythingElseMini />
+                <EverythingElseMini onExpandedChange={setDeckOpen} />
               </motion.div>
 
               {/* "Worth a look" (ReviewRotation) removed by the execution
@@ -284,6 +297,12 @@ export function HomePage() {
                   a second resurfacing mechanism sitting unused is exactly the
                   fragmentation this rebuild is clearing out. */}
 
+              {/* Everything below the row goes while the suggestions deck
+                  is open — it's a full surface, and leaving two more
+                  sections stacked under it is the menu this page exists to
+                  avoid. */}
+              {!deckOpen && (
+                <>
               <div className="section-seam" aria-hidden />
 
               {/* Section 3 — Now consuming. Identity layer.
@@ -291,8 +310,13 @@ export function HomePage() {
                   dropdowns hold articles from the reading queue and RSS feeds.
                   Deferred: it fetches the reading queue + RSS on mount, so we
                   hold it back until it's near the viewport rather than letting
-                  it compete with the first paint. */}
-              <h2 className="section-header" style={{ margin: '0 0 10px' }}>now <span>consuming</span></h2>
+                  it compete with the first paint.
+
+                  The section header lives inside the component now. It was
+                  here, above a widget that returns null when there's nothing
+                  being consumed — so an empty identity layer printed "now
+                  consuming" over blank page, the one thing every section on
+                  this stack is meant never to do. */}
               <motion.div {...stackTransition(4)}>
                 <DeferMount minHeight={120}>
                   <ConsumingWidget />
@@ -314,11 +338,17 @@ export function HomePage() {
                   <ThoughtOfTheDay />
                 </DeferMount>
               </motion.div>
+                </>
+              )}
             </>
           )}
 
-          {/* Quiet exit to Settings — small, centred, low-contrast.
-              Lives at the very bottom so it never competes with content. */}
+          {/* Quiet exit to Settings — small, centred, low-contrast. Lives
+              at the very bottom so it never competes with content, and
+              goes with everything else when the card takes the screen: a
+              lone Settings link under a running session is the whole
+              "one thing on screen" rule undone by its own footer. */}
+          {!clearPage && (
           <motion.div {...stackTransition(6)}>
             <div className="pt-10 pb-2 flex justify-center">
               <button
@@ -331,6 +361,7 @@ export function HomePage() {
               </button>
             </div>
           </motion.div>
+          )}
 
         </div>
 

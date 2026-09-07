@@ -35,7 +35,10 @@ import type { RSSFeedItem as RSSItem } from '../types/rss'
 // Lazy load heavy dialog components to reduce initial bundle size
 const ProcessingDebugPanel = lazy(lazyRetry(() => import('../components/reading/ProcessingDebugPanel').then(m => ({ default: m.ProcessingDebugPanel }))))
 
-type FilterTab = 'queue' | 'updates' | 'unread' | 'reading' | 'archived'
+// 'good' is the shelf of articles the reader's end-of-article verdict kept
+// — the ones that actually count towards project ideas. Without it the
+// verdict would file things somewhere the user can never look at again.
+type FilterTab = 'queue' | 'updates' | 'unread' | 'reading' | 'good' | 'archived'
 
 /**
  * Helper to find the article-type list and return its path.
@@ -634,6 +637,8 @@ export function ReadingPage() {
       return safeArticles.filter((a) => a.status === 'unread' && !(a.tags && a.tags.includes('rss')))
     } else if (activeTab === 'reading') {
       return safeArticles.filter((a) => a.status === 'reading')
+    } else if (activeTab === 'good') {
+      return safeArticles.filter((a) => a.resonance === 'good')
     } else {
       return safeArticles.filter((a) => a.status === activeTab)
     }
@@ -683,6 +688,7 @@ export function ReadingPage() {
     if (tab === 'queue') return safeArticles.filter(a => a.status !== 'archived' && !(a.tags && a.tags.includes('rss'))).length
     if (tab === 'unread') return safeArticles.filter(a => a.status === 'unread' && !(a.tags && a.tags.includes('rss'))).length
     if (tab === 'reading') return safeArticles.filter(a => a.status === 'reading').length
+    if (tab === 'good') return safeArticles.filter(a => a.resonance === 'good').length
     if (tab === 'updates') {
       const currentCount = Array.isArray(rssItems) ? rssItems.length : 0
       // Show current count with + to indicate there may be more on next reload
@@ -699,6 +705,7 @@ export function ReadingPage() {
     { id: 'queue', label: 'All', count: getTabCount('queue') },
     { id: 'unread', label: 'Unread', count: getTabCount('unread') },
     { id: 'reading', label: 'Reading', count: getTabCount('reading') },
+    { id: 'good', label: 'Good', count: getTabCount('good') },
     { id: 'archived', label: 'Archived', count: getTabCount('archived') },
     { id: 'updates', label: 'RSS', count: getTabCount('updates') },
   ]
@@ -973,6 +980,7 @@ export function ReadingPage() {
                    activeTab === 'archived' ? 'Archive' :
                    activeTab === 'reading' ? 'In progress' :
                    activeTab === 'unread' ? 'Unread' :
+                   activeTab === 'good' ? 'The ones you kept' :
                    'Queue'}
                 </h2>
                 <div className="px-2 py-0.5 rounded-lg bg-[var(--glass-surface)] border border-white/5 text-[10px] font-bold text-brand-primary">

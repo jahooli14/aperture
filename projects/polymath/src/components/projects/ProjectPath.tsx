@@ -18,6 +18,8 @@ import { handleInputFocus } from '../../utils/keyboard'
 import { useConfirmDialog } from '../ui/confirm-dialog'
 import type { Task } from './TaskList'
 
+import { reorderWithinPhase } from './projectPathOps'
+
 interface ProjectPathProps {
   tasks: Task[]
   highlightedTasks?: any[]
@@ -159,29 +161,8 @@ export function ProjectPath({ tasks, highlightedTasks = [], onUpdate, projectId 
   }
 
   const handleReorderInPhase = useCallback((draggedTaskId: string, targetTaskId: string) => {
-    if (draggedTaskId === targetTaskId) return
-    const draggedTask = tasks.find(t => t.id === draggedTaskId)
-    const targetTask = tasks.find(t => t.id === targetTaskId)
-    if (!draggedTask || !targetTask) return
-    if (getPhase(draggedTask) !== getPhase(targetTask)) return
-    if (draggedTask.done || targetTask.done) return
-
-    const phase = getPhase(draggedTask)
-    const phaseTasks = tasks
-      .filter(t => getPhase(t) === phase && !t.done)
-      .sort((a, b) => a.order - b.order)
-    const otherTasks = tasks.filter(t => !(getPhase(t) === phase && !t.done))
-
-    const fromIdx = phaseTasks.findIndex(t => t.id === draggedTaskId)
-    const toIdx = phaseTasks.findIndex(t => t.id === targetTaskId)
-    if (fromIdx === -1 || toIdx === -1) return
-
-    const reordered = [...phaseTasks]
-    const [moved] = reordered.splice(fromIdx, 1)
-    reordered.splice(toIdx, 0, moved)
-
-    const merged = [...otherTasks, ...reordered]
-    onUpdate(merged.map((t, i) => ({ ...t, order: i })))
+    const next = reorderWithinPhase(tasks, draggedTaskId, targetTaskId, getPhase)
+    if (next) onUpdate(next)
   }, [tasks, onUpdate])
 
   const handleEstimateChange = (taskId: string, currentEstimate: number = 0) => {

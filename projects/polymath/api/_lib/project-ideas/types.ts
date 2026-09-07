@@ -115,7 +115,7 @@ export interface GatherResult {
   list_items: Array<{ id: string; content: string; list_type: string; list_title: string | null; status: string; created_at: string; reaction: 'sparked' | 'off' | 'make' | null; user_rating: number | null }>
   active_projects: Array<{ id: string; title: string; description: string | null; status: string; tags: string[]; blocker?: string | null; last_bookmark?: string | null; updated_at: string; embedding?: number[] | string | null }>
   dormant_projects: Array<{ id: string; title: string; description: string | null; status: string; blocker?: string | null; last_bookmark?: string | null; updated_at: string; embedding?: number[] | string | null }>
-  reading: Array<{ id: string; title: string | null; excerpt: string | null; source: string | null; created_at: string; embedding?: number[] | string | null }>
+  reading: Array<{ id: string; title: string | null; excerpt: string | null; source: string | null; created_at: string; resonance?: 'good' | 'not_for_me' | null; themes?: string[] | null; embedding?: number[] | string | null }>
   highlights: Array<{ id: string; quote: string; article_title: string | null; created_at: string }>
   prior_suggestions: Array<{ id: string; title: string; status: string }>
   ie_ideas: Array<{ id: string; title: string; description: string; status: string; rejection_reason: string | null }>

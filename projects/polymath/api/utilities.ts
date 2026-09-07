@@ -51,8 +51,9 @@ import { shapeSession } from './_lib/session-shaper.js'
 import { shapeProjectFromDump } from './_lib/project-shaping.js'
 import { generateTaskSpine, generateFirstCutTasks, toStoredTasks } from './_lib/task-spine.js'
 import { debriefSession, type DebriefOpenTask } from './_lib/debrief-matcher.js'
-import { bumpEstimate } from './_lib/session-estimate.js'
-import { insertAfterDone, normalizeTaskOrder } from './_lib/task-order.js'
+import { normalizeTaskOrder } from './_lib/task-order.js'
+import { handleFixQueue } from './_lib/fix-queue/route.js'
+import { reconcileCloseout, parseTicked } from './_lib/session-closeout.js'
 import { judgeFinishLine } from './_lib/finish-line.js'
 import { readCycleState, cycleLabel, rollToNextCycle, lastCycleSteps } from './_lib/project-cycles.js'
 import { pickNextSparkType, type SparkHistoryEntry } from './_lib/spark-types.js'
@@ -83,6 +84,11 @@ const EXECUTION_PROPOSALS_RESOURCES = new Set([
   'generate-morph', 'drift-decay', 'mine-joints', 'generate-composite',
   'pending', 'accept', 'reject',
 ])
+// Fix Queue, folded in from its own serverless function to stay under
+// Vercel's Hobby cap of 12. Routed on `action`, which nothing else in this
+// file uses, so it can't collide with the `resource` sets above -- note
+// 'reject' means different things to each and never meets.
+const FIX_QUEUE_ACTIONS = new Set(['draft-pending', 'run-fixes', 'approve', 'reject', 'list'])
 
 export const config = {
   // Vercel caps execution at 60s by default. Bumped to 300s for
@@ -99,6 +105,9 @@ export const config = {
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const resource = req.query.resource as string
+
+  const action = req.query.action
+  if (typeof action === 'string' && FIX_QUEUE_ACTIONS.has(action)) return handleFixQueue(req, res)
 
   // Execution rebuild (SPEC.md) — routed by disjoint resource-name sets so
   // none of the checks below cost anything extra for the pre-existing
@@ -1264,7 +1273,7 @@ Do NOT ask what done looks like. Plenty of real projects are ongoing and have no
 ` : phase === 'stale' ? `THEY'VE BEEN AWAY FOR ${daysSinceActive} DAYS.
 - greeting: Acknowledge the gap honestly and name the next step on the list, so picking it up is one decision, not two.
 - focusSuggestion: One tiny concrete thing — not "get back into it" but e.g. "Open the file and read the last paragraph you wrote."
-- proactiveQuestion: "What's actually blocking you from [specific next task]?"
+- proactiveQuestion: "What's the next step on [specific next task]?" -- about the work, not about them.
 ` : phase === 'closing' ? `HOME STRETCH — ${progressPercent}% of the current list done.
 - greeting: Name what's left on the list.
 - focusSuggestion: Name the specific remaining task most likely to close this out.
@@ -1272,13 +1281,13 @@ Do NOT ask what done looks like. Plenty of real projects are ongoing and have no
 ` : `BUILDING — steps in flight.
 - greeting: Reference what they last did or the next step by name.
 - focusSuggestion: Name the specific step to do this session.
-- proactiveQuestion: ONE practical question. Examples: "Is [next task] actually the right next move, or are you avoiding [harder task]?" / "Does [next task] still need doing, or has it moved on?"
+- proactiveQuestion: ONE practical question about the WORK. Examples: "Does [next task] still need doing, or has it moved on?" / "Is [next task] one sitting, or does it need splitting?" Never ask whether they're avoiding, resisting or putting something off -- you cannot see that, and guessing at it reads as an accusation.
 `}
 
 Rules for ALL states:
 ${CHAT_TURN_RULES}
 ${PLAIN_ENGLISH_RULES}
-- No filler. No "Great to see you", "Welcome back", "Let's dive in", "Let's explore".
+- No filler. No "Great to see you", "Welcome back", "Let's dive in", "Let's explore", "Time to kick off".
 - Short sentences. Say it straight. Second person ("you").
 - Always reference specific steps by name. Never be vague.
 - Never ask what done looks like${hasGoal ? '' : ' — this project may be an ongoing thing with no end, and that is fine'}.
@@ -2157,6 +2166,16 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
       return res.status(500).json({ error: insertErr.message })
     }
 
+    // Sitting down to it is already enough to call the project active --
+    // waiting for the close would leave "LONG QUIET" on screen for the
+    // whole hour you spend working on it.
+    const { error: touchErr } = await supabase
+      .from('projects')
+      .update({ last_active: new Date().toISOString() })
+      .eq('id', project_id)
+      .eq('user_id', userId)
+    if (touchErr) console.warn('[utilities/sessions] could not mark the project active:', touchErr.message)
+
     return res.status(200).json({
       session,
       shapes,
@@ -2192,77 +2211,13 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
     const text = typeof closeout_text === 'string' ? closeout_text.trim() : ''
     const moved = text.length > 0 ? await classifyMoved(text) : null
 
-    // What actually got ticked off. Until now the ticks only pre-filled the
-    // close-out box and were then thrown away — so "the tasks have been
-    // checked off properly" was never true of the data, and the shaper had
-    // no way to know what was already finished.
-    //
-    // Two code traces independently found the same failure: the shaper's
-    // own prompt teaches it to paraphrase the task it's grounded in ("Fix
-    // the transition out of track two" -> "Play track two from the top and
-    // find where it breaks"), so matching ticked text against stored task
-    // text silently missed almost every real completion. Each ticked item
-    // now carries the real task id it was grounded in (threaded through
-    // session-grounding.ts's citation check), and that id is what gets
-    // matched -- text is kept only as a fallback for items with no id
-    // (the ignition move, offline-derived shapes, anything typed by hand).
-    type TickedItem = { text: string; taskId: string | null; partial: boolean }
-    const ticked: TickedItem[] = Array.isArray(done_items)
-      ? done_items
-          .map((x: unknown) => {
-            if (typeof x === 'string') return { text: x, taskId: null, partial: false }
-            if (x && typeof x === 'object' && typeof (x as any).text === 'string') {
-              return {
-                text: (x as any).text,
-                taskId: typeof (x as any).taskId === 'string' ? (x as any).taskId : null,
-                partial: (x as any).partial === true,
-              }
-            }
-            return null
-          })
-          .filter((x: TickedItem | null): x is TickedItem => !!x)
-      : []
-    const tickedTaskIds = new Set(ticked.map(t => t.taskId).filter((id): id is string => !!id))
-    const tickedTextLower = new Set(ticked.map(t => t.text.toLowerCase().trim()))
+    // What actually got ticked off, and what that does to the task list.
+    // The reconciliation itself is pure and lives in session-closeout.ts --
+    // it was ~150 lines inline here, threaded through four awaited
+    // Supabase calls, so the one place the app rewrites a project's plan
+    // on the user's behalf could not be tested at all.
+    const ticked = parseTicked(done_items)
     const sessionItems: any[] = Array.isArray(session.items) ? session.items : []
-    const itemsWithOutcome = sessionItems.map((it: any) => {
-      const itText = typeof it === 'string' ? it : it?.text
-      const itTaskId = typeof it === 'object' ? it?.taskId : null
-      const byText = tickedTextLower.has(String(itText).toLowerCase().trim())
-      // Pieces of one step share its id, so only the text says which
-      // piece was ticked.
-      const done = it?.partial === true ? byText : ((itTaskId && tickedTaskIds.has(itTaskId)) || byText)
-      return { ...it, done }
-    })
-
-    // A split step: the session showed pieces of ONE step. Ticking every
-    // piece finishes the step; ticking some of them is progress on it,
-    // recorded as such, never a false "done".
-    const piecesByStep = new Map<string, { total: number; ticked: string[] }>()
-    for (const it of sessionItems) {
-      if (!it || typeof it !== 'object' || it.partial !== true || typeof it.taskId !== 'string') continue
-      const entry = piecesByStep.get(it.taskId) ?? { total: 0, ticked: [] }
-      entry.total++
-      if (tickedTaskIds.has(it.taskId) && tickedTextLower.has(String(it.text).toLowerCase().trim())) entry.ticked.push(String(it.text))
-      piecesByStep.set(it.taskId, entry)
-    }
-
-    const { error: updateErr } = await supabase
-      .from('sessions')
-      .update({
-        ended_at: endedAt.toISOString(),
-        duration_minutes: durationMinutes,
-        closeout_text: text || null,
-        moved,
-        items: itemsWithOutcome,
-      })
-      .eq('id', session_id)
-      .eq('user_id', userId)
-
-    if (updateErr) {
-      console.error('[utilities/sessions] close update failed:', updateErr)
-      return res.status(500).json({ error: updateErr.message })
-    }
 
     // ── Task-list reconciliation, all in one pass ──────────────────────
     // Every write below happens against ONE in-memory working copy, so the
@@ -2273,121 +2228,73 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
       .select('title, metadata')
       .eq('id', session.project_id).eq('user_id', userId).single()
     const currentMetadata = projRow?.metadata ?? {}
-    let tasks: any[] = Array.isArray(currentMetadata?.tasks) ? [...currentMetadata.tasks] : []
-    let tasksChanged = false
-    const markedDoneTexts: string[] = []
-    const createdTexts: string[] = []
-    const progressNoted: string[] = []
+    const storedTasks: any[] = Array.isArray(currentMetadata?.tasks) ? currentMetadata.tasks : []
 
-    const markDoneById = (id: string) => {
-      const idx = tasks.findIndex(t => t?.id === id && !t?.done)
-      if (idx === -1) return
-      // A finished step has no "where I got to" any more.
-      const { progress_note: _n, progress_at: _a, ...rest } = tasks[idx]
-      tasks[idx] = { ...rest, done: true, completed_at: endedAt.toISOString() }
-      tasksChanged = true
-      markedDoneTexts.push(String(tasks[idx].text))
-    }
-    const noteProgress = (id: string, note: string) => {
-      const idx = tasks.findIndex(t => t?.id === id && !t?.done)
-      if (idx === -1) return
-      tasks[idx] = { ...tasks[idx], progress_note: note, progress_at: endedAt.toISOString() }
-      tasksChanged = true
-      progressNoted.push(`${tasks[idx].text} — ${note}`)
-    }
-    let seq = 0
-    const newTask = (text: string, done: boolean, origin: string, source: string | null) => ({
-      id: `t-${endedAt.getTime()}-${seq++}`,
-      text,
-      done,
-      created_at: endedAt.toISOString(),
-      ...(done ? { completed_at: endedAt.toISOString() } : {}),
-      order: tasks.length,
-      origin,
-      source,
+    // The voice debrief is the one model call in the reconciliation, so it
+    // resolves here and goes in as plain data. It reads the WHOLE open
+    // list, not just what was on screen -- people regularly do something
+    // unplanned mid-session and it should still land as real progress.
+    const debrief = text
+      ? await debriefSession(
+          text,
+          storedTasks
+            .filter(t => !t.done && typeof t.id === 'string' && typeof t.text === 'string')
+            .map(t => ({ id: t.id, text: t.text }) as DebriefOpenTask),
+          projRow?.title || 'this project',
+        )
+      : null
+
+    const outcome = reconcileCloseout({
+      tasks: storedTasks,
+      sessionItems,
+      ticked,
+      endedAt,
+      windowMinutes: typeof session.window_minutes === 'number' ? session.window_minutes : null,
+      durationMinutes,
+      debrief,
     })
-    const createDoneTask = (text: string, origin: string, source: string | null) => {
-      tasks.push(newTask(text, true, origin, source))
-      tasksChanged = true
-      markedDoneTexts.push(text)
-    }
+    const tasks = outcome.tasks
+    const tasksChanged = outcome.changed
+    const markedDoneTexts = outcome.markedDone
+    const createdTexts = outcome.created
+    const nextAddedTexts = outcome.nextAdded
+    const progressNoted = outcome.progressNoted
 
-    // Ticked items: id match first (survives any paraphrasing), text match
-    // as a fallback for items that were never grounded to a task at all. A
-    // "pending-" id is a session line that was never written to the
-    // project -- ticking it is what promotes it from provisional to real;
-    // left unticked, it simply never existed. A partial item is a piece of
-    // a step, handled below, never a tick on the whole step.
-    for (const t of ticked) {
-      if (!t.taskId || t.partial) continue
-      if (t.taskId.startsWith('pending-')) {
-        createDoneTask(t.text, 'session', null)
-        continue
-      }
-      markDoneById(t.taskId)
-    }
-    for (const t of ticked) {
-      if (t.taskId || t.partial) continue
-      const idx = tasks.findIndex(x => !x.done && typeof x.text === 'string' && x.text.toLowerCase().trim() === t.text.toLowerCase().trim())
-      if (idx !== -1) markDoneById(tasks[idx].id)
-    }
-    for (const [stepId, pieces] of piecesByStep) {
-      if (pieces.ticked.length === 0) continue
-      if (pieces.ticked.length >= pieces.total) markDoneById(stepId)
-      else noteProgress(stepId, `did: ${pieces.ticked.map(p => p.replace(/[.!?]+$/, '')).join('; ')}`)
-    }
+    const { error: updateErr } = await supabase
+      .from('sessions')
+      .update({
+        ended_at: endedAt.toISOString(),
+        duration_minutes: durationMinutes,
+        closeout_text: text || null,
+        moved,
+        items: outcome.itemsWithOutcome,
+      })
+      .eq('id', session_id)
+      .eq('user_id', userId)
 
-    // Voice debrief: reconciled against the WHOLE open list, not just what
-    // was on screen this session -- someone regularly does something
-    // unplanned mid-session, and it should still land as real progress.
-    // What they said comes after the ticks, so a spoken "got as far as X"
-    // on a step overrides the mechanical "did: piece one" note.
-    const nextAddedTexts: string[] = []
-    if (text) {
-      const openForDebrief: DebriefOpenTask[] = tasks
-        .filter(t => !t.done && typeof t.id === 'string' && typeof t.text === 'string')
-        .map(t => ({ id: t.id, text: t.text }))
-      const debrief = await debriefSession(text, openForDebrief, projRow?.title || 'this project')
-      debrief.doneTaskIds.forEach(markDoneById)
-      debrief.newDone.forEach(t => createDoneTask(t, 'closeout', 'you said it at the end of a session'))
-      debrief.progress.forEach(p => noteProgress(p.taskId, p.note))
-      // What comes next is, by definition, the very next thing: it goes at
-      // the front of the open list, not after the eight steps already there.
-      if (debrief.next.length > 0) {
-        const incoming = debrief.next.map(t => newTask(t, false, 'closeout', 'you said it at the end of a session'))
-        tasks = insertAfterDone(tasks, incoming)
-        tasksChanged = true
-        debrief.next.forEach(t => { createdTexts.push(t); nextAddedTexts.push(t) })
-      }
-    }
-    if (tasksChanged) tasks = normalizeTaskOrder(tasks)
-
-    // A task that was in this session's plan, never ticked, and the
-    // session ran its full window anyway -- real evidence the estimate
-    // was too low, cheap to nudge without another model call.
-    if (typeof session.window_minutes === 'number' && durationMinutes >= session.window_minutes) {
-      const unfinishedTaskIds = new Set(
-        itemsWithOutcome
-          .filter((it: any) => !it.done && typeof it.taskId === 'string' && !String(it.taskId).startsWith('pending-'))
-          .map((it: any) => it.taskId),
-      )
-      if (unfinishedTaskIds.size > 0) {
-        tasks = tasks.map(t => {
-          if (!unfinishedTaskIds.has(t.id) || !t.estimate_set || typeof t.estimated_minutes !== 'number') return t
-          tasksChanged = true
-          return { ...t, estimated_minutes: bumpEstimate(t.estimated_minutes) }
-        })
-      }
+    if (updateErr) {
+      console.error('[utilities/sessions] close update failed:', updateErr)
+      return res.status(500).json({ error: updateErr.message })
     }
 
     // Re-entry playback for next time, and MVS seeding/recompute.
     const projectUpdate: Record<string, unknown> = {}
     if (tasksChanged) projectUpdate.metadata = { ...currentMetadata, tasks }
 
-    if (text) {
-      projectUpdate.last_closeout_text = text
-      projectUpdate.last_session_ended_at = endedAt.toISOString()
-    }
+    // Working on a project is the strongest possible signal that it's
+    // alive, so it has to move `last_active` -- that is the field every
+    // recency and dormancy display actually reads (byRecency, the "1mo
+    // ago" line on a mini card, the shaper's own dormancyDays). It was
+    // never being set here, so an hour's work left the project still
+    // reading as untouched since whenever it was last edited by hand, and
+    // the home card would say "LONG QUIET" the morning after a session.
+    //
+    // The timestamps are also no longer gated on there being close-out
+    // text: a session that ran and was closed with nothing to say still
+    // ran. Only the text itself depends on there being text.
+    projectUpdate.last_active = endedAt.toISOString()
+    projectUpdate.last_session_ended_at = endedAt.toISOString()
+    if (text) projectUpdate.last_closeout_text = text
 
     if (typeof mvs_seed_minutes === 'number' && mvs_seed_minutes > 0) {
       // One-time seed from the user's own estimate, asked only on session one.
@@ -2419,7 +2326,7 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
     // finish line against what's actually been made and says which, so
     // the receipt can offer one honest action instead of a guess.
     let finish: { reached: boolean; reason: string } | null = null
-    const openLeft = tasks.filter(t => t && !t.done).length
+    const openLeft = outcome.openLeft
     const endGoal = typeof currentMetadata?.end_goal === 'string' ? currentMetadata.end_goal.trim() : ''
     if (tasksChanged && openLeft === 0 && markedDoneTexts.length > 0) {
       if (endGoal) {

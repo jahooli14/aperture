@@ -1,8 +1,19 @@
+/**
+ * Fix Queue's route handler.
+ *
+ * It used to BE the route (api/fix-queue.ts). Polymath sits on Vercel's
+ * Hobby tier, which caps a deployment at 12 serverless functions, and this
+ * legacy feature — kept only so existing drafts stay visible, with its cron
+ * disabled (CLAUDE.md) — was holding one of them. It's served by
+ * /api/utilities?action=... now, routed on a disjoint set of action names
+ * exactly as the execution resources already are. Nothing about its
+ * behaviour changed; only who calls it.
+ */
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { supabase, isSupabaseConfigured } from './_lib/idea-engine-v2/supabase.js'
-import { draftFix } from './_lib/fix-queue/drafter.js'
-import { executeFix } from './_lib/fix-queue/runner.js'
-import { getMissingRequirements, type FixDraft, type FixStatus } from './_lib/fix-queue/types.js'
+import { supabase, isSupabaseConfigured } from '../idea-engine-v2/supabase.js'
+import { draftFix } from './drafter.js'
+import { executeFix } from './runner.js'
+import { getMissingRequirements, type FixDraft, type FixStatus } from './types.js'
 
 const USER_ID = process.env.IDEA_ENGINE_USER_ID
 
@@ -15,7 +26,7 @@ async function getUserFromRequest(req: VercelRequest): Promise<string | null> {
   return data?.user?.id || null
 }
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+export async function handleFixQueue(req: VercelRequest, res: VercelResponse) {
   const action = req.query.action as string
 
   // Cron actions require bearer token auth

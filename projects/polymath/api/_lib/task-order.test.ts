@@ -37,6 +37,31 @@ describe('insertAfterDone', () => {
     expect(result.map(t => t.order)).toEqual([0, 1, 2, 3])
   })
 
+  it('ignores an order the incoming task already carries', () => {
+    // The close-out builds its new steps with `order: tasks.length`, so
+    // every real incoming task arrives carrying the HIGHEST order in the
+    // list. Re-sorting on that sent it straight back to the end and undid
+    // the insertion -- the test above never caught it because it hands in
+    // a bare task with no order at all, which no caller does.
+    const tasks = [
+      { id: 'done1', done: true, order: 0 },
+      { id: 'open1', done: false, order: 1 },
+      { id: 'open2', done: false, order: 2 },
+    ]
+    const result = insertAfterDone(tasks, [{ id: 'next', done: false, order: 3 }])
+    expect(result.map(t => t.id)).toEqual(['done1', 'next', 'open1', 'open2'])
+    expect(result.map(t => t.order)).toEqual([0, 1, 2, 3])
+  })
+
+  it('keeps several incoming steps in the order they were said', () => {
+    const tasks = [{ id: 'done1', done: true, order: 0 }, { id: 'open1', done: false, order: 1 }]
+    const result = insertAfterDone(tasks, [
+      { id: 'first', done: false, order: 2 },
+      { id: 'second', done: false, order: 3 },
+    ])
+    expect(result.map(t => t.id)).toEqual(['done1', 'first', 'second', 'open1'])
+  })
+
   it('appends when everything is done', () => {
     const tasks = [{ id: 'done1', done: true, order: 0 }]
     expect(insertAfterDone(tasks, [{ id: 'next', done: false }]).map(t => t.id)).toEqual(['done1', 'next'])

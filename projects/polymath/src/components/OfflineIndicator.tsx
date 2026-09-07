@@ -16,6 +16,22 @@ export function OfflineIndicator() {
   const [isExpanded, setIsExpanded] = useState(false)
   const [wasOffline, setWasOffline] = useState(false)
 
+  // The offline bar is a full-width strip pinned to the very top, so
+  // anything else that pins itself to the top has to know it's there. It
+  // publishes its own height as --global-banner-h; the reader's toolbar
+  // offsets by it instead of being shoved half under it (which is exactly
+  // what used to happen, leaving article text visible through the pill).
+  useEffect(() => {
+    const showingBar = !isOnline
+    const root = document.documentElement
+    if (showingBar) {
+      root.style.setProperty('--global-banner-h', '36px')
+    } else {
+      root.style.removeProperty('--global-banner-h')
+    }
+    return () => { root.style.removeProperty('--global-banner-h') }
+  }, [isOnline])
+
   // Track when we come back online
   useEffect(() => {
     if (!isOnline) {
@@ -71,8 +87,8 @@ export function OfflineIndicator() {
   // Show offline warning
   if (!isOnline) {
     return (
-      <div className="fixed top-0 left-0 right-0 z-50">
-        <div className="flex items-center justify-center gap-2 px-4 py-2 bg-brand-primary text-[var(--brand-text-primary)]">
+      <div className="fixed top-0 left-0 right-0 z-[60]">
+        <div className="flex items-center justify-center gap-2 px-4 h-9 bg-brand-primary text-[var(--brand-text-primary)]">
           <WifiOff className="h-4 w-4" />
           <span className="text-sm font-medium">
             You're offline - changes will sync when reconnected

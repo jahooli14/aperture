@@ -9,7 +9,8 @@
  * pill, an icon) is needed to tell the two groups apart.
  */
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { ChevronDown } from 'lucide-react'
 import { useRecentNonPriorityProjects, useUpNextMiniProjects } from '../../stores/useProjectStore'
 import { ProjectMiniCard } from './ProjectMiniCard'
 import { ProjectIdeasHome } from './ProjectIdeasHome'
@@ -25,7 +26,15 @@ function relative(dateStr?: string): string {
   return `${Math.floor(days / 30)}mo ago`
 }
 
-export function EverythingElseMini() {
+export function EverythingElseMini({
+  onExpandedChange,
+}: {
+  /** Fires when the suggestions deck opens or closes, so the page can
+   *  clear what sits below it — same rule the answer card follows. The
+   *  deck is a full surface of its own; leaving two more sections under
+   *  it is the menu the whole stack exists to avoid. */
+  onExpandedChange?: (expanded: boolean) => void
+} = {}) {
   const recent = useRecentNonPriorityProjects(2)
   const upNext = useUpNextMiniProjects().slice(0, 2)
   // "Suggest a project" was three taps down — behind the answer card's
@@ -38,6 +47,7 @@ export function EverythingElseMini() {
   // empty state to hide: a shelf with nothing warm on it is exactly when
   // a suggestion is worth the most.
   const [showIdeas, setShowIdeas] = useState(false)
+  useEffect(() => { onExpandedChange?.(showIdeas) }, [showIdeas, onExpandedChange])
 
   return (
     <div className="space-y-3">
@@ -65,17 +75,23 @@ export function EverythingElseMini() {
         ))}
 
         {/* Dashed rather than glass or ghost: the other cards are projects
-            that already exist, and this one isn't a project yet. */}
+            that already exist, and this one isn't a project yet. The
+            chevron flips with state so it reads as a toggle even mid-scroll,
+            not as a stub project card. */}
         <div className="flex-shrink-0 w-[70vw] max-w-[260px] snap-start flex">
           <button
             onClick={() => setShowIdeas(v => !v)}
             aria-expanded={showIdeas}
-            className="w-full h-full rounded-2xl px-4 py-4 text-left flex flex-col justify-end transition-colors"
+            className="w-full h-full rounded-2xl px-4 py-4 text-left flex flex-col justify-end gap-2 transition-colors"
             style={{
               border: '1px dashed rgba(var(--brand-primary-rgb), 0.30)',
               background: showIdeas ? 'rgba(var(--brand-primary-rgb), 0.06)' : 'transparent',
             }}
           >
+            <ChevronDown
+              className="h-4 w-4 transition-transform"
+              style={{ transform: showIdeas ? 'rotate(180deg)' : 'none', opacity: 0.6 }}
+            />
             <span className="text-[15px] leading-snug font-medium">
               {showIdeas ? 'Hide suggestions' : 'Suggest a project'}
             </span>
@@ -83,7 +99,10 @@ export function EverythingElseMini() {
         </div>
       </div>
 
-      {showIdeas && <ProjectIdeasHome startExpanded />}
+      {/* onClose mirrors the row's own toggle — the deck can be closer to
+          where you're actually reading than the toggle card is once you've
+          scrolled the row away. */}
+      {showIdeas && <ProjectIdeasHome startExpanded onClose={() => setShowIdeas(false)} />}
     </div>
   )
 }

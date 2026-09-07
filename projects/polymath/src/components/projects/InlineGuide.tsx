@@ -194,8 +194,12 @@ export function InlineGuide({
         // Consumed once, right here, so a later unrelated visit doesn't
         // replay stale context.
         const handoff = consumeChatHandoff(project.id)
-        const hasPriorConversation = !!(project.metadata?.conversation as ChatTurn[] | undefined)?.length
-        const leadNote = handoff || (hasPriorConversation ? 'Continuing from earlier — this greeting is fresh, but the project remembers.' : undefined)
+        // Only a real handoff from Focus chat earns a lead note. There used
+        // to be a fallback line explaining that the greeting was freshly
+        // generated but the conversation was remembered -- which is the
+        // app narrating its own implementation at someone who just wanted
+        // to get on with the work.
+        const leadNote = handoff || undefined
         setMessages([{ kind: 'guide', content: opening, leadNote }])
       } catch {
         if (!cancelled) {
@@ -212,7 +216,8 @@ export function InlineGuide({
     // brief and seeds the thread once per project open. Adding
     // project.metadata would re-run it (and reset the visible thread) on
     // every background metadata write, e.g. a task checked off elsewhere.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // (The disable that used to sit here became redundant when the
+    // metadata read for the lead note was removed.)
   }, [project.id])
 
   // Scrolls the newest message into view within the page rather than

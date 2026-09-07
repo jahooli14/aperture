@@ -15,11 +15,18 @@ import { parseHTML } from 'linkedom'
 import { updateItemConnections } from './_lib/connection-logic.js' // New import
 import { MODELS } from './_lib/models.js'
 import { thinkingFragment } from './_lib/gemini-thinking.js'
+import { generateGist, type ArticleGist } from './_lib/article-gist.js'
 
 // rss-parser is used only for XML parsing now — fetching is done manually
 // in robustParseFeed below so we can present a full browser identity to
 // stubborn feeds (Cloudflare, UA-gated Substacks, etc.).
 const rssParser = new Parser({ timeout: 15000 })
+
+// How much work one sync does per feed. Each new item costs a full-text
+// extraction, so this is the knob that keeps the whole sync inside the
+// serverless time budget when a lot of feeds have all published at once.
+const RSS_ITEMS_PER_SYNC = 5
+const RSS_EXTRACT_TIMEOUT_MS = 12000
 
 /**
  * Browser-headers fetch + parse, for known canonical feed URLs (sync,
@@ -1295,6 +1302,154 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
   if (!userId) return res.status(401).json({ error: 'Sign in to access your data' })
   const { resource, id } = req.query
 
+  // GIST RESOURCE — the three bullets at the top of the reader.
+  //
+  // Called once as the article opens. The result is cached on the row, so
+  // the second open is free and the offline copy carries it too. A short
+  // article gets no gist at all (`gist: null`) rather than a padded one.
+  //
+  //   GET  ?resource=gist&id=<article>   — cached only, never calls Gemini
+  //   POST ?resource=gist&id=<article>   — generate if missing (`?force=1` to redo)
+  if (resource === 'gist') {
+    const articleId = Array.isArray(id) ? id[0] : id
+    if (!articleId || typeof articleId !== 'string') {
+      return res.status(400).json({ error: 'Article ID required' })
+    }
+
+    try {
+      const { data: article, error: fetchError } = await supabase
+        .from('reading_queue')
+        .select('id, title, source, content, excerpt, metadata')
+        .eq('id', articleId)
+        .eq('user_id', userId)
+        .maybeSingle()
+
+      if (fetchError) throw fetchError
+      if (!article) return res.status(404).json({ error: 'Article not found' })
+
+      const cached = (article.metadata as Record<string, unknown> | null)?.gist as ArticleGist | undefined
+      const force = req.query.force === '1' || req.query.force === 'true'
+
+      if (cached?.bullets?.length && !force) {
+        return res.status(200).json({ success: true, gist: cached, cached: true })
+      }
+
+      if (req.method !== 'POST') {
+        // GET is the cheap path — the reader uses it to render instantly
+        // from cache without ever risking a surprise API bill.
+        return res.status(200).json({ success: true, gist: null, cached: false })
+      }
+
+      const gist = await generateGist(article)
+
+      if (!gist) {
+        // Too short, or nothing worth showing came back. Remember that so
+        // we don't retry on every open.
+        await supabase
+          .from('reading_queue')
+          .update({
+            metadata: { ...(article.metadata as Record<string, unknown> || {}), gist_skipped_at: new Date().toISOString() },
+          })
+          .eq('id', articleId)
+          .eq('user_id', userId)
+        return res.status(200).json({ success: true, gist: null, cached: false })
+      }
+
+      const { error: updateError } = await supabase
+        .from('reading_queue')
+        .update({
+          metadata: { ...(article.metadata as Record<string, unknown> || {}), gist },
+          themes: gist.topics.length > 0 ? gist.topics : null,
+        })
+        .eq('id', articleId)
+        .eq('user_id', userId)
+
+      if (updateError) throw updateError
+
+      return res.status(200).json({ success: true, gist, cached: false })
+    } catch (error) {
+      console.error('[reading gist] Error:', error)
+      return res.status(500).json({ error: 'Failed to build the gist' })
+    }
+  }
+
+  // RESONANCE RESOURCE — the two buttons at the end of an article.
+  //
+  // This is the only thing that lets an article into the corpus. "This was
+  // good" means it can shape project ideas; "Not for me" means it never
+  // will. Either way the article is filed, because answering the question
+  // IS finishing it — there's no separate archive step to remember.
+  //
+  //   POST ?resource=resonance  { id, resonance: 'good' | 'not_for_me' | null }
+  //
+  // Passing null clears the verdict, which is what Undo sends.
+  if (resource === 'resonance' && req.method === 'POST') {
+    try {
+      const bodyId = (req.body?.id ?? id) as unknown
+      const articleId = Array.isArray(bodyId) ? bodyId[0] : bodyId
+      const verdict = req.body?.resonance ?? null
+
+      if (!articleId || typeof articleId !== 'string') {
+        return res.status(400).json({ error: 'Article ID required' })
+      }
+      if (verdict !== null && verdict !== 'good' && verdict !== 'not_for_me') {
+        return res.status(400).json({ error: "resonance must be 'good', 'not_for_me' or null" })
+      }
+
+      const { data: article, error: fetchError } = await supabase
+        .from('reading_queue')
+        .select('id, title, excerpt, embedding, status')
+        .eq('id', articleId)
+        .eq('user_id', userId)
+        .maybeSingle()
+
+      if (fetchError) throw fetchError
+      if (!article) return res.status(404).json({ error: 'Article not found' })
+
+      const now = new Date().toISOString()
+      const update: Record<string, unknown> = {
+        resonance: verdict,
+        resonance_at: verdict ? now : null,
+      }
+
+      if (verdict) {
+        update.status = 'archived'
+        update.archived_at = now
+        update.dismissed_at = null
+      } else {
+        // Undo puts it back where it was: read, but not filed.
+        update.status = 'reading'
+        update.archived_at = null
+      }
+
+      const { data: updated, error: updateError } = await supabase
+        .from('reading_queue')
+        .update(update)
+        .eq('id', articleId)
+        .eq('user_id', userId)
+        .select()
+        .single()
+
+      if (updateError) throw updateError
+
+      // Only a "good" article earns an embedding. Embedding everything was
+      // how feed noise got into semantic search in the first place.
+      if (verdict === 'good' && !article.embedding) {
+        generateArticleEmbeddingAndConnect(
+          articleId,
+          article.title || '',
+          article.excerpt || '',
+          userId,
+        ).catch(err => console.error('[reading resonance] Background embedding failed:', err))
+      }
+
+      return res.status(200).json({ success: true, article: updated })
+    } catch (error) {
+      console.error('[reading resonance] Error:', error)
+      return res.status(500).json({ error: 'Failed to save that' })
+    }
+  }
+
   // HIGHLIGHTS RESOURCE
   if (resource === 'highlights') {
     // POST - Create highlight
@@ -1521,7 +1676,7 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
         const newLimit = Number.isFinite(parsedNewLimit) && parsedNewLimit > 0 ? Math.min(parsedNewLimit, 100) : 20
         const newOffset = Number.isFinite(parsedNewOffset) && parsedNewOffset >= 0 ? parsedNewOffset : 0
 
-        const SELECT_COLS = 'id, url, title, excerpt, source, favicon_url, thumbnail_url, published_date, read_time_minutes, status, tags, created_at, pinned_at'
+        const SELECT_COLS = 'id, url, title, excerpt, source, favicon_url, thumbnail_url, published_date, read_time_minutes, status, tags, created_at, pinned_at, resonance'
 
         // Saved reads — anything the user has touched, or saved without an
         // rss tag. Pinned float to the top; rest by recency. Dismissed and
@@ -2186,52 +2341,89 @@ Return ONLY the JSON, no other text.`
           try {
             const feedData = await fetchFeedDirect(feed.feed_url)
 
-            // 1. Process new items
-            for (const item of feedData.items.slice(0, 5)) {
-              const existing = await supabase.from('reading_queue').select('id').eq('user_id', userId).eq('url', item.link || '').single()
-              if (existing.data) continue
+            // 1. Process new items.
+            //
+            // Every candidate is checked against the queue in ONE query
+            // rather than one round-trip each, and the Jina extraction that
+            // follows is the slow part — it used to run with no timeout at
+            // all, so a single hanging fetch could burn the whole function
+            // budget and the feeds after it in the list never synced.
+            const candidates = feedData.items
+              .slice(0, RSS_ITEMS_PER_SYNC)
+              .filter((item: any) => typeof item.link === 'string' && item.link.trim().length > 0)
 
-              const jinaUrl = `https://r.jina.ai/${item.link}`
-              const response = await fetch(jinaUrl, { headers: { 'Accept': 'application/json', 'X-Return-Format': 'json' } })
+            const candidateLinks = candidates.map((item: any) => item.link as string)
+            const { data: alreadyHave } = candidateLinks.length > 0
+              ? await supabase
+                  .from('reading_queue')
+                  .select('url')
+                  .eq('user_id', userId)
+                  .in('url', candidateLinks)
+              : { data: [] as { url: string }[] }
+            const known = new Set((alreadyHave ?? []).map(r => r.url))
+
+            for (const item of candidates) {
+              const link = item.link as string
+              if (known.has(link)) continue
+
+              // A link the URL parser chokes on can't be stored or opened,
+              // and throwing here used to abandon the rest of the feed.
+              let host: string
+              try {
+                host = new URL(link).hostname.replace('www.', '')
+              } catch {
+                console.warn('[RSS Sync] Skipping unparseable link:', link)
+                continue
+              }
+
               let content = item.contentSnippet || item.description || ''
 
-              const text = await response.text()
-              if (response.ok && text) {
-                try {
+              try {
+                const response = await fetchWithTimeout(
+                  `https://r.jina.ai/${link}`,
+                  RSS_EXTRACT_TIMEOUT_MS,
+                  { 'Accept': 'application/json', 'X-Return-Format': 'json' },
+                )
+                const text = response.ok ? await response.text() : ''
+                if (text) {
                   const result = JSON.parse(text)
                   const rawContent = result.data?.content || result.content || content
                   const cleanedMarkdown = cleanMarkdownContent(rawContent)
                   const parsedHtml = marked.parse(cleanedMarkdown)
                   const htmlString = typeof parsedHtml === 'string' ? parsedHtml : await (parsedHtml as any)
-                  content = cleanHtml(htmlString, item.link || '')
-                } catch (e) {
-                  console.error('[RSS Sync] Failed to parse Jina response for', item.link)
-                  // Fallback to basic cleaning if Jina fails
-                  content = '' // Reset to trigger fallback below
+                  content = cleanHtml(htmlString, link)
+                } else {
+                  content = cleanHtml(content, link)
                 }
-              } else {
-                content = cleanHtml(content, item.link || '')
+              } catch (extractErr) {
+                // Timed out, blocked, or unparseable JSON. The feed's own
+                // content is the fallback below — an item with a headline
+                // and a blurb still beats no item at all.
+                console.warn('[RSS Sync] Extraction failed for', link, extractErr instanceof Error ? extractErr.message : extractErr)
+                content = ''
               }
 
               // FALLBACK: If Jina failed or returned empty content, use feed content
               if (!content || content.length < 50) {
                 const feedContent = item['content:encoded'] || item.content || item.description || item.summary || ''
                 if (feedContent) {
-                  content = cleanHtml(feedContent, item.link || '')
+                  content = cleanHtml(feedContent, link)
                 }
               }
 
+              const words = stripHtml(content).split(/\s+/).filter(Boolean).length
+
               await supabase.from('reading_queue').insert([{
                 user_id: userId,
-                url: item.link || '',
+                url: link,
                 title: decodeHTMLEntities(item.title || 'Untitled'),
                 author: item.creator || item.author || null,
                 content: content || '',
                 excerpt: stripHtml(content).substring(0, 200),
                 published_date: item.pubDate || item.isoDate || null,
-                source: new URL(item.link || '').hostname.replace('www.', ''),
-                read_time_minutes: Math.ceil(stripHtml(content).split(/\s+/).length / 225),
-                word_count: stripHtml(content).split(/\s+/).length,
+                source: host,
+                read_time_minutes: Math.max(1, Math.ceil(words / 225)),
+                word_count: words,
                 status: 'unread',
                 tags: ['rss', 'auto-imported'],
                 processed: !!content

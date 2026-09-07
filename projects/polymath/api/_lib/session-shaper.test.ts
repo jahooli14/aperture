@@ -686,7 +686,14 @@ describe('shapeSession', () => {
     }
     const { shapeSession } = await import('./session-shaper.js')
     const result = await shapeSession(stubClient({ project: bigBacklog }), 'u1', 'p1', 20)
-    expect(result.truncatedCount).toBe(6)
+    // The UI renders this as "+N more on your list, not shown today", so
+    // it counts open steps that didn't make TODAY'S PLAN -- 30 on the
+    // list, 3 planned into twenty minutes, 27 left. It used to be
+    // `total - OPEN_TASK_LIMIT` (steps beyond the 24 the shaper even
+    // looks at), which said 6 here and said nothing at all for any
+    // project with fewer than 24 open steps, however much it left out.
+    expect(result.items).toHaveLength(3)
+    expect(result.truncatedCount).toBe(27)
   })
 
   it('throws on a reshape the model cannot serve, so the list on screen stays put', async () => {

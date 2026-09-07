@@ -53,6 +53,10 @@ export const CRINGE_PATTERNS: readonly RegExp[] = [
   /\bcore assumption embedded\b/i,
   /\b(constraint-based|structure-based)\s+\w+\b/i,
   /\binevitable in retrospect\b/i,
+  // Mind-reading: the app telling the user what they're feeling or dodging.
+  /\bare you (avoiding|resisting|putting off|scared of|afraid of)\b/i,
+  /\byou'?re (avoiding|resisting|procrastinating|stalling)\b/i,
+  /\bwhat'?s really (stopping|holding) you\b/i,
   /\bcouldn't see from inside\b/i,
   /\bthe moment when [a-z\s]+ makes [a-z\s]+ possible\b/i,
 ]
@@ -74,7 +78,10 @@ export const PLAIN_ENGLISH_RULES = `Plain English. Talk like a friend who's payi
 - One idea per sentence. Short sentences.
 - Concrete nouns. "Logic Pro trial expired" beats "your reliance on the 90-day trial."
 - No scare-quoted invented terms ("friction-over-function," "blind-edit").
+- NEVER guess at their state of mind. You cannot see whether they are avoiding, resisting, procrastinating, afraid or stuck, and saying so reads as an accusation from something with no standing to make one. Talk about the work, not the person.
 - If you can't say it plainly, stay silent.
+BAD: "Is that actually the right next move, or are you avoiding the hard part?"
+GOOD: "Does that still need doing, or has it moved on?"
 BAD: "Your multifaceted engagement with constraint-based creation unlocks transformative potential."
 GOOD: "You keep coming back to limits as a creative tool. This project fits that."`
 

@@ -29,7 +29,6 @@ import { fetchWithTimeout } from '../lib/network'
 import { useMemoryStore } from '../stores/useMemoryStore'
 import { usePin } from '../contexts/PinContext'
 
-import { useContextEngineStore } from '../stores/useContextEngineStore'
 import { SubtleBackground } from '../components/SubtleBackground'
 import { api } from '../lib/apiClient'
 
@@ -73,7 +72,7 @@ function BlockerField({ blocker, onSave }: { blocker?: string; onSave: (text: st
         className="block mb-2 italic text-xs"
         style={{
           fontFamily: 'var(--brand-font-body)',
-          color: 'rgba(252,211,77,0.75)',
+          color: 'var(--brand-text-secondary)',
           letterSpacing: '0.02em',
         }}
       >
@@ -91,7 +90,7 @@ function BlockerField({ blocker, onSave }: { blocker?: string; onSave: (text: st
               fontFamily: 'var(--brand-font-body)',
               lineHeight: 1.55,
               color: 'var(--brand-text-primary)',
-              borderColor: 'rgba(252,211,77,0.18)',
+              borderColor: 'var(--glass-border-bold)',
             }}
             rows={2}
             onKeyDown={e => {
@@ -111,7 +110,7 @@ function BlockerField({ blocker, onSave }: { blocker?: string; onSave: (text: st
               onClick={handleSave}
               disabled={saving}
               className="px-3.5 py-1.5 text-[11px] font-medium rounded-full transition-all"
-              style={{ background: 'rgba(252,211,77,0.16)', color: 'rgba(252,211,77,0.95)', border: '1px solid rgba(252,211,77,0.3)' }}
+              style={{ background: 'rgba(var(--brand-primary-rgb),0.12)', color: 'rgb(var(--brand-primary-rgb))', border: '1px solid rgba(var(--brand-primary-rgb),0.32)' }}
             >
               {saving ? 'Saving…' : 'Save'}
             </button>
@@ -146,6 +145,7 @@ export function ProjectDetailPage() {
   // isOnThisProjectsPage there) so the pending session shows inline here
   // instead — same state, one place it's presented.
   const windowMinutes = useSessionStore(s => s.windowMinutes)
+  const activeSessionProjectId = useSessionStore(s => s.active?.project_id ?? null)
   const [sessionOpen, setSessionOpen] = useState(false)
   const [replanning, setReplanning] = useState(false)
 
@@ -176,7 +176,6 @@ export function ProjectDetailPage() {
       setReplanning(false)
     }
   }
-  const { setContext, clearContext } = useContextEngineStore()
   const { pinnedItem, pinItem, unpinItem } = usePin()
 
   // Reactive selection from store
@@ -225,22 +224,6 @@ export function ProjectDetailPage() {
     setTimeout(() => setFlashTarget(prev => (prev === kind ? null : prev)), 1600)
   }, [])
 
-  // Listen for AI enrichment completion to refresh tasks
-  useEffect(() => {
-    const handleEnriched = (e: CustomEvent<{ projectId: string }>) => {
-      if (e.detail.projectId === id) {
-        console.log('[ProjectDetailPage] AI enrichment completed, refreshing...')
-        loadProjectDetails()
-        addToast({
-          title: 'New task suggestions',
-          description: 'Added below — accept or skip each one.',
-          variant: 'default',
-        })
-      }
-    }
-    window.addEventListener('projectEnriched', handleEnriched as EventListener)
-    return () => window.removeEventListener('projectEnriched', handleEnriched as EventListener)
-  }, [id])
   const [editingTitle, setEditingTitle] = useState(false)
   const [editingGoal, setEditingGoal] = useState(false)
   const [tempTitle, setTempTitle] = useState('')
@@ -259,12 +242,19 @@ export function ProjectDetailPage() {
   useEffect(() => {
     activeIdRef.current = id
     loadProjectDetails()
-    return () => clearContext()
   }, [id])
+
+  // A session running on this project when the page mounts is one to
+  // rejoin, not to start again. `active` lives in the store and survives
+  // navigation; `sessionOpen` is local state and doesn't — so opening this
+  // page mid-session showed a "Start session" button under the project
+  // record, and pressing it opened a second session on the same project.
+  useEffect(() => {
+    if (activeSessionProjectId && activeSessionProjectId === id) setSessionOpen(true)
+  }, [activeSessionProjectId, id])
 
   useEffect(() => {
     if (project) {
-      setContext('project', project.id, project.title, `${project.title}\n\n${project.description || ''}`)
       if (!seededPrevTasksRef.current) {
         const tasks = (project.metadata?.tasks as { id: string; done: boolean }[] | undefined) || []
         prevTasksRef.current = tasks.map(t => ({ id: t.id, done: !!t.done }))
@@ -865,11 +855,11 @@ export function ProjectDetailPage() {
               {project.status}
             </span>
           </span>
-          {/* Labels, not `type`. metadata.tags is what actually groups projects
-              (it drives the colour, the resurface ordering and the idea
-              generator's seed pairs); `type` is legacy and labels nothing —
-              "creative" says nothing when every project is creative. This row
-              showed the dead field and hid the live one. */}
+          {/* `type` is legacy and is NOT a grouping axis (see CLAUDE.md) --
+              "hobby" on a project page tells you nothing and reads as a
+              category the app cares about. metadata.tags is the real axis
+              — it drives the colour, the resurface ordering and the idea
+              generator's seed pairs — so it's what renders here instead. */}
           {((project.metadata?.tags as string[] | undefined) ?? []).slice(0, 3).map((tag) => (
             <span
               key={tag}
@@ -887,7 +877,7 @@ export function ProjectDetailPage() {
               {/* Guide — primary surface. This is what a project's mid-life
                   view is for: keep the chat that scopes/frames/edits front
                   and center, not just at project creation. */}
-              {project && (
+              {!sessionOpen && project && (
                 <InlineGuide
                   project={project}
                   recentCompletions={recentCompletions}
@@ -925,6 +915,14 @@ export function ProjectDetailPage() {
                   <Zap className="h-3.5 w-3.5 fill-current" /> Start session
                 </button>
               )}
+
+              {/* Everything below is the project's record — the finish
+                  line, the blocker, what sparked it, the whole task list,
+                  the notes. All of it is worth reading BEFORE you sit
+                  down and is a distraction the moment you have. It goes
+                  while the contract is open, exactly as the home page
+                  clears around a session: one thing on screen. */}
+              {!sessionOpen && (<>
 
               {/* What done looks like — only when the user has actually
                   said. An empty "What does done look like?" box on every
@@ -1124,6 +1122,7 @@ export function ProjectDetailPage() {
               >
                 <ProjectNotes projectId={project.id} notesDoc={project.notes_doc} />
               </div>
+              </>)}
       </div>
 
 

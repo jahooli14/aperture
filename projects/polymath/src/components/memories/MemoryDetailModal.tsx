@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Calendar, Edit, Trash2, Copy, Share2, Link2, Pin, CheckSquare, Square, MoreVertical, Lightbulb } from 'lucide-react'
+import { X, Calendar, Edit, Trash2, Copy, Share2, Link2, Pin, CheckSquare, Square, MoreVertical } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { MarkdownRenderer } from '../ui/MarkdownRenderer'
 import { format } from 'date-fns'
@@ -15,7 +15,6 @@ import { ThemeEditor } from './ThemeEditor'
 import { GlassCard } from '../ui/GlassCard'
 import { CACHE_TTL } from '../../lib/cacheConfig'
 
-import { useContextEngineStore } from '../../stores/useContextEngineStore'
 
 interface MemoryDetailModalProps {
   memory: Memory | null
@@ -32,7 +31,6 @@ export const MemoryDetailModal: React.FC<MemoryDetailModalProps> = ({ memory, is
   const unpinMemory = useMemoryStore((state) => state.unpinMemory)
   const updateChecklistItems = useMemoryStore((state) => state.updateChecklistItems)
   const fetchBridgesForMemory = useMemoryStore((state) => state.fetchBridgesForMemory)
-  const { setContext, toggleSidebar } = useContextEngineStore()
 
 const [bridges, setBridges] = useState<BridgeWithMemories[]>([])
   const [bridgesFetched, setBridgesFetched] = useState(false)
@@ -146,9 +144,6 @@ const [bridges, setBridges] = useState<BridgeWithMemories[]>([])
   }, [memory, handleCopyText]);
 
 
-  // Move hook above conditional returns to satisfy React rules
-  const memoryContent = useMemo(() => memory ? `${memory.title}\n\n${memory.body}` : '', [memory]);
-
   if (!isOpen) return null;
   if (!memory) {
     // We shouldn't effect state (onClose) during render, so removing it or wrapping in useEffect if really needed. 
@@ -215,6 +210,7 @@ const [bridges, setBridges] = useState<BridgeWithMemories[]>([])
                   Pin stays out because it is a state you can SEE, and the
                   kebab matches the one on the project page. */}
               <div className="flex items-center gap-1 mb-4">
+                {/* Pin toggle */}
                 <button
                   onClick={() => {
                     if (memory.is_pinned) {
@@ -257,9 +253,12 @@ const [bridges, setBridges] = useState<BridgeWithMemories[]>([])
                           boxShadow: '0 20px 40px rgba(0,0,0,0.6)',
                         }}
                       >
+                        {/* "What connects here" used to live in this menu,
+                            opening the Context Engine sidebar — removed
+                            from main entirely, so there's nowhere left for
+                            it to open to. */}
                         {[
                           { label: 'Edit', icon: Edit, run: () => setEditDialogOpen(true) },
-                          { label: 'What connects here', icon: Lightbulb, run: () => { setContext('memory', memory.id, memory.title, memoryContent); toggleSidebar(true) } },
                           { label: 'Copy text', icon: Copy, run: handleCopyText },
                           { label: 'Share', icon: Share2, run: handleShare },
                         ].map(({ label, icon: Icon, run }) => (

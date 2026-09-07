@@ -14,7 +14,7 @@
  * After save / dismiss / build, the card collapses back to the pill.
  */
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { BookmarkPlus, X } from 'lucide-react'
 import { haptic } from '../../utils/haptics'
@@ -101,7 +101,7 @@ const LOADING_STAGES: Array<{ at_ms: number; line: string }> = [
 // it's the harness's rarest, most valuable move, so it earns a louder door.
 const RESURRECTION_MIN_CONFIDENCE = 60
 
-export function ProjectIdeasHome({ startExpanded = false }: { startExpanded?: boolean } = {}) {
+export function ProjectIdeasHome({ startExpanded = false, onClose }: { startExpanded?: boolean; onClose?: () => void } = {}) {
   const createProject = useProjectStore(s => s.createProject)
   const { addToast } = useToast()
   // Shared with TodaysAnswerCard's "already noticed" chips — one fetch,
@@ -318,6 +318,27 @@ export function ProjectIdeasHome({ startExpanded = false }: { startExpanded?: bo
     await generate()
   }, [generating, ideas.length, generate, resurrectionIndex])
 
+  // `startExpanded` opens the deck without going through the button, so
+  // nothing was ever asking for an idea: `expanded` flipped true, the
+  // queue was empty, `active` stayed null, and every render branch below
+  // was false — a dead button and 260px of nothing. It runs the same
+  // reveal the button does now.
+  //
+  // Gated on `loaded` rather than firing at mount, because the queue fetch
+  // is still in flight then: revealing early would read an empty deck and
+  // burn an LLM call generating an idea that was already baked and waiting.
+  const ideasLoaded = useProjectIdeasStore(s => s.loaded)
+  const autoRevealed = useRef(false)
+  useEffect(() => {
+    if (!startExpanded || autoRevealed.current || !ideasLoaded) return
+    autoRevealed.current = true
+    if (ideas.length > 0) {
+      setActiveIndex(resurrectionIndex >= 0 ? resurrectionIndex : 0)
+      return
+    }
+    void generate()
+  }, [startExpanded, ideasLoaded, ideas.length, generate, resurrectionIndex])
+
   // The hour door. Unlike reveal(), it never opens the queued deck — the
   // user asked for a fresh one-hour thing, so it always generates one
   // (the server skips the queue short-circuit for scope='hour').
@@ -458,6 +479,36 @@ export function ProjectIdeasHome({ startExpanded = false }: { startExpanded?: bo
           </div>
         )}
 
+        {/* Expanded, done loading, and still nothing to show. Every branch
+            above was false here, so the panel rendered an empty 260px box
+            — the "suggest a project button doesn't do anything" bug. Say
+            which of the three real reasons it is, and give a way on. */}
+        {!loading && !generating && expanded && !active && (
+          <div className="flex flex-col items-center gap-3 text-center">
+            <p className="text-[13px] leading-snug" style={{ color: 'var(--brand-text-secondary)' }}>
+              {insufficientSignals !== null
+                ? `Not enough to go on yet — ${insufficientSignals} thing${insufficientSignals === 1 ? '' : 's'} captured, it needs 8 to find a pattern.`
+                : error
+                  ? error
+                  : "Nothing came back this time."}
+            </p>
+            {insufficientSignals === null && (
+              <button
+                type="button"
+                onClick={() => { void generate() }}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-full transition-all"
+                style={{
+                  background: 'rgba(var(--brand-primary-rgb), 0.08)',
+                  color: 'var(--brand-text-secondary)',
+                  border: '1px solid rgba(var(--brand-primary-rgb), 0.18)',
+                }}
+              >
+                <span className="text-[11.5px] tracking-wide">Try again</span>
+              </button>
+            )}
+          </div>
+        )}
+
         {!loading && !generating && expanded && active && (() => {
           // Mode-specific visual identity. Falls back to brand cyan if mode
           // can't be derived (rare — only on legacy ideas without evidence).
@@ -475,22 +526,6 @@ export function ProjectIdeasHome({ startExpanded = false }: { startExpanded?: bo
                 transition={{ duration: 0.45, ease: 'easeOut' }}
                 className="relative"
               >
-                {/* Atmospheric mesh — mode-tinted radial gradients give the
-                    card a colour identity without a literal background panel.
-                    Two offset ellipses create a soft, organic glow. */}
-                <div
-                  aria-hidden
-                  className="absolute -inset-x-6 -top-16 h-[120%] pointer-events-none -z-10"
-                  style={{
-                    background: `
-                      radial-gradient(ellipse 70% 45% at 30% 10%, rgba(${accent}, 0.22), transparent 65%),
-                      radial-gradient(ellipse 50% 35% at 80% 25%, rgba(${accent}, 0.12), transparent 60%),
-                      radial-gradient(ellipse 60% 30% at 50% 80%, rgba(${accent}, 0.08), transparent 70%)
-                    `,
-                    filter: 'blur(32px)',
-                  }}
-                />
-
                 {/* Eyebrow — one quiet line naming what kind of note this is
                     ("you set this down", "a new idea taking shape", …).
                     Mode-tinted so each idea still reads as a distinct kind of
@@ -520,6 +555,17 @@ export function ProjectIdeasHome({ startExpanded = false }: { startExpanded?: bo
                     >
                       {active.status}
                     </span>
+                  )}
+                  {onClose && (
+                    <button
+                      type="button"
+                      onClick={onClose}
+                      aria-label="Close"
+                      className="flex-shrink-0 opacity-40 hover:opacity-90 transition-opacity"
+                      style={{ color: 'var(--brand-text-muted)' }}
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
                   )}
                 </div>
 
@@ -567,16 +613,15 @@ export function ProjectIdeasHome({ startExpanded = false }: { startExpanded?: bo
 
                 {/* Why now — one quiet line, not a monument. */}
                 <p
-                  className="relative text-[14px] sm:text-[15px] leading-[1.6] mb-7 pl-3 italic"
+                  className="relative text-[14px] sm:text-[15px] leading-[1.6] mb-7 italic"
                   style={{
                     color: 'var(--brand-text-secondary)',
                     fontFamily: 'var(--brand-font-body)',
-                    borderLeft: `2px solid rgba(${accent}, 0.4)`,
                   }}
                 >
                   <span
-                    className="not-italic mr-1.5 text-[10px] uppercase tracking-[0.26em] font-semibold"
-                    style={{ color: `rgb(${accent})`, opacity: 0.85 }}
+                    className="not-italic mr-1.5 text-[10px] uppercase tracking-[0.26em] font-semibold opacity-70"
+                    style={{ color: 'var(--brand-text-muted)' }}
                   >
                     why now ·
                   </span>
@@ -584,12 +629,14 @@ export function ProjectIdeasHome({ startExpanded = false }: { startExpanded?: bo
                 </p>
 
                 {/* Your move — the one emphasised block, because it's the
-                    concrete first action. */}
+                    concrete first action. Flat fill, no gradient — the
+                    accent still marks it as "the" block without the card
+                    reading as a stack of separately-lit panels. */}
                 <div
                   className="relative mb-8 p-4 sm:p-5 rounded-2xl"
                   style={{
-                    background: `linear-gradient(135deg, rgba(${accent}, 0.12), rgba(${accent}, 0.03) 70%, transparent)`,
-                    border: `1px solid rgba(${accent}, 0.22)`,
+                    background: `rgba(${accent}, 0.06)`,
+                    border: `1px solid rgba(${accent}, 0.18)`,
                   }}
                 >
                   <span
@@ -712,8 +759,7 @@ export function ProjectIdeasHome({ startExpanded = false }: { startExpanded?: bo
                     className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-[12px] font-bold tracking-wide transition-all disabled:opacity-60"
                     style={{
                       color: 'var(--brand-bg)',
-                      background: `linear-gradient(135deg, rgb(${accent}), rgba(${accent}, 0.8))`,
-                      boxShadow: `0 4px 16px -4px rgba(${accent}, 0.6), inset 0 1px 0 rgba(255,255,255,0.2)`,
+                      background: `rgb(${accent})`,
                     }}
                     title="Save to projects"
                   >

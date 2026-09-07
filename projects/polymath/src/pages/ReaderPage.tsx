@@ -1,24 +1,40 @@
 /**
- * Reader View Page - Premium Reading Experience
- * Inspired by Readwise Reader and Omnivore
+ * Reader — the article view.
+ *
+ * Three things make this page work, and everything else is in service of
+ * them:
+ *
+ *  1. THE GIST. Three bullets above the piece saying what it actually
+ *     claims, so the decision to read is made on the content rather than
+ *     the headline. One Gemini call per article, cached forever after.
+ *  2. THE TEXT. Literata at a size you chose, on a measure that doesn't
+ *     make you track back, with nothing floating over it. Reading is the
+ *     whole job — the global nav and FAB are hidden on this route.
+ *  3. THE VERDICT. At the end, one question: was this good? That answer,
+ *     and only that answer, is what lets an article influence the project
+ *     ideas the app suggests (see api/_lib/reading-corpus.ts).
  */
 
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, useCallback } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft, ExternalLink, Archive, Loader2, Highlighter, Clock, Type, Mic, X, Check } from 'lucide-react'
+import { ArrowLeft, ExternalLink, Loader2, Highlighter, Clock, Type, Mic, X, Check, WifiOff } from 'lucide-react'
 import DOMPurify from 'dompurify'
-import { useReadingStore } from '../stores/useReadingStore'
 import { useMemoryStore } from '../stores/useMemoryStore'
+import { useReadingStore } from '../stores/useReadingStore'
 import { useArticle } from '../hooks/useArticle'
+import { useArticleGist } from '../hooks/useArticleGist'
 import { useScrollDirection } from '../hooks/useScrollDirection'
 import { useToast } from '../components/ui/toast'
 import { useOfflineArticle } from '../hooks/useOfflineArticle'
 import { useReadingProgress } from '../hooks/useReadingProgress'
 import { VoiceInput } from '../components/VoiceInput'
-import { ConnectionsList } from '../components/connections/ConnectionsList'
-import { useConnectionStore } from '../stores/useConnectionStore'
+import { ArticleGistCard } from '../components/reading/ArticleGistCard'
+import { ArticleVerdict } from '../components/reading/ArticleVerdict'
+import { ReaderSettingsSheet } from '../components/reading/ReaderSettingsSheet'
 import { DateRule } from '../components/ui/DateRule'
+import { loadPrefs, savePrefs, typeStyle, type ReaderPrefs } from '../lib/readerPrefs'
+import type { ArticleResonance } from '../types/reading'
 import { spring, ease } from '../lib/motion'
 
 export function ReaderPage() {
@@ -31,43 +47,51 @@ export function ReaderPage() {
   const noPromote = searchParams.get('no_promote') === 'true'
   const { data: articleData, isLoading: loading, refetch } = useArticle(id, { noPromote })
   const article = articleData?.article || null
-  const highlights = articleData?.highlights || []
 
   const scrollDirection = useScrollDirection()
   const [hideUI, setHideUI] = useState(false)
 
   useEffect(() => {
-    if (scrollDirection === 'down') {
-      setHideUI(true)
-    } else if (scrollDirection === 'up') {
-      setHideUI(false)
-    }
+    if (scrollDirection === 'down') setHideUI(true)
+    else if (scrollDirection === 'up') setHideUI(false)
   }, [scrollDirection])
 
-  // Broadcast hideUI state for FloatingNav
-  useEffect(() => {
-    window.dispatchEvent(new CustomEvent('toggle-nav', { detail: { hidden: hideUI } }))
-  }, [hideUI])
+  // The global nav and voice FAB hide themselves for this whole route
+  // (FloatingNav derives it from the path) — nothing floats over the text.
+  // hideUI here only tucks the reader's own toolbar away on scroll-down.
 
   const { addToast } = useToast()
   const { caching, downloadForOffline, isCached, getCachedImages } = useOfflineArticle()
   const { progress, restoreProgress } = useReadingProgress(id || '')
+  const { gist, loading: gistLoading } = useArticleGist(article)
 
   const [selectedText, setSelectedText] = useState('')
   const [showHighlightMenu, setShowHighlightMenu] = useState(false)
   const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 })
-  const [fontSize, setFontSize] = useState<'compact' | 'comfortable' | 'spacious'>('comfortable')
   const [isOfflineCached, setIsOfflineCached] = useState(false)
   const [cachedImageUrls, setCachedImageUrls] = useState<Map<string, string>>(new Map())
 
+  const [prefs, setPrefs] = useState<ReaderPrefs>(() => loadPrefs())
+  const [showSettings, setShowSettings] = useState(false)
   const [isHighlighterMode, setIsHighlighterMode] = useState(false)
   const [showVoiceNote, setShowVoiceNote] = useState(false)
   const [savingNote, setSavingNote] = useState(false)
   const [noteText, setNoteText] = useState('')
-  // Bumped after a thought is saved so the "Connected" list remounts and
-  // shows the new link without a page refresh.
-  const [connRefreshKey, setConnRefreshKey] = useState(0)
-  const invalidateConnections = useConnectionStore(s => s.invalidateConnections)
+  const [savingVerdict, setSavingVerdict] = useState(false)
+  // Optimistic: the verdict shows the moment it's tapped, so the end of the
+  // article never sits there looking unresponsive on a slow connection.
+  const [localResonance, setLocalResonance] = useState<ArticleResonance | null>(null)
+
+  const resonance = localResonance ?? article?.resonance ?? null
+
+  useEffect(() => {
+    setLocalResonance(null)
+  }, [article?.id])
+
+  const updatePrefs = useCallback((next: ReaderPrefs) => {
+    setPrefs(next)
+    savePrefs(next)
+  }, [])
 
   // Automatic offline caching
   useEffect(() => {
@@ -81,16 +105,10 @@ export function ReaderPage() {
     try {
       const cached = await isCached(article.id)
       if (!cached) {
-        console.log('[Reader] Auto-syncing for offline...')
         await downloadForOffline(article)
-        setIsOfflineCached(true)
-        const images = await getCachedImages(article.id)
-        setCachedImageUrls(images)
-      } else {
-        setIsOfflineCached(true)
-        const images = await getCachedImages(article.id)
-        setCachedImageUrls(images)
       }
+      setIsOfflineCached(true)
+      setCachedImageUrls(await getCachedImages(article.id))
     } catch (error) {
       console.warn('[Reader] Auto-sync failed:', error)
     }
@@ -98,15 +116,10 @@ export function ReaderPage() {
 
   useEffect(() => {
     const handleSelectStart = (event: Event) => {
-      if (isHighlighterMode) {
-        event.preventDefault()
-      }
+      if (isHighlighterMode) event.preventDefault()
     }
-
     document.addEventListener('selectstart', handleSelectStart)
-    return () => {
-      document.removeEventListener('selectstart', handleSelectStart)
-    }
+    return () => document.removeEventListener('selectstart', handleSelectStart)
   }, [isHighlighterMode])
 
   useEffect(() => {
@@ -117,21 +130,14 @@ export function ReaderPage() {
   // Clean up blob URLs to prevent memory leaks
   useEffect(() => {
     return () => {
-      // Revoke all blob URLs when component unmounts or cachedImageUrls changes
-      cachedImageUrls.forEach((blobUrl) => {
-        URL.revokeObjectURL(blobUrl)
-      })
+      cachedImageUrls.forEach((blobUrl) => URL.revokeObjectURL(blobUrl))
     }
   }, [cachedImageUrls])
 
   // Handle polling for unprocessed articles
   useEffect(() => {
     if (article && !article.processed) {
-      console.log('[ReaderPage] Article not processed, starting polling...')
-      const interval = setInterval(() => {
-        refetch()
-      }, 2000)
-
+      const interval = setInterval(() => refetch(), 2000)
       return () => clearInterval(interval)
     }
   }, [article?.processed, refetch])
@@ -140,11 +146,7 @@ export function ReaderPage() {
     if (!id) return
     const cached = await isCached(id)
     setIsOfflineCached(cached)
-
-    if (cached) {
-      const images = await getCachedImages(id)
-      setCachedImageUrls(images)
-    }
+    if (cached) setCachedImageUrls(await getCachedImages(id))
   }
 
   const processedContent = useMemo(() => {
@@ -178,7 +180,6 @@ export function ReaderPage() {
       // 1. Use cached blob if available (Offline mode)
       if (cachedImageUrls.has(originalSrc)) {
         img.setAttribute('src', cachedImageUrls.get(originalSrc)!)
-        // Remove srcset to prevent browser from picking original
         img.removeAttribute('srcset')
         img.removeAttribute('sizes')
       }
@@ -191,17 +192,23 @@ export function ReaderPage() {
       }
     })
 
+    // Tables and wide code blocks scroll inside themselves rather than
+    // making the whole article slide sideways under your thumb.
+    doc.querySelectorAll('table').forEach((table) => {
+      const wrapper = doc.createElement('div')
+      wrapper.className = 'reader-scroll-x'
+      table.parentNode?.insertBefore(wrapper, table)
+      wrapper.appendChild(table)
+    })
+
     return doc.body.innerHTML
   }, [article?.content, cachedImageUrls])
 
-  // Restore reading progress when article content is ready
-  // NOTE: This effect must be defined AFTER processedContent useMemo to avoid TDZ error
+  // Restore reading progress when article content is ready.
+  // NOTE: must be defined AFTER processedContent to avoid a TDZ error.
   useEffect(() => {
     if (article?.content && processedContent) {
-      // Small delay to ensure DOM is fully rendered before scrolling
-      const timer = setTimeout(() => {
-        restoreProgress()
-      }, 100)
+      const timer = setTimeout(() => restoreProgress(), 100)
       return () => clearTimeout(timer)
     }
   }, [article?.id, processedContent, restoreProgress])
@@ -215,14 +222,9 @@ export function ReaderPage() {
 
     if (text && text.length > 0) {
       setSelectedText(text)
-      const range = selection?.getRangeAt(0)
-      const rect = range?.getBoundingClientRect()
-
+      const rect = selection?.getRangeAt(0)?.getBoundingClientRect()
       if (rect) {
-        setMenuPosition({
-          x: rect.left + rect.width / 2,
-          y: rect.top - 10,
-        })
+        setMenuPosition({ x: rect.left + rect.width / 2, y: rect.top - 10 })
         setShowHighlightMenu(true)
       }
     } else {
@@ -237,25 +239,16 @@ export function ReaderPage() {
       const response = await fetch('/api/reading?resource=highlights', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          article_id: article.id,
-          highlight_text: selectedText,
-          color,
-        }),
+        body: JSON.stringify({ article_id: article.id, highlight_text: selectedText, color }),
       })
 
       if (!response.ok) throw new Error('Failed to create highlight')
 
       refetch()
-      addToast({
-        title: 'Highlighted!',
-        description: 'Text saved to highlights',
-        variant: 'success',
-      })
-
+      addToast({ title: 'Highlighted', description: 'Saved to your highlights.', variant: 'success' })
       setShowHighlightMenu(false)
       window.getSelection()?.removeAllRanges()
-    } catch (error) {
+    } catch {
       addToast({
         title: 'Couldn\'t save highlight',
         description: 'Try again in a moment.',
@@ -264,45 +257,38 @@ export function ReaderPage() {
     }
   }
 
-  // One tap files the article away and takes you back. Capturing a
-  // thought is optional and never blocks the archive — the mic is always
-  // there, and the end-of-article bar offers it too. An Undo toast covers
-  // mis-taps so there's no confirmation step to wade through.
-  const handleArchive = async () => {
+  /**
+   * The verdict. "This was good" is what puts an article into the corpus —
+   * it earns an embedding and starts counting towards project ideas. "Not
+   * for me" locks it out permanently. Both file the article, so answering
+   * the question is the whole of finishing it.
+   */
+  const handleVerdict = async (verdict: ArticleResonance | null) => {
     if (!article) return
-    const prevStatus = article.status
+    const previous = resonance
+    setLocalResonance(verdict)
+    setSavingVerdict(true)
     try {
-      await useReadingStore.getState().updateArticleStatus(article.id, 'archived')
+      // The store owns the optimistic write, the offline cache and the
+      // signal the home widget listens for; it rolls itself back and
+      // rethrows if the server refuses.
+      await useReadingStore.getState().setResonance(article.id, verdict)
+    } catch {
+      setLocalResonance(previous)
       addToast({
-        title: 'Archived',
-        description: 'Filed away.',
-        variant: 'success',
-        action: {
-          label: 'Undo',
-          onClick: () => {
-            useReadingStore.getState().updateArticleStatus(
-              article.id,
-              prevStatus === 'archived' ? 'unread' : prevStatus,
-            )
-          },
-        },
-      })
-      navigate(-1)
-    } catch (error) {
-      addToast({
-        title: 'Couldn\'t archive',
-        description: 'Try again in a moment.',
+        title: 'Couldn\'t save that',
+        description: 'You\'re offline, or the server said no. Try again.',
         variant: 'destructive',
       })
+    } finally {
+      setSavingVerdict(false)
     }
   }
 
   // Save a thought tied to this article. Goes through the memory store's
-  // createMemory, which handles optimistic UI, the capture endpoint, AND
+  // createMemory, which handles optimistic UI, the capture endpoint AND
   // offline queueing (carrying the article source_reference so the link
-  // survives the sync). When online, we also create an explicit
-  // article→thought connection so "related" is actually true rather than
-  // relying on background embedding similarity.
+  // survives the sync).
   const handleSaveNote = async (text: string) => {
     const trimmed = text.trim()
     if (!article || !trimmed) return
@@ -319,42 +305,21 @@ export function ReaderPage() {
         },
       })
 
-      // Offline: createMemory queued it (id is an offline placeholder). The
-      // source_reference rides along, so it gets linked when it syncs.
       const isOfflineQueued = typeof memory?.id === 'string' && memory.id.startsWith('offline_')
 
-      if (isOfflineQueued) {
-        addToast({
-          title: 'Saved offline',
-          description: 'It’ll sync and link to this article when you’re back online.',
-          variant: 'default',
-        })
-      } else if (memory?.id) {
-        // Online: link the thought to the article explicitly. Non-fatal.
-        try {
-          await fetch('/api/connections?action=create-spark', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              source_type: 'article',
-              source_id: article.id,
-              target_type: 'thought',
-              target_id: memory.id,
-              connection_type: 'reading_thought',
-            }),
-          })
-        } catch (linkErr) {
-          console.warn('[ReaderPage] Failed to link thought to article:', linkErr)
-        }
-        // Refresh the "Connected" list so the new thought shows immediately.
-        invalidateConnections('article', article.id)
-        setConnRefreshKey(k => k + 1)
-        addToast({
-          title: 'Thought saved',
-          description: `Linked to "${article.title}"`,
-          variant: 'success',
-        })
-      }
+      addToast(
+        isOfflineQueued
+          ? {
+              title: 'Saved offline',
+              description: 'It’ll sync and link to this article when you’re back online.',
+              variant: 'default',
+            }
+          : {
+              title: 'Thought saved',
+              description: `Linked to "${article.title}"`,
+              variant: 'success',
+            },
+      )
 
       setNoteText('')
       setShowVoiceNote(false)
@@ -370,28 +335,7 @@ export function ReaderPage() {
     }
   }
 
-  // Reading sizes — leaning Dia / Day One. Serif body, generous leading.
-  // Compact for dense / journalistic, comfortable default, spacious for
-  // long-form essays.
-  const fontSizeSettings = {
-    compact: {
-      article: 'text-[17px] leading-[1.7]',
-      title: 'text-[32px] sm:text-[38px]',
-      meta: 'text-sm'
-    },
-    comfortable: {
-      article: 'text-[19px] leading-[1.8]',
-      title: 'text-[38px] sm:text-[46px]',
-      meta: 'text-sm'
-    },
-    spacious: {
-      article: 'text-[21px] leading-[1.9]',
-      title: 'text-[44px] sm:text-[54px]',
-      meta: 'text-base'
-    }
-  }
-
-  // Minimal keyboard support (Escape to go back)
+  // Escape goes back.
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -403,7 +347,7 @@ export function ReaderPage() {
     return () => window.removeEventListener('keydown', handleKeyPress)
   }, [navigate])
 
-  // Mobile: Swipe right from left edge to go back
+  // Mobile: swipe right from the left edge goes back.
   useEffect(() => {
     let touchStartX = 0
     let touchStartY = 0
@@ -422,7 +366,6 @@ export function ReaderPage() {
       const deltaY = Math.abs(touch.clientY - touchStartY)
       const deltaTime = Date.now() - touchStartTime
 
-      // Swipe right from left edge (within 50px of left edge, fast swipe, mostly horizontal)
       if (touchStartX < 50 && deltaX > 100 && deltaY < 100 && deltaTime < 300) {
         navigate(-1)
       }
@@ -452,15 +395,12 @@ export function ReaderPage() {
 
   if (!article) return null
 
-  const settings = fontSizeSettings[fontSize]
+  const type = typeStyle(prefs)
 
   return (
     <div
       className="min-h-screen relative overflow-x-hidden"
-      style={{
-        background: 'var(--brand-bg)',
-        color: 'var(--brand-text-secondary)',
-      }}
+      style={{ background: 'var(--brand-bg)', color: 'var(--brand-text-secondary)' }}
     >
       {/* Single, calm wash. Reading is sacred — no parallax orbs. */}
       <div
@@ -474,155 +414,194 @@ export function ReaderPage() {
       <div className="relative z-10">
         <style>{`
         .reader-content {
-          font-family: var(--brand-font-serif);
-          color: rgba(245, 245, 247, 0.92);
+          color: rgba(245, 245, 247, 0.9);
           font-weight: 400;
-          letter-spacing: -0.003em;
+          text-wrap: pretty;
+          overflow-wrap: break-word;
         }
-        .reader-content h1, .reader-content h2, .reader-content h3 {
+        .reader-content > *:first-child { margin-top: 0; }
+        .reader-content h1, .reader-content h2, .reader-content h3, .reader-content h4 {
           color: #f5f5f7;
-          font-family: var(--brand-font-serif);
+          font-family: var(--brand-font-header);
           font-weight: 600;
-          margin-top: 2.5rem;
-          margin-bottom: 1.1rem;
+          margin-top: 2.4rem;
+          margin-bottom: 0.9rem;
           line-height: 1.25;
-          letter-spacing: -0.018em;
+          letter-spacing: -0.014em;
+          text-wrap: balance;
         }
-        .reader-content h2 { font-size: 1.5em; }
-        .reader-content h3 { font-size: 1.2em; }
-        .reader-content p {
-          margin-bottom: 1.4rem;
-        }
+        .reader-content h2 { font-size: 1.35em; }
+        .reader-content h3 { font-size: 1.15em; }
+        .reader-content h4 { font-size: 1.02em; }
+        .reader-content p { margin-bottom: 1.35em; }
         .reader-content blockquote {
           border-left: 2px solid rgba(var(--brand-primary-rgb), 0.6);
-          padding: 0.4rem 0 0.4rem 1.4rem;
-          margin: 2rem 0;
-          font-style: italic;
-          color: rgba(255, 255, 255, 0.7);
-          font-family: var(--brand-font-serif);
+          padding: 0.2rem 0 0.2rem 1.2rem;
+          margin: 1.9em 0;
+          color: rgba(255, 255, 255, 0.72);
+        }
+        .reader-content blockquote p:last-child { margin-bottom: 0; }
+        .reader-scroll-x {
+          overflow-x: auto;
+          -webkit-overflow-scrolling: touch;
+          margin: 1.75em 0;
+        }
+        .reader-content table {
+          border-collapse: collapse;
+          font-size: 0.88em;
+          min-width: 100%;
+        }
+        .reader-content th, .reader-content td {
+          border: 1px solid rgba(255,255,255,0.08);
+          padding: 0.5rem 0.75rem;
+          text-align: left;
         }
         .reader-content pre {
           background: rgba(255, 255, 255, 0.04);
-          padding: 1.25rem;
+          padding: 1.1rem;
           border-radius: 0.75rem;
           overflow-x: auto;
-          margin: 1.75rem 0;
+          -webkit-overflow-scrolling: touch;
+          margin: 1.6em 0;
           border: 1px solid rgba(255, 255, 255, 0.06);
           font-family: 'JetBrains Mono', ui-monospace, monospace;
+          font-size: 0.82em;
+          line-height: 1.6;
         }
         .reader-content code {
           font-family: 'JetBrains Mono', ui-monospace, monospace;
-          font-size: 0.88em;
+          font-size: 0.86em;
           background: rgba(255, 255, 255, 0.05);
-          padding: 0.15rem 0.4rem;
+          padding: 0.12rem 0.35rem;
           border-radius: 0.25rem;
         }
-        .reader-content pre code { background: transparent; padding: 0; }
+        .reader-content pre code { background: transparent; padding: 0; font-size: 1em; }
         .reader-content img {
           border-radius: 0.5rem;
-          margin: 2.25rem auto;
+          margin: 2em auto;
           box-shadow: 0 12px 28px -10px rgba(0,0,0,0.6);
           max-width: 100%;
+          height: auto;
+        }
+        .reader-content figcaption {
+          font-family: var(--brand-font-body);
+          font-size: 0.78em;
+          text-align: center;
+          color: rgba(255,255,255,0.42);
+          margin-top: -1.2em;
+          margin-bottom: 2em;
         }
         .reader-content a {
           color: rgb(var(--brand-primary-rgb));
           text-decoration: underline;
           text-decoration-thickness: 1px;
-          text-underline-offset: 4px;
-          transition: opacity 0.2s;
+          text-underline-offset: 3px;
+          text-decoration-color: rgba(var(--brand-primary-rgb), 0.4);
+          transition: text-decoration-color 0.2s;
         }
-        .reader-content a:hover { opacity: 0.7; }
-        .reader-content ul, .reader-content ol {
-          margin: 1.4rem 0;
-          padding-left: 1.4rem;
-        }
-        .reader-content li { margin-bottom: 0.55rem; }
+        .reader-content a:hover { text-decoration-color: rgb(var(--brand-primary-rgb)); }
+        .reader-content ul, .reader-content ol { margin: 1.3em 0; padding-left: 1.3em; }
+        .reader-content li { margin-bottom: 0.5em; }
         .reader-content hr {
           border: none;
           height: 1px;
           background: rgba(255, 255, 255, 0.08);
-          margin: 2.5rem auto;
+          margin: 2.4em auto;
           width: 30%;
         }
+        /* Reading in highlighter mode: the cursor says what the tap does. */
+        .reader-highlighting { cursor: crosshair; }
       `}</style>
 
-        {/* Soft sticky toolbar — Dia-leaning. Refined glass, no heavy shadow. */}
+        {/* Scrim behind the toolbar. Without it the article slides under a
+            72%-opaque pill and the two sets of text fight each other. */}
+        <div
+          aria-hidden
+          className="fixed left-0 right-0 z-40 pointer-events-none"
+          style={{
+            top: 'var(--global-banner-h, 0px)',
+            height: '104px',
+            background: 'linear-gradient(to bottom, var(--brand-bg) 38%, transparent)',
+            opacity: hideUI ? 0 : 1,
+            transition: 'opacity 0.25s ease',
+          }}
+        />
+
+        {/* Toolbar. Back on the left, three controls on the right — the
+            three type sizes that used to live here (identical "A" icons,
+            impossible to hit) moved into the settings sheet. */}
         <motion.nav
-          initial={{ y: -80 }}
-          animate={{ y: hideUI ? -80 : 0 }}
+          initial={{ y: -90 }}
+          animate={{ y: hideUI ? -110 : 0 }}
           transition={spring.gentle}
-          className="fixed top-0 left-0 right-0 z-50 px-4 pt-3"
+          className="fixed left-0 right-0 z-50 px-4 pt-3"
+          style={{ top: 'var(--global-banner-h, 0px)' }}
         >
           <div
-            className="max-w-2xl mx-auto flex items-center justify-between px-3 py-2 rounded-full"
+            className="mx-auto flex items-center justify-between px-2 py-1.5 rounded-full"
             style={{
-              background: 'rgba(11, 16, 24, 0.72)',
-              backdropFilter: 'blur(18px)',
-              WebkitBackdropFilter: 'blur(18px)',
-              border: '1px solid rgba(255, 255, 255, 0.06)',
+              maxWidth: '42rem',
+              background: 'rgba(11, 16, 24, 0.82)',
+              backdropFilter: 'blur(20px)',
+              WebkitBackdropFilter: 'blur(20px)',
+              border: '1px solid rgba(255, 255, 255, 0.07)',
             }}
           >
             <button
               onClick={() => navigate(-1)}
-              className="h-9 w-9 rounded-full flex items-center justify-center hover:bg-white/[0.04] transition-colors"
+              className="h-10 w-10 rounded-full flex items-center justify-center hover:bg-white/[0.06] transition-colors"
               aria-label="Back"
             >
-              <ArrowLeft className="h-4 w-4 opacity-80" />
+              <ArrowLeft className="h-[18px] w-[18px] opacity-80" />
             </button>
 
-            <div className="flex items-center gap-1">
+            {/* Source, centred — tells you where you are once the masthead
+                has scrolled away. */}
+            <span
+              className="text-[11px] uppercase tracking-[0.22em] font-semibold truncate px-2 opacity-45"
+              style={{ maxWidth: '45%' }}
+            >
+              {article.source || article.author || ''}
+            </span>
+
+            <div className="flex items-center gap-0.5">
               <button
                 onClick={() => setIsHighlighterMode(!isHighlighterMode)}
-                className="h-9 w-9 rounded-full flex items-center justify-center transition-all"
+                className="h-10 w-10 rounded-full flex items-center justify-center transition-all"
                 style={{
                   background: isHighlighterMode ? 'rgba(var(--brand-primary-rgb), 0.18)' : 'transparent',
                   color: isHighlighterMode ? 'rgb(var(--brand-primary-rgb))' : 'rgba(255,255,255,0.7)',
                 }}
-                title="Highlight"
+                aria-pressed={isHighlighterMode}
+                aria-label="Highlighter"
               >
-                <Highlighter className="h-4 w-4" />
+                <Highlighter className="h-[18px] w-[18px]" />
               </button>
 
-              <div className="flex items-center mx-1">
-                {(['compact', 'comfortable', 'spacious'] as const).map((size) => (
-                  <button
-                    key={size}
-                    onClick={() => setFontSize(size)}
-                    className="h-9 w-7 rounded-full flex items-center justify-center transition-all"
-                    style={{
-                      color: fontSize === size ? 'rgb(var(--brand-primary-rgb))' : 'rgba(255,255,255,0.45)',
-                    }}
-                    aria-label={`Font ${size}`}
-                  >
-                    <Type className={size === 'compact' ? 'h-[11px] w-[11px]' : size === 'comfortable' ? 'h-[13px] w-[13px]' : 'h-4 w-4'} />
-                  </button>
-                ))}
-              </div>
-
               <button
-                onClick={handleArchive}
-                className="h-9 w-9 rounded-full flex items-center justify-center hover:bg-white/[0.04] transition-colors"
-                title="Archive"
+                onClick={() => setShowSettings(true)}
+                className="h-10 w-10 rounded-full flex items-center justify-center hover:bg-white/[0.06] transition-colors"
+                aria-label="Reading settings"
               >
-                <Archive className="h-4 w-4 opacity-70" />
+                <Type className="h-[18px] w-[18px] opacity-75" />
               </button>
 
               <a
                 href={article.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="h-9 w-9 rounded-full flex items-center justify-center hover:bg-white/[0.04] transition-colors"
-                title="Open original"
+                className="h-10 w-10 rounded-full flex items-center justify-center hover:bg-white/[0.06] transition-colors"
+                aria-label="Open the original"
               >
-                <ExternalLink className="h-4 w-4 opacity-70" />
+                <ExternalLink className="h-[18px] w-[18px] opacity-70" />
               </a>
             </div>
           </div>
 
-          {/* Reading Progress — single hairline */}
+          {/* Reading progress — single hairline */}
           <div
-            className="max-w-2xl mx-auto mt-2 h-px overflow-hidden"
-            style={{ background: 'rgba(255,255,255,0.05)' }}
+            className="mx-auto mt-2 h-px overflow-hidden"
+            style={{ maxWidth: '42rem', background: 'rgba(255,255,255,0.05)' }}
           >
             <motion.div
               className="h-full"
@@ -634,28 +613,21 @@ export function ReaderPage() {
               transition={ease.quick}
             />
           </div>
-
-          {/* Offline indicator — quietly tucked below */}
-          {!isOfflineCached && (
-            <div className="max-w-2xl mx-auto mt-2 flex justify-center">
-              <span className="text-[10px] uppercase tracking-[0.28em] flex items-center gap-1.5 opacity-50">
-                <Loader2 className="h-3 w-3 animate-spin" /> caching for offline
-              </span>
-            </div>
-          )}
         </motion.nav>
 
-        {/* Article — serif body, magazine-grade hierarchy */}
-        <main className="max-w-2xl mx-auto px-5 sm:px-6 pt-28 sm:pt-32 pb-24">
+        <main
+          className="mx-auto px-5 sm:px-6 pt-24 sm:pt-28 pb-20"
+          style={{ maxWidth: type.maxWidth }}
+        >
           <motion.header
-            className="mb-14"
+            className="mb-10"
             initial={{ opacity: 0, y: 14 }}
             animate={{ opacity: 1, y: 0 }}
             transition={ease.editorial}
           >
             {/* Source masthead — small caps, hairline rule */}
             {(article.source || article.author) && (
-              <div className="flex items-center gap-3 mb-6">
+              <div className="flex items-center gap-3 mb-5">
                 <span
                   className="text-[10px] uppercase tracking-[0.32em] font-semibold"
                   style={{ color: 'rgba(var(--brand-primary-rgb), 0.7)' }}
@@ -671,131 +643,115 @@ export function ReaderPage() {
             )}
 
             <h1
-              className={`mb-7 ${settings.title}`}
+              className="mb-5"
               style={{
                 fontFamily: 'var(--brand-font-serif)',
+                fontSize: type.titleSize,
                 fontWeight: 600,
-                lineHeight: 1.08,
-                letterSpacing: '-0.022em',
+                lineHeight: 1.12,
+                letterSpacing: '-0.02em',
                 color: '#f5f5f7',
+                textWrap: 'balance',
               }}
             >
               {article.title}
             </h1>
 
-            <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
               {article.author && article.source && (
-                <span className="text-[13px] italic" style={{ fontFamily: 'var(--brand-font-serif)', color: 'rgba(255,255,255,0.7)' }}>
+                <span
+                  className="text-[13px] italic"
+                  style={{ fontFamily: 'var(--brand-font-reading)', color: 'rgba(255,255,255,0.65)' }}
+                >
                   by {article.author}
                 </span>
               )}
               {article.published_date && (
                 <DateRule date={article.published_date} variant="full" ruleSide="none" />
               )}
-              {article.read_time_minutes && (
+              {article.read_time_minutes ? (
                 <span
                   className="text-[10px] uppercase tracking-[0.32em] font-semibold flex items-center gap-1.5"
                   style={{ color: 'rgba(255,255,255,0.4)' }}
                 >
                   <Clock className="h-3 w-3" /> {article.read_time_minutes} min
                 </span>
+              ) : null}
+              {!isOfflineCached && caching && (
+                <span
+                  className="text-[10px] uppercase tracking-[0.28em] flex items-center gap-1.5 opacity-40"
+                  title="Saving a copy so this works offline"
+                >
+                  <Loader2 className="h-3 w-3 animate-spin" /> saving offline
+                </span>
               )}
             </div>
           </motion.header>
+
+          {/* What the piece actually claims, before you commit to it. */}
+          <ArticleGistCard gist={gist} loading={gistLoading} />
 
           {processedContent || article.content ? (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.5, delay: 0.15 }}
-              className={`reader-content ${settings.article}`}
+              className={`reader-content ${isHighlighterMode ? 'reader-highlighting' : ''}`}
+              style={{
+                fontFamily: type.fontFamily,
+                fontSize: type.fontSize,
+                lineHeight: type.lineHeight,
+                letterSpacing: type.letterSpacing,
+              }}
               onMouseUp={handleTextSelection}
               onTouchEnd={handleTextSelection}
               dangerouslySetInnerHTML={{ __html: processedContent || article.content || '' }}
             />
           ) : (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.5, delay: 0.15 }}
-              className={`reader-content ${settings.article}`}
+            <div
+              className="reader-content"
+              style={{ fontFamily: type.fontFamily, fontSize: type.fontSize, lineHeight: type.lineHeight }}
             >
-              <p className="text-brand-text-muted italic">
-                No content available for this article.{' '}
-                <a
-                  href={article.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-[var(--brand-primary)] underline"
-                >
-                  View Original
-                </a>
-              </p>
-            </motion.div>
+              {article.processed === false ? (
+                <p className="flex items-center gap-2 opacity-60 text-[15px]" style={{ fontFamily: 'var(--brand-font-body)' }}>
+                  <Loader2 className="h-4 w-4 animate-spin" /> Pulling the text out…
+                </p>
+              ) : (
+                <p className="flex flex-wrap items-center gap-2 opacity-70 text-[15px]" style={{ fontFamily: 'var(--brand-font-body)' }}>
+                  <WifiOff className="h-4 w-4" />
+                  Couldn’t get the text for this one.
+                  <a
+                    href={article.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[var(--brand-primary)] underline"
+                  >
+                    Read it at the source
+                  </a>
+                </p>
+              )}
+            </div>
           )}
 
-          {/* Connected — thoughts you've captured here plus anything in your
-              corpus this article links to. Closes the loop on "save a thought
-              from an article": the note shows up right here afterwards. */}
-          <motion.section
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-            className="mt-14 pt-8 border-t border-white/[0.08]"
-          >
-            <h2
-              className="text-[11px] uppercase tracking-[0.32em] font-semibold mb-5"
-              style={{ color: 'rgba(255,255,255,0.4)' }}
-            >
-              Connected
-            </h2>
-            <ConnectionsList
-              key={connRefreshKey}
-              itemType="article"
-              itemId={article.id}
-              itemTitle={article.title ?? undefined}
-            />
-          </motion.section>
-
-          {/* End-of-article finish bar — the calm way out. One tap files it
-              away and takes you back. Capturing a thought first is optional;
-              it just opens the mic. No modal, no "skip". */}
-          {article.status !== 'archived' && (
-            <motion.div
-              initial={{ opacity: 0, y: 12 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: '-80px' }}
-              transition={{ duration: 0.5 }}
-              className="mt-16 pt-10 border-t border-white/[0.08] flex flex-col items-center text-center"
-            >
-              <span
-                className="text-[11px] uppercase tracking-[0.32em] font-semibold mb-6"
-                style={{ color: 'rgba(255,255,255,0.4)' }}
-              >
-                You reached the end
-              </span>
-              <button
-                onClick={handleArchive}
-                className="inline-flex items-center gap-2 px-7 py-3.5 rounded-full font-semibold text-white transition-all press-spring"
-                style={{
-                  backgroundColor: 'var(--brand-primary)',
-                  boxShadow: '0 8px 28px -8px rgba(var(--brand-primary-rgb), 0.7)',
-                }}
-              >
-                <Archive className="h-4 w-4" /> Archive
-              </button>
-              <button
-                onClick={() => setShowVoiceNote(true)}
-                className="mt-4 text-[13px] opacity-60 hover:opacity-100 transition-opacity press-spring py-2"
-                style={{ color: 'var(--brand-text-secondary)' }}
-              >
-                Add a thought first
-              </button>
-            </motion.div>
-          )}
+          {/* The one question that lets an article into the corpus. */}
+          <ArticleVerdict
+            resonance={resonance}
+            saving={savingVerdict}
+            onChoose={handleVerdict}
+            onUndo={() => handleVerdict(null)}
+            onCaptureThought={() => setShowVoiceNote(true)}
+            onDone={() => navigate(-1)}
+          />
         </main>
 
-        {/* Highlight Menu */}
+        <ReaderSettingsSheet
+          open={showSettings}
+          prefs={prefs}
+          onChange={updatePrefs}
+          onClose={() => setShowSettings(false)}
+        />
+
+        {/* Highlight menu */}
         <AnimatePresence>
           {showHighlightMenu && (
             <motion.div
@@ -815,36 +771,15 @@ export function ReaderPage() {
                   onClick={() => handleHighlight(shade)}
                   className="w-8 h-8 rounded-full border border-[var(--glass-surface-hover)] hover:scale-110 transition-transform"
                   style={{ backgroundColor: shade === 'light' ? 'rgba(var(--color-accent-light-rgb), 0.5)' : shade === 'medium' ? 'rgba(var(--brand-primary-rgb), 0.5)' : 'rgba(var(--color-accent-dark-rgb), 0.5)' }}
+                  aria-label={`Highlight ${shade}`}
                 />
               ))}
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* Voice Note FAB — consistent with global VoiceFAB design */}
-        <AnimatePresence>
-          {!hideUI && !showVoiceNote && (
-            <motion.button
-              initial={{ scale: 0, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0, opacity: 0 }}
-              transition={{ type: 'spring', damping: 20, stiffness: 300 }}
-              onClick={() => setShowVoiceNote(true)}
-              className="fixed z-[25001] bottom-28 md:bottom-12 right-6 md:right-12 h-14 w-14 md:h-16 md:w-16 rounded-full flex items-center justify-center touch-none"
-              style={{
-                backgroundColor: 'var(--brand-primary)',
-                backdropFilter: 'blur(16px)',
-                WebkitBackdropFilter: 'blur(16px)',
-                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4), inset 0 0 10px var(--glass-surface)',
-              }}
-              aria-label="Add a thought about this article"
-            >
-              <Mic className="h-6 w-6 text-white" />
-            </motion.button>
-          )}
-        </AnimatePresence>
-
-        {/* Voice Note Modal */}
+        {/* Capture a thought about this article. Reachable from the end of
+            the piece; no floating button competing with the text. */}
         <AnimatePresence>
           {showVoiceNote && (
             <div className="fixed inset-0 z-[21000] flex items-end md:items-center md:justify-center">
@@ -872,21 +807,21 @@ export function ReaderPage() {
                     <div>
                       <h3 className="page-hero-sm flex items-center gap-2" style={{ fontSize: 'clamp(1.5rem, 4vw, 1.75rem)' }}>
                         <Mic className="h-5 w-5 text-brand-primary" />
-                        Capture a thought
+                        What stuck?
                       </h3>
                       <p className="meta-serif mt-1 line-clamp-1">{article.title}</p>
                     </div>
                     <button
                       onClick={() => setShowVoiceNote(false)}
                       className="h-12 w-12 rounded-full bg-[var(--glass-surface)] hover:bg-[rgba(255,255,255,0.1)] flex items-center justify-center transition-all border border-[var(--glass-surface)]"
+                      aria-label="Close"
                     >
                       <X className="h-6 w-6 text-brand-text-muted" />
                     </button>
                   </div>
                   <div className="px-8 pb-10 space-y-4">
                     {/* Type it or talk it. Voice transcribes into the same
-                        box so you can read it back and edit before saving —
-                        nothing gets fired off behind your back. */}
+                        box so you can read it back and edit before saving. */}
                     <textarea
                       value={noteText}
                       onChange={(e) => setNoteText(e.target.value)}

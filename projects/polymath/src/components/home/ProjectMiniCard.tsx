@@ -67,11 +67,23 @@ export function ProjectMiniCard({
         WebkitBackdropFilter: 'blur(14px) saturate(140%)',
       }
 
+  const open = () => { haptic.light(); navigate(`/projects/${project.id}`) }
+
   return (
-    <button
-      type="button"
-      onClick={() => { haptic.light(); navigate(`/projects/${project.id}`) }}
-      className="group relative w-full h-full text-left transition-all hover:-translate-y-0.5 active:scale-[0.99] overflow-hidden"
+    // A div, not a button. The ▶ below is a real button, and a button
+    // inside a button is invalid HTML -- browsers recover from it however
+    // they like, and Safari in particular hoists the inner one out of the
+    // outer, which is how a play tap silently opened the project page
+    // instead of starting a session. role/tabIndex/onKeyDown keep the card
+    // reachable from the keyboard exactly as it was.
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={open}
+      onKeyDown={e => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open() }
+      }}
+      className="group relative w-full h-full text-left transition-all hover:-translate-y-0.5 active:scale-[0.99] overflow-hidden cursor-pointer"
       style={{
         ...surface,
         borderRadius: '18px',
@@ -143,6 +155,6 @@ export function ProjectMiniCard({
           </button>
         </div>
       </div>
-    </button>
+    </div>
   )
 }

@@ -5,7 +5,7 @@
 
 import { create } from 'zustand'
 import { logger } from '../lib/logger'
-import type { Article, ArticleStatus, SaveArticleRequest } from '../types/reading'
+import type { Article, ArticleResonance, ArticleStatus, SaveArticleRequest } from '../types/reading'
 import { queueOperation } from '../lib/offlineQueue'
 import { useOfflineStore } from './useOfflineStore'
 import { CACHE_TTL } from '../lib/cacheConfig'
@@ -45,6 +45,7 @@ interface ReadingState {
   saveArticle: (request: SaveArticleRequest) => Promise<Article>
   updateArticle: (id: string, updates: Partial<Article>) => Promise<void>
   updateArticleStatus: (id: string, status: ArticleStatus) => Promise<void>
+  setResonance: (id: string, resonance: ArticleResonance | null) => Promise<void>
   deleteArticle: (id: string) => Promise<void>
   setFilter: (filter: ArticleStatus | 'all') => void
   syncPendingArticles: () => Promise<void>
@@ -484,6 +485,79 @@ export const useReadingStore = create<ReadingState>((set, get) => {
           return
         }
         logger.warn('[ReadingStore] updateArticle failed:', error)
+      }
+    },
+
+    /**
+     * The end-of-article verdict, and the only thing that lets an article
+     * into the corpus (see api/_lib/reading-corpus.ts). Both answers file
+     * the article, so this doubles as the archive action — there is no
+     * separate "done" step to remember.
+     *
+     * Optimistic, and it throws on failure so the reader can put the
+     * buttons back rather than pretending the answer landed. Unlike a
+     * status change this is NOT queued offline: the server does real work
+     * on a "good" (embedding, connections) that a replayed PATCH wouldn't
+     * trigger, so it's better to ask again than to silently half-apply it.
+     */
+    setResonance: async (id: string, resonance: ArticleResonance | null) => {
+      const previous = get().articles.find((a) => a.id === id)
+      const patch: Partial<Article> = {
+        resonance,
+        resonance_at: resonance ? new Date().toISOString() : null,
+        status: resonance ? 'archived' : 'reading',
+      }
+
+      set((state) => ({
+        articles: state.articles.map((a) => (a.id === id ? { ...a, ...patch } : a)),
+      }))
+
+      try {
+        const { readingDb } = await import('../lib/db')
+        const cached = await readingDb.articles.get(id)
+        if (cached) await readingDb.articles.put({ ...cached, ...patch })
+      } catch (cacheError) {
+        logger.warn('[ReadingStore] Failed to cache resonance:', cacheError)
+      }
+
+      // Same signal archiving sends, so home's Consuming widget drops the
+      // article from "Saved reads" straight away.
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('article-status-changed', {
+          detail: { id, status: patch.status },
+        }))
+      }
+
+      try {
+        const response = await fetchWithTimeout('/api/reading?resource=resonance', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id, resonance }),
+        })
+        if (!response.ok) throw new Error(`HTTP ${response.status}`)
+      } catch (error) {
+        // Put everything back exactly as it was and let the caller say so.
+        // A verdict that looks saved but isn't is worse than one you have
+        // to give twice — it's the difference between an article counting
+        // towards your project ideas and silently not.
+        if (previous) {
+          set((state) => ({
+            articles: state.articles.map((a) => (a.id === id ? previous : a)),
+          }))
+          try {
+            const { readingDb } = await import('../lib/db')
+            const cached = await readingDb.articles.get(id)
+            if (cached) await readingDb.articles.put({ ...cached, ...previous })
+          } catch {
+            // The cache is a convenience; don't mask the real failure.
+          }
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('article-status-changed', {
+              detail: { id, status: previous.status },
+            }))
+          }
+        }
+        throw error
       }
     },
 

@@ -82,7 +82,13 @@ Cron bakes a deep queue overnight (full pipeline, Read enabled). The on-demand b
 
 - **Todos / Fix Queue / AudioPen** — historical or unused. Fix Queue route + API still exist so old drafts stay visible, but cron is disabled and it isn't surfaced on home. Don't extend without checking.
 - **Idea Engine emails** — not a Polymath surface. Lives inside the polymath API (`api/_lib/idea-engine-v2/`). See Cron section.
-- **Context Engine sidebar** (`src/components/context/ContextSidebar.tsx`) — surfaces an "AI Analysis" panel from many pages. Prompts in `api/connections.ts` (`analyze` + the `ai-action` types) are plain-English and voice-gated via `findVoiceViolations`. Still owner-unloved — confirm it's wanted before extending. If you add a new `ai-action` prompt, include a concrete BAD/GOOD anti-example like the existing ones.
+- **Context Engine sidebar** — **removed.** It was a "What connects here" panel opened from cards across the app, with six AI actions (summarize, find-gaps, suggest-next, connect-dots, chase-thread, provoke) plus an `analyze` readout.
+
+  It invented. The only check on its output was `findVoiceViolations` — a *voice* gate, which gives the prose the house style and then passes whatever titles the model made up. With an empty corpus the context block read `(no related items found in knowledge lake)` while the prompt still ordered "Show 2-3 ways this idea echoes… Name titles directly", so at zero connections it named three articles that don't exist.
+
+  Grounding it was possible (`session-grounding.ts` and Relay's `index/ground.ts` both do exactly this) and not worth it. Five of the six actions were "tell me something interesting about this note" — browsing enrichment with no output, the knowledge-graph mode this app isn't. The sixth, suggest-next, is already answered four times over and grounded: the answer card, the session shaper, the crossover generator, the Guide. **The test to apply to anything like it: does it end in an output, or does it just make the note more interesting to look at?**
+
+  `/api/connections` itself stays — it's real plumbing (sparks, suggestions, paths, links) with a dozen callers, and the `connections` table feeds `memories.ts` and embeddings maintenance.
 
 ### Project = creative goal with a defined output
 
@@ -126,6 +132,23 @@ Active, partly-shaped, dormant, and abandoned are different states. Long-dormant
 ### Identity layer
 
 Lists + reading queue + recent highlights are framing inputs. Same project surfaces with different framing depending on what the user has been reading. *Bed by Ten* after a minimalism book reads differently than *Bed by Ten* after a film about constraint.
+
+### Reading (RSS + the reader)
+
+Feeds arrive as unread rows in `reading_queue` (tagged `rss`). Most of them are never opened. The reader is where an article either earns a place in the corpus or doesn't.
+
+**Only a verdict lets an article into the corpus** (`api/_lib/reading-corpus.ts`, unit-tested). At the end of every article there are two buttons — **"This was good"** and **"Not for me"**. That answer is `reading_queue.resonance`, and it is the whole gate:
+- `good` — the article counts towards project ideas, syntheses and semantic search, and *only then* is it embedded. Labelled in the generator prompt so the model can tell a vouched-for piece from one that merely sat in the list.
+- `not_for_me` — excluded permanently, never embedded.
+- `NULL` — undecided. One carve-out for the years of rows that predate the verdict: a **hand-saved** article (no `rss` tag) still counts, as it always did. An unread RSS headline counts for nothing.
+
+Both answers file the article, because answering IS finishing it — there is no separate archive step. `POST /api/reading?resource=resonance`; the kept ones live under the **Good** tab on `/reading`. Nullable-column trap: PostgREST `.neq()` drops `NULL` rows, so every query gating on this uses `.or('resonance.is.null,resonance.neq.not_for_me')` and lets `selectCorpusArticles` do the real filtering.
+
+**The gist.** Opening an article fires one Gemini call that returns three bullets saying what the piece actually claims (`api/_lib/article-gist.ts`, `POST ?resource=gist`). Cached in `metadata.gist` forever after, so a second open is free; skipped below ~220 words and recorded as skipped so it doesn't retry. Bullets that break the plain-English rules are dropped rather than shown, and fewer than two means no card at all — silence beats a hedged summary.
+
+**Typography.** Article body is **Literata** (`--brand-font-reading`), not Playfair. Playfair is a display face: its hairlines vanish at body size on a dark screen, which is what made long reads tiring. Playfair still sets the title. Typeface / size / line spacing / column width live in a settings sheet (`ReaderSettingsSheet`) and persist per device (`src/lib/readerPrefs.ts`, pure + unit-tested) — reading preferences are set once, not per article.
+
+**Nothing floats over the text.** `FloatingNav` (and its voice FAB) hide for the whole `/reading/:id` route, derived from the path — the reader has its own back button, edge swipe and Escape. The offline banner publishes its height as `--global-banner-h` so the reader toolbar sits below it instead of half under it. Connections are out of the reading surface entirely — the "Connected" block at the end of every article, the Connect button on the card, and `ArticleConnectionsDialog` (deleted). `ItemInsightStrip` lives on and is still used by lists.
 
 ### Session context
 
@@ -317,6 +340,28 @@ npm run type-check           # polymath, relay (tsc)
 
 Push to `main` → Vercel auto-deploys. Env vars live in the Vercel dashboard, never commit them.
 
+### The serverless-function budget
+
+Vercel's Hobby tier caps a deployment at **12 serverless functions**, and
+every `.ts` file under `projects/polymath/api/` that isn't in `_lib/` is one
+of them. Polymath sat at exactly 12 — the next route added would have
+failed the build.
+
+Currently **10**: `brainstorm`, `connections`, `cron/jobs`, `idea-engine`,
+`lists`, `memories`, `projects`, `push`, `reading`, `utilities`.
+
+So a new endpoint is a **resource on an existing route**, not a new file.
+`utilities.ts` is the pattern: it routes on disjoint `resource` name sets
+(`EXECUTION_SESSIONS_RESOURCES` and friends) plus an `action` set for Fix
+Queue, delegating to a handler in `_lib/`. Put the logic in `_lib/` and add
+a name to a set. Anything under `_lib/` is free — it's bundled, not
+deployed.
+
+Count them before adding a route:
+```bash
+find projects/polymath/api -name '*.ts' -not -path '*/_lib/*' -not -name '*.test.ts' | wc -l
+```
+
 ## Debugging checklist
 
 1. Browser console for frontend errors.
@@ -383,7 +428,7 @@ Voice-capture life annoyances → AI drafts automated fixes → approve → runs
 - Triage: voice notes classified as `annoyance` by Gemini (severity + automatable flag)
 - Drafting: AI generates data-driven fix specs
 - Approval: `/fixes` page in Polymath UI
-- Execution: cron (see table above) hits `/api/fix-queue`
+- Execution: cron would hit `/api/utilities?action=run-fixes` (disabled)
 
 **Fix action types**
 - `send_email` — Reminder/notification via Resend
@@ -392,7 +437,7 @@ Voice-capture life annoyances → AI drafts automated fixes → approve → runs
 - `http_request` — Generic API calls
 
 **Key files** (all under `projects/polymath/`)
-- `api/fix-queue.ts` — Main API (draft-pending, run-fixes, approve, reject, list)
+- `api/_lib/fix-queue/route.ts` — Main API (draft-pending, run-fixes, approve, reject, list), served by `/api/utilities?action=…`. It was its own route until the serverless-function budget below made that too expensive; routed on `action`, which nothing else in utilities.ts uses.
 - `api/_lib/fix-queue/drafter.ts` — AI fix generation
 - `api/_lib/fix-queue/runner.ts` — Fix execution (tests in `runner.test.ts`)
 - `api/_lib/fix-queue/types.ts` — FixDraft, FixAction types

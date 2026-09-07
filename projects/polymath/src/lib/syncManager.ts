@@ -12,7 +12,6 @@ import {
   persistOperationData,
   type QueuedOperation,
 } from './offlineQueue'
-import { triggerImmediateEnrichment } from './aiEnrichmentManager'
 
 const MAX_RETRIES = 3
 let isSyncing = false
@@ -20,7 +19,6 @@ let syncScheduled = false
 let autoSyncSetup = false
 
 // Track projects that need AI enrichment after sync
-const projectsNeedingEnrichment = new Set<string>()
 
 /**
  * Process a single queued operation
@@ -124,7 +122,6 @@ async function processOperation(operation: QueuedOperation): Promise<boolean> {
         // Schedule AI enrichment on the real project id so the server can
         // backfill anything the offline create skipped (summary, embeddings).
         if (data?.id) {
-          projectsNeedingEnrichment.add(data.id)
         }
         return true
       }
@@ -140,7 +137,6 @@ async function processOperation(operation: QueuedOperation): Promise<boolean> {
 
         // Track for AI enrichment if tasks were updated
         if (updateData.metadata?.tasks) {
-          projectsNeedingEnrichment.add(id)
         }
         return true
       }
@@ -521,13 +517,6 @@ export async function syncPendingOperations(): Promise<{
     }
 
     // Trigger AI enrichment for projects that had task updates (immediate, no debounce)
-    if (projectsNeedingEnrichment.size > 0) {
-      console.log(`[SyncManager] Triggering immediate AI enrichment for ${projectsNeedingEnrichment.size} projects`)
-      for (const projectId of projectsNeedingEnrichment) {
-        triggerImmediateEnrichment(projectId)
-      }
-      projectsNeedingEnrichment.clear()
-    }
 
     return { success, failed, total: operations.length }
   } finally {

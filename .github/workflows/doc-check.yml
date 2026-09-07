@@ -69,9 +69,6 @@ jobs:
         REQUIRED_DOCS=(
           "README.md"
           "CLAUDE.md"
-          "CLAUDE-APERTURE.md"
-          "START_HERE.md"
-          ".claude/startup.md"
         )
 
         # Optional docs - check and warn but don't fail
@@ -133,8 +130,7 @@ jobs:
         echo "============================================"
         echo "📋 Documentation Check Summary"
         echo "============================================"
-        echo "Required: README.md, CLAUDE.md, CLAUDE-APERTURE.md,"
-        echo "          START_HERE.md, .claude/startup.md"
+        echo "Required: README.md, CLAUDE.md"
         echo ""
         echo "Optional: NEXT_SESSION.md, .process/*.md"
         echo "============================================"

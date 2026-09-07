@@ -710,13 +710,14 @@ export function ConsumingWidget() {
     }).catch(() => { /* cache write failure is non-critical */ })
   }, [loaded, saved, feedReads, recentlyDismissed, recentlyArchived, hasMore, nextOffset, activeItems])
 
-  // Loading state — render a low-key skeleton so the "now consuming"
-  // section header in HomePage doesn't sit above empty air for the ~500ms
-  // before the network resolves. The skeleton mirrors the eventual card
-  // dimensions so the page doesn't reflow when content arrives.
+  // Loading state — a low-key skeleton rather than nothing, so the page
+  // doesn't reflow when content arrives ~500ms later. It carries the
+  // header because at this point we don't yet know the section is empty;
+  // once we do (below) both the header and the section go.
   if (!loaded) {
     return (
       <section className="pb-8">
+        <h2 className="section-header" style={{ margin: '0 0 10px' }}>now <span>consuming</span></h2>
         <div
           className="relative rounded-2xl overflow-hidden"
           style={{
@@ -743,6 +744,7 @@ export function ConsumingWidget() {
   if (!hasAnything && feeds.length === 0) {
     return (
       <section className="pb-8">
+        <h2 className="section-header" style={{ margin: '0 0 10px' }}>now <span>consuming</span></h2>
         <div
           className="relative rounded-2xl overflow-hidden p-6 text-center"
           style={{
@@ -771,12 +773,18 @@ export function ConsumingWidget() {
       </section>
     )
   }
+  // Returns nothing when there's nothing being consumed. HomePage used to
+  // print the "now consuming" header above this, so an empty identity
+  // layer left a heading sitting over blank page -- the one thing every
+  // section here is supposed to never do. The header moved in here, below
+  // the empty checks, so it can only ever appear with something under it.
   if (!hasAnything) return null
 
   const shownActive = activeItems.slice(0, 3)
 
   return (
     <section className="pb-8">
+      <h2 className="section-header" style={{ margin: '0 0 10px' }}>now <span>consuming</span></h2>
       <div
         className="relative flex flex-col rounded-2xl overflow-hidden"
         style={{
