@@ -318,9 +318,11 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
                 opacity: currentReaction && currentReaction !== id ? 0.35 : 0.7,
               }}
               title={label}
+              aria-label={label}
+              aria-pressed={currentReaction === id}
             >
               <Icon className="h-3 w-3" />
-              <span className="hidden sm:inline">{label}</span>
+              <span>{label}</span>
             </button>
           ))}
         </div>

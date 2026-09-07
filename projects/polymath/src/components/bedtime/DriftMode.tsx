@@ -167,7 +167,11 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
           haptic.success()
           startFallbackTimer()
         } else {
+          // Declining the permission dialog used to strand people on this
+          // screen with no way forward. Tap-to-wake still works without
+          // motion access, so fall through to it instead.
           setMotionPermission('denied')
+          startFallbackTimer()
         }
       } catch (e) {
         console.error('[Drift] Motion permission error:', e)
@@ -319,7 +323,7 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
             </button>
 
             {motionPermission === 'denied' && (
-              <p className="mt-4 text-brand-text-secondary text-sm">Motion permission required for this feature.</p>
+              <p className="mt-4 text-brand-text-secondary text-sm">No motion access — tap the screen when you're ready instead.</p>
             )}
           </motion.div>
         )}
@@ -333,13 +337,13 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
             exit={{ opacity: 0 }}
             transition={{ duration: 2 }}
             className="absolute inset-0 bg-black flex items-center justify-center"
-            // Touch-based wake for fallback mode (when motion isn't working)
+            // A tap always wakes it — the shake gesture below is a bonus for
+            // whoever wants the fuller ritual, not the only way in. Making
+            // people shake their phone in the dark to see one prompt was the
+            // "fiddly" complaint; a tap is the one clear low-effort action.
             onClick={() => {
-              if (!motionEventsReceived.current) {
-                console.log('[Drift] Touch-based wake triggered (fallback mode)')
-                haptic.medium()
-                triggerInsight()
-              }
+              haptic.medium()
+              triggerInsight()
             }}
           >
             {driftSeed && (
@@ -359,18 +363,15 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
               </motion.div>
             )}
             <div className="absolute w-3 h-3 rounded-full bg-brand-primary/50 animate-ping" />
-            {/* Show hint if no motion detected after entering drift */}
-            {!motionEventsReceived.current && (
-              <motion.p
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 0.75 }}
-                exit={{ opacity: 0, transition: { duration: 4 } }}
-                transition={{ delay: 5, duration: 2 }}
-                className="absolute bottom-20 text-white/75 text-base text-center px-8 leading-relaxed"
-              >
-                Tap anywhere when you're ready to capture your insight
-              </motion.p>
-            )}
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 0.75 }}
+              exit={{ opacity: 0, transition: { duration: 4 } }}
+              transition={{ delay: 5, duration: 2 }}
+              className="absolute bottom-20 text-white/75 text-base text-center px-8 leading-relaxed"
+            >
+              Tap anywhere when you're ready
+            </motion.p>
           </motion.div>
         )}
 

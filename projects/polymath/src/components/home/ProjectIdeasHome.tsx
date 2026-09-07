@@ -579,6 +579,7 @@ export function ProjectIdeasHome({ startExpanded = false, onClose }: { startExpa
                       fontFamily: 'var(--brand-font-body)',
                       fontWeight: 400,
                       letterSpacing: '-0.015em',
+                      textWrap: 'balance',
                     }}
                   >
                     {active.pattern}
@@ -593,6 +594,7 @@ export function ProjectIdeasHome({ startExpanded = false, onClose }: { startExpa
                     fontFamily: 'var(--brand-font-body)',
                     fontWeight: 500,
                     letterSpacing: '-0.02em',
+                    textWrap: 'balance',
                   }}
                 >
                   {active.title}
@@ -606,17 +608,21 @@ export function ProjectIdeasHome({ startExpanded = false, onClose }: { startExpa
                     fontFamily: 'var(--brand-font-body)',
                     fontWeight: 400,
                     opacity: 0.92,
+                    textWrap: 'pretty',
                   }}
                 >
                   {active.pitch}
                 </p>
 
-                {/* Why now — one quiet line, not a monument. */}
+                {/* Why now — one quiet line, not a monument. text-wrap:
+                    pretty (same fix as the reader, ReaderPage.tsx) keeps
+                    the last line from stranding a single hanging word. */}
                 <p
                   className="relative text-[14px] sm:text-[15px] leading-[1.6] mb-7 italic"
                   style={{
                     color: 'var(--brand-text-secondary)',
                     fontFamily: 'var(--brand-font-body)',
+                    textWrap: 'pretty',
                   }}
                 >
                   <span

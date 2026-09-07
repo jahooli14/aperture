@@ -48,7 +48,8 @@ export function PinButton({ type, id, title, content, currentId, contentVersion 
         borderColor: isThisPinned ? 'rgba(var(--brand-primary-rgb), 0.5)' : 'rgba(255, 255, 255, 0.2)',
         color: isThisPinned ? 'var(--brand-primary)' : 'var(--brand-text-secondary)'
       }}
-      title={isThisPinned ? 'Unpin' : 'Pin to compare'}
+      title={isThisPinned ? 'Unpin from bottom strip' : 'Pin to bottom strip — keep this open while you browse elsewhere'}
+      aria-label={isThisPinned ? 'Unpin from bottom strip' : 'Pin to bottom strip — keep this open while you browse elsewhere'}
     >
       {isThisPinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
     </button>

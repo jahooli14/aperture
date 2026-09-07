@@ -30,7 +30,7 @@ import { useMemoryStore } from '../stores/useMemoryStore'
 import { usePin } from '../contexts/PinContext'
 
 import { SubtleBackground } from '../components/SubtleBackground'
-import { api } from '../lib/apiClient'
+import { api, ApiError } from '../lib/apiClient'
 
 /**
  * What paused this — a post-it, but only once there's something written on it.
@@ -589,6 +589,33 @@ export function ProjectDetailPage() {
     setShowCategoryMenu(false)
   }
 
+  // The one manual way to set which project is "the" priority — the star the
+  // review rotation, the colour-matching and the home answer all build
+  // around. It used to exist only behind a long-press on a project card
+  // (undiscoverable, no visual hint) and not at all on this page, even
+  // though the badge above already showed the state read-only.
+  const handleTogglePriority = async () => {
+    if (!project) return
+    try {
+      await setPriority(project.id)
+    } catch (err: unknown) {
+      const isCapReached = err instanceof ApiError && (err.details as { error?: string } | undefined)?.error === 'focus_cap_reached'
+      if (isCapReached) {
+        addToast({
+          title: 'You already have a priority project',
+          description: 'Remove the current priority first, then promote this one.',
+          variant: 'destructive',
+        })
+      } else {
+        addToast({
+          title: "Couldn't set priority",
+          description: err instanceof Error ? err.message : 'Try again in a moment.',
+          variant: 'destructive',
+        })
+      }
+    }
+  }
+
   // The guide can drop a note into the project's content space. Append to the
   // existing doc (with a blank line) rather than overwrite, then persist.
   const handleChatAppendNote = async (text: string) => {
@@ -770,10 +797,13 @@ export function ProjectDetailPage() {
                       const isThisPinned = pinnedItem !== null && (pinnedItem.id === project.id || pinnedItem.id === id)
                       if (isThisPinned) { unpinItem() } else { pinItem({ type: 'project', id: project.id, title: project.title, content: pinnedContent }) }
                     }}
+                    title="Keeps this project open in a strip at the bottom of the screen so you can check it while you browse elsewhere"
                     className="w-full px-3.5 py-3 text-left text-[14px] font-medium transition-colors hover:bg-white/[0.05] rounded-xl flex items-center gap-2 min-h-[44px]"
                     style={{ color: 'var(--brand-text-primary)', opacity: 0.9 }}
                   >
-                    {pinnedItem?.id === project.id ? <><PinOff className="h-4 w-4" /> Unpin</> : <><Pin className="h-4 w-4" /> Pin</>}
+                    {pinnedItem?.id === project.id
+                      ? <><PinOff className="h-4 w-4" /> Unpin from bottom strip</>
+                      : <><Pin className="h-4 w-4" /> Pin to bottom strip</>}
                   </button>
                   {project.status !== 'graveyard' && project.status !== 'completed' && (
                     <button
@@ -814,6 +844,23 @@ export function ProjectDetailPage() {
 
         <LineageBreadcrumb project={project} />
 
+        {/* Sparked by — where this came from, same "origin" idea as the
+            lineage breadcrumb above, so it lives here instead of as its
+            own boxed section further down the page. */}
+        {sparkedByMemories.length > 0 && (
+          <div className="mb-3 space-y-1.5">
+            <div className="flex items-center gap-1.5">
+              <Sprout className="h-3 w-3" style={{ color: 'var(--brand-text-secondary)', opacity: 0.4 }} />
+              <span className="text-[11px] font-medium tracking-wide lowercase" style={{ color: 'var(--brand-text-secondary)', opacity: 0.4 }}>sparked by</span>
+            </div>
+            {sparkedByMemories.map(m => (
+              <p key={m.id} className="text-[13px] italic leading-relaxed line-clamp-2 pl-4" style={{ color: 'var(--brand-text-primary)', opacity: 0.6 }}>
+                "{m.body || m.title}"
+              </p>
+            ))}
+          </div>
+        )}
+
         {/* Day One-style project hero — chapter-cover, not CRM record */}
         <h1 className="page-hero mb-4">{project.title}</h1>
         <div
@@ -827,10 +874,24 @@ export function ProjectDetailPage() {
 
         {/* Meta row — status + type as inline chips */}
         <div className="flex flex-wrap items-center gap-2 mb-8 relative">
-          {project.is_priority && (
-            <span className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold" style={{ color: 'rgb(var(--brand-primary-rgb))', background: 'rgba(var(--brand-primary-rgb),0.08)' }}>
-              <Star className="h-3 w-3 fill-current" /> Priority
-            </span>
+          {/* The priority toggle — the only manual way to set which one
+              project everything else (review rotation, colour, the home
+              answer) is built around. A visible, tappable chip, not a
+              read-only badge you had to already know about to find. */}
+          {project.status !== 'completed' && project.status !== 'graveyard' && (
+            <button
+              onClick={handleTogglePriority}
+              title={project.is_priority ? 'Remove as the priority project' : 'Make this the priority project'}
+              className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-colors"
+              style={
+                project.is_priority
+                  ? { color: 'rgb(var(--brand-primary-rgb))', background: 'rgba(var(--brand-primary-rgb),0.08)' }
+                  : { color: 'var(--brand-text-secondary)', background: 'rgba(255,255,255,0.03)', opacity: 0.7 }
+              }
+            >
+              <Star className={`h-3 w-3 ${project.is_priority ? 'fill-current' : ''}`} />
+              {project.is_priority ? 'Priority' : 'Make it the priority'}
+            </button>
           )}
           {/* Read-only status chip. Transitions happen via explicit actions:
               "Mark Complete" below the task list, and "Send to graveyard" in
@@ -988,55 +1049,37 @@ export function ProjectDetailPage() {
               </div>
               )}
 
-              {/* "A new angle" — the Mode 2b reshape, generated nightly for dormant
-                  projects from post-original signals. Only shows when there's a real
-                  evolved framing AND the project hasn't been opened recently. */}
-              {project.metadata?.evolved_description && project.status === 'dormant' && (
-                <div className="p-4 sm:p-5 rounded-2xl" style={{ background: 'rgba(var(--brand-primary-rgb),0.04)', border: '1px solid rgba(var(--brand-primary-rgb),0.14)' }}>
-                  <span className="text-[11px] font-medium tracking-wide block mb-2 lowercase" style={{ color: 'rgba(var(--brand-primary-rgb),0.7)' }}>
-                    a new angle
-                  </span>
-                  <p className="text-[15px] leading-relaxed italic" style={{ color: 'var(--brand-text-primary)', fontFamily: 'var(--brand-font-body)' }}>
-                    {project.metadata.evolved_description as string}
-                  </p>
-                  {project.heat_reason && (
-                    <p className="mt-2 text-[12px] leading-relaxed" style={{ color: 'var(--brand-text-secondary)', opacity: 0.7 }}>
-                      {project.heat_reason}
-                    </p>
-                  )}
-                </div>
-              )}
-
-              {/* Blocker field — always available on non-completed projects so the user
-                  can capture WHY work paused at the moment it pauses. Powers Mode 2b reshape. */}
+              {/* Paused — why it stalled, and, for a dormant project, the
+                  new framing the system found for it. Used to be two
+                  separately-boxed cards stacked on top of each other; the
+                  angle is really a preface to the blocker question, not a
+                  standalone thing, so they share one card now. */}
               {project.status !== 'completed' && project.status !== 'graveyard' && (
-                <BlockerField
-                  key={project.id}
-                  blocker={project.metadata?.blocker as string | undefined}
-                  onSave={async (text) => {
-                    await updateProject(project.id, {
-                      metadata: { ...project.metadata, blocker: text || undefined }
-                    })
-                  }}
-                />
-              )}
-
-              {/* Sparked By */}
-              {sparkedByMemories.length > 0 && (
-                <div>
-                  <div className="flex items-center gap-2 mb-3">
-                    <Sprout className="h-3.5 w-3.5" style={{ color: 'var(--brand-text-secondary)', opacity: 0.4 }} />
-                    <span className="text-[11px] font-medium tracking-wide lowercase" style={{ color: 'var(--brand-text-secondary)', opacity: 0.4 }}>sparked by</span>
-                  </div>
-                  <div className="space-y-2">
-                    {sparkedByMemories.map(m => (
-                      <div key={m.id} className="px-4 py-3 rounded-xl" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.04)' }}>
-                        <p className="text-[13px] italic leading-relaxed line-clamp-2" style={{ color: 'var(--brand-text-primary)', opacity: 0.6 }}>
-                          "{m.body || m.title}"
+                <div className="space-y-3">
+                  {project.metadata?.evolved_description && project.status === 'dormant' && (
+                    <div>
+                      <span className="text-[11px] font-medium tracking-wide block mb-2 lowercase" style={{ color: 'rgba(var(--brand-primary-rgb),0.7)' }}>
+                        a new angle
+                      </span>
+                      <p className="text-[15px] leading-relaxed italic" style={{ color: 'var(--brand-text-primary)', fontFamily: 'var(--brand-font-body)' }}>
+                        {project.metadata.evolved_description as string}
+                      </p>
+                      {project.heat_reason && (
+                        <p className="mt-2 text-[12px] leading-relaxed" style={{ color: 'var(--brand-text-secondary)', opacity: 0.7 }}>
+                          {project.heat_reason}
                         </p>
-                      </div>
-                    ))}
-                  </div>
+                      )}
+                    </div>
+                  )}
+                  <BlockerField
+                    key={project.id}
+                    blocker={project.metadata?.blocker as string | undefined}
+                    onSave={async (text) => {
+                      await updateProject(project.id, {
+                        metadata: { ...project.metadata, blocker: text || undefined }
+                      })
+                    }}
+                  />
                 </div>
               )}
 
