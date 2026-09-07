@@ -76,6 +76,10 @@
     --brand-font-header: 'Outfit', 'Inter', sans-serif;
     --brand-font-body: 'Inter', -apple-system, sans-serif;
     --brand-font-serif: 'Playfair Display', Georgia, 'Times New Roman', serif;
+    /* Long-form reading only (the article body in the reader). Playfair is
+       a display face and gets thin and tiring below ~24px; Literata is a
+       screen-reading face and stays solid at 19px on a dark background. */
+    --brand-font-reading: 'Literata', Charter, 'Iowan Old Style', Georgia, serif;
 
     /* ─── Page Color Identity System ─────────────────────────── */
     /* Unified cyan accent across all pages */

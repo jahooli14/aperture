@@ -431,8 +431,10 @@ function buildFastSinglePrompt(
     }).join('; ')}`
   ).join('\n')
 
+  // A "good" mark is the user vouching for the piece at the end of it —
+  // worth more than something that merely sat in the saved list.
   const readingBlock = g.reading.slice(0, 120).map(r =>
-    `  "${r.title ?? '(untitled)'}"${r.excerpt ? ` — ${truncate(r.excerpt, 160)}` : ''}`
+    `  "${r.title ?? '(untitled)'}"${r.resonance === 'good' ? ' [they said this one was good]' : ''}${r.excerpt ? ` — ${truncate(r.excerpt, 160)}` : ''}`
   ).join('\n')
   const highlightBlock = g.highlights.slice(0, 120).map(h =>
     `  "${truncate(h.quote, 200)}"${h.article_title ? ` — ${h.article_title}` : ''}`
@@ -563,7 +565,7 @@ function buildFastHourPrompt(g: GatherResult, feeling: SessionFeeling | null): s
   ).join('\n')
 
   const readingBlock = g.reading.slice(0, 80).map(r =>
-    `  "${r.title ?? '(untitled)'}"${r.excerpt ? ` — ${truncate(r.excerpt, 140)}` : ''}`
+    `  "${r.title ?? '(untitled)'}"${r.resonance === 'good' ? ' [they said this one was good]' : ''}${r.excerpt ? ` — ${truncate(r.excerpt, 140)}` : ''}`
   ).join('\n')
   const highlightBlock = g.highlights.slice(0, 80).map(h =>
     `  "${truncate(h.quote, 180)}"${h.article_title ? ` — ${h.article_title}` : ''}`

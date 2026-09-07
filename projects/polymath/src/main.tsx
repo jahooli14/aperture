@@ -20,6 +20,16 @@ import '@fontsource/playfair-display/latin-400-italic.css'
 import '@fontsource/playfair-display/latin-600.css'
 import '@fontsource/playfair-display/latin-700.css'
 
+// Literata — the READING face, used for article body text in the reader.
+// Playfair is a display serif: gorgeous at 44px on a headline, and the
+// wrong tool for 3000 words on a dark screen, where its hairline strokes
+// thin out to nothing. Literata was drawn for e-readers — even weight,
+// low stroke contrast, tall x-height — so it holds up at body size.
+import '@fontsource/literata/latin-400.css'
+import '@fontsource/literata/latin-400-italic.css'
+import '@fontsource/literata/latin-600.css'
+import '@fontsource/literata/latin-700.css'
+
 import './styles/premium-dark.css'
 import './styles/ripple.css'
 

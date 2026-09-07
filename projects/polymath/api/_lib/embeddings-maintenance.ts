@@ -61,7 +61,9 @@ async function fetchItems(supabase: any, table: string, userId: string, limit: n
   // Handle specific fields based on table
   if (table === 'projects') query = query.select('id, title, description, embedding, user_id')
   if (table === 'memories') query = query.select('id, title, body, embedding, user_id')
-  if (table === 'reading_queue') query = query.select('id, title, excerpt, embedding, user_id').eq('processed', true)
+  // Never spend an embedding on an article the user said wasn't for them —
+  // that's the noise the semantic search was full of.
+  if (table === 'reading_queue') query = query.select('id, title, excerpt, embedding, user_id').eq('processed', true).or('resonance.is.null,resonance.neq.not_for_me')
   if (table === 'list_items') query = query.select('id, content, metadata, embedding, user_id').eq('enrichment_status', 'completed')
 
   const { data, error } = await query.limit(limit)

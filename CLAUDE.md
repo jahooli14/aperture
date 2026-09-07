@@ -133,6 +133,23 @@ Active, partly-shaped, dormant, and abandoned are different states. Long-dormant
 
 Lists + reading queue + recent highlights are framing inputs. Same project surfaces with different framing depending on what the user has been reading. *Bed by Ten* after a minimalism book reads differently than *Bed by Ten* after a film about constraint.
 
+### Reading (RSS + the reader)
+
+Feeds arrive as unread rows in `reading_queue` (tagged `rss`). Most of them are never opened. The reader is where an article either earns a place in the corpus or doesn't.
+
+**Only a verdict lets an article into the corpus** (`api/_lib/reading-corpus.ts`, unit-tested). At the end of every article there are two buttons — **"This was good"** and **"Not for me"**. That answer is `reading_queue.resonance`, and it is the whole gate:
+- `good` — the article counts towards project ideas, syntheses and semantic search, and *only then* is it embedded. Labelled in the generator prompt so the model can tell a vouched-for piece from one that merely sat in the list.
+- `not_for_me` — excluded permanently, never embedded.
+- `NULL` — undecided. One carve-out for the years of rows that predate the verdict: a **hand-saved** article (no `rss` tag) still counts, as it always did. An unread RSS headline counts for nothing.
+
+Both answers file the article, because answering IS finishing it — there is no separate archive step. `POST /api/reading?resource=resonance`; the kept ones live under the **Good** tab on `/reading`. Nullable-column trap: PostgREST `.neq()` drops `NULL` rows, so every query gating on this uses `.or('resonance.is.null,resonance.neq.not_for_me')` and lets `selectCorpusArticles` do the real filtering.
+
+**The gist.** Opening an article fires one Gemini call that returns three bullets saying what the piece actually claims (`api/_lib/article-gist.ts`, `POST ?resource=gist`). Cached in `metadata.gist` forever after, so a second open is free; skipped below ~220 words and recorded as skipped so it doesn't retry. Bullets that break the plain-English rules are dropped rather than shown, and fewer than two means no card at all — silence beats a hedged summary.
+
+**Typography.** Article body is **Literata** (`--brand-font-reading`), not Playfair. Playfair is a display face: its hairlines vanish at body size on a dark screen, which is what made long reads tiring. Playfair still sets the title. Typeface / size / line spacing / column width live in a settings sheet (`ReaderSettingsSheet`) and persist per device (`src/lib/readerPrefs.ts`, pure + unit-tested) — reading preferences are set once, not per article.
+
+**Nothing floats over the text.** `FloatingNav` (and its voice FAB) hide for the whole `/reading/:id` route, derived from the path — the reader has its own back button, edge swipe and Escape. The offline banner publishes its height as `--global-banner-h` so the reader toolbar sits below it instead of half under it. Connections are out of the reading surface entirely — the "Connected" block at the end of every article, the Connect button on the card, and `ArticleConnectionsDialog` (deleted). `ItemInsightStrip` lives on and is still used by lists.
+
 ### Session context
 
 `useSessionContextStore` carries a per-session `feeling` (focused / scattered / restless), captured by the FeelingPill at app open and persisted to sessionStorage (resets when the tab closes). The on-demand "suggest a project" path passes it into the generator prompt so the re-roll calibrates to right-now state.

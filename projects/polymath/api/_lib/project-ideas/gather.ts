@@ -13,6 +13,7 @@
 
 import type { getSupabaseClient } from '../supabase.js'
 import type { GatherResult, IdeaOutcome } from './types.js'
+import { selectCorpusArticles } from '../reading-corpus.js'
 
 /** A project spawned from a built idea, as we read it back for outcome
  *  classification. Loose shape — only the fields the classifier needs. */
@@ -143,12 +144,16 @@ export async function gatherForIdeas(supabase: Supabase, userId: string): Promis
       .in('status', ['dormant', 'on-hold', 'archived', 'abandoned'])
       .order('updated_at', { ascending: false })
       .limit(150),
+    // Reading is filtered to what the user actually vouched for — see
+    // reading-corpus.ts. Fetch wider than we need because the filter drops
+    // the unread feed noise afterwards.
     supabase
       .from('reading_queue')
-      .select('id, title, excerpt, source, created_at, status, embedding')
+      .select('id, title, excerpt, source, created_at, status, tags, resonance, themes, embedding')
       .eq('user_id', userId)
+      .or('resonance.is.null,resonance.neq.not_for_me')
       .order('created_at', { ascending: false })
-      .limit(150),
+      .limit(300),
     supabase
       .from('project_suggestions')
       .select('id, title, status')
@@ -284,12 +289,17 @@ export async function gatherForIdeas(supabase: Supabase, userId: string): Promis
     embedding: (p.embedding ?? null) as number[] | string | null,
   }))
 
-  const reading = (readingRes.data ?? []).map((r: any) => ({
+  // Only articles the user marked good, plus legacy hand-saves. An unread
+  // RSS headline is not a signal about who they are, and treating it as
+  // one is what made the reading corpus read like a news ticker.
+  const reading = selectCorpusArticles(readingRes.data ?? []).slice(0, 150).map((r: any) => ({
     id: r.id as string,
     title: r.title as string | null,
     excerpt: r.excerpt as string | null,
     source: r.source as string | null,
     created_at: r.created_at as string,
+    resonance: (r.resonance ?? null) as 'good' | 'not_for_me' | null,
+    themes: (r.themes ?? null) as string[] | null,
     embedding: (r.embedding ?? null) as number[] | string | null,
   }))
 
