@@ -1942,6 +1942,29 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
 
         if (highlightsError) throw highlightsError
 
+        // Articles saved before the link-farm and bot-wall cleanup existed
+        // keep whatever was stored that day, and nothing ever revisits them —
+        // which is why an old article still reads like a nav rail. Re-clean
+        // stored content on the way out and keep the result if it actually
+        // changed, so the backlog heals as it's read rather than staying
+        // broken forever. No network: cleanHtml only parses what we have.
+        if (article.content) {
+          try {
+            const recleaned = cleanHtml(article.content, article.url || '')
+            if (recleaned && recleaned.length < article.content.length) {
+              await supabase
+                .from('reading_queue')
+                .update({ content: recleaned })
+                .eq('id', article.id)
+                .eq('user_id', userId)
+
+              article.content = recleaned
+            }
+          } catch (recleanError) {
+            console.error('[reading] Re-clean failed:', recleanError)
+          }
+        }
+
         if (article.status === 'unread' && req.query.no_promote !== 'true') {
           await supabase
             .from('reading_queue')
@@ -1965,14 +1988,24 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
 
     // List articles
     try {
-      const { status, limit = 50 } = req.query
+      const { status, resonance, limit = 50 } = req.query
 
       let query = supabase
         .from('reading_queue')
         .select('*') // Select new columns -> Reverted temporarily
         .eq('user_id', userId)
-        .order('created_at', { ascending: false })
         .limit(Number(limit))
+
+      // The kept/rejected shelves have to be queried, not sliced out of the
+      // recency window: giving a verdict archives the article but leaves
+      // created_at alone, so an incoming day of RSS pushes it out of the
+      // default list and the "Good" tab looks empty. Order them by when the
+      // verdict was given, which is the order the shelf reads in.
+      if (resonance === 'good' || resonance === 'not_for_me') {
+        query = query.eq('resonance', resonance).order('resonance_at', { ascending: false })
+      } else {
+        query = query.order('created_at', { ascending: false })
+      }
 
       if (status && typeof status === 'string') {
         query = query.eq('status', status)

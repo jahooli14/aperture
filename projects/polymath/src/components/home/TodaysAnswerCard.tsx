@@ -593,17 +593,18 @@ export function TodaysAnswerCard({
         </button>
       </div>
 
-      {/* Below the action, not above the whole card — a light touch that
-          feeds the redirect/idea generator's calibration without acting
-          like a second thing to answer before the real one. */}
-      <FeelingPill />
-
       {/* Redirect — stopPropagation so tapping anything in here doesn't
           also fire the card's navigate-to-project click above. */}
       <div onClick={(e) => e.stopPropagation()}>
         {!engaged ? (
           <SteerRow onOpen={openSteer} nudge={nudge.text} />
         ) : (
+          <>
+          {/* Asked here rather than at app open, because here is the only
+              place the answer does anything: it calibrates what the
+              redirect and the idea deck come back with. On the card it was
+              a question with no visible consequence. */}
+          <FeelingPill />
           <SteerPanel
             chips={chips}
             chipsLoaded={chipsLoaded}
@@ -620,6 +621,7 @@ export function TodaysAnswerCard({
             showDeck={showDeck}
             onToggleDeck={() => setShowDeck(v => !v)}
           />
+          </>
         )}
       </div>
     </div>

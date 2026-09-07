@@ -338,13 +338,12 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
           const ListIcon = getListIcon(memory.source_reference?.list_type)
           return (
             <div className="px-3.5 pt-1.5">
+              {/* Where it came from, said quietly. As a filled amber pill it
+                  competed with the thought's own words for attention on a
+                  card whose body is 12px. */}
               <span
-                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-medium"
-                style={{
-                  background: 'rgba(251,191,36,0.12)',
-                  border: '1px solid rgba(251,191,36,0.3)',
-                  color: 'rgb(252,211,77)',
-                }}
+                className="inline-flex items-center gap-1 text-[10px] font-medium"
+                style={{ color: 'var(--brand-text-muted)' }}
               >
                 <ListIcon className="w-2.5 h-2.5" />
                 {memory.source_reference.title}
@@ -415,43 +414,17 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
           </div>
         )}
 
-        {/* Footer: date + badges */}
-        <div
-          className="flex items-center justify-between gap-2 px-3.5 pt-2 pb-3 mt-2"
-          style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}
-        >
-          <div className="flex items-center gap-1.5">
-            <span
-              className="text-[11px] font-medium tabular-nums"
-              style={{ color: 'var(--brand-text-muted)' }}
-            >
-              {displayDate}
-            </span>
-
-          </div>
-
-          <div className="flex items-center gap-1.5 flex-shrink-0">
-
-            {typeConfig ? (
-              <span
-                className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-semibold"
-                style={{ background: typeConfig.bg, border: typeConfig.border, color: typeConfig.text }}
-              >
-                {typeConfig.label}
-              </span>
-            ) : firstTag ? (
-              <span
-                className="px-1.5 py-0.5 rounded-md text-[10px] font-semibold truncate max-w-[90px]"
-                style={{
-                  background: 'rgba(148,163,184,0.12)',
-                  border: '1px solid rgba(148,163,184,0.25)',
-                  color: 'rgba(203,213,225,0.95)',
-                }}
-              >
-                {firstTag}
-              </span>
-            ) : null}
-          </div>
+        {/* Footer: one quiet line. It was a ruled-off zone holding a date and
+            a bordered pill — chrome for two words. The rule and the pill are
+            gone; the words stayed. */}
+        <div className="flex items-center gap-1.5 px-3.5 pt-2 pb-3 mt-1 text-[11px]" style={{ color: 'var(--brand-text-muted)' }}>
+          <span className="font-medium tabular-nums">{displayDate}</span>
+          {(typeConfig || firstTag) && (
+            <>
+              <span aria-hidden>·</span>
+              <span className="truncate">{typeConfig ? typeConfig.label : firstTag}</span>
+            </>
+          )}
         </div>
       </motion.div>
 

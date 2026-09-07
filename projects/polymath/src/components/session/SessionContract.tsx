@@ -50,6 +50,17 @@ function formatClock(seconds: number): string {
 
 const secondaryTextStyle = { color: 'var(--brand-text-secondary)', opacity: 0.7 }
 const borderStyle = { borderColor: 'var(--glass-border-bold)' }
+/**
+ * Panels that report something (a cycle finished, the finish line reached)
+ * sit in neutral glass, not tinted accent. The accent is spent on the step
+ * you're on and the button you press — when every panel is also blue,
+ * nothing on the page is emphasised and the whole thing just reads blue.
+ */
+const notePanelStyle = {
+  background: 'var(--glass-surface)',
+  border: '1px solid var(--glass-border-bold)',
+}
+const noteLabelStyle = { color: 'var(--brand-text-secondary)', opacity: 0.75 }
 const primaryButtonStyle = {
   background: 'rgba(var(--brand-primary-rgb), 0.12)',
   border: '1px solid rgba(var(--brand-primary-rgb), 0.32)',
@@ -395,12 +406,9 @@ export function SessionContract({
           {closeResult.cycle && (
             <div
               className="rounded-xl px-3.5 py-3 space-y-1"
-              style={{
-                background: 'rgba(var(--brand-primary-rgb),0.06)',
-                border: '1px solid rgba(var(--brand-primary-rgb),0.20)',
-              }}
+              style={notePanelStyle}
             >
-              <p className="text-[11px] uppercase tracking-wide flex items-center gap-1.5" style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.7 }}>
+              <p className="text-[11px] uppercase tracking-wide flex items-center gap-1.5" style={noteLabelStyle}>
                 <Flag size={11} /> {closeResult.cycle.label} done
               </p>
               <p className="text-sm leading-snug">{closeResult.cycle.reason}</p>
@@ -414,12 +422,9 @@ export function SessionContract({
           {closeResult.finish && (
             <div
               className="rounded-xl px-3.5 py-3 space-y-1"
-              style={{
-                background: 'rgba(var(--brand-primary-rgb),0.06)',
-                border: '1px solid rgba(var(--brand-primary-rgb),0.20)',
-              }}
+              style={notePanelStyle}
             >
-              <p className="text-[11px] uppercase tracking-wide flex items-center gap-1.5" style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.7 }}>
+              <p className="text-[11px] uppercase tracking-wide flex items-center gap-1.5" style={noteLabelStyle}>
                 <Flag size={11} /> {closeResult.finish.reached ? 'That’s the finish line' : 'Plan’s done, project isn’t'}
               </p>
               <p className="text-sm leading-snug">{closeResult.finish.reason}</p>
@@ -784,7 +789,7 @@ export function SessionContract({
             started until something else was done. Said plainly, because
             it rewrote the list -- never a silent reshuffle. */}
         {plan?.unblocked && (
-          <p className="text-[12.5px] leading-snug" style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.8 }}>
+          <p className="text-[12.5px] leading-snug" style={secondaryTextStyle}>
             {plan.unblocked.added ? 'Added a step that had to come first' : 'Moved a step up'} — “{plan.unblocked.before}” needs “{plan.unblocked.text}” done before it.
           </p>
         )}
@@ -793,7 +798,7 @@ export function SessionContract({
             today's list -- said plainly for the same reason `unblocked`
             is: this rewrote the permanent plan. */}
         {plan?.removed && plan.removed.length > 0 && (
-          <p className="text-[12.5px] leading-snug" style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.8 }}>
+          <p className="text-[12.5px] leading-snug" style={secondaryTextStyle}>
             Taken off the project — {plan.removed.map(r => `“${r.text}”`).join(', ')}.
           </p>
         )}

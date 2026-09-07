@@ -2580,6 +2580,36 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
   // accurate declaration is never interrupted -- this only fires when the
   // user's actual behaviour has quietly diverged from what they said.
   if (resource === 'live-reask') {
+    // "Leave it as is" is an answer, and it has to be recorded somewhere the
+    // next app open can see. Without this the condition (last 3 sessions all
+    // on one other project) stays true indefinitely and the same question
+    // comes back every single open — a timer only changes how often.
+    if (req.method === 'POST') {
+      const { project_id } = req.body || {}
+      if (!project_id) return res.status(400).json({ error: 'project_id required' })
+
+      const { data: project } = await supabase
+        .from('projects')
+        .select('metadata')
+        .eq('id', project_id)
+        .eq('user_id', userId)
+        .maybeSingle()
+
+      const { error } = await supabase
+        .from('projects')
+        .update({
+          metadata: {
+            ...(project?.metadata ?? {}),
+            live_reask_declined_at: new Date().toISOString(),
+          },
+        })
+        .eq('id', project_id)
+        .eq('user_id', userId)
+
+      if (error) return res.status(500).json({ error: 'Failed to record that' })
+      return res.status(200).json({ success: true })
+    }
+
     if (req.method !== 'GET') return res.status(405).json({ error: 'GET required' })
 
     const { data: liveProject } = await supabase
@@ -2607,6 +2637,22 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
     if (!allElsewhere || !sameOtherProject) return res.status(200).json({ suggestion: null })
 
     const other = recentSessions[0] as any
+
+    // Already answered for this project: the live one stands, and asking
+    // again about the same project is just the same question reworded.
+    // A different project drifting is genuinely new evidence, so that
+    // still gets through.
+    const { data: candidate } = await supabase
+      .from('projects')
+      .select('metadata')
+      .eq('id', other.project_id)
+      .eq('user_id', userId)
+      .maybeSingle()
+
+    if (candidate?.metadata?.live_reask_declined_at) {
+      return res.status(200).json({ suggestion: null })
+    }
+
     return res.status(200).json({
       suggestion: { project_id: other.project_id, title: other.projects?.title ?? 'this' },
     })

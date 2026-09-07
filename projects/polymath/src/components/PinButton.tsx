@@ -1,9 +1,12 @@
 /**
- * Pin Button Component
- * Reusable button to pin content to split screen
+ * Keeps one item on screen in the bottom strip while you browse elsewhere.
+ *
+ * Deliberately not called "pin": pinning already means putting a project in
+ * Up Next, and the two wearing the same word and the same pin icon is why
+ * nobody could tell what this button did.
  */
 
-import { Pin, PinOff } from 'lucide-react'
+import { Columns2, X } from 'lucide-react'
 import { usePin } from '../contexts/PinContext'
 import { ReactNode, useEffect } from 'react'
 
@@ -48,10 +51,10 @@ export function PinButton({ type, id, title, content, currentId, contentVersion 
         borderColor: isThisPinned ? 'rgba(var(--brand-primary-rgb), 0.5)' : 'rgba(255, 255, 255, 0.2)',
         color: isThisPinned ? 'var(--brand-primary)' : 'var(--brand-text-secondary)'
       }}
-      title={isThisPinned ? 'Unpin from bottom strip' : 'Pin to bottom strip — keep this open while you browse elsewhere'}
-      aria-label={isThisPinned ? 'Unpin from bottom strip' : 'Pin to bottom strip — keep this open while you browse elsewhere'}
+      title={isThisPinned ? 'Stop keeping this on screen' : 'Keep on screen while you browse elsewhere'}
+      aria-label={isThisPinned ? 'Stop keeping this on screen' : 'Keep on screen while you browse elsewhere'}
     >
-      {isThisPinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
+      {isThisPinned ? <X className="h-4 w-4" /> : <Columns2 className="h-4 w-4" />}
     </button>
   )
 }

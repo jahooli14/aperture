@@ -42,6 +42,7 @@ interface ReadingState {
 
   // Actions
   fetchArticles: (status?: ArticleStatus, force?: boolean) => Promise<void>
+  fetchShelf: (shelf: 'good' | 'not_for_me' | 'archived') => Promise<void>
   saveArticle: (request: SaveArticleRequest) => Promise<Article>
   updateArticle: (id: string, updates: Partial<Article>) => Promise<void>
   updateArticleStatus: (id: string, status: ArticleStatus) => Promise<void>
@@ -240,6 +241,45 @@ export const useReadingStore = create<ReadingState>((set, get) => {
           // We have stale data, just stop loading
           set({ loading: false })
         }
+      }
+    },
+
+    fetchShelf: async (shelf: 'good' | 'not_for_me' | 'archived') => {
+      if (!navigator.onLine) return
+
+      const params = shelf === 'archived'
+        ? 'status=archived&limit=200'
+        : `resonance=${shelf}&limit=200`
+
+      try {
+        const response = await fetchWithTimeout(`/api/reading?${params}`)
+        if (!response.ok) throw new Error('Failed to fetch shelf')
+
+        const { articles: shelfArticles } = await response.json()
+        if (!Array.isArray(shelfArticles) || shelfArticles.length === 0) return
+
+        // Merge rather than replace: the shelf is a second window onto the
+        // same table, and the default list is still the one driving the
+        // other tabs.
+        const byId = new Map<string, Article>(get().articles.map(a => [a.id, a]))
+        for (const article of shelfArticles) {
+          byId.set(article.id, { ...byId.get(article.id), ...article })
+        }
+        set({ articles: [...byId.values()] })
+
+        try {
+          const { readingDb } = await import('../lib/db')
+          await readingDb.articles.bulkPut(shelfArticles.map((a: Article) => ({
+            ...a,
+            offline_available: true,
+            images_cached: false,
+            last_synced: new Date().toISOString(),
+          })))
+        } catch (cacheError) {
+          logger.warn('[ReadingStore] Failed to cache shelf:', cacheError)
+        }
+      } catch (error) {
+        logger.error('[ReadingStore] Shelf fetch failed:', error)
       }
     },
 

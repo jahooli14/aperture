@@ -102,37 +102,6 @@ function markMirrorSeen() {
   }
 }
 
-/**
- * The reask has no server-side cooldown -- the condition it checks
- * (last 3 sessions all on one other project) stays true for as long as
- * behaviour hasn't changed, which without a client-side rest means it
- * asks again on every single app open until you act on it. A week of
- * quiet after each showing is enough for "leave it as is" to actually
- * mean something.
- */
-const REASK_SEEN_KEY = 'aperture-reask-last-shown'
-const REASK_COOLDOWN_DAYS = 7
-
-function reaskOnCooldown(): boolean {
-  try {
-    const raw = localStorage.getItem(REASK_SEEN_KEY)
-    if (!raw) return false
-    const last = Date.parse(raw)
-    if (Number.isNaN(last)) return false
-    return Date.now() - last < REASK_COOLDOWN_DAYS * 24 * 60 * 60 * 1000
-  } catch {
-    return true // fail closed -- never nag if storage is unavailable
-  }
-}
-
-function markReaskShown() {
-  try {
-    localStorage.setItem(REASK_SEEN_KEY, new Date().toISOString())
-  } catch {
-    // Storage unavailable -- the reask will just show again next open, harmless.
-  }
-}
-
 async function getJson<T>(url: string): Promise<T | null> {
   try {
     const res = await fetch(url)
@@ -357,7 +326,17 @@ function ReaskSlot({ suggestion, onResolved }: { suggestion: ReaskSuggestion; on
   const act = async (accept: boolean) => {
     setBusy(true)
     try {
-      if (accept) await declareLive(suggestion.project_id)
+      if (accept) {
+        await declareLive(suggestion.project_id)
+      } else {
+        // Recorded against the project so the answer survives this open —
+        // and this device.
+        await fetch('/api/utilities?resource=live-reask', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ project_id: suggestion.project_id }),
+        }).catch(() => {})
+      }
     } finally {
       setBusy(false)
       onResolved()
@@ -434,15 +413,14 @@ export function AttentionSlot() {
         }
       }
 
-      if (!reaskOnCooldown()) {
-        const reaskResult = await getJson<{ suggestion: ReaskSuggestion | null }>('/api/utilities?resource=live-reask')
-        if (cancelled) return
-        if (reaskResult?.suggestion) {
-          setReask(reaskResult.suggestion)
-          setKind('reask')
-          markReaskShown()
-          return
-        }
+      // No client-side timer: the server drops a project you've already
+      // answered for, so a suggestion arriving here is one you haven't seen.
+      const reaskResult = await getJson<{ suggestion: ReaskSuggestion | null }>('/api/utilities?resource=live-reask')
+      if (cancelled) return
+      if (reaskResult?.suggestion) {
+        setReask(reaskResult.suggestion)
+        setKind('reask')
+        return
       }
 
       const proposals = await getJson<{ proposals: Proposal[] }>('/api/utilities?resource=pending')

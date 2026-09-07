@@ -5,7 +5,7 @@
 
 import { useEffect, useState, useRef, useMemo, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Loader2, MoreVertical, Check, X, GripVertical, Play, Target, Star, Sprout, Pin, PinOff, Skull, ArrowLeft } from 'lucide-react'
+import { Loader2, MoreVertical, Check, X, GripVertical, Play, Target, Star, Sprout, Columns2, Skull, ArrowLeft } from 'lucide-react'
 import { useProjectStore } from '../stores/useProjectStore'
 import { useSessionStore } from '../stores/useSessionStore'
 import { SessionContract } from '../components/session/SessionContract'
@@ -802,8 +802,8 @@ export function ProjectDetailPage() {
                     style={{ color: 'var(--brand-text-primary)', opacity: 0.9 }}
                   >
                     {pinnedItem?.id === project.id
-                      ? <><PinOff className="h-4 w-4" /> Unpin from bottom strip</>
-                      : <><Pin className="h-4 w-4" /> Pin to bottom strip</>}
+                      ? <><X className="h-4 w-4" /> Stop keeping this on screen</>
+                      : <><Columns2 className="h-4 w-4" /> Keep on screen</>}
                   </button>
                   {project.status !== 'graveyard' && project.status !== 'completed' && (
                     <button
