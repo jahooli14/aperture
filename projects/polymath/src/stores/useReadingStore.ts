@@ -574,7 +574,13 @@ export const useReadingStore = create<ReadingState>((set, get) => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ id, resonance }),
         })
-        if (!response.ok) throw new Error(`HTTP ${response.status}`)
+        if (!response.ok) {
+          // Carry the server's own explanation up to the toast. Collapsing
+          // it to a status code is what let a missing column read as
+          // "you're offline".
+          const body = await response.json().catch(() => null)
+          throw new Error(body?.details || body?.error || `HTTP ${response.status}`)
+        }
       } catch (error) {
         // Put everything back exactly as it was and let the caller say so.
         // A verdict that looks saved but isn't is worse than one you have

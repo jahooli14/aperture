@@ -19,7 +19,6 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { BookmarkPlus, X } from 'lucide-react'
 import { haptic } from '../../utils/haptics'
 import { api } from '../../lib/apiClient'
-import { useSessionContextStore } from '../../stores/useSessionContextStore'
 import { useProjectStore } from '../../stores/useProjectStore'
 import { useProjectIdeasStore, type ProjectIdea } from '../../stores/useProjectIdeasStore'
 import { createProjectFromIdea } from '../../lib/createProjectFromIdea'
@@ -66,13 +65,20 @@ function deriveMode(idea: ProjectIdea): IdeaMode {
 //
 // Read uses warm rose — distinct from the other modes (which trend cool),
 // and signals "this is the wow line" before the user reads anything.
+// One accent, the app's own. Each mode used to get its own colour — rose,
+// amber, slate, violet, cyan, emerald — but the colour wasn't carrying the
+// meaning: the glyph and the eyebrow already say which mode this is, in
+// words. All it did was make a card turn up in a colour the rest of the app
+// never uses, which reads as random rather than significant.
+const BRAND_ACCENT_RGB = 'var(--brand-primary-rgb)'
+
 const MODE_VISUAL: Record<IdeaMode, { glyph: string; accentRgb: string; eyebrow: string }> = {
-  read:      { glyph: '◉', accentRgb: '244, 114, 182', eyebrow: 'what i see across your work' }, // rose
-  new_idea:  { glyph: '✦', accentRgb: '252, 211, 77',  eyebrow: 'a new idea taking shape' },     // amber
-  forgotten: { glyph: '❋', accentRgb: '148, 163, 184', eyebrow: 'you set this down' },           // slate
-  reshape:   { glyph: '◈', accentRgb: '167, 139, 250', eyebrow: 'a new angle' },                 // violet
-  extend:    { glyph: '→', accentRgb: '56, 189, 248',  eyebrow: 'pick this up' },                // cyan
-  hour:      { glyph: '◷', accentRgb: '52, 211, 153',  eyebrow: 'one hour, start to finish' },   // emerald
+  read:      { glyph: '◉', accentRgb: BRAND_ACCENT_RGB, eyebrow: 'what i see across your work' },
+  new_idea:  { glyph: '✦', accentRgb: BRAND_ACCENT_RGB, eyebrow: 'a new idea taking shape' },
+  forgotten: { glyph: '❋', accentRgb: BRAND_ACCENT_RGB, eyebrow: 'you set this down' },
+  reshape:   { glyph: '◈', accentRgb: BRAND_ACCENT_RGB, eyebrow: 'a new angle' },
+  extend:    { glyph: '→', accentRgb: BRAND_ACCENT_RGB, eyebrow: 'pick this up' },
+  hour:      { glyph: '◷', accentRgb: BRAND_ACCENT_RGB, eyebrow: 'one hour, start to finish' },
 }
 
 const KIND_LABEL: Record<string, string> = {
@@ -175,13 +181,9 @@ export function ProjectIdeasHome({ startExpanded = false, onClose }: { startExpa
       // hits the LLM when the queue is empty. Fast path is ~10s; allow 40s
       // so a slightly slow tail doesn't abort. The hour scope never
       // short-circuits — it always generates a fresh one-hour thing.
-      // Pass the session feeling (focused / scattered / restless) when
-      // the user has picked one — the backend folds it into the generator
-      // prompt so the on-demand re-roll calibrates to right-now state.
-      const feeling = useSessionContextStore.getState().feeling
       const res = await api.post(
         'utilities?resource=generate-project-ideas',
-        { ...(feeling ? { feeling } : {}), ...(scope === 'hour' ? { scope } : {}) },
+        { ...(scope === 'hour' ? { scope } : {}) },
         // Full-history corpus on a thinking model is genuinely slow on a
         // cold press; the server budget is ~66s. Paid once — the next
         // press is instant from the pending queue.
@@ -625,11 +627,14 @@ export function ProjectIdeasHome({ startExpanded = false, onClose }: { startExpa
                     textWrap: 'pretty',
                   }}
                 >
+                  {/* On its own line. Inline, the tracked-out label ate the
+                      first line and left the italic sentence wrapping around
+                      it with a word stranded on the last line. */}
                   <span
-                    className="not-italic mr-1.5 text-[10px] uppercase tracking-[0.26em] font-semibold opacity-70"
+                    className="not-italic block mb-1 text-[10px] uppercase tracking-[0.26em] font-semibold opacity-70"
                     style={{ color: 'var(--brand-text-muted)' }}
                   >
-                    why now ·
+                    why now
                   </span>
                   {active.why_now}
                 </p>

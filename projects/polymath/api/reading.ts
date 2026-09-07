@@ -1516,6 +1516,19 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
       return res.status(200).json({ success: true, article: updated })
     } catch (error) {
       console.error('[reading resonance] Error:', error)
+      // 42703 is Postgres for "column does not exist". This repo has no
+      // migration runner, so code can ship before its columns do, and the
+      // generic message made that look identical to being offline — which
+      // is exactly how a verdict that could never be saved went unnoticed.
+      // Say which migration is missing instead.
+      const code = (error as { code?: string } | null)?.code
+      if (code === '42703') {
+        return res.status(500).json({
+          error: 'The database is missing the resonance columns',
+          details: 'Run supabase/migrations/20260907_reading_resonance_and_gist.sql against this project, then try again.',
+          code,
+        })
+      }
       return res.status(500).json({ error: 'Failed to save that' })
     }
   }

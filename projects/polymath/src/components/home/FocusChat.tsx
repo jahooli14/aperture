@@ -25,7 +25,6 @@ import { useRef, useEffect } from 'react'
 import { ChevronRight } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useProjectStore } from '../../stores/useProjectStore'
-import { useSessionContextStore } from '../../stores/useSessionContextStore'
 import { useFocusChatStore } from '../../stores/useFocusChatStore'
 import { toPortfolioSummaries } from './focusChatOps'
 import { FocusChatActionCard } from './FocusChatActionCard'
@@ -36,7 +35,6 @@ import { ThinkingIndicator } from '../chat/ThinkingIndicator'
 
 export function FocusChat({ onEditMessage }: { onEditMessage: (content: string) => void }) {
   const allProjects = useProjectStore(s => s.allProjects)
-  const feeling = useSessionContextStore(s => s.feeling)
   const messages = useFocusChatStore(s => s.messages)
   const thinking = useFocusChatStore(s => s.thinking)
   const markGuideFlag = useFocusChatStore(s => s.markGuideFlag)
@@ -57,8 +55,8 @@ export function FocusChat({ onEditMessage }: { onEditMessage: (content: string) 
     bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
   }, [messages, thinking])
 
-  const sendMessage = (message: string) => useFocusChatStore.getState().sendMessage(message, portfolioSummaries, feeling)
-  const regenerate = () => useFocusChatStore.getState().regenerate(portfolioSummaries, feeling)
+  const sendMessage = (message: string) => useFocusChatStore.getState().sendMessage(message, portfolioSummaries, null)
+  const regenerate = () => useFocusChatStore.getState().regenerate(portfolioSummaries, null)
 
   const lastUserIndex = messages.reduce((acc, m, i) => (m.kind === 'you' ? i : acc), -1)
 

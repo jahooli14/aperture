@@ -1670,12 +1670,21 @@ Return JSON only:
       // today. Skipping it is what made "send to graveyard" look broken —
       // the project vanished from the projects page and stayed put as
       // today's answer on Home.
-      if (updates.status === 'graveyard' || updates.status === 'completed') {
+      const burying = updates.status === 'graveyard' || updates.status === 'abandoned'
+      if (burying || updates.status === 'completed') {
         updates.state = updates.status === 'completed' ? 'harvested' : 'mull'
         updates.is_priority = false
         updates.up_next_position = null
         updates.booked_session_at = null
       }
+
+      // The projects.status CHECK constraint permits upcoming / active /
+      // dormant / on-hold / maintaining / completed / archived / abandoned.
+      // It has never permitted 'graveyard', so every "send to graveyard"
+      // was rejected by Postgres and surfaced as "Failed to update project".
+      // 'abandoned' is the same state under the name the database knows,
+      // and nothing else writes it.
+      if (updates.status === 'graveyard') updates.status = 'abandoned'
 
       const { data, error } = await supabase
         .from('projects')

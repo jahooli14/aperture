@@ -239,9 +239,7 @@ export function HomePage() {
           </motion.div>
 
           {/* Section 1 — Today's answer. One statement, one action, one
-              redirect. FeelingPill still feeds the session-context signal
-              the redirect and the idea generator both read; kept small and
-              out of the way rather than a competing control above the box.
+              redirect.
               The Focus chat thread renders INSIDE this card now (its own
               redirect panel), not as a second card mounted separately here
               — that used to produce two stacked glass cards with duplicate

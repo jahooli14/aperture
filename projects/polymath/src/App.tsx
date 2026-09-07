@@ -5,9 +5,7 @@ import { OfflineIndicator } from './components/OfflineIndicator'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { FloatingNav } from './components/FloatingNav'
 import { PWAInstallBanner } from './components/PWAInstallBanner'
-import { PinProvider } from './contexts/PinContext'
 import { AuthProvider } from './contexts/AuthContext'
-import { PinOverlay } from './components/PinOverlay'
 import { AutoSuggestionProvider } from './contexts/AutoSuggestionContext'
 import { ScrollToTop } from './components/ScrollToTop'
 import { AnimatedPage } from './components/AnimatedPage'
@@ -322,7 +320,6 @@ export default function App() {
 
   return (
     <AuthProvider>
-    <PinProvider>
       <AutoSuggestionProvider>
         <ToastProvider>
           <Router future={{
@@ -402,11 +399,6 @@ export default function App() {
                 </Suspense>
               </ErrorBoundary>
 
-              {/* Pin Overlay - Split Screen */}
-              <ErrorBoundary fallback={null}>
-                <PinOverlay />
-              </ErrorBoundary>
-
               {/* Debug Panel - Shows console logs on screen */}
               <ErrorBoundary fallback={null}>
                 <Suspense fallback={null}>
@@ -417,7 +409,6 @@ export default function App() {
           </Router>
         </ToastProvider>
       </AutoSuggestionProvider>
-    </PinProvider>
     </AuthProvider>
   )
 }

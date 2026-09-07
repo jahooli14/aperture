@@ -9,7 +9,6 @@ import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Star, Heart, Plus, Check } from 'lucide-react'
 import { useProjectStore } from '../../stores/useProjectStore'
-import { usePin } from '../../contexts/PinContext'
 import type { Project } from '../../types'
 
 interface ProjectListRowProps {
@@ -24,13 +23,9 @@ export function ProjectListRow({
   spotlightColor = 'rgba(var(--brand-primary-rgb), 0.1)' // default blue
 }: ProjectListRowProps) {
   const { setPriority, updateProject } = useProjectStore()
-  const { pinnedItem } = usePin()
   const [newTaskText, setNewTaskText] = useState('')
   const [isAddingTask, setIsAddingTask] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
-
-  // Check if this project is pinned
-  const isPinned = pinnedItem?.type === 'project' && pinnedItem?.id === project.id
 
   const tasks = (project.metadata?.tasks || []) as any[]
   // Copy before sorting — .sort() mutates in place and `tasks` is the
@@ -200,60 +195,6 @@ export function ProjectListRow({
           </div>
         )}
 
-        {/* Quick Add Task - Only for pinned projects */}
-        {isPinned && (
-          <div
-            className="mt-2 pt-2"
-            style={{ borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}
-            onClick={(e) => e.preventDefault()}
-          >
-            {isAddingTask ? (
-              <form onSubmit={handleAddTask} className="flex items-center gap-2">
-                <input
-                  ref={inputRef}
-                  type="text"
-                  value={newTaskText}
-                  onChange={(e) => setNewTaskText(e.target.value)}
-                  onBlur={() => {
-                    if (!newTaskText.trim()) {
-                      setIsAddingTask(false)
-                    }
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Escape') {
-                      setNewTaskText('')
-                      setIsAddingTask(false)
-                    }
-                  }}
-                  placeholder="Add task..."
-                  className="flex-1 px-3 py-2 text-sm rounded-lg min-h-[40px]"
-                  style={{
-                    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-                    border: '1px solid rgba(255, 255, 255, 0.15)',
-                    color: 'var(--brand-text-primary)',
-                    outline: 'none'
-                  }}
-                />
-                <button
-                  type="submit"
-                  className="h-9 w-9 flex items-center justify-center rounded-lg hover:bg-white/10 transition-colors"
-                  style={{ color: 'var(--brand-primary)' }}
-                >
-                  <Check size={16} />
-                </button>
-              </form>
-            ) : (
-              <button
-                onClick={handleStartAddingTask}
-                className="flex items-center gap-1.5 text-sm px-2 py-2 rounded-lg hover:bg-[rgba(255,255,255,0.06)] transition-colors w-full min-h-[36px]"
-                style={{ color: 'var(--brand-text-secondary)' }}
-              >
-                <Plus size={16} />
-                <span>Add task</span>
-              </button>
-            )}
-          </div>
-        )}
       </motion.div>
     </Link>
   )

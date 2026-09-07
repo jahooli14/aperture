@@ -338,6 +338,10 @@ export function SearchPage() {
                 />
                 <input
                   type="text"
+                  // You opened the search page to type. Landing with the
+                  // keyboard down and the cursor nowhere costs a tap every
+                  // single time.
+                  autoFocus
                   value={query}
                   onChange={handleQueryChange}
                   onFocus={(e) => { setSearchFocused(true); handleInputFocus(e) }}

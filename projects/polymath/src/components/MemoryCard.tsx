@@ -1,7 +1,7 @@
 import React, { useState, memo, useCallback, useMemo, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
-import { Edit, Trash2, Copy, Share2, Pin, Sprout, Film, Book, Music, MapPin, Gamepad2, Monitor, FileText, Box, CheckSquare, Square } from 'lucide-react'
+import { Edit, Trash2, Copy, Share2, Sprout, Film, Book, Music, MapPin, Gamepad2, Monitor, FileText, Box, CheckSquare, Square } from 'lucide-react'
 import type { Memory, BridgeWithMemories, ChecklistItem } from '../types'
 import { useMemoryStore } from '../stores/useMemoryStore'
 import { useToast } from './ui/toast'
@@ -127,8 +127,6 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
   const pressOrigin = useRef<{ x: number; y: number } | null>(null)
 
   const deleteMemory = useMemoryStore((state) => state.deleteMemory)
-  const pinMemory = useMemoryStore((state) => state.pinMemory)
-  const unpinMemory = useMemoryStore((state) => state.unpinMemory)
   const updateChecklistItems = useMemoryStore((state) => state.updateChecklistItems)
   const { addToast } = useToast()
   const { confirm, dialog: confirmDialog } = useConfirmDialog()
@@ -191,15 +189,6 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
     updateChecklistItems(memory.id, updated)
   }, [memory.id, memory.checklist_items, updateChecklistItems])
 
-  const handleTogglePin = useCallback(() => {
-    if (memory.is_pinned) {
-      unpinMemory(memory.id)
-    } else {
-      pinMemory(memory.id)
-      haptic.success()
-    }
-  }, [memory.id, memory.is_pinned, pinMemory, unpinMemory])
-
   const handleCopyText = useCallback(() => {
     const textToCopy = `${memory.title}\n\n${memory.body}`
     navigator.clipboard.writeText(textToCopy).then(() => {
@@ -250,11 +239,6 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
       onClick: () => setShowDetailModal(true),
     },
     {
-      label: memory.is_pinned ? 'Unpin' : 'Pin',
-      icon: <Pin className="h-5 w-5" />,
-      onClick: handleTogglePin,
-    },
-    {
       label: 'Grow into project',
       icon: <Sprout className="h-5 w-5" />,
       onClick: () => setSeedProjectOpen(true),
@@ -275,7 +259,7 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
       onClick: handleDelete,
       variant: 'destructive' as const,
     },
-  ], [memory, handleTogglePin, handleCopyText, handleShare, handleDelete])
+  ], [memory, handleCopyText, handleShare, handleDelete])
 
   const isOfflinePending = memory.id.startsWith('offline_') || memory.tags?.includes('offline-pending')
   const typeConfig = memory.memory_type ? MEMORY_TYPE_CONFIG[memory.memory_type] : null
@@ -306,18 +290,10 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
         className="glass-card break-inside-avoid cursor-pointer select-none touch-pan-y"
         style={{
           // glass-card supplies base translucent fill + hairline border + blur.
-          // Pinned/offline only overlay border tint, not the whole surface.
-          border: isOfflinePending
-            ? '1px solid rgba(255,255,255,0.08)'
-            : memory.is_pinned
-              ? '1px solid rgba(251,191,36,0.45)'
-              : undefined,
-          boxShadow: memory.is_pinned
-            ? '0 0 0 1px rgba(251,191,36,0.12), 0 4px 16px rgba(0,0,0,0.5)'
-            : undefined,
+          border: isOfflinePending ? '1px solid rgba(255,255,255,0.08)' : undefined,
         }}
       >
-        {/* Title row — pin dot when pinned, no buttons */}
+        {/* Title row — no buttons */}
         <div className="flex items-start gap-1.5 px-3.5 pt-3 pb-0">
           <p
             className="flex-1 min-w-0 font-semibold text-[13px] leading-snug line-clamp-2"
@@ -325,12 +301,6 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
           >
             {memory.title}
           </p>
-          {memory.is_pinned && (
-            <Pin
-              className="w-3 h-3 flex-shrink-0 mt-0.5"
-              style={{ color: 'rgb(251,191,36)', fill: 'rgb(251,191,36)' }}
-            />
-          )}
         </div>
 
         {/* Source reference badge */}

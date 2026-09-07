@@ -248,12 +248,30 @@ function ForgottenSlot({ spark, onResolved }: { spark: Spark; onResolved: () => 
         >
           Make it live
         </button>
-        <button className={quietOutClass} style={quietOutStyle} disabled={busy} onClick={onResolved}>
+        <button className={quietOutClass} style={quietOutStyle} disabled={busy} onClick={() => { void dismissSpark(spark.id); onResolved() }}>
           not now
         </button>
       </div>
     </div>
   )
+}
+
+/**
+ * Retire a spark the user waved away. A spark is served until it's answered
+ * or expires, so without this "not now" only cleared the screen and the same
+ * one came back on the next open.
+ */
+async function dismissSpark(sparkId: string): Promise<void> {
+  try {
+    await fetch('/api/utilities?resource=dismiss-spark', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ spark_id: sparkId }),
+    })
+  } catch {
+    // Offline — it'll be offered again, which is the old behaviour, not a
+    // new failure.
+  }
 }
 
 /** How long the "here's what that did" line stays up before the slot

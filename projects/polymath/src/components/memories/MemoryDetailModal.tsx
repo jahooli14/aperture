@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Calendar, Edit, Trash2, Copy, Share2, Link2, Pin, CheckSquare, Square, MoreVertical } from 'lucide-react'
+import { X, Calendar, Edit, Trash2, Copy, Share2, Link2, CheckSquare, Square, MoreVertical } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { MarkdownRenderer } from '../ui/MarkdownRenderer'
 import { format } from 'date-fns'
@@ -11,7 +11,6 @@ import { useConfirmDialog } from '../ui/confirm-dialog'
 import { haptic } from '../../utils/haptics'
 import { EditMemoryDialog } from './EditMemoryDialog'
 import { TagEditor } from './TagEditor'
-import { ThemeEditor } from './ThemeEditor'
 import { GlassCard } from '../ui/GlassCard'
 import { CACHE_TTL } from '../../lib/cacheConfig'
 
@@ -27,8 +26,6 @@ export const MemoryDetailModal: React.FC<MemoryDetailModalProps> = ({ memory, is
   const { addToast } = useToast()
   const { confirm, dialog: confirmDialog } = useConfirmDialog()
   const deleteMemory = useMemoryStore((state) => state.deleteMemory)
-  const pinMemory = useMemoryStore((state) => state.pinMemory)
-  const unpinMemory = useMemoryStore((state) => state.unpinMemory)
   const updateChecklistItems = useMemoryStore((state) => state.updateChecklistItems)
   const fetchBridgesForMemory = useMemoryStore((state) => state.fetchBridgesForMemory)
 
@@ -210,28 +207,6 @@ const [bridges, setBridges] = useState<BridgeWithMemories[]>([])
                   Pin stays out because it is a state you can SEE, and the
                   kebab matches the one on the project page. */}
               <div className="flex items-center gap-1 mb-4">
-                {/* Pin toggle */}
-                <button
-                  onClick={() => {
-                    if (memory.is_pinned) {
-                      unpinMemory(memory.id)
-                    } else {
-                      pinMemory(memory.id)
-                      haptic.success()
-                    }
-                  }}
-                  className={`h-10 w-10 flex items-center justify-center rounded-full transition-colors ${
-                    memory.is_pinned
-                      ? 'text-[var(--brand-primary)] hover:bg-brand-primary/10'
-                      : 'hover:bg-white/5 text-[var(--brand-text-muted)]'
-                  }`}
-                  title={memory.is_pinned ? 'Unpin' : 'Pin'}
-                  aria-label={memory.is_pinned ? 'Unpin this thought' : 'Pin this thought'}
-                  aria-pressed={!!memory.is_pinned}
-                >
-                  <Pin className="h-5 w-5" style={memory.is_pinned ? { fill: 'currentColor' } : undefined} />
-                </button>
-
                 <div className="relative">
                   <button
                     onClick={() => setMenuOpen(v => !v)}
@@ -339,7 +314,10 @@ const [bridges, setBridges] = useState<BridgeWithMemories[]>([])
                 )}
               </div>
 
-              <ThemeEditor memoryId={memory.id} initialThemes={(memory as any).themes ?? []} />
+              {/* Themes are extracted automatically and read by
+                  project-genesis clustering — they were never a second list
+                  for you to curate. Two editable chip rows on one card was
+                  just the same job asked twice; tags are the one you own. */}
               <TagEditor memoryId={memory.id} initialTags={memory.tags ?? []} />
 
               {/* Connected Thoughts (Bridges) */}
