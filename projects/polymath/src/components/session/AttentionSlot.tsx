@@ -33,6 +33,7 @@ import { useProjectStore } from '../../stores/useProjectStore'
 import { VoiceInput } from '../VoiceInput'
 
 const secondaryTextStyle = { color: 'var(--brand-text-secondary)', opacity: 0.7 }
+const borderStyle = { borderColor: 'var(--glass-border-bold)' }
 /**
  * The quiet way out.
  *
