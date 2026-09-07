@@ -16,6 +16,8 @@ import { updateItemConnections } from './_lib/connection-logic.js' // New import
 import { MODELS } from './_lib/models.js'
 import { thinkingFragment } from './_lib/gemini-thinking.js'
 import { generateGist, type ArticleGist } from './_lib/article-gist.js'
+import { mitigationFromHeaders, detectBotWallText } from './_lib/bot-wall.js'
+import { stripLinkFarms } from './_lib/link-density.js'
 
 // rss-parser is used only for XML parsing now — fetching is done manually
 // in robustParseFeed below so we can present a full browser identity to
@@ -353,6 +355,15 @@ function cleanHtml(html: string, url: string): string {
     }
   })
 
+  // 6. Strip link-farm blocks. This is the fix for "the article comes back
+  // but it's basically all links": Readability (and Jina's markdown, once
+  // converted) sometimes keeps "Related stories" rows, tag rails, and nav
+  // menus because they live inside the same DOM subtree as the real
+  // content and have no distinguishing class name for step 1 to catch. The
+  // one thing that marks them is that they're mostly links, not prose —
+  // see link-density.ts for the (unit-tested) heuristic.
+  stripLinkFarms(document)
+
   // Defensive check: Ensure we can safely access the body and its content.
   // In some environments, linkedom's 'body' getter crashes if the document is malformed.
   try {
@@ -389,6 +400,16 @@ async function fetchArticleWithReadability(url: string): Promise<any> {
     })
 
     clearTimeout(timeoutId)
+
+    // Authoritative first: Vercel's Attack Challenge and Cloudflare's
+    // challenge action both stamp a header saying so outright, whatever
+    // the status code — no need to guess from server/cf-ray combinations
+    // for these two. Checked before the !response.ok branch because a
+    // challenge can, in principle, come back 200.
+    const mitigatedBy = mitigationFromHeaders(response.headers)
+    if (mitigatedBy) {
+      throw new Error(`Site protected by a ${mitigatedBy} bot challenge. Try viewing the original article.`)
+    }
 
     // Check for anti-bot protection (DataDome, Cloudflare, etc.)
     if (!response.ok) {
@@ -433,6 +454,20 @@ async function fetchArticleWithReadability(url: string): Promise<any> {
 
     if (!article) {
       throw new Error('Readability failed to extract article content')
+    }
+
+    // Readability's charThreshold is 0 — it accepts ANY non-empty result,
+    // including a bot-challenge page's "please verify you're human"
+    // boilerplate, which is exactly the "sometimes it says there's a
+    // Vercel security thing and won't return any of the article" bug.
+    // Checked on Readability's own extracted text, not the raw page HTML
+    // — the raw page can legitimately contain a stray "enable JavaScript"
+    // noscript fallback that has nothing to do with what got extracted.
+    {
+      const wall = detectBotWallText(article.title, article.textContent)
+      if (wall) {
+        throw new Error(`Readability: the site's bot challenge came back instead of the article (matched "${wall}"). Try viewing the original article.`)
+      }
     }
 
     console.log('[Readability] Extracted:', article.title)
@@ -516,6 +551,13 @@ async function fetchArticleWithDiffbot(url: string): Promise<any> {
 
     const article = data.objects[0]
 
+    {
+      const wall = detectBotWallText(article.title, article.text)
+      if (wall) {
+        throw new Error(`Diffbot: the site's bot challenge came back instead of the article (matched "${wall}"). Try viewing the original article.`)
+      }
+    }
+
     console.log('[Diffbot] Extracted:', article.title)
 
     return {
@@ -584,6 +626,13 @@ async function fetchArticleWithScraperAPI(url: string): Promise<any> {
 
     if (!article) {
       throw new Error('ScraperAPI: Readability failed to extract article content')
+    }
+
+    {
+      const wall = detectBotWallText(article.title, article.textContent)
+      if (wall) {
+        throw new Error(`ScraperAPI: the site's bot challenge came back instead of the article (matched "${wall}"). Try viewing the original article.`)
+      }
     }
 
     console.log('[ScraperAPI] Extracted:', article.title)
@@ -885,7 +934,15 @@ async function fetchArticleWithJina(url: string, retryCount = 0): Promise<any> {
     const response = await fetch(jinaUrl, {
       headers: {
         'Accept': 'application/json',
-        'X-Return-Format': 'markdown'
+        'X-Return-Format': 'markdown',
+        // Anchor text stays, the URL doesn't. This is the fix for "the
+        // article comes back but it's basically all links" on Jina's
+        // path: without it, every inline citation, every "related" chip
+        // and every cross-reference on the page becomes a blue-underlined
+        // [text](url) in the body. The original is always one tap away
+        // via "Open the original" in the reader toolbar, so nothing is
+        // actually lost by dropping the URLs here.
+        'X-Retain-Links': 'text',
       },
       signal: controller.signal
     })
@@ -968,6 +1025,19 @@ async function fetchArticleWithJina(url: string, retryCount = 0): Promise<any> {
     if (textForValidation.length < 50) {
       console.error('[Jina AI] Content validation failed - insufficient text content after stripping tags')
       throw new Error('Jina AI returned insufficient text content (possible JavaScript-heavy site)')
+    }
+
+    // Jina renders whatever the origin sent it — if the origin challenged
+    // Jina's own crawler, what comes back IS the challenge page, and it
+    // easily clears the 50-char bar above ("Please verify you're human"
+    // is 30-odd words on its own). Catch it here rather than let it
+    // through as if it were the article.
+    {
+      const wall = detectBotWallText(jinaTitle, textForValidation)
+      if (wall) {
+        console.error('[Jina AI] Content looks like a bot challenge, not an article:', wall)
+        throw new Error(`Jina AI: the origin site's bot challenge came back instead of the article (matched "${wall}"). Try viewing the original article.`)
+      }
     }
 
     // Extract H1 from HTML content using regex ([\s\S] matches any char including newlines)
@@ -2098,6 +2168,14 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
             }
           } else if (errorMessage.includes('JavaScript-heavy site')) {
             userFriendlyMessage = 'This site requires JavaScript rendering. Content extraction may be incomplete.'
+          } else if (errorMessage.includes('bot challenge')) {
+            // Every tier's bot-wall throw (see bot-wall.ts) shares this
+            // phrase, so this catches it whichever tier hit it — including
+            // the "all four exhausted" case below, since that message is
+            // every tier's error joined together and this one substring-
+            // matches inside it. Checked before that broader branch so
+            // this more specific, truer message wins.
+            userFriendlyMessage = 'This site blocked automatic extraction with a bot check. Open the original to read it.'
           } else if (errorMessage.includes('timeout') || errorMessage.includes('aborted') || errorMessage.includes('AbortError')) {
             // Backend extraction timed out - client will auto-retry via zombie detection
             userFriendlyMessage = 'Extraction timed out - auto-retry initiated. Page may be slow to load.'
@@ -2382,12 +2460,31 @@ Return ONLY the JSON, no other text.`
                 const response = await fetchWithTimeout(
                   `https://r.jina.ai/${link}`,
                   RSS_EXTRACT_TIMEOUT_MS,
-                  { 'Accept': 'application/json', 'X-Return-Format': 'json' },
+                  {
+                    'Accept': 'application/json',
+                    'X-Return-Format': 'json',
+                    // Anchor text stays, the URL doesn't — see the full
+                    // explanation on the on-demand Jina tier above. Same
+                    // "too many links" complaint applies to every RSS item
+                    // pulled through this path.
+                    'X-Retain-Links': 'text',
+                  },
                 )
                 const text = response.ok ? await response.text() : ''
                 if (text) {
                   const result = JSON.parse(text)
                   const rawContent = result.data?.content || result.content || content
+
+                  // Same bot-wall risk as the on-demand path: if the origin
+                  // challenged Jina's own crawler, rawContent IS the
+                  // challenge page. Throwing here routes into the feed-blurb
+                  // fallback below instead of storing "please verify you're
+                  // human" as the article.
+                  const wall = detectBotWallText(result.data?.title, rawContent)
+                  if (wall) {
+                    throw new Error(`Bot challenge for ${host} (matched "${wall}")`)
+                  }
+
                   const cleanedMarkdown = cleanMarkdownContent(rawContent)
                   const parsedHtml = marked.parse(cleanedMarkdown)
                   const htmlString = typeof parsedHtml === 'string' ? parsedHtml : await (parsedHtml as any)
