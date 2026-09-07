@@ -29,7 +29,6 @@ import { fetchWithTimeout } from '../lib/network'
 import { useMemoryStore } from '../stores/useMemoryStore'
 import { usePin } from '../contexts/PinContext'
 
-import { useContextEngineStore } from '../stores/useContextEngineStore'
 import { SubtleBackground } from '../components/SubtleBackground'
 import { api } from '../lib/apiClient'
 
@@ -155,7 +154,6 @@ export function ProjectDetailPage() {
       setReplanning(false)
     }
   }
-  const { setContext, clearContext } = useContextEngineStore()
   const { pinnedItem, pinItem, unpinItem } = usePin()
 
   // Reactive selection from store
@@ -222,7 +220,6 @@ export function ProjectDetailPage() {
   useEffect(() => {
     activeIdRef.current = id
     loadProjectDetails()
-    return () => clearContext()
   }, [id])
 
   // A session running on this project when the page mounts is one to
@@ -236,7 +233,6 @@ export function ProjectDetailPage() {
 
   useEffect(() => {
     if (project) {
-      setContext('project', project.id, project.title, `${project.title}\n\n${project.description || ''}`)
       if (!seededPrevTasksRef.current) {
         const tasks = (project.metadata?.tasks as { id: string; done: boolean }[] | undefined) || []
         prevTasksRef.current = tasks.map(t => ({ id: t.id, done: !!t.done }))

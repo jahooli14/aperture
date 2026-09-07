@@ -47,7 +47,6 @@ import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useProjectStore } from '../stores/useProjectStore'
 import { useMemoryStore } from '../stores/useMemoryStore'
-import { useContextEngineStore } from '../stores/useContextEngineStore'
 import { useJourneyStore } from '../stores/useJourneyStore'
 import { useSessionStore } from '../stores/useSessionStore'
 import { useAuthContext } from '../contexts/AuthContext'
@@ -68,7 +67,6 @@ export function HomePage() {
   const fetchProjects = useProjectStore(s => s.fetchProjects)
   const projects = useProjectStore(s => s.projects)
   const fetchMemories = useMemoryStore(s => s.fetchMemories)
-  const setContext = useContextEngineStore(s => s.setContext)
   const onboardingCompletedAt = useJourneyStore(s => s.onboardingCompletedAt)
   const startSession = useJourneyStore(s => s.startSession)
   // One thing on screen at a time. True whenever the answer card has taken
@@ -113,7 +111,6 @@ export function HomePage() {
 
   useEffect(() => {
     if (!isAuthenticated) return
-    setContext('home', 'home', 'Home')
     if (onboardingCompletedAt) startSession()
   }, [isAuthenticated])
 

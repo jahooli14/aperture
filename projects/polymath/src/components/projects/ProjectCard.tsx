@@ -5,7 +5,6 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { MarkdownRenderer } from '../ui/MarkdownRenderer'
 import { ArrowRight, Clock, Star, Zap, X, CheckCircle, Archive, Plus, ListOrdered } from 'lucide-react'
 import type { Project } from '../../types'
-import { useContextEngineStore } from '../../stores/useContextEngineStore'
 import { useProjectStore } from '../../stores/useProjectStore'
 import { useToast } from '../ui/toast'
 import { handleInputFocus } from '../../utils/keyboard'
@@ -31,7 +30,6 @@ export { PROJECT_COLORS } from '../../lib/projectTheme'
 const LONG_PRESS_DURATION = 450
 
 export function ProjectCard({ project, prominent = false }: { project: Project, prominent?: boolean }) {
-  const { setContext, toggleSidebar } = useContextEngineStore()
   const { setPriority, setUpNext, replaceUpNext, updateProject } = useProjectStore()
   const { addToast } = useToast()
   const navigate = useNavigate()
@@ -70,14 +68,6 @@ export function ProjectCard({ project, prominent = false }: { project: Project, 
       e.preventDefault()
       e.stopPropagation()
     }
-  }
-
-  const handleViewInsights = (e: React.MouseEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    setContext('project', project.id, project.title, `${project.title}\n\n${project.description || ''}`)
-    toggleSidebar(true)
-    setShowContextMenu(false)
   }
 
   const handleTogglePriority = async (e: React.MouseEvent) => {
@@ -397,21 +387,6 @@ export function ProjectCard({ project, prominent = false }: { project: Project, 
                     </div>
                   </button>
 
-                  <button
-                    onClick={handleViewInsights}
-                    className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all text-left"
-                    style={{
-                      background: 'var(--glass-surface)',
-                      border: '1.5px solid rgba(255,255,255,0.06)',
-                      color: 'var(--brand-text-primary)'
-                    }}
-                  >
-                    <Zap className="h-5 w-5 flex-shrink-0" style={{ color: theme.text }} />
-                    <div>
-                      <p className="text-sm font-bold">View Insights</p>
-                      <p className="text-[11px] opacity-60 mt-0.5">See related memories and context</p>
-                    </div>
-                  </button>
 
                   <button
                     onClick={handleMarkComplete}

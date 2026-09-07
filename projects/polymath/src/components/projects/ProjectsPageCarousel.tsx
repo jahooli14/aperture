@@ -4,7 +4,6 @@ import { motion } from 'framer-motion'
 import { Star, ArrowRight, CheckCircle2, Clock, Snowflake, Archive, Sprout, Loader2, ListOrdered, Play } from 'lucide-react'
 import type { Project } from '../../types'
 import { useProjectStore } from '../../stores/useProjectStore'
-import { useContextEngineStore } from '../../stores/useContextEngineStore'
 import { useHomeAnswerStore } from '../../stores/useHomeAnswerStore'
 import { PROJECT_COLORS, getTheme } from '../../lib/projectTheme'
 import { getNextTask } from '../../lib/taskUtils'
@@ -32,7 +31,6 @@ const CARD_HOVER_STYLES = {
 }
 
 function ProjectCard({ project, prominent = false }: { project: Project, prominent?: boolean }) {
-  const { setContext, toggleSidebar } = useContextEngineStore()
   const { setPriority, setUpNext, replaceUpNext } = useProjectStore()
   const { addToast } = useToast()
   const navigate = useNavigate()
@@ -105,13 +103,6 @@ function ProjectCard({ project, prominent = false }: { project: Project, promine
     if (longPressTimer.current) clearTimeout(longPressTimer.current)
     if (hideTimer.current) clearTimeout(hideTimer.current)
   }, [])
-
-  const handleAnalyze = (e: React.MouseEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    setContext('project', project.id, project.title, `${project.title}\n\n${project.description || ''}`)
-    toggleSidebar(true)
-  }
 
   const handleToggleUpNext = async (e: React.MouseEvent) => {
     e.preventDefault()
@@ -204,13 +195,6 @@ function ProjectCard({ project, prominent = false }: { project: Project, promine
           {project.title}
         </h4>
         <div className="flex items-center gap-0.5 flex-shrink-0 -mr-1">
-          <button
-            onClick={handleAnalyze}
-            className="h-7 w-7 rounded-full flex items-center justify-center transition-colors hover:bg-white/10"
-            title="What connects here"
-          >
-            <span className="block w-2 h-2 rounded-full" style={{ backgroundColor: theme.textColor, opacity: 0.75 }} />
-          </button>
           {actionsRevealed && (
             <>
               <button

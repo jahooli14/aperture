@@ -82,7 +82,13 @@ Cron bakes a deep queue overnight (full pipeline, Read enabled). The on-demand b
 
 - **Todos / Fix Queue / AudioPen** — historical or unused. Fix Queue route + API still exist so old drafts stay visible, but cron is disabled and it isn't surfaced on home. Don't extend without checking.
 - **Idea Engine emails** — not a Polymath surface. Lives inside the polymath API (`api/_lib/idea-engine-v2/`). See Cron section.
-- **Context Engine sidebar** (`src/components/context/ContextSidebar.tsx`) — surfaces an "AI Analysis" panel from many pages. Prompts in `api/connections.ts` (`analyze` + the `ai-action` types) are plain-English and voice-gated via `findVoiceViolations`. Still owner-unloved — confirm it's wanted before extending. If you add a new `ai-action` prompt, include a concrete BAD/GOOD anti-example like the existing ones.
+- **Context Engine sidebar** — **removed.** It was a "What connects here" panel opened from cards across the app, with six AI actions (summarize, find-gaps, suggest-next, connect-dots, chase-thread, provoke) plus an `analyze` readout.
+
+  It invented. The only check on its output was `findVoiceViolations` — a *voice* gate, which gives the prose the house style and then passes whatever titles the model made up. With an empty corpus the context block read `(no related items found in knowledge lake)` while the prompt still ordered "Show 2-3 ways this idea echoes… Name titles directly", so at zero connections it named three articles that don't exist.
+
+  Grounding it was possible (`session-grounding.ts` and Relay's `index/ground.ts` both do exactly this) and not worth it. Five of the six actions were "tell me something interesting about this note" — browsing enrichment with no output, the knowledge-graph mode this app isn't. The sixth, suggest-next, is already answered four times over and grounded: the answer card, the session shaper, the crossover generator, the Guide. **The test to apply to anything like it: does it end in an output, or does it just make the note more interesting to look at?**
+
+  `/api/connections` itself stays — it's real plumbing (sparks, suggestions, paths, links) with a dozen callers, and the `connections` table feeds `memories.ts` and embeddings maintenance.
 
 ### Project = creative goal with a defined output
 

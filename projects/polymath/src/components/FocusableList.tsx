@@ -14,7 +14,6 @@
 import React, { createContext, useContext, useEffect, useRef } from 'react'
 import { useFocusedItem } from '../hooks/useFocusedItem'
 import { useSwipeGesture } from '../hooks/useSwipeGesture'
-import { useContextEngineStore } from '../stores/useContextEngineStore'
 
 interface FocusableListContextValue {
   focusedId: string | null
@@ -34,31 +33,9 @@ interface FocusableListProps {
 
 export function FocusableList({ children, swipeEnabled = true }: FocusableListProps) {
   const { focusedItem, registerItem } = useFocusedItem()
-  const { setContext, toggleSidebar, sidebarOpen } = useContextEngineStore()
-
-  // Update context when focused item changes
-  useEffect(() => {
-    if (focusedItem) {
-      // Map 'thought' to the context type expected
-      const contextType = focusedItem.type === 'thought' ? 'memory' : focusedItem.type
-      setContext(contextType as any, focusedItem.id)
-    }
-  }, [focusedItem, setContext])
-
-  // Handle swipe to open sidebar
-  useSwipeGesture({
-    onSwipeLeft: () => {
-      if (focusedItem && !sidebarOpen) {
-        toggleSidebar(true)
-      }
-    },
-    onSwipeRight: () => {
-      if (sidebarOpen) {
-        toggleSidebar(false)
-      }
-    },
-    enabled: swipeEnabled
-  })
+  // The swipe-left gesture used to open the Context Engine sidebar, which
+  // is gone. `swipeEnabled` is kept on the props so callers don't all need
+  // editing, and does nothing.
 
   return (
     <FocusableListContext.Provider value={{ focusedId: focusedItem?.id || null, registerItem }}>
@@ -76,9 +53,7 @@ interface FocusableItemProps {
 
 export function FocusableItem({ children, id, type, className = '' }: FocusableItemProps) {
   const { focusedId, registerItem } = useContext(FocusableListContext)
-  const { setContext, toggleSidebar } = useContextEngineStore()
   const ref = useRef<HTMLDivElement>(null)
-  const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null)
   const isFocused = focusedId === id
 
   useEffect(() => {
@@ -88,46 +63,12 @@ export function FocusableItem({ children, id, type, className = '' }: FocusableI
     }
   }, [registerItem])
 
-  const handleTouchStart = (e: React.TouchEvent) => {
-    const touch = e.touches[0]
-    // Only track if not starting from screen edge (first 30px)
-    if (touch.clientX > 30) {
-      touchStartRef.current = {
-        x: touch.clientX,
-        y: touch.clientY,
-        time: Date.now()
-      }
-    }
-  }
-
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    if (!touchStartRef.current) return
-
-    const touch = e.changedTouches[0]
-    const deltaX = touchStartRef.current.x - touch.clientX
-    const deltaY = Math.abs(touchStartRef.current.y - touch.clientY)
-    const deltaTime = Date.now() - touchStartRef.current.time
-
-    // Swipe left: moved >80px horizontally, <50px vertically, within 500ms
-    if (deltaX > 80 && deltaY < 50 && deltaTime < 500) {
-      e.preventDefault()
-      e.stopPropagation()
-      const contextType = type === 'thought' ? 'memory' : type
-      setContext(contextType as any, id)
-      toggleSidebar(true)
-    }
-
-    touchStartRef.current = null
-  }
-
   return (
     <div
       ref={ref}
       data-focus-id={id}
       data-focus-type={type}
       className={className}
-      onTouchStart={handleTouchStart}
-      onTouchEnd={handleTouchEnd}
     >
       {children}
     </div>

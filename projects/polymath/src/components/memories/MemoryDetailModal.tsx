@@ -15,7 +15,6 @@ import { ThemeEditor } from './ThemeEditor'
 import { GlassCard } from '../ui/GlassCard'
 import { CACHE_TTL } from '../../lib/cacheConfig'
 
-import { useContextEngineStore } from '../../stores/useContextEngineStore'
 
 interface MemoryDetailModalProps {
   memory: Memory | null
@@ -32,7 +31,6 @@ export const MemoryDetailModal: React.FC<MemoryDetailModalProps> = ({ memory, is
   const unpinMemory = useMemoryStore((state) => state.unpinMemory)
   const updateChecklistItems = useMemoryStore((state) => state.updateChecklistItems)
   const fetchBridgesForMemory = useMemoryStore((state) => state.fetchBridgesForMemory)
-  const { setContext, toggleSidebar } = useContextEngineStore()
 
 const [bridges, setBridges] = useState<BridgeWithMemories[]>([])
   const [bridgesFetched, setBridgesFetched] = useState(false)
@@ -83,14 +81,6 @@ const [bridges, setBridges] = useState<BridgeWithMemories[]>([])
     onClose()
     navigate(`/memories?id=${memoryId}`)
   }, [onClose, navigate])
-
-  const handleAnalyze = (e: React.MouseEvent) => {
-    e.stopPropagation()
-    if (!memory) return
-    // Set context for the side panel AI
-    setContext('memory', memory.id, memory.title, `${memory.title}\n\n${memory.body}`)
-    toggleSidebar(true)
-  }
 
   const handleDelete = async () => {
     if (!memory) return;
@@ -215,19 +205,6 @@ const [bridges, setBridges] = useState<BridgeWithMemories[]>([])
               )}
 
               <div className="flex items-center gap-1 mb-4">
-                {/* AI Analysis Dot */}
-                <button
-                  onClick={handleAnalyze}
-                  className="h-10 w-10 flex items-center justify-center rounded-full hover:bg-[rgba(var(--brand-primary-rgb),0.1)] transition-colors"
-                  title="Analyze with AI"
-                  aria-label="Analyze with AI"
-                >
-                  <span className="w-2.5 h-2.5 rounded-full block" style={{
-                    backgroundColor: 'rgb(var(--color-accent-dark-rgb))',
-                    boxShadow: '0 0 8px rgba(var(--brand-primary-rgb),0.5)'
-                  }} />
-                </button>
-
                 {/* Pin toggle */}
                 <button
                   onClick={() => {
