@@ -5,7 +5,7 @@
 
 import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useNavigate, useLocation, useSearchParams, Link } from 'react-router-dom'
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom'
 import { useAuthContext } from '../contexts/AuthContext'
 import { SignInNudge } from '../components/SignInNudge'
 import { useMemoryStore } from '../stores/useMemoryStore'
@@ -501,15 +501,13 @@ function MemoriesPageInner() {
                 </>
               )}
             </button>
-            {/* Cross-link to bedtime — small & unobtrusive */}
-            <Link
-              to="/bedtime"
-              className="inline-flex items-center gap-1 text-[10px] tracking-[0.15em] transition-opacity hover:opacity-100"
-              style={{ color: 'rgba(var(--brand-primary-rgb),0.55)', opacity: 0.75 }}
-            >
-              <Moon className="h-3 w-3" />
-              bedtime
-            </Link>
+            {/* The separate "bedtime" link that used to sit here is gone.
+                After 21:30 the button on its left already SAYS "Bedtime mode
+                — wind down" with the same moon on it, so the page offered
+                two moons side by side pointing at nearly the same thing —
+                exactly the "one statement, one action" rule the home is
+                built on, broken on the page next door. The /bedtime route is
+                reachable from the home masthead's moon at the same hour. */}
           </div>
 
           <div className="flex items-center gap-3">

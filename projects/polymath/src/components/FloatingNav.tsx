@@ -363,6 +363,14 @@ export function FloatingNav() {
                       key={option.id}
                       onClick={() => handleNavClick(option)}
                       whileTap={{ scale: 0.85 }}
+                      /* These four had no accessible name of any kind — no
+                         label, no title, no aria-label — so a screen reader
+                         announced the whole bar as four unnamed buttons, and
+                         a hovering mouse got no confirmation that the
+                         checklist icon means Lists rather than todos. */
+                      aria-label={option.label}
+                      title={option.label}
+                      aria-current={active ? 'page' : undefined}
                       className="flex flex-col items-center justify-center relative min-w-0"
                       style={{
                         flex: '1 1 0px',
@@ -389,6 +397,7 @@ export function FloatingNav() {
                         {dot && (
                           <span
                             className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full"
+                            title="Captured something in the last day"
                             style={{
                               background: colors.primary,
                               boxShadow: `0 0 4px ${colors.glow}`,

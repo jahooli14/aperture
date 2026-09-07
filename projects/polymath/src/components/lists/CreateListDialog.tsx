@@ -60,7 +60,7 @@ export function CreateListDialog({ open, onOpenChange }: Props) {
         <BottomSheet open={open} onOpenChange={onOpenChange}>
             <BottomSheetContent>
                 <BottomSheetHeader>
-                    <BottomSheetTitle>New collection</BottomSheetTitle>
+                    <BottomSheetTitle>New list</BottomSheetTitle>
                 </BottomSheetHeader>
 
                 <form onSubmit={handleSubmit} className="mt-5 space-y-4">
@@ -73,7 +73,7 @@ export function CreateListDialog({ open, onOpenChange }: Props) {
                     <Input
                         value={title}
                         onChange={e => setTitle(e.target.value)}
-                        placeholder="Collection name…"
+                        placeholder="What is it a list of?"
                         className="h-12 text-base bg-[var(--glass-surface)] border-[var(--glass-surface-hover)] focus:border-white/30 placeholder:text-white/20"
                         autoFocus
                         autoComplete="off"
@@ -107,7 +107,7 @@ export function CreateListDialog({ open, onOpenChange }: Props) {
                             disabled={!title.trim() || loading}
                             className="w-full h-12 bg-white text-black font-semibold hover:bg-white/90 disabled:opacity-30 disabled:cursor-not-allowed rounded-xl"
                         >
-                            {loading ? 'Creating…' : 'Create collection'}
+                            {loading ? 'Creating…' : 'Create list'}
                         </Button>
                     </BottomSheetFooter>
                 </form>

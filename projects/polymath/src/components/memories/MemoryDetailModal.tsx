@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Calendar, Edit, Trash2, Copy, Share2, Link2, Pin, CheckSquare, Square } from 'lucide-react'
+import { X, Calendar, Edit, Trash2, Copy, Share2, Link2, Pin, CheckSquare, Square, MoreVertical, Lightbulb } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { MarkdownRenderer } from '../ui/MarkdownRenderer'
 import { format } from 'date-fns'
@@ -37,6 +37,7 @@ export const MemoryDetailModal: React.FC<MemoryDetailModalProps> = ({ memory, is
 const [bridges, setBridges] = useState<BridgeWithMemories[]>([])
   const [bridgesFetched, setBridgesFetched] = useState(false)
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   // (insight fetch + banner removed — see render comment below)
 
   // Module-level cache to prevent refetching bridges
@@ -83,14 +84,6 @@ const [bridges, setBridges] = useState<BridgeWithMemories[]>([])
     onClose()
     navigate(`/memories?id=${memoryId}`)
   }, [onClose, navigate])
-
-  const handleAnalyze = (e: React.MouseEvent) => {
-    e.stopPropagation()
-    if (!memory) return
-    // Set context for the side panel AI
-    setContext('memory', memory.id, memory.title, `${memory.title}\n\n${memory.body}`)
-    toggleSidebar(true)
-  }
 
   const handleDelete = async () => {
     if (!memory) return;
@@ -214,21 +207,14 @@ const [bridges, setBridges] = useState<BridgeWithMemories[]>([])
                 </p>
               )}
 
+              {/* One state toggle and one overflow, not a six-button toolbar.
+                  You open a thought to READ it — edit / copy / share / delete
+                  / analyse are all things you do occasionally and afterwards,
+                  and parking them in a row between the title and the first
+                  line meant stepping over a toolbar to reach the writing.
+                  Pin stays out because it is a state you can SEE, and the
+                  kebab matches the one on the project page. */}
               <div className="flex items-center gap-1 mb-4">
-                {/* AI Analysis Dot */}
-                <button
-                  onClick={handleAnalyze}
-                  className="h-10 w-10 flex items-center justify-center rounded-full hover:bg-[rgba(var(--brand-primary-rgb),0.1)] transition-colors"
-                  title="Analyze with AI"
-                  aria-label="Analyze with AI"
-                >
-                  <span className="w-2.5 h-2.5 rounded-full block" style={{
-                    backgroundColor: 'rgb(var(--color-accent-dark-rgb))',
-                    boxShadow: '0 0 8px rgba(var(--brand-primary-rgb),0.5)'
-                  }} />
-                </button>
-
-                {/* Pin toggle */}
                 <button
                   onClick={() => {
                     if (memory.is_pinned) {
@@ -244,41 +230,58 @@ const [bridges, setBridges] = useState<BridgeWithMemories[]>([])
                       : 'hover:bg-white/5 text-[var(--brand-text-muted)]'
                   }`}
                   title={memory.is_pinned ? 'Unpin' : 'Pin'}
+                  aria-label={memory.is_pinned ? 'Unpin this thought' : 'Pin this thought'}
+                  aria-pressed={!!memory.is_pinned}
                 >
                   <Pin className="h-5 w-5" style={memory.is_pinned ? { fill: 'currentColor' } : undefined} />
                 </button>
 
-                <button
-                  onClick={() => setEditDialogOpen(true)}
-                  className="h-10 w-10 flex items-center justify-center rounded-full hover:bg-[rgba(255,255,255,0.08)] transition-colors text-[var(--brand-text-secondary)]"
-                  title="Edit Memory"
-                  aria-label="Edit thought"
-                >
-                  <Edit className="h-5 w-5" />
-                </button>
-                <button
-                  onClick={handleCopyText}
-                  className="h-10 w-10 flex items-center justify-center rounded-full hover:bg-[rgba(255,255,255,0.08)] transition-colors text-[var(--brand-text-secondary)]"
-                  title="Copy text"
-                  aria-label="Copy text"
-                >
-                  <Copy className="h-5 w-5" />
-                </button>
-                <button
-                  onClick={handleShare}
-                  className="h-10 w-10 flex items-center justify-center rounded-full hover:bg-[rgba(255,255,255,0.08)] transition-colors text-[var(--brand-text-secondary)]"
-                  title="Share"
-                  aria-label="Share"
-                >
-                  <Share2 className="h-5 w-5" />
-                </button>
-                <button
-                  onClick={handleDelete}
-                  className="h-10 w-10 flex items-center justify-center rounded-full hover:bg-red-500/10 transition-colors text-red-400/80 ml-auto"
-                  title="Delete Memory"
-                >
-                  <Trash2 className="h-5 w-5" />
-                </button>
+                <div className="relative">
+                  <button
+                    onClick={() => setMenuOpen(v => !v)}
+                    className="h-10 w-10 flex items-center justify-center rounded-full hover:bg-[rgba(255,255,255,0.08)] transition-colors text-[var(--brand-text-secondary)]"
+                    aria-label="More options"
+                    aria-expanded={menuOpen}
+                  >
+                    <MoreVertical className="h-5 w-5" />
+                  </button>
+
+                  {menuOpen && (
+                    <>
+                      <div className="fixed inset-0 z-[60]" onClick={() => setMenuOpen(false)} />
+                      <div
+                        className="absolute left-0 top-full mt-2 w-56 max-w-[calc(100vw-3rem)] rounded-2xl p-1.5 z-[70]"
+                        style={{
+                          background: '#1a1a24',
+                          border: '1px solid rgba(255,255,255,0.08)',
+                          boxShadow: '0 20px 40px rgba(0,0,0,0.6)',
+                        }}
+                      >
+                        {[
+                          { label: 'Edit', icon: Edit, run: () => setEditDialogOpen(true) },
+                          { label: 'What connects here', icon: Lightbulb, run: () => { setContext('memory', memory.id, memory.title, memoryContent); toggleSidebar(true) } },
+                          { label: 'Copy text', icon: Copy, run: handleCopyText },
+                          { label: 'Share', icon: Share2, run: handleShare },
+                        ].map(({ label, icon: Icon, run }) => (
+                          <button
+                            key={label}
+                            onClick={() => { setMenuOpen(false); run() }}
+                            className="w-full px-3.5 py-3 text-left text-[14px] font-medium transition-colors hover:bg-white/[0.05] rounded-xl flex items-center gap-2.5 min-h-[44px]"
+                            style={{ color: 'var(--brand-text-primary)', opacity: 0.9 }}
+                          >
+                            <Icon className="h-4 w-4 flex-shrink-0" /> {label}
+                          </button>
+                        ))}
+                        <button
+                          onClick={() => { setMenuOpen(false); handleDelete() }}
+                          className="w-full px-3.5 py-3 text-left text-[14px] font-medium transition-colors hover:bg-red-500/10 rounded-xl flex items-center gap-2.5 min-h-[44px] text-red-400"
+                        >
+                          <Trash2 className="h-4 w-4 flex-shrink-0" /> Delete
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
               </div>
 
               {/* AI Insight banner removed — the placeholder copy

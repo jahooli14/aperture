@@ -734,7 +734,12 @@ const StandardItemCard = memo(({
 
             {/* Content overlay */}
             <div className="absolute inset-0 p-2.5 sm:p-3 flex flex-col justify-end">
-                <h3 className={`text-[var(--brand-text-primary)] font-bold leading-tight uppercase tracking-tight text-[13px] sm:text-sm mb-2 line-clamp-3 ${isCompleted ? 'line-through opacity-60' : ''}`}
+                {/* Sentence case, as typed. These are titles of real things —
+                    a film, an album, a place — and shouting them in caps costs
+                    the proper-noun shape that makes a title scannable
+                    ("Fields of Gold — Eva Cassidy" vs "FIELDS OF GOLD EVA
+                    CASSIDY"). Every other surface in the app is sentence case. */}
+                <h3 className={`text-[var(--brand-text-primary)] font-semibold leading-snug text-[14px] sm:text-[15px] mb-2 line-clamp-3 ${isCompleted ? 'line-through opacity-60' : ''}`}
                     style={{ textShadow: '0 1px 4px rgba(0,0,0,0.95), 0 0 12px rgba(0,0,0,0.75)' }}>
                     {item.content}
                 </h3>
@@ -765,16 +770,20 @@ const StandardItemCard = memo(({
                         </button>
                     )
                 })()}
-                {/* Rating stars — always visible so rating is a one-tap action.
-                    Faded to low opacity when unrated so it doesn't compete with
-                    the title; lights up fully once rated or on hover. */}
-                <div className={`mb-1 mt-1 transition-opacity ${item.user_rating ? 'opacity-100' : 'opacity-55 group-hover:opacity-100'}`}>
-                    <StarRating
-                        rating={item.user_rating}
-                        onRate={(r) => onRate(item.id, r)}
-                        size="sm"
-                    />
-                </div>
+                {/* Rating stars — shown once the item HAS a rating (it's real
+                    information then), and offered on the expanded card so you
+                    can set one. An empty five-star row on every card in a
+                    forty-item grid is two hundred grey stars of pure chrome
+                    sitting on top of the covers. */}
+                {(item.user_rating || isExpanded) && (
+                    <div className="mb-1 mt-1">
+                        <StarRating
+                            rating={item.user_rating}
+                            onRate={(r) => onRate(item.id, r)}
+                            size="sm"
+                        />
+                    </div>
+                )}
 
                 {/* Key metadata on expanded */}
                 {isExpanded && (
@@ -822,11 +831,20 @@ const StandardItemCard = memo(({
                     </div>
                 )}
 
-                {/* Reaction row — identity signal, always visible (one tap, no expand needed) */}
-                {onReact && (
+                {/* Reaction row — the identity signal ("this sparked me").
+                    Revealed on tap, or kept up permanently once you've
+                    answered, since the answer is the signal. Three unlabelled
+                    emoji buttons under a rule on every resting card read as
+                    chrome and buried the covers; the same three buttons one
+                    tap in read as a question. */}
+                {onReact && (isExpanded || item.metadata?.reaction) && (
                     <div className="flex items-center gap-1 pt-1.5 mt-1.5 border-t border-white/10">
                         {ITEM_REACTIONS.map(r => {
                             const active = item.metadata?.reaction === r.id
+                            // Once answered, the two roads not taken collapse
+                            // away — the card states what you said, it doesn't
+                            // keep re-asking.
+                            if (item.metadata?.reaction && !isExpanded && !active) return null
                             return (
                                 <button
                                     key={r.id}
@@ -843,7 +861,10 @@ const StandardItemCard = memo(({
                                     aria-pressed={active}
                                 >
                                     <span>{r.emoji}</span>
-                                    {active && <span className="hidden sm:inline">{r.label}</span>}
+                                    {/* Standing alone as the answer, it gets to
+                                        say what it means. In the row of three
+                                        it stays an emoji so the row fits. */}
+                                    {active && <span className={isExpanded ? 'hidden sm:inline' : ''}>{r.label}</span>}
                                 </button>
                             )
                         })}
@@ -859,25 +880,30 @@ const StandardItemCard = memo(({
                     </div>
                 )}
 
-                {/* Thought captured indicator */}
+                {/* Thought captured — a mark, not a label. 8px black caps is
+                    below the size where words are read anyway; the icon says
+                    the same thing and the tooltip carries the sentence. */}
                 {hasThought && (
                     <div
-                        className="flex items-center gap-1 mt-1"
+                        className="flex items-center mt-1.5"
                         title="You captured a thought about this"
+                        aria-label="You captured a thought about this"
                     >
-                        <Brain className="w-2.5 h-2.5" style={{ color: 'rgba(251,191,36,0.7)' }} />
-                        <span className="text-[8px] font-black uppercase tracking-widest" style={{ color: 'rgba(251,191,36,0.6)' }}>thought captured</span>
+                        <Brain className="w-3 h-3" style={{ color: 'rgba(251,191,36,0.75)' }} />
                     </div>
                 )}
             </div>
 
-            {/* Delete — always visible on touch (faded); brighter on hover or
-                when expanded. Tap target meets minimum mobile size. */}
-            <div className="absolute top-2 right-2 flex gap-1">
+            {/* Delete — on the expanded card only (and on hover, for mouse).
+                Removing an item is the rarest thing you do to it, and a solid
+                black chip parked over every cover in the grid was the loudest
+                control on the page. Tap the card, then delete. */}
+            <div className={`absolute top-2 right-2 flex gap-1 transition-opacity ${isExpanded ? 'opacity-100' : 'opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto'}`}>
                 <button
                     onClick={(e) => { e.stopPropagation(); onDelete(item.id, item.list_id) }}
                     aria-label="Delete item"
-                    className={`flex items-center justify-center h-10 w-10 rounded-xl bg-black/60 backdrop-blur-md border border-white/15 text-[var(--brand-text-primary)]/60 active:text-[var(--brand-text-primary)] hover:bg-brand-primary hover:text-[var(--brand-text-primary)] active:scale-95 transition-all ${isExpanded ? 'opacity-100' : 'opacity-80'}`}
+                    tabIndex={isExpanded ? 0 : -1}
+                    className="flex items-center justify-center h-10 w-10 rounded-xl bg-black/60 backdrop-blur-md border border-white/15 text-[var(--brand-text-primary)]/60 active:text-[var(--brand-text-primary)] hover:bg-brand-primary hover:text-[var(--brand-text-primary)] active:scale-95 transition-all"
                 >
                     <Trash2 className="h-4 w-4" />
                 </button>
@@ -1169,7 +1195,7 @@ function ArticleListMode({ list, navigate }: ArticleListModeProps) {
                 <header className="page-masthead">
                     <div className="page-masthead-text">
                         <button onClick={() => navigate('/lists')} className="flex items-center gap-2 text-[11px] uppercase tracking-[0.15em] text-[var(--brand-text-muted)] hover:text-[var(--brand-text-secondary)] transition-colors mb-2">
-                            <ArrowLeft className="h-3.5 w-3.5" /> Back to Collections
+                            <ArrowLeft className="h-3.5 w-3.5" /> All lists
                         </button>
 
                         <div className="flex items-center gap-3 mb-3">
@@ -1622,29 +1648,20 @@ export default function ListDetailPage() {
                 <header className="page-masthead">
                     <div className="page-masthead-text">
                         <button onClick={() => navigate('/lists')} className="flex items-center gap-2 text-[11px] uppercase tracking-[0.15em] text-[var(--brand-text-muted)] hover:text-[var(--brand-text-secondary)] transition-colors mb-2">
-                            <ArrowLeft className="h-3.5 w-3.5" /> Back to Collections
+                            <ArrowLeft className="h-3.5 w-3.5" /> All lists
                         </button>
 
-                        {/* List type header */}
-                        <div className="flex items-center gap-2 mb-3 flex-wrap">
-                            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full"
-                                style={{
-                                    backgroundColor: `rgba(${rgb}, 0.14)`,
-                                    boxShadow: `inset 0 0 0 1px rgba(${rgb}, 0.35)`
-                                }}>
-                                <ListIcon type={list.type} className="h-3.5 w-3.5" style={{ color: `rgb(${rgb})` }} />
-                                <span className="text-[11px] font-bold uppercase tracking-widest" style={{ color: `rgb(${rgb})` }}>
-                                    {list.type}
-                                </span>
-                            </div>
-                            {/* Item count badge */}
-                            <div className="px-2.5 py-1 rounded-full bg-white/8 text-xs font-semibold text-[var(--brand-text-secondary)]"
-                                style={{ boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.12)' }}>
-                                {displayItems.length} {displayItems.length === 1 ? 'item' : 'items'}
-                            </div>
-                        </div>
-
                         <h1 className="page-hero-sm mb-1 break-words">{list.title}</h1>
+                        {/* One eyebrow line instead of two floating pills. Every
+                            other tab states what it is this way ("73 captured",
+                            "8 collections"); two bordered chips above the title
+                            was this page inventing its own header language. */}
+                        <div className="page-eyebrow" style={{ color: `rgba(${rgb}, 0.8)` }}>
+                            <span className="inline-flex items-center gap-1.5">
+                                <ListIcon type={list.type} className="h-3 w-3" style={{ color: `rgb(${rgb})` }} />
+                                {list.type} · {displayItems.length} {displayItems.length === 1 ? 'item' : 'items'}
+                            </span>
+                        </div>
                         {list.description && <MarkdownRenderer content={list.description} className="text-[var(--brand-text-secondary)] text-sm max-w-xl mb-2 leading-relaxed" />}
                     </div>
                     <div className="page-masthead-actions">
@@ -1699,7 +1716,7 @@ export default function ListDetailPage() {
                         {/* List settings */}
                         <button
                             onClick={() => setShowListSettings(true)}
-                            aria-label="Collection settings"
+                            aria-label="List settings"
                             className="flex items-center justify-center w-11 h-11 rounded-full border transition-all border-white/10 bg-[var(--glass-surface)] text-[var(--brand-text-secondary)] hover:text-[var(--brand-text-primary)] hover:border-white/20"
                         >
                             <Settings2 className="h-4 w-4" />
@@ -1733,34 +1750,44 @@ export default function ListDetailPage() {
                                     initial={{ opacity: 0, y: 10 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     exit={{ opacity: 0, y: 10 }}
-                                    className="backdrop-blur-2xl bg-zinc-900/60 rounded-2xl p-2 flex items-center gap-2 shadow-2xl transition-all font-mono"
-                                    style={{ boxShadow: 'inset 0 0 0 1px var(--glass-surface-hover), 0 25px 50px rgba(0,0,0,0.5)' }}
+                                    className="rounded-2xl p-1.5 flex items-center gap-2 transition-all"
+                                    style={{ background: 'var(--soft-surface)', border: '1px solid var(--soft-border)' }}
                                 >
-                                    <form onSubmit={handleAddItem} className="flex-1 flex px-3 text-[var(--brand-text-primary)] items-center gap-2">
+                                    <form onSubmit={handleAddItem} className="flex-1 flex px-2 text-[var(--brand-text-primary)] items-center gap-2">
+                                        {/* Sentence case, serif placeholder — the same
+                                            input the rest of the app uses. This bar used
+                                            to be monospace with caps-locked entry and a
+                                            white-on-black ADD button, which is why the
+                                            lists screens read like a different product. */}
                                         <Input
                                             ref={inputRef}
                                             value={inputText}
                                             onChange={e => setInputText(e.target.value)}
-                                            placeholder={`Add to ${list.title.toLowerCase()}...`}
-                                            className="border-0 bg-transparent focus-visible:ring-0 text-lg text-[var(--brand-text-primary)] placeholder:text-zinc-600 h-12 uppercase tracking-tight"
+                                            placeholder={`Add to ${list.title.toLowerCase()}…`}
+                                            className="border-0 bg-transparent focus-visible:ring-0 text-base text-[var(--brand-text-primary)] h-11"
+                                            style={{ fontFamily: 'var(--brand-font-serif)' }}
                                             autoFocus
                                         />
-                                        <div className="flex items-center gap-2 px-1">
+                                        <div className="flex items-center gap-1.5">
                                             <Button
                                                 type="button"
                                                 onClick={() => setIsVoiceMode(true)}
-                                                className="rounded-xl bg-zinc-800/50 hover:bg-zinc-800 text-brand-text-muted hover:text-brand-primary h-10 w-10 p-0 shrink-0 transition-all"
-                                                style={{ boxShadow: 'inset 0 0 0 1px var(--glass-surface)' }}
+                                                aria-label="Add by voice"
+                                                className="rounded-full bg-transparent hover:bg-white/5 text-brand-text-muted hover:text-brand-primary h-10 w-10 p-0 shrink-0 transition-all"
                                             >
                                                 <Mic className="h-4 w-4" />
                                             </Button>
                                             <Button
                                                 type="submit"
                                                 disabled={!inputText.trim()}
-                                                className="rounded-xl bg-white text-black hover:bg-zinc-200 h-10 px-4 gap-2 font-bold shrink-0 transition-all uppercase text-xs tracking-widest"
+                                                aria-label="Add to list"
+                                                className="rounded-full h-10 w-10 p-0 shrink-0 transition-all disabled:opacity-30"
+                                                style={{
+                                                    background: 'rgba(var(--brand-primary-rgb),0.14)',
+                                                    color: 'rgb(var(--brand-primary-rgb))',
+                                                }}
                                             >
-                                                <span>Add</span>
-                                                <Send className="h-3 w-3" />
+                                                <Send className="h-4 w-4" />
                                             </Button>
                                         </div>
                                     </form>
@@ -1777,21 +1804,23 @@ export default function ListDetailPage() {
                 <div className="px-4 sm:px-6 lg:px-8 max-w-5xl">
                     {showSearch ? (
                         <div className="relative mb-4">
-                            <div className="flex items-center gap-2 bg-zinc-900/60 backdrop-blur-xl rounded-xl px-3 py-2"
-                                style={{ boxShadow: 'inset 0 0 0 1px var(--glass-surface-hover)' }}>
-                                <Search className="h-4 w-4 text-zinc-500 flex-shrink-0" />
+                            <div className="flex items-center gap-2 rounded-xl px-3 py-2"
+                                style={{ background: 'var(--soft-surface)', border: '1px solid var(--soft-border-focus)' }}>
+                                <Search className="h-4 w-4 flex-shrink-0" style={{ color: 'var(--brand-text-muted)' }} />
                                 <input
                                     type="text"
                                     value={searchQuery}
                                     onChange={e => setSearchQuery(e.target.value)}
-                                    placeholder="Search items..."
-                                    className="flex-1 bg-transparent text-sm text-[var(--brand-text-primary)] placeholder:text-zinc-600 focus:outline-none uppercase tracking-tight font-medium"
+                                    placeholder="Search this list…"
+                                    className="flex-1 bg-transparent text-sm text-[var(--brand-text-primary)] focus:outline-none"
+                                    style={{ fontFamily: 'var(--brand-font-serif)' }}
                                     autoFocus
                                 />
                                 <button
                                     onClick={() => { setSearchQuery(''); setShowSearch(false) }}
                                     aria-label="Close search"
-                                    className="h-8 w-8 flex items-center justify-center rounded-full bg-zinc-800 text-zinc-400 hover:text-[var(--brand-text-primary)] transition-colors"
+                                    className="h-8 w-8 flex items-center justify-center rounded-full hover:bg-white/10 transition-colors"
+                                    style={{ color: 'var(--brand-text-muted)' }}
                                 >
                                     <X className="h-3.5 w-3.5" />
                                 </button>
@@ -1803,7 +1832,7 @@ export default function ListDetailPage() {
                             className="mb-4 flex items-center gap-1.5 px-3 py-2 rounded-full border border-[var(--glass-surface-hover)] text-brand-text-muted hover:text-[var(--brand-text-primary)] hover:border-white/20 transition-all min-h-[36px]"
                         >
                             <Search className="h-3.5 w-3.5" />
-                            <span className="text-[10px] font-black uppercase tracking-widest">Search</span>
+                            <span className="text-[11px] font-medium">Search</span>
                         </button>
                     )}
                 </div>
@@ -1994,13 +2023,13 @@ export default function ListDetailPage() {
                     <BottomSheetHeader>
                         <div className="flex items-center gap-3 mb-1">
                             <Settings2 className="h-5 w-5" style={{ color: `rgb(${rgb})` }} />
-                            <BottomSheetTitle>Collection Settings</BottomSheetTitle>
+                            <BottomSheetTitle>List settings</BottomSheetTitle>
                         </div>
                     </BottomSheetHeader>
                     <div className="mt-6 space-y-6">
                         {/* Editable title and description */}
                         <div>
-                            <p className="text-xs font-bold text-brand-text-muted uppercase tracking-widest mb-3">Collection Info</p>
+                            <p className="text-xs font-bold text-brand-text-muted uppercase tracking-widest mb-3">The list</p>
                             <div className="space-y-3">
                                 <div>
                                     <label className="text-[10px] font-bold uppercase tracking-widest text-brand-text-muted mb-1 block">Title</label>
@@ -2042,7 +2071,7 @@ export default function ListDetailPage() {
                                 <div>
                                     <p className="text-sm font-bold text-[var(--brand-text-primary)] uppercase tracking-widest">Progress Tracking</p>
                                     <p className="text-xs text-brand-text-muted mt-0.5">
-                                        {hasStatus ? 'Items have a status you can advance' : 'Collection only — no status on items'}
+                                        {hasStatus ? 'Items have a status you can advance' : 'Just a list — no status on items'}
                                     </p>
                                 </div>
                                 <button

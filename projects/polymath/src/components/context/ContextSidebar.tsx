@@ -40,6 +40,20 @@ export function ContextSidebar() {
     // Tracks the in-view context so a stale analysis fetch can't overwrite a newer one.
     const activeKeyRef = useRef('')
 
+    // Whether the analysis actually SAYS anything. A returned object with an
+    // empty summary and no patterns is not an analysis — it's the shape of
+    // one, and rendering the card around it puts a heading and a refresh
+    // button over a blank space at the top of the panel.
+    const a = analysisData?.analysis
+    const hasAnalysis = !!(
+        a && (
+            a.summary?.trim() ||
+            a.patterns?.length ||
+            a.insight?.trim() ||
+            a.next_step?.trim()
+        )
+    )
+
     const executeAction = async (actionType: string) => {
         if (!activeContext.id || activeContext.type === 'page' || activeContext.type === 'home') {
             return
@@ -241,8 +255,13 @@ export function ContextSidebar() {
 
                         {/* Content */}
                         <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                            {/* AI Analysis Section */}
-                            {activeContext.type !== 'page' && activeContext.type !== 'home' && (
+                            {/* AI Analysis Section — only mounted when it has
+                                something. A titled, bordered, gradient card
+                                whose entire content is "No analysis available
+                                yet" is the panel taking up the top of the
+                                screen to say nothing; the Try actions below
+                                are the real offer while it's quiet. */}
+                            {activeContext.type !== 'page' && activeContext.type !== 'home' && (analysisLoading || hasAnalysis) && (
                                 <div className="rounded-xl p-4 bg-gradient-to-br from-brand-primary/10 to-brand-primary/10 border border-brand-primary/20">
                                     <div className="flex items-center justify-between mb-3">
                                         <div className="flex items-center gap-2">
@@ -272,7 +291,7 @@ export function ContextSidebar() {
                                             <Loader2 className="h-4 w-4 animate-spin" />
                                             <span>Analyzing...</span>
                                         </div>
-                                    ) : analysisData ? (
+                                    ) : analysisData && hasAnalysis ? (
                                         <div className="space-y-3">
                                             {/* Summary */}
                                             <p className="text-sm text-[var(--brand-text-secondary)] leading-relaxed">
@@ -308,10 +327,14 @@ export function ContextSidebar() {
                                                 </div>
                                             )}
 
-                                            {/* Connection count */}
-                                            <p className="text-xs text-[var(--brand-text-muted)] pt-1">
-                                                {analysisData.connectionCount} connection{analysisData.connectionCount !== 1 ? 's' : ''}
-                                            </p>
+                                            {/* Connection count — only when there
+                                                are some. "0 connections" is the
+                                                panel reporting its own emptiness. */}
+                                            {analysisData.connectionCount > 0 && (
+                                                <p className="text-xs text-[var(--brand-text-muted)] pt-1">
+                                                    {analysisData.connectionCount} connection{analysisData.connectionCount !== 1 ? 's' : ''}
+                                                </p>
+                                            )}
                                         </div>
                                     ) : (
                                         <p className="text-xs text-[var(--brand-text-muted)]">

@@ -1,7 +1,7 @@
 import React, { useMemo, useRef, useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Star, ArrowRight, CheckCircle2, Clock, Snowflake, Archive, Sprout, Loader2, ListOrdered, Play } from 'lucide-react'
+import { Star, CheckCircle2, Clock, Snowflake, Archive, Sprout, Loader2, ListOrdered, Play } from 'lucide-react'
 import type { Project } from '../../types'
 import { useProjectStore } from '../../stores/useProjectStore'
 import { useContextEngineStore } from '../../stores/useContextEngineStore'
@@ -323,9 +323,13 @@ function ProjectCard({ project, prominent = false }: { project: Project, promine
           >
             <Play className="h-3 w-3 fill-current" style={{ marginLeft: '1px' }} />
           </button>
-          <div className="h-7 w-7 rounded-full flex items-center justify-center bg-white/5 group-hover:bg-[var(--brand-primary)] group-hover:text-black transition-colors text-white/70">
-            <ArrowRight className="h-3.5 w-3.5" />
-          </div>
+          {/* The chevron circle that used to sit here is gone. The whole
+              card is already the link, so it wasn't an action — it was a
+              second circular button of exactly the same size sitting next to
+              the one real action (start a session), and the drawer grid is
+              twenty cards deep. Two identical-looking buttons per card, one
+              of which does nothing you can't do by tapping the card, is most
+              of why this page reads as busy. */}
         </div>
       </div>
     </Link>
