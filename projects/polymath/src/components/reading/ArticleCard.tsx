@@ -9,7 +9,6 @@ import { readingDb } from '../../lib/db'
 import { haptic } from '../../utils/haptics'
 import { ContextMenu, type ContextMenuItem } from '../ui/context-menu'
 import { Thumbnail } from '../ui/optimized-image'
-import { PinButton } from '../PinButton'
 
 import { EditArticleDialog } from './EditArticleDialog'
 import { useOfflineArticle } from '../../hooks/useOfflineArticle'
@@ -245,7 +244,6 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
                   <WifiOff className="h-3 w-3" />
                 </div>
               ) : null}
-              <PinButton type="article" id={article.id} title={article.title || 'Article'} content={<></>} />
             </div>
 
             <div className="flex items-center gap-3 text-[11px] text-[var(--brand-text-secondary)] uppercase tracking-wider font-semibold">

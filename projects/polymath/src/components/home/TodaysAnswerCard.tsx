@@ -39,7 +39,6 @@ import {
   usePriorityProject,
   useFocusProject,
 } from '../../stores/useProjectStore'
-import { useSessionContextStore } from '../../stores/useSessionContextStore'
 import { useFocusChatStore } from '../../stores/useFocusChatStore'
 import { useHomeAnswerStore } from '../../stores/useHomeAnswerStore'
 import { useProjectIdeasStore, type ProjectIdea } from '../../stores/useProjectIdeasStore'
@@ -49,7 +48,6 @@ import { ProjectIdeasHome } from './ProjectIdeasHome'
 import { FocusChat } from './FocusChat'
 import { SessionContract, type Phase } from '../session/SessionContract'
 import { WINDOW_PRESETS, useSessionStore } from '../../stores/useSessionStore'
-import { FeelingPill } from './FeelingPill'
 import { useDifferentThingNudge } from './useDifferentThingNudge'
 import { createProjectFromIdea } from '../../lib/createProjectFromIdea'
 import { haptic } from '../../utils/haptics'
@@ -76,7 +74,6 @@ export function TodaysAnswerCard({
   const projectsInitialized = useProjectStore(s => s.initialized)
   const createProject = useProjectStore(s => s.createProject)
   const priorityProject = usePriorityProject()
-  const feeling = useSessionContextStore(s => s.feeling)
 
   // A chip tap — or confirming a new-project proposal from inside the
   // Focus chat thread — creates a project and becomes the new answer in
@@ -223,7 +220,7 @@ export function TodaysAnswerCard({
     setEngaged(true)
     void useProjectIdeasStore.getState().load()
     if (nudge.opener && useFocusChatStore.getState().messages.length === 0) {
-      useFocusChatStore.getState().sendMessage(nudge.opener, summaries, feeling)
+      useFocusChatStore.getState().sendMessage(nudge.opener, summaries, null)
     }
   }
 
@@ -247,7 +244,7 @@ export function TodaysAnswerCard({
     // conversation, so it reads as a deliberate handoff instead of
     // silently vanishing a moment later.
     setShowDeck(false)
-    useFocusChatStore.getState().sendMessage(text, summaries, feeling)
+    useFocusChatStore.getState().sendMessage(text, summaries, null)
   }
 
   // Ends the conversation for real (clears the transcript), not just
@@ -600,11 +597,6 @@ export function TodaysAnswerCard({
           <SteerRow onOpen={openSteer} nudge={nudge.text} />
         ) : (
           <>
-          {/* Asked here rather than at app open, because here is the only
-              place the answer does anything: it calibrates what the
-              redirect and the idea deck come back with. On the card it was
-              a question with no visible consequence. */}
-          <FeelingPill />
           <SteerPanel
             chips={chips}
             chipsLoaded={chipsLoaded}

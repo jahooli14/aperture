@@ -2118,7 +2118,9 @@ async function searchArticles(query: string, supabase: any, userId: string, embe
       .from('reading_queue')
       .select('*')
       .eq('user_id', userId)
-      .or(`title.ilike.%${query}%,excerpt.ilike.%${query}%`)
+      // Also the body: an article you remember a phrase from is unfindable
+      // if only the title and the excerpt are searched.
+      .or(`title.ilike.%${query}%,excerpt.ilike.%${query}%,content.ilike.%${query}%`)
       .limit(20)
 
     if (error) {

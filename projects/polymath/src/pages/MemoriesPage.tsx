@@ -19,7 +19,7 @@ import { Button } from '../components/ui/button'
 import { useToast } from '../components/ui/toast'
 import { PremiumTabs } from '../components/ui/premium-tabs'
 import { SkeletonCard } from '../components/ui/skeleton-card'
-import { Brain, Zap, ArrowLeft, CloudOff, Search, X, Pin, Wind, Moon } from 'lucide-react'
+import { Brain, Zap, ArrowLeft, CloudOff, Search, X, Wind, Moon } from 'lucide-react'
 import { BrandName } from '../components/BrandName'
 import { SubtleBackground } from '../components/SubtleBackground'
 import type { Memory, ThemeCluster, ThemeClustersResponse } from '../types'
@@ -435,11 +435,6 @@ function MemoriesPageInner() {
   // time the list changed). Set on every render — cheap.
   totalCountRef.current = displayMemories.length
 
-  // Pinned thoughts  shown as a horizontal row above the main grid
-  const pinnedMemories = useMemo(() => {
-    return memories.filter(m => m.is_pinned)
-  }, [memories])
-
   const isFiltered = searchQuery.trim().length > 0
 
   const isLoading = view === 'resurfacing' ? loadingResurfacing : loading
@@ -775,54 +770,6 @@ function MemoriesPageInner() {
                       removed — the home page's "thought of the day" surface
                       is now the single place we resurface an old memory. */}
 
-                  {/* Pinned Thoughts Section */}
-                  {pinnedMemories.length > 0 && !searchQuery && (
-                    <div className="mb-6">
-                      <h3 className="text-sm font-semibold mb-3 flex items-center gap-2" style={{ color: "var(--brand-text-primary)" }}>
-                        <Pin className="w-3.5 h-3.5 text-brand-text-secondary" style={{ fill: 'currentColor' }} />
-                        Pinned
-                      </h3>
-                      <div className="shelf-fade flex gap-3 overflow-x-auto pb-2 -mx-3 px-3 sm:-mx-1 sm:px-1 scrollbar-hide snap-x snap-mandatory">
-                        {pinnedMemories.map((memory) => (
-                          <motion.div
-                            key={memory.id}
-                            onClick={() => handleOpenDetail(memory)}
-                            whileHover={{ y: -2 }}
-                            className="flex-shrink-0 w-[68vw] max-w-[260px] sm:w-56 rounded-xl p-3.5 cursor-pointer transition-all snap-start"
-                            style={{
-                              background: 'linear-gradient(135deg, var(--glass-surface-hover) 0%, var(--glass-surface) 100%)',
-                              boxShadow: 'inset 0 0 0 1px rgba(var(--brand-primary-rgb),0.25), 0 4px 12px rgba(0,0,0,0.3)',
-                              borderTop: '2px solid rgba(var(--brand-primary-rgb),0.5)',
-                            }}
-                          >
-                            <h4 className="text-sm font-semibold truncate mb-1.5 text-[var(--brand-text-primary)]">
-                              {memory.title}
-                            </h4>
-                            {memory.checklist_items && memory.checklist_items.length > 0 ? (
-                              <div className="flex flex-col gap-1">
-                                {memory.checklist_items.slice(0, 3).map((item) => (
-                                  <div key={item.id} className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--brand-text-secondary)', opacity: item.checked ? 0.5 : 0.95 }}>
-                                    <span className="w-3 h-3 rounded-sm border flex-shrink-0" style={{ borderColor: item.checked ? 'var(--brand-primary)' : 'rgba(255,255,255,0.3)', background: item.checked ? 'var(--brand-primary)' : 'transparent' }} />
-                                    <span style={{ textDecoration: item.checked ? 'line-through' : 'none' }} className="truncate">{item.text}</span>
-                                  </div>
-                                ))}
-                                {memory.checklist_items.length > 3 && (
-                                  <span className="text-[11px] mt-0.5" style={{ color: 'var(--brand-text-muted)' }}>+{memory.checklist_items.length - 3} more</span>
-                                )}
-                              </div>
-                            ) : (
-                              <p className="text-xs line-clamp-3 leading-relaxed" style={{ color: "var(--brand-text-secondary)" }}>
-                                {memory.body}
-                              </p>
-                            )}
-                            <span className="text-[11px] mt-2 block font-medium" style={{ color: "var(--brand-text-muted)" }}>
-                              {new Date(memory.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                            </span>
-                          </motion.div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
 
                   <MasonryGrid memories={displayMemories.slice(0, visibleCount)} onEdit={handleOpenDetail} onDelete={handleDelete} />
                   {visibleCount < displayMemories.length && (

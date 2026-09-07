@@ -18,6 +18,7 @@ import { queueOperation } from '../lib/offlineQueue'
 import { useHomeAnswerStore } from './useHomeAnswerStore'
 import { isActiveShaped, recentExcluding, resolveFocusProjectId, warmRow, queueRow } from './focusProjectOps'
 import { useOfflineStore } from './useOfflineStore'
+import { isRetired } from '../utils/projectStatus'
 
 // The `api` client's fetchWithTimeout rethrows a raw TypeError for a genuine
 // connectivity failure, and wraps its own abort-timeout as ApiError(408) —
@@ -354,7 +355,7 @@ export const useProjectStore = create<ProjectState>()(
         // does — otherwise Home keeps showing a graveyarded project as
         // today's answer until the next fetch lands.
         const released: Partial<Project> =
-          data.status === 'graveyard' || data.status === 'completed'
+          isRetired(data.status)
             ? {
                 state: (data.status === 'completed' ? 'harvested' : 'mull') as Project['state'],
                 is_priority: false,

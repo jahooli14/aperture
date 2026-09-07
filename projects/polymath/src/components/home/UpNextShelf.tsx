@@ -6,7 +6,7 @@
  * user has staked a claim on what comes next.
  */
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Reorder, motion, AnimatePresence, useDragControls } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import { GripVertical, X } from 'lucide-react'
@@ -34,23 +34,65 @@ interface ShelfRowProps {
   onDragEnd: () => void
 }
 
+/** How long to hold before a touch becomes a drag. */
+const HOLD_MS = 260
+/** Move further than this before the hold fires and it was a scroll. */
+const MOVE_TOLERANCE_PX = 8
+
 /**
- * The drag used to be attached to the whole row with `touch-none`, so any
- * vertical swipe over the row — the normal way to scroll this drawer — got
- * captured as a reorder instead. `dragControls` restricts drag start to the
- * grip handle alone; the row itself keeps native touch scrolling.
+ * Hold to reorder, swipe to scroll.
+ *
+ * Touching the row used to start a drag immediately — first anywhere on the
+ * row, then on the grip, which is a full-height column down the card's left
+ * edge and therefore exactly where a thumb lands when scrolling. Either way
+ * a scroll picked the card up. A drag now has to be asked for: press and
+ * hold, and any real movement before the hold completes cancels it and
+ * leaves the scroll alone.
  */
 function ShelfRow({ project, position, onOpen, onUnpin, onDragEnd }: ShelfRowProps) {
   const theme = getTheme(project.type || 'other', project.title, project.metadata?.tags)
   const dragControls = useDragControls()
+  const holdTimer = useRef<number | null>(null)
+  const pressOrigin = useRef<{ x: number; y: number } | null>(null)
+  const [armed, setArmed] = useState(false)
+
+  const cancelHold = () => {
+    if (holdTimer.current !== null) {
+      window.clearTimeout(holdTimer.current)
+      holdTimer.current = null
+    }
+    pressOrigin.current = null
+  }
+
+  const beginHold = (e: React.PointerEvent) => {
+    pressOrigin.current = { x: e.clientX, y: e.clientY }
+    const nativeEvent = e.nativeEvent
+    holdTimer.current = window.setTimeout(() => {
+      holdTimer.current = null
+      haptic.light()
+      setArmed(true)
+      dragControls.start(nativeEvent)
+    }, HOLD_MS)
+  }
+
+  const maybeCancelHold = (e: React.PointerEvent) => {
+    if (holdTimer.current === null || !pressOrigin.current) return
+    const movedFar =
+      Math.abs(e.clientX - pressOrigin.current.x) > MOVE_TOLERANCE_PX ||
+      Math.abs(e.clientY - pressOrigin.current.y) > MOVE_TOLERANCE_PX
+    if (movedFar) cancelHold()
+  }
 
   return (
     <Reorder.Item
       value={project}
       dragListener={false}
       dragControls={dragControls}
-      onDragEnd={onDragEnd}
+      onDragEnd={() => { setArmed(false); cancelHold(); onDragEnd() }}
       whileDrag={{ scale: 1.02, boxShadow: '0 12px 32px rgba(0,0,0,0.5)' }}
+      // Only once the hold has fired does this row stop being scrollable
+      // surface and become the thing being dragged.
+      style={{ touchAction: armed ? 'none' : 'pan-y' }}
     >
       <motion.div
         layout
@@ -58,7 +100,11 @@ function ShelfRow({ project, position, onOpen, onUnpin, onDragEnd }: ShelfRowPro
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -8 }}
         transition={{ duration: 0.2 }}
-        onClick={() => onOpen(project.id)}
+        onClick={() => { if (!armed) onOpen(project.id) }}
+        onPointerDown={beginHold}
+        onPointerMove={maybeCancelHold}
+        onPointerUp={cancelHold}
+        onPointerCancel={cancelHold}
         className="rounded-xl flex items-stretch overflow-hidden cursor-pointer transition-all hover:brightness-110"
         style={{
           background: `linear-gradient(135deg, rgba(${theme.rgb}, 0.08), rgba(15,24,41,0.5))`,
@@ -66,17 +112,16 @@ function ShelfRow({ project, position, onOpen, onUnpin, onDragEnd }: ShelfRowPro
           boxShadow: `0 2px 12px rgba(0,0,0,0.3)`,
         }}
       >
-        {/* Drag handle + position badge — the only part that starts a
-            drag, and the only part with touch-action disabled, so
-            scrolling the rest of the row still works. */}
+        {/* Position badge and grip. The grip says the row can be moved; it
+            no longer grabs the touch itself, because as a full-height column
+            on the left edge it caught scrolls aimed at the page. */}
         <div
-          className="flex flex-col items-center justify-center px-3 py-3 flex-shrink-0 cursor-grab active:cursor-grabbing touch-none"
+          className="flex flex-col items-center justify-center px-3 py-3 flex-shrink-0 cursor-grab active:cursor-grabbing"
           style={{
             background: `rgba(${theme.rgb}, 0.12)`,
             borderRight: `1px solid rgba(${theme.rgb}, 0.15)`,
           }}
           onClick={(e) => e.stopPropagation()}
-          onPointerDown={(e) => dragControls.start(e)}
         >
           <span
             className="text-[10px] font-black tracking-widest mb-0.5 aperture-header"
@@ -159,7 +204,7 @@ export function UpNextShelf() {
     <div>
       <h2 className="section-heading">up <span className="accent">next</span></h2>
       <p className="text-[12px] mb-4 -mt-2" style={{ color: 'var(--brand-text-muted)' }}>
-        The queue you've committed to. Drag to reorder, ✕ to unpin.
+        The queue you've committed to. Hold to reorder, ✕ to unpin.
       </p>
       <Reorder.Group
         axis="y"

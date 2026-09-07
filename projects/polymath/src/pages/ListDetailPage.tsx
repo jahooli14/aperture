@@ -630,9 +630,9 @@ function getMetaLine(item: ListItem, listType: string): string[] {
 // ============================================================================
 
 const ITEM_REACTIONS = [
-    { id: 'sparked', emoji: '⚡', label: 'sparked me' },
-    { id: 'off', emoji: '✕', label: 'not for me' },
-    { id: 'make', emoji: '💡', label: 'want to make' },
+    { id: 'sparked', label: 'sparked me' },
+    { id: 'off', label: 'not for me' },
+    { id: 'make', label: 'want to make' },
 ] as const
 
 type ItemReaction = typeof ITEM_REACTIONS[number]['id']
@@ -838,7 +838,7 @@ const StandardItemCard = memo(({
                     chrome and buried the covers; the same three buttons one
                     tap in read as a question. */}
                 {onReact && (isExpanded || item.metadata?.reaction) && (
-                    <div className="flex items-center gap-1 pt-1.5 mt-1.5 border-t border-white/10">
+                    <div className="flex flex-wrap items-center gap-1 pt-1.5 mt-1.5 border-t border-white/10">
                         {ITEM_REACTIONS.map(r => {
                             const active = item.metadata?.reaction === r.id
                             // Once answered, the two roads not taken collapse
@@ -860,11 +860,11 @@ const StandardItemCard = memo(({
                                     aria-label={r.label}
                                     aria-pressed={active}
                                 >
-                                    <span>{r.emoji}</span>
-                                    {/* Standing alone as the answer, it gets to
-                                        say what it means. In the row of three
-                                        it stays an emoji so the row fits. */}
-                                    {active && <span className={isExpanded ? 'hidden sm:inline' : ''}>{r.label}</span>}
+                                    {/* Always the words. As three bare emoji
+                                        (⚡ ✕ 💡) nobody could tell what the
+                                        row was for — it read as decoration on
+                                        a card, not a question being asked. */}
+                                    <span>{r.label}</span>
                                 </button>
                             )
                         })}

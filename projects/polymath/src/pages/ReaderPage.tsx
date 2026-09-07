@@ -273,11 +273,15 @@ export function ReaderPage() {
       // signal the home widget listens for; it rolls itself back and
       // rethrows if the server refuses.
       await useReadingStore.getState().setResonance(article.id, verdict)
-    } catch {
+    } catch (err) {
       setLocalResonance(previous)
+      // The server says why when it knows why (a missing column, say).
+      // Guessing "you're offline" at it hid a fault that was never going
+      // to fix itself by trying again.
+      const detail = err instanceof Error && err.message ? err.message : null
       addToast({
         title: 'Couldn\'t save that',
-        description: 'You\'re offline, or the server said no. Try again.',
+        description: detail ?? 'You\'re offline, or the server said no. Try again.',
         variant: 'destructive',
       })
     } finally {

@@ -5,16 +5,14 @@
 
 import { useEffect, useState, useRef, useMemo, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Loader2, MoreVertical, Check, X, GripVertical, Play, Target, Star, Sprout, Columns2, Skull, ArrowLeft } from 'lucide-react'
+import { Loader2, MoreVertical, Check, X, GripVertical, Play, Target, Star, Sprout, ArrowLeft } from 'lucide-react'
 import { useProjectStore } from '../stores/useProjectStore'
 import { useSessionStore } from '../stores/useSessionStore'
 import { SessionContract } from '../components/session/SessionContract'
 import { ProjectNotes } from '../components/projects/ProjectNotes'
 import { ProjectPath } from '../components/projects/ProjectPath'
 import type { Task } from '../components/projects/TaskList'
-import { PinnedTaskList } from '../components/projects/PinnedTaskList'
 import { InlineGuide } from '../components/projects/InlineGuide'
-import { PinButton } from '../components/PinButton'
 import { Button } from '../components/ui/button'
 import { useToast } from '../components/ui/toast'
 import { useConfirmDialog } from '../components/ui/confirm-dialog'
@@ -27,7 +25,7 @@ import type { Project, Memory } from '../types'
 import { supabase } from '../lib/supabase'
 import { fetchWithTimeout } from '../lib/network'
 import { useMemoryStore } from '../stores/useMemoryStore'
-import { usePin } from '../contexts/PinContext'
+import { isRetired, GRAVEYARD_STATUS } from '../utils/projectStatus'
 
 import { SubtleBackground } from '../components/SubtleBackground'
 import { api, ApiError } from '../lib/apiClient'
@@ -176,7 +174,6 @@ export function ProjectDetailPage() {
       setReplanning(false)
     }
   }
-  const { pinnedItem, pinItem, unpinItem } = usePin()
 
   // Reactive selection from store
   const project = useProjectStore(state => state.allProjects.find(p => p.id === id))
@@ -228,7 +225,6 @@ export function ProjectDetailPage() {
   const [editingGoal, setEditingGoal] = useState(false)
   const [tempTitle, setTempTitle] = useState('')
   const [tempGoal, setTempGoal] = useState('')
-  const [draggedPinnedTaskId, setDraggedPinnedTaskId] = useState<string | null>(null)
   const [showCategoryMenu, setShowCategoryMenu] = useState(false)
   const titleInputRef = useRef<HTMLInputElement>(null)
   const goalInputRef = useRef<HTMLTextAreaElement>(null)
@@ -447,76 +443,8 @@ export function ProjectDetailPage() {
     setTimeout(() => goalInputRef.current?.focus(), 0)
   }
 
-  const addPinnedTask = useCallback(async (text: string) => {
-    if (!project) return
 
-    const tasks = (project.metadata?.tasks || []) as Task[]
-    const newTask = {
-      id: crypto.randomUUID(),
-      text: text.trim(),
-      done: false,
-      created_at: new Date().toISOString(),
-      order: tasks.length
-    }
-    const updatedTasks = [...tasks, newTask]
-    const newMetadata = {
-      ...project.metadata,
-      tasks: updatedTasks
-    }
 
-    try {
-      await updateProject(project.id, { metadata: newMetadata })
-      await loadProjectDetails()
-      addToast({
-        title: 'Task added',
-        variant: 'success',
-      })
-    } catch (error) {
-      console.error('[addPinnedTask] Failed to add task:', error)
-      addToast({
-        title: 'Failed to add task',
-        description: error instanceof Error ? error.message : 'An unknown error occurred',
-        variant: 'destructive',
-      })
-    }
-  }, [project, updateProject, loadProjectDetails, addToast])
-
-  const togglePinnedTask = useCallback(async (taskId: string) => {
-    if (!project) return
-
-    const tasks = (project.metadata?.tasks || []) as Task[]
-    const taskToToggle = tasks.find(t => t.id === taskId)
-    if (!taskToToggle) return
-
-    const updatedTasks = tasks.map(t =>
-      t.id === taskId ? { ...t, done: !t.done } : t
-    )
-    const newMetadata = {
-      ...project.metadata,
-      tasks: updatedTasks,
-      progress: Math.round((updatedTasks.filter(t => t.done).length / updatedTasks.length) * 100) || 0
-    }
-
-    try {
-      await updateProject(project.id, { metadata: newMetadata })
-      await loadProjectDetails()
-      addToast({
-        title: 'Task updated',
-        variant: 'success',
-      })
-    } catch (error) {
-      console.error('Failed to update task:', error)
-      addToast({
-        title: 'Failed to update task',
-        description: error instanceof Error ? error.message : 'An unknown error occurred',
-        variant: 'destructive',
-      })
-    }
-  }, [project, updateProject, loadProjectDetails, addToast])
-
-  const handlePinnedDragStart = useCallback((taskId: string) => {
-    setDraggedPinnedTaskId(taskId)
-  }, [])
 
   const handleReorder = useCallback((draggedId: string, targetId: string) => {
     if (!project) return
@@ -549,9 +477,6 @@ export function ProjectDetailPage() {
     updateProject(project.id, { metadata: newMetadata })
   }, [project, updateProject])
 
-  const handlePinnedDragEnd = useCallback(() => {
-    setDraggedPinnedTaskId(null)
-  }, [])
 
   const handleStatusChange = async (newStatus: Project['status']) => {
     if (!project) return
@@ -711,24 +636,6 @@ export function ProjectDetailPage() {
   const tasks = project?.metadata?.tasks || []
   const nextTask = tasks.find(t => !t.done)
 
-  // Memoize pinned content to prevent unnecessary re-renders
-  // MUST be called before ALL early returns (loading, !project, etc)
-  const pinnedContent = useMemo(() => {
-    if (!project) return null
-
-    return (
-      <PinnedTaskList
-        tasks={project.metadata?.tasks || []}
-        onToggle={togglePinnedTask}
-        onAdd={addPinnedTask}
-        onReorder={handleReorder}
-        draggedTaskId={draggedPinnedTaskId}
-        onDragStart={handlePinnedDragStart}
-        onDragEnd={handlePinnedDragEnd}
-      />
-    )
-  }, [project?.metadata?.tasks, togglePinnedTask, addPinnedTask, handleReorder, draggedPinnedTaskId, handlePinnedDragStart, handlePinnedDragEnd])
-
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-brand-bg" style={{ backgroundColor: 'var(--brand-bg)' }}>
@@ -791,21 +698,7 @@ export function ProjectDetailPage() {
                   >
                     Edit Details
                   </button>
-                  <button
-                    onClick={() => {
-                      setShowMenu(false)
-                      const isThisPinned = pinnedItem !== null && (pinnedItem.id === project.id || pinnedItem.id === id)
-                      if (isThisPinned) { unpinItem() } else { pinItem({ type: 'project', id: project.id, title: project.title, content: pinnedContent }) }
-                    }}
-                    title="Keeps this project open in a strip at the bottom of the screen so you can check it while you browse elsewhere"
-                    className="w-full px-3.5 py-3 text-left text-[14px] font-medium transition-colors hover:bg-white/[0.05] rounded-xl flex items-center gap-2 min-h-[44px]"
-                    style={{ color: 'var(--brand-text-primary)', opacity: 0.9 }}
-                  >
-                    {pinnedItem?.id === project.id
-                      ? <><X className="h-4 w-4" /> Stop keeping this on screen</>
-                      : <><Columns2 className="h-4 w-4" /> Keep on screen</>}
-                  </button>
-                  {project.status !== 'graveyard' && project.status !== 'completed' && (
+                  {!isRetired(project.status) && (
                     <button
                       onClick={async () => {
                         setShowMenu(false)
@@ -816,12 +709,12 @@ export function ProjectDetailPage() {
                           cancelText: 'Cancel',
                           variant: 'destructive',
                         })
-                        if (ok) handleStatusChange('graveyard')
+                        if (ok) handleStatusChange(GRAVEYARD_STATUS)
                       }}
-                      className="w-full px-3.5 py-3 text-left text-[14px] font-medium transition-colors hover:bg-white/[0.05] rounded-xl flex items-center gap-2 min-h-[44px]"
+                      className="w-full px-3.5 py-3 text-left text-[14px] font-medium transition-colors hover:bg-white/[0.05] rounded-xl min-h-[44px]"
                       style={{ color: 'var(--brand-text-primary)', opacity: 0.9 }}
                     >
-                      <Skull className="h-4 w-4" /> Send to graveyard
+                      Send to graveyard
                     </button>
                   )}
                   <button
@@ -836,11 +729,6 @@ export function ProjectDetailPage() {
           </div>
           </div>
         </header>
-
-        {/* Hidden PinButton to preserve useEffect content sync */}
-        <div className="hidden">
-          <PinButton type="project" id={project.id} title={project.title} currentId={id} contentVersion={tasks.length} content={pinnedContent} />
-        </div>
 
         <LineageBreadcrumb project={project} />
 
@@ -878,7 +766,7 @@ export function ProjectDetailPage() {
               project everything else (review rotation, colour, the home
               answer) is built around. A visible, tappable chip, not a
               read-only badge you had to already know about to find. */}
-          {project.status !== 'completed' && project.status !== 'graveyard' && (
+          {!isRetired(project.status) && (
             <button
               onClick={handleTogglePriority}
               title={project.is_priority ? 'Remove as the priority project' : 'Make this the priority project'}
@@ -893,29 +781,58 @@ export function ProjectDetailPage() {
               {project.is_priority ? 'Priority' : 'Make it the priority'}
             </button>
           )}
-          {/* Read-only status chip. Transitions happen via explicit actions:
-              "Mark Complete" below the task list, and "Send to graveyard" in
-              the kebab menu. Dormant is set automatically by inactivity. */}
-          <span
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg"
-            style={{ background: 'rgba(255,255,255,0.03)' }}
-          >
-            <span
-              className="h-1.5 w-1.5 rounded-full"
-              style={{
-                background:
-                  project.status === 'active' || project.status === 'completed'
-                    ? 'rgb(var(--brand-primary-rgb))'
-                    : 'rgba(255,255,255,0.25)',
-              }}
-            />
-            <span
-              className="text-[11px] font-semibold capitalize"
-              style={{ color: 'var(--brand-text-secondary)', opacity: 0.6 }}
-            >
-              {project.status}
-            </span>
-          </span>
+          {/* Active or parked, and tappable to change it. This was a
+              read-only chip on the theory that dormancy is set by
+              inactivity — which left no way anywhere in the app to say "I'm
+              on this now" or "park this", only to finish it or bury it.
+              Completed and graveyard still happen through their own
+              explicit actions, so the toggle is only offered between the
+              two states you actually pick between. */}
+          {(() => {
+            const parked = project.status === 'dormant'
+            const togglable = project.status === 'active' || parked
+            const chipBody = (
+              <>
+                <span
+                  className="h-1.5 w-1.5 rounded-full"
+                  style={{
+                    background:
+                      project.status === 'active' || project.status === 'completed'
+                        ? 'rgb(var(--brand-primary-rgb))'
+                        : 'rgba(255,255,255,0.25)',
+                  }}
+                />
+                <span
+                  className="text-[11px] font-semibold capitalize"
+                  style={{ color: 'var(--brand-text-secondary)', opacity: 0.6 }}
+                >
+                  {parked ? 'Parked' : project.status}
+                </span>
+              </>
+            )
+
+            if (!togglable) {
+              return (
+                <span
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg"
+                  style={{ background: 'rgba(255,255,255,0.03)' }}
+                >
+                  {chipBody}
+                </span>
+              )
+            }
+
+            return (
+              <button
+                onClick={() => handleStatusChange(parked ? 'active' : 'dormant')}
+                title={parked ? 'Pick this back up' : 'Park it — stops it surfacing on Home'}
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg transition-colors hover:bg-white/[0.06]"
+                style={{ background: 'rgba(255,255,255,0.03)' }}
+              >
+                {chipBody}
+              </button>
+            )
+          })()}
           {/* `type` is legacy and is NOT a grouping axis (see CLAUDE.md) --
               "hobby" on a project page tells you nothing and reads as a
               category the app cares about. metadata.tags is the real axis

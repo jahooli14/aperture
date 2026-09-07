@@ -12,6 +12,7 @@ import { Search, Check, ArrowLeft, Skull, Sprout } from 'lucide-react'
 import { useConfirmDialog } from '../components/ui/confirm-dialog'
 import { SubtleBackground } from '../components/SubtleBackground'
 import { useToast } from '../components/ui/toast'
+import { isGraveyard, isRetired } from '../utils/projectStatus'
 import type { Project } from '../types'
 
 // ============================================================================
@@ -228,7 +229,7 @@ function ProjectsPageInner() {
   const FOCUS_CAP = 3
   const { activeList, drawerList } = React.useMemo(() => {
     // Exclude completed/graveyard projects from active and drawer sections
-    const nonCompleted = projects.filter(p => p.status !== 'completed' && p.status !== 'graveyard')
+    const nonCompleted = projects.filter(p => !isRetired(p.status))
 
     const priorityProjects = nonCompleted
       .filter(p => p.is_priority)
@@ -288,8 +289,8 @@ function ProjectsPageInner() {
                   {view === 'completed'
                     ? `${projects.filter(p => p.status === 'completed').length} finished`
                     : view === 'graveyard'
-                    ? `${projects.filter(p => p.status === 'graveyard').length} parked`
-                    : `${projects.filter(p => p.status !== 'completed' && p.status !== 'graveyard').length} on the go`}
+                    ? `${projects.filter(p => isGraveyard(p.status)).length} parked`
+                    : `${projects.filter(p => !isRetired(p.status)).length} on the go`}
                 </div>
               </div>
             </div>
@@ -342,7 +343,7 @@ function ProjectsPageInner() {
             />
           ) : view === 'graveyard' ? (
             <GraveyardTimeline
-              projects={projects.filter(p => p.status === 'graveyard')}
+              projects={projects.filter(p => isGraveyard(p.status))}
               onNavigate={(id) => navigate(`/projects/${id}`)}
               onRevive={handleRevive}
             />

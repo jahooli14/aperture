@@ -619,8 +619,8 @@ export function SessionContract({
                   <p
                     className="text-[10px] uppercase tracking-[0.14em] mt-3 mb-1 first:mt-0"
                     style={{
-                      color: isCurrent ? 'rgba(var(--brand-primary-rgb),0.75)' : 'var(--brand-text-secondary)',
-                      opacity: isCurrent ? 1 : 0.4,
+                      color: 'var(--brand-text-secondary)',
+                      opacity: isCurrent ? 0.85 : 0.4,
                     }}
                   >
                     {label}
@@ -629,16 +629,20 @@ export function SessionContract({
                 <button
                   onClick={() => toggle(i)}
                   className="w-full flex items-start gap-2.5 text-left py-2.5 px-3 -mx-3 rounded-lg transition-colors hover:bg-white/[0.04]"
+                  // The step you're on is emphasised by weight and a lifted
+                  // surface, not by colour. A blue wash behind the one line
+                  // you're meant to be reading fought the text on a black
+                  // screen, which is the opposite of what emphasis is for.
                   style={isCurrent ? {
-                    background: 'rgba(var(--brand-primary-rgb),0.09)',
-                    boxShadow: 'inset 3px 0 0 rgba(var(--brand-primary-rgb),0.6)',
+                    background: 'rgba(255,255,255,0.05)',
+                    boxShadow: 'inset 2px 0 0 rgba(255,255,255,0.28)',
                   } : undefined}
                 >
                   <span
                     className="mt-0.5 h-4 w-4 rounded-[5px] flex-shrink-0 flex items-center justify-center border"
                     style={done
                       ? { background: 'rgba(var(--brand-primary-rgb),0.9)', borderColor: 'rgba(var(--brand-primary-rgb),0.9)' }
-                      : { borderColor: isCurrent ? 'rgba(var(--brand-primary-rgb),0.7)' : 'var(--glass-border-bold)' }}
+                      : { borderColor: isCurrent ? 'rgba(255,255,255,0.45)' : 'var(--glass-border-bold)' }}
                   >
                     {done && <Check size={11} strokeWidth={3} style={{ color: '#0b1220' }} />}
                   </span>

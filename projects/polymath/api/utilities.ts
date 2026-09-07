@@ -79,7 +79,7 @@ const EXECUTION_SESSIONS_RESOURCES = new Set([
   'start', 'close', 'pending-closeout', 'log-retro', 'declare-live',
   'live-reask', 'different-thing-status', 'harvest', 'mirror', 'book',
 ])
-const EXECUTION_SPARKS_RESOURCES = new Set(['bake', 'today', 'respond'])
+const EXECUTION_SPARKS_RESOURCES = new Set(['bake', 'today', 'respond', 'dismiss-spark'])
 const EXECUTION_PROPOSALS_RESOURCES = new Set([
   'generate-morph', 'drift-decay', 'mine-joints', 'generate-composite',
   'pending', 'accept', 'reject',
@@ -2815,6 +2815,34 @@ async function handleExecutionSparks(req: VercelRequest, res: VercelResponse) {
     }
 
     return res.status(200).json({ spark })
+  }
+
+  // ─── DISMISS ────────────────────────────────────────────────────────
+  // "not now" is an answer too. Without this it changed nothing on the
+  // server, and since a spark is served until it's answered or expires,
+  // the same forgotten project came back every single app open — the
+  // definition of nagging. Stamping answered_at retires this spark; the
+  // 21-day per-project cooldown then decides when that project may be
+  // offered again.
+  if (resource === 'dismiss-spark') {
+    if (req.method !== 'POST') return res.status(405).json({ error: 'POST required' })
+    const userId = await getUserId(req)
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' })
+
+    const { spark_id } = req.body || {}
+    if (!spark_id) return res.status(400).json({ error: 'spark_id required' })
+
+    const { error } = await supabase
+      .from('sparks')
+      .update({ answered_at: new Date().toISOString() })
+      .eq('id', spark_id)
+      .eq('user_id', userId)
+
+    if (error) {
+      console.error('[utilities/sparks] dismiss failed:', error)
+      return res.status(500).json({ error: error.message })
+    }
+    return res.status(200).json({ success: true })
   }
 
   // ─── RESPOND ────────────────────────────────────────────────────────
