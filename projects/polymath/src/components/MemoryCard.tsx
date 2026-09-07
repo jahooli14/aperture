@@ -432,20 +432,6 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
 
           <div className="flex items-center gap-1.5 flex-shrink-0">
 
-            {memory.checklist_items && memory.checklist_items.length > 0 && (
-              <span
-                className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md text-[10px] font-semibold"
-                style={{
-                  background: 'rgba(var(--brand-primary-rgb),0.14)',
-                  border: '1px solid rgba(var(--brand-primary-rgb),0.3)',
-                  color: 'rgb(var(--brand-primary-rgb))',
-                }}
-              >
-                <CheckSquare className="w-2.5 h-2.5" />
-                {memory.checklist_items.filter(i => i.checked).length}/{memory.checklist_items.length}
-              </span>
-            )}
-
             {typeConfig ? (
               <span
                 className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-semibold"

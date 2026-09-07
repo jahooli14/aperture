@@ -1913,6 +1913,14 @@ async function handleSearch(query: string, supabase: any, userId: string, res: V
         })
       ])
 
+      // The RPC calls can fail (e.g. a query-embedding dimension mismatch
+      // against the vector(768) columns) without throwing — Supabase just
+      // returns { data: null, error }. Log it so a broken vector search is
+      // visible instead of quietly looking like "no matches".
+      if (memoriesRpc.error) console.error('[handleSearch] match_memories RPC error:', memoriesRpc.error)
+      if (projectsRpc.error) console.error('[handleSearch] match_projects RPC error:', projectsRpc.error)
+      if (articlesRpc.error) console.error('[handleSearch] match_reading RPC error:', articlesRpc.error)
+
       const memoriesResults: SearchResult[] = (memoriesRpc.data || []).map((m: any) => ({
         type: 'memory',
         id: m.id,
@@ -1944,17 +1952,25 @@ async function handleSearch(query: string, supabase: any, userId: string, res: V
       const allResults = [...memoriesResults, ...projectsResults, ...articlesResults]
         .sort((a, b) => b.score - a.score)
 
-      return res.status(200).json({
-        query: searchTerm,
-        semantic: true,
-        total: allResults.length,
-        results: allResults,
-        breakdown: {
-          memories: memoriesResults.length,
-          projects: projectsResults.length,
-          articles: articlesResults.length
-        }
-      })
+      // Only trust the vector-only result set when it actually found
+      // something. An RPC error, or a corpus where nothing has an
+      // embedding yet, would otherwise report "0 results" for a query that
+      // plainly matches a title/body — fall through to the text search
+      // below instead of returning that dead end.
+      if (allResults.length > 0) {
+        return res.status(200).json({
+          query: searchTerm,
+          semantic: true,
+          total: allResults.length,
+          results: allResults,
+          breakdown: {
+            memories: memoriesResults.length,
+            projects: projectsResults.length,
+            articles: articlesResults.length,
+            suggestions: 0
+          }
+        })
+      }
     }
 
     // Fallback: text-based search (with optional embedding boost)
@@ -1979,7 +1995,8 @@ async function handleSearch(query: string, supabase: any, userId: string, res: V
       breakdown: {
         memories: memoriesResults.length,
         projects: projectsResults.length,
-        articles: articlesResults.length
+        articles: articlesResults.length,
+        suggestions: 0
       }
     })
 

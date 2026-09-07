@@ -404,6 +404,7 @@ export function EditMemoryDialog({ memory, open, onOpenChange, onMemoryUpdated }
               style={{
                 background: 'rgba(255,255,255,0.08)',
                 border: '1px solid rgba(255,255,255,0.15)',
+                borderRadius: 'var(--brand-radius)',
                 color: 'var(--brand-text-primary)',
               }}
             >
