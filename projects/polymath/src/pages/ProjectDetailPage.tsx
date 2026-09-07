@@ -32,6 +32,17 @@ import { usePin } from '../contexts/PinContext'
 import { SubtleBackground } from '../components/SubtleBackground'
 import { api } from '../lib/apiClient'
 
+/**
+ * What paused this — a post-it, but only once there's something written on it.
+ *
+ * This used to render on every unfinished project as an empty amber card
+ * saying "Tap if something paused this." That is a warning-coloured box on a
+ * project that isn't in trouble, and it's the same anti-pattern the finish
+ * line was fixed for: never an empty field on a card, never a gate, never a
+ * warning. So when it's empty it's one quiet line of text you can tap; when
+ * it holds a real sentence it becomes the paper note it always was, because
+ * then it's saying something.
+ */
 function BlockerField({ blocker, onSave }: { blocker?: string; onSave: (text: string) => Promise<void> }) {
   const [editing, setEditing] = useState(false)
   const [text, setText] = useState(blocker ?? '')
@@ -40,6 +51,18 @@ function BlockerField({ blocker, onSave }: { blocker?: string; onSave: (text: st
   const handleSave = async () => {
     setSaving(true)
     try { await onSave(text) } finally { setSaving(false); setEditing(false) }
+  }
+
+  if (!blocker && !editing) {
+    return (
+      <button
+        onClick={() => setEditing(true)}
+        className="w-full text-center text-[12px] py-1 transition-opacity hover:opacity-90"
+        style={{ color: 'var(--brand-text-secondary)', opacity: 0.45 }}
+      >
+        or say what's pausing this
+      </button>
+    )
   }
 
   // Post-it: shared styling lives in design-tokens.css (.post-it).
@@ -98,14 +121,13 @@ function BlockerField({ blocker, onSave }: { blocker?: string; onSave: (text: st
           className="cursor-pointer hover:opacity-95 transition-opacity text-base"
           style={{
             fontFamily: 'var(--brand-font-body)',
-            fontStyle: blocker ? 'normal' : 'italic',
             lineHeight: 1.55,
             color: 'var(--brand-text-primary)',
-            opacity: blocker ? 0.92 : 0.45,
+            opacity: 0.92,
           }}
           onClick={() => setEditing(true)}
         >
-          {blocker || 'Tap if something paused this.'}
+          {blocker}
         </p>
       )}
     </div>
@@ -705,7 +727,7 @@ export function ProjectDetailPage() {
   }
 
   return (
-    <div className="min-h-screen pb-24 relative" style={{ backgroundColor: 'var(--brand-bg)' }}>
+    <div className="min-h-screen page-bottom relative" style={{ backgroundColor: 'var(--brand-bg)' }}>
       <SubtleBackground />
       <div className="max-w-2xl mx-auto px-5 sm:px-6 pb-4">
         <header className="page-masthead mb-6">
@@ -835,8 +857,18 @@ export function ProjectDetailPage() {
           </span>
           {/* `type` is legacy and is NOT a grouping axis (see CLAUDE.md) --
               "hobby" on a project page tells you nothing and reads as a
-              category the app cares about. Labels (metadata.tags) are the
-              real axis. */}
+              category the app cares about. metadata.tags is the real axis
+              — it drives the colour, the resurface ordering and the idea
+              generator's seed pairs — so it's what renders here instead. */}
+          {((project.metadata?.tags as string[] | undefined) ?? []).slice(0, 3).map((tag) => (
+            <span
+              key={tag}
+              className="text-[11px] font-medium px-2.5 py-1 rounded-lg"
+              style={{ color: 'var(--brand-text-secondary)', opacity: 0.55, background: 'rgba(255,255,255,0.04)' }}
+            >
+              {tag}
+            </span>
+          ))}
         </div>
       </div>
 

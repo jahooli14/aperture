@@ -85,11 +85,11 @@ export function QuickAddSheet({ list, isOpen, onClose, listRgb }: QuickAddSheetP
                             {/* Header */}
                             <div className="flex items-center justify-between mb-5">
                                 <div>
-                                    <p className="text-[9px] font-black uppercase tracking-[0.2em] mb-0.5"
+                                    <p className="text-[9px] font-semibold uppercase tracking-[0.2em] mb-0.5"
                                         style={{ color: `rgb(${listRgb})` }}>
-                                        Quick Add
+                                        adding to
                                     </p>
-                                    <h3 className="text-base font-black text-[var(--brand-text-primary)] uppercase tracking-tight">
+                                    <h3 className="text-base font-semibold text-[var(--brand-text-primary)]">
                                         {list.title}
                                     </h3>
                                 </div>
@@ -107,8 +107,9 @@ export function QuickAddSheet({ list, isOpen, onClose, listRgb }: QuickAddSheetP
                                     ref={inputRef}
                                     value={value}
                                     onChange={e => setValue(e.target.value)}
-                                    placeholder={`Add to ${list.title.toLowerCase()}...`}
-                                    className="flex-1 bg-[var(--glass-surface)] rounded-xl px-4 py-3 text-[var(--brand-text-primary)] text-sm placeholder-white/20 outline-none border border-white/8 focus:border-white/20 transition-colors uppercase tracking-tight font-medium"
+                                    placeholder={`Add to ${list.title.toLowerCase()}…`}
+                                    className="flex-1 bg-[var(--glass-surface)] rounded-xl px-4 py-3 text-[var(--brand-text-primary)] text-sm placeholder-white/20 outline-none border border-white/8 focus:border-white/20 transition-colors"
+                                    style={{ fontFamily: 'var(--brand-font-serif)' }}
                                     onKeyDown={e => {
                                         if (e.key === 'Escape') onClose()
                                     }}

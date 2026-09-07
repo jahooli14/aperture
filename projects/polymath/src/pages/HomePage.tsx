@@ -195,7 +195,7 @@ export function HomePage() {
     >
       <SubtleBackground />
 
-      <div className="min-h-screen pb-24 relative">
+      <div className="min-h-screen page-bottom relative">
         {/* Vertical time-of-day wash — warm-top to cool-bottom. The trick
             that makes "now → later" feel like a real axis on the page. */}
         <div className="home-atmosphere" aria-hidden />

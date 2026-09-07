@@ -34,6 +34,18 @@ import { VoiceInput } from '../VoiceInput'
 
 const secondaryTextStyle = { color: 'var(--brand-text-secondary)', opacity: 0.7 }
 const borderStyle = { borderColor: 'var(--glass-border-bold)' }
+/**
+ * The quiet way out.
+ *
+ * Every slot in here is one statement and one action — and each one used to
+ * put its decline in a bordered rectangle the same height and width as the
+ * action, so the card asked you to choose between two buttons instead of
+ * offering you one. Same tap, same effect, no competition: the out is a
+ * line of text under the action, which is how the home card, the reader and
+ * the project page all do it.
+ */
+const quietOutClass = 'w-full text-[12px] py-1.5 transition-opacity hover:opacity-90 disabled:opacity-30'
+const quietOutStyle = { color: 'var(--brand-text-secondary)', opacity: 0.5 }
 const primaryButtonStyle = {
   background: 'rgba(var(--brand-primary-rgb), 0.12)',
   border: '1px solid rgba(var(--brand-primary-rgb), 0.32)',
@@ -182,22 +194,20 @@ function ProposalSlot({ proposal, onResolved }: { proposal: Proposal; onResolved
         {proposal.kind === 'morph' ? 'A shift, maybe' : 'A bridge, maybe'}
       </p>
       <p className="text-base">{proposal.proposed_text}</p>
-      <div className="flex gap-2">
+      <div className="space-y-1">
         <button
-          className="flex-1 py-2 rounded-lg text-sm font-medium disabled:opacity-50"
+          className="w-full py-2 rounded-lg text-sm font-medium disabled:opacity-50"
           style={primaryButtonStyle}
           disabled={busy}
           onClick={() => act('accept')}
         >
           Take it
         </button>
-        <button
-          className="flex-1 py-2 rounded-lg border text-sm disabled:opacity-50"
-          style={borderStyle}
-          disabled={busy}
-          onClick={() => act('reject')}
-        >
-          That's not it
+        {/* Still one tap and still recorded — rejecting is what sets the
+            cooldown — it just isn't a second rectangle arguing with the
+            first one. */}
+        <button className={quietOutClass} style={quietOutStyle} disabled={busy} onClick={() => act('reject')}>
+          that's not it
         </button>
       </div>
     </div>
@@ -229,22 +239,17 @@ function ForgottenSlot({ spark, onResolved }: { spark: Spark; onResolved: () => 
   return (
     <div className="glass-card p-6 space-y-3">
       <p className="text-base">{spark.text}</p>
-      <div className="flex gap-2">
+      <div className="space-y-1">
         <button
-          className="flex-1 py-2 rounded-lg text-sm font-medium disabled:opacity-50"
+          className="w-full py-2 rounded-lg text-sm font-medium disabled:opacity-50"
           style={primaryButtonStyle}
           disabled={busy || !spark.project_id}
           onClick={makeLive}
         >
           Make it live
         </button>
-        <button
-          className="px-4 py-2 rounded-lg border text-sm disabled:opacity-50"
-          style={borderStyle}
-          disabled={busy}
-          onClick={onResolved}
-        >
-          Not now
+        <button className={quietOutClass} style={quietOutStyle} disabled={busy} onClick={onResolved}>
+          not now
         </button>
       </div>
     </div>
@@ -330,23 +335,21 @@ function ReaskSlot({ suggestion, onResolved }: { suggestion: ReaskSuggestion; on
 
   return (
     <div className="glass-card p-6 space-y-3">
-      <p className="text-base">You've been on {suggestion.title}. Make that the live one?</p>
-      <div className="flex gap-2">
+      {/* A statement and an action, not a question with a Yes and a No
+          sitting at identical weight — which is the one shape CLAUDE.md
+          names outright as the thing never to build. */}
+      <p className="text-base">You've been on {suggestion.title} more than anything else.</p>
+      <div className="space-y-1">
         <button
-          className="flex-1 py-2 rounded-lg text-sm font-medium disabled:opacity-50"
+          className="w-full py-2 rounded-lg text-sm font-medium disabled:opacity-50"
           style={primaryButtonStyle}
           disabled={busy}
           onClick={() => act(true)}
         >
-          Yes
+          Make it the live one
         </button>
-        <button
-          className="flex-1 py-2 rounded-lg border text-sm disabled:opacity-50"
-          style={borderStyle}
-          disabled={busy}
-          onClick={() => act(false)}
-        >
-          No, keep it as is
+        <button className={quietOutClass} style={quietOutStyle} disabled={busy} onClick={() => act(false)}>
+          or leave it as is
         </button>
       </div>
     </div>
@@ -455,9 +458,9 @@ export function AttentionSlot() {
           className="w-full rounded-xl px-3 py-2 text-sm bg-transparent border resize-none outline-none"
           style={{ ...borderStyle, color: 'var(--brand-text-primary)' }}
         />
-        <div className="flex gap-2">
+        <div className="space-y-1">
           <button
-            className="flex-1 py-2 rounded-lg text-sm font-medium disabled:opacity-50"
+            className="w-full py-2 rounded-lg text-sm font-medium disabled:opacity-50"
             style={primaryButtonStyle}
             disabled={!closeoutText.trim() || closing}
             onClick={async () => {
@@ -472,17 +475,18 @@ export function AttentionSlot() {
               very next home open, and the one after that, until it aged
               out. Nothing to report IS an answer: it closes the session
               with an empty close-out, exactly as the contract's own
-              "Skip — nothing to report" does. */}
+              "Skip — nothing to report" does. Styled as the quiet way out
+              rather than a bordered button of equal weight to Save. */}
           <button
-            className="px-4 py-2 rounded-lg border text-sm disabled:opacity-50"
-            style={borderStyle}
+            className={quietOutClass}
+            style={quietOutStyle}
             disabled={closing}
             onClick={async () => {
               await closeoutForPending('')
               setResolved(true)
             }}
           >
-            Skip
+            or skip it
           </button>
         </div>
       </div>

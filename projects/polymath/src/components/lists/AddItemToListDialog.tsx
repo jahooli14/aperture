@@ -74,7 +74,7 @@ export function AddItemToListDialog({ isOpen, onOpenChange }: AddItemToListDialo
                         <BottomSheetTitle>Add to List</BottomSheetTitle>
                     </div>
                     <BottomSheetDescription>
-                        {selectedListId ? `Adding to ${selectedList?.title}` : 'Choose a collection'}
+                        {selectedListId ? `Adding to ${selectedList?.title}` : 'Choose a list'}
                     </BottomSheetDescription>
                 </BottomSheetHeader>
 
@@ -84,7 +84,7 @@ export function AddItemToListDialog({ isOpen, onOpenChange }: AddItemToListDialo
                             <div className="relative">
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4" style={{ color: "var(--brand-primary)" }} />
                                 <Input
-                                    placeholder="Search collections..."
+                                    placeholder="Search your lists…"
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
                                     className="pl-10 bg-[var(--glass-surface)] border-[var(--glass-surface-hover)] focus:border-brand-primary placeholder:text-[var(--brand-text-primary)]/15"
@@ -156,7 +156,7 @@ export function AddItemToListDialog({ isOpen, onOpenChange }: AddItemToListDialo
                                     <span className="text-xl">{selectedList?.icon || ''}</span>
                                 </div>
                                 <div className="flex-1">
-                                    <p className="text-xs font-bold uppercase tracking-widest" style={{ color: "var(--brand-text-muted)" }}>Target Collection</p>
+                                    <p className="text-xs font-bold uppercase tracking-widest" style={{ color: "var(--brand-text-muted)" }}>Which list</p>
                                     <p className="text-lg font-bold" style={{ color: "var(--brand-text-primary)" }}>{selectedList?.title}</p>
                                 </div>
                                 <button

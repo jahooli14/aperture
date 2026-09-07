@@ -800,11 +800,11 @@ export function ReadingPage() {
                 className="flex items-center gap-2 flex-1 rounded-lg px-3 h-10 transition-all duration-200"
                 style={{
                   backgroundColor: 'var(--brand-glass-bg)',
-                  border: inlineUrlFocused ? '2px solid rgba(34,211,238,0.5)' : '2px solid var(--glass-surface-hover)',
-                  boxShadow: inlineUrlFocused ? '0 0 20px rgba(34,211,238,0.1)' : '0 4px 16px rgba(0,0,0,0.6)',
+                  border: inlineUrlFocused ? '2px solid rgba(var(--brand-primary-rgb),0.5)' : '2px solid var(--glass-surface-hover)',
+                  boxShadow: inlineUrlFocused ? '0 0 20px rgba(var(--brand-primary-rgb),0.1)' : '0 4px 16px rgba(0,0,0,0.6)',
                 }}
               >
-                <LinkIcon className="h-4 w-4 flex-shrink-0" style={{ color: inlineUrlFocused ? 'rgba(34,211,238,0.8)' : 'rgba(255,255,255,0.25)' }} />
+                <LinkIcon className="h-4 w-4 flex-shrink-0" style={{ color: inlineUrlFocused ? 'rgba(var(--brand-primary-rgb),0.8)' : 'rgba(255,255,255,0.25)' }} />
                 <input
                   type="url"
                   placeholder="Save URL..."
@@ -920,8 +920,8 @@ export function ReadingPage() {
                 className="rounded-lg p-4"
                 style={{
                   background: 'var(--brand-glass-bg)',
-                  border: '1.5px solid rgba(34,211,238,0.2)',
-                  borderLeft: '4px solid rgba(34,211,238,0.7)',
+                  border: '1.5px solid rgba(var(--brand-primary-rgb),0.2)',
+                  borderLeft: '4px solid rgba(var(--brand-primary-rgb),0.7)',
                   boxShadow: '0 4px 16px rgba(0,0,0,0.7)',
                 }}
               >
@@ -930,7 +930,7 @@ export function ReadingPage() {
                   <span className="text-[11px] font-black uppercase tracking-widest" style={{ color: "var(--brand-primary)" }}>
                     Continue Reading
                   </span>
-                  <span className="text-[10px] font-black px-1.5 py-0.5 rounded-lg" style={{ background: 'rgba(34,211,238,0.15)', color: "var(--brand-text-secondary)" }}>
+                  <span className="text-[10px] font-black px-1.5 py-0.5 rounded-lg" style={{ background: 'rgba(var(--brand-primary-rgb),0.15)', color: "var(--brand-text-secondary)" }}>
                     {continueReadingArticles.length}
                   </span>
                 </div>

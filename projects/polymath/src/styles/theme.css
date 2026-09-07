@@ -148,39 +148,10 @@
     font-family: var(--brand-font-body);
 }
 
-/* Section header — legacy alias for .section-heading (design-tokens.css).
-   Same visual language: hairline rule, lowercase, cyan accent on the
-   highlighted word. Kept so older home/projects components keep working.
-   New code should use .section-heading. */
-.section-header {
-    position: relative;
-    font-size: var(--section-heading-size, clamp(1.05rem, 3.2vw, 1.25rem));
-    line-height: 1.2;
-    font-weight: var(--section-heading-weight, 700);
-    color: var(--section-heading-color, rgba(255, 255, 255, 0.92));
-    letter-spacing: var(--section-heading-tracking, -0.015em);
-    font-family: var(--brand-font-header);
-    text-transform: lowercase;
-    margin: 0 0 1rem;
-    display: flex;
-    align-items: center;
-    gap: 0.625rem;
-}
-
-.section-header::before {
-    content: '';
-    width: 18px;
-    height: 1px;
-    background: rgba(var(--brand-primary-rgb), 0.7);
-    box-shadow: 0 0 8px rgba(var(--brand-primary-rgb), 0.6);
-    flex-shrink: 0;
-}
-
-.section-header span,
-.section-header .accent {
-    color: rgb(var(--brand-primary-rgb));
-    text-shadow: 0 0 14px rgba(var(--brand-primary-rgb), 0.55), 0 0 4px rgba(var(--brand-primary-rgb), 0.35);
-}
+/* .section-header used to be defined here as a near-copy of
+   .section-heading in design-tokens.css. Both names now resolve to the
+   one rule over there — see the note beside it. New code should use
+   .section-heading. */
 
 /* The "Shelf" Separator */
 .aperture-shelf {

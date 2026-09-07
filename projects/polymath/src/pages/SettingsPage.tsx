@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
-import { Palette, Check, Bug, ToggleRight, ToggleLeft, Zap, RefreshCw, Search, Type, Bell, GitBranch, RotateCcw, Lightbulb, LogOut } from 'lucide-react'
+import { Check, Bug, ToggleRight, ToggleLeft, RefreshCw, Search, Type, GitBranch, RotateCcw, LogOut } from 'lucide-react'
 import { api } from '../lib/apiClient'
 import { supabase } from '../lib/supabase'
 import { useThemeStore, DEFAULT_ACCENT_COLOR, DEFAULT_BG_ACCENT_COLOR } from '../stores/useThemeStore'
@@ -282,30 +282,19 @@ export function SettingsPage() {
         </div>
       </div>
 
-      <div className="min-h-screen pb-24" style={{ paddingTop: 'calc(5.5rem + env(safe-area-inset-top))' }}>
+      <div className="min-h-screen page-bottom" style={{ paddingTop: 'calc(5.5rem + env(safe-area-inset-top))' }}>
 
         {/* Appearance Section */}
-        <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">
-          <div className="p-6 rounded-xl backdrop-blur-xl" style={{
-            background: 'var(--brand-glass-bg)',
-            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
-          }}>
-            <div className="flex items-center gap-3 mb-6 border-b border-[var(--glass-surface)] pb-4">
-              <Palette className="h-6 w-6" style={{ color: "var(--brand-primary)" }} />
-              <h2
-                className="text-xl font-bold"
-                style={{ color: "var(--brand-text-primary)" }}
-              >
-                Appearance
-              </h2>
-            </div>
+        <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mb-10">
+          <div>
+            <h2 className="section-heading">how it <span className="accent">looks</span></h2>
 
             {/* Look & feel — pick the primary accent and the cool depth
                 tone used in the background atmosphere. */}
             <div className="mb-8">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-sm font-semibold uppercase tracking-wider opacity-60" style={{ color: 'var(--brand-text-muted)' }}>
-                  Look &amp; feel
+                  Colours
                 </h3>
                 <button
                   onClick={resetThemeColors}
@@ -371,7 +360,7 @@ export function SettingsPage() {
             {/* Font Size */}
             <div>
               <h3 className="text-sm font-semibold mb-4 uppercase tracking-wider opacity-60 flex items-center gap-2" style={{ color: "var(--brand-text-muted)" }}>
-                <Type className="h-4 w-4" /> Text Size
+                <Type className="h-4 w-4" /> Text size
               </h3>
               <div className="grid grid-cols-3 gap-3">
                 {fontSizeOptions.map((option) => {
@@ -402,17 +391,9 @@ export function SettingsPage() {
             home "suggest a project" button produces. Plain English, free
             text, saved per-user. NULL in the DB means "use the default";
             saving the unchanged default behaves the same as a reset. */}
-        <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">
-          <div className="p-6 rounded-xl backdrop-blur-xl" style={{
-            background: 'var(--brand-glass-bg)',
-            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
-          }}>
-            <div className="flex items-center gap-3 mb-4 border-b border-[var(--glass-surface)] pb-4">
-              <Lightbulb className="h-6 w-6" style={{ color: 'var(--brand-primary)' }} />
-              <h2 className="text-xl font-bold" style={{ color: 'var(--brand-text-primary)' }}>
-                Suggest-an-idea brief
-              </h2>
-            </div>
+        <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mb-10">
+          <div>
+            <h2 className="section-heading">the idea <span className="accent">brief</span></h2>
 
             <p className="text-sm mb-4" style={{ color: 'var(--brand-text-secondary)' }}>
               This is what the home "suggest a project" button asks the model. Rewrite it in your own words — what kind of idea you want, what to avoid, how to phrase it. Leave it blank to use the default. Voice notes, projects, and the JSON output stay structural; only this brief is editable.
@@ -477,17 +458,9 @@ export function SettingsPage() {
         </section>
 
         {/* Notifications Section */}
-        <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">
-          <div className="p-6 rounded-xl backdrop-blur-xl" style={{
-            background: 'var(--brand-glass-bg)',
-            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
-          }}>
-            <div className="flex items-center gap-3 mb-6 border-b border-[var(--glass-surface)] pb-4">
-              <Bell className="h-6 w-6" style={{ color: "var(--brand-primary)" }} />
-              <h2 className="text-xl font-bold" style={{ color: "var(--brand-text-primary)" }}>
-                Notifications
-              </h2>
-            </div>
+        <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mb-10">
+          <div>
+            <h2 className="section-heading">when it <span className="accent">nudges you</span></h2>
 
             <div className="space-y-3">
 
@@ -642,20 +615,9 @@ export function SettingsPage() {
         </section>
 
         {/* System & Maintenance */}
-        <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">
-          <div className="p-6 rounded-xl backdrop-blur-xl" style={{
-            background: 'var(--brand-glass-bg)',
-            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
-          }}>
-            <div className="flex items-center gap-3 mb-6 border-b border-[var(--glass-surface)] pb-4">
-              <Zap className="h-6 w-6" style={{ color: "var(--brand-primary)" }} />
-              <h2
-                className="text-xl font-bold"
-                style={{ color: "var(--brand-text-primary)" }}
-              >
-                System
-              </h2>
-            </div>
+        <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mb-10">
+          <div>
+            <h2 className="section-heading">under the <span className="accent">bonnet</span></h2>
 
             <div className="space-y-4">
               {/* Setup status — tells the user plainly whether onboarding

@@ -40,9 +40,9 @@ export function KeepGoingEmpty({
     <div
       className="rounded-2xl p-6 flex flex-col items-center justify-center text-center"
       style={{
-        background: 'linear-gradient(135deg, rgba(56,189,248,0.06) 0%, rgba(15,24,41,0.5) 60%)',
-        border: '1px solid rgba(56,189,248,0.15)',
-        boxShadow: '0 0 30px rgba(56,189,248,0.05), 0 4px 16px rgba(0,0,0,0.4)',
+        background: 'linear-gradient(135deg, rgba(var(--brand-primary-rgb),0.06) 0%, rgba(15,24,41,0.5) 60%)',
+        border: '1px solid rgba(var(--brand-primary-rgb),0.15)',
+        boxShadow: '0 0 30px rgba(var(--brand-primary-rgb),0.05), 0 4px 16px rgba(0,0,0,0.4)',
         minHeight: '180px',
       }}
     >

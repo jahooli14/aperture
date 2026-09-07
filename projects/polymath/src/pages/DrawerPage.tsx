@@ -123,7 +123,7 @@ export default function DrawerPage() {
     <>
       <SubtleBackground />
       <div className="min-h-screen">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 pb-24">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 page-bottom">
           <header className="page-masthead">
             <div className="page-masthead-text">
               <h1 className="page-hero-sm">The drawer.</h1>

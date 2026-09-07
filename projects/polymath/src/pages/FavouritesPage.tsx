@@ -70,7 +70,10 @@ function FavouriteCard({ item, onClick }: { item: FavouriteItem; onClick: () => 
             )}
 
             <div className="absolute inset-0 p-3 flex flex-col justify-end">
-                <h3 className="text-[var(--brand-text-primary)] font-bold leading-tight uppercase tracking-tight text-sm mb-1 line-clamp-2"
+                {/* Sentence case, matching the list cards these mirror —
+                    a title in caps loses the proper-noun shape that makes
+                    it scannable. */}
+                <h3 className="text-[var(--brand-text-primary)] font-semibold leading-snug text-[14px] mb-1 line-clamp-2"
                     style={{ textShadow: '0 1px 4px rgba(0,0,0,0.95), 0 0 12px rgba(0,0,0,0.8)' }}>
                     {item.content}
                 </h3>

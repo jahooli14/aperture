@@ -240,11 +240,11 @@ function ListsPageInner() {
     }
 
     return (
-        <div className="min-h-screen pb-32 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto overflow-hidden">
+        <div className="min-h-screen page-bottom px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto overflow-hidden">
             <header className="page-masthead">
                 <div className="page-masthead-text">
                     <h1 className="page-hero">Your lists.</h1>
-                    <div className="page-eyebrow">{lists.length} {lists.length === 1 ? 'collection' : 'collections'}</div>
+                    <div className="page-eyebrow">{lists.length} {lists.length === 1 ? 'list' : 'lists'}</div>
                 </div>
                 <div className="page-masthead-actions">
                     <button
@@ -255,24 +255,25 @@ function ListsPageInner() {
                     >
                         <Star className="h-5 w-5" />
                     </button>
-                    {lists.length > 0 && (
+                    {/* Reorder is a mode you enter from a card's long-press
+                        sheet (which already offers it), so the masthead only
+                        carries the way OUT of it. A permanent fourth icon for
+                        a mode you use twice a year was the page's own clutter. */}
+                    {isReordering && (
                         <button
-                            onClick={() => setIsReordering(!isReordering)}
-                            aria-label={isReordering ? 'Done reordering' : 'Reorder lists'}
-                            title={isReordering ? 'Done reordering' : 'Reorder lists'}
+                            onClick={() => setIsReordering(false)}
+                            aria-label="Done reordering"
+                            title="Done reordering"
                             className="masthead-action press-spring"
-                            style={isReordering
-                                ? { border: '1px solid rgba(125,211,252,0.5)', background: 'rgba(125,211,252,0.15)' }
-                                : undefined
-                            }
+                            style={{ border: '1px solid rgba(var(--brand-primary-rgb),0.5)', background: 'rgba(var(--brand-primary-rgb),0.15)' }}
                         >
-                            {isReordering ? <Check className="h-5 w-5" /> : <ListOrdered className="h-5 w-5" />}
+                            <Check className="h-5 w-5" />
                         </button>
                     )}
                     <Button
                         onClick={() => setCreateOpen(true)}
-                        aria-label="Create a collection"
-                        title="Create a collection"
+                        aria-label="Create a list"
+                        title="Create a list"
                         className="masthead-action press-spring p-0"
                     >
                         <Plus className="h-5 w-5" />
@@ -309,7 +310,7 @@ function ListsPageInner() {
                     {/* Hero empty state */}
                     <div className="text-center py-10 px-4 mb-10">
                         <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-brand-primary/10 mb-6"
-                            style={{ boxShadow: 'inset 0 0 0 1px rgba(56,189,248,0.15)' }}>
+                            style={{ boxShadow: 'inset 0 0 0 1px rgba(var(--brand-primary-rgb),0.15)' }}>
                             <ListOrdered className="h-8 w-8 text-brand-primary" />
                         </div>
                         <h3 className="text-xl font-black uppercase tracking-tight text-[var(--brand-text-primary)] mb-2">Add a list</h3>
@@ -321,7 +322,7 @@ function ListsPageInner() {
                             className="h-11 px-6 rounded-full border border-[var(--glass-surface-hover)] hover:bg-[var(--glass-surface)] bg-transparent text-[var(--brand-text-primary)] font-bold uppercase tracking-widest text-xs"
                         >
                             <Plus className="h-4 w-4 mr-2" />
-                            Create a collection
+                            Create a list
                         </Button>
                     </div>
 
@@ -613,8 +614,8 @@ function ListsPageInner() {
 
             {/* Long press hint - only show when there are lists and not reordering */}
             {lists.length > 0 && !isReordering && (
-                <p className="text-center text-[9px] font-bold uppercase tracking-widest text-zinc-700 pb-4">
-                    Hold card for options
+                <p className="text-center text-[11px] pb-4" style={{ color: 'var(--brand-text-muted)', opacity: 0.45 }}>
+                    Hold a card for options.
                 </p>
             )}
 
@@ -674,7 +675,7 @@ function ListsPageInner() {
                                         style={{ boxShadow: 'inset 0 0 0 1px var(--glass-surface-hover)' }}
                                     >
                                         <Plus className="h-4 w-4 text-brand-primary" />
-                                        <span className="text-sm font-bold text-[var(--brand-text-primary)] uppercase tracking-widest">Quick Add</span>
+                                        <span className="text-sm font-medium text-[var(--brand-text-primary)]">Add something</span>
                                     </button>
                                     <button
                                         onClick={() => {
@@ -686,7 +687,7 @@ function ListsPageInner() {
                                         style={{ boxShadow: 'inset 0 0 0 1px var(--glass-surface-hover)' }}
                                     >
                                         <ImageIcon className="h-4 w-4 text-brand-primary" />
-                                        <span className="text-sm font-bold text-[var(--brand-text-primary)] uppercase tracking-widest">Customise Cover</span>
+                                        <span className="text-sm font-medium text-[var(--brand-text-primary)]">Change the cover</span>
                                     </button>
                                     <button
                                         onClick={() => {
@@ -697,7 +698,7 @@ function ListsPageInner() {
                                         style={{ boxShadow: 'inset 0 0 0 1px var(--glass-surface-hover)' }}
                                     >
                                         <ArrowUpDown className="h-4 w-4 text-brand-primary" />
-                                        <span className="text-sm font-bold text-[var(--brand-text-primary)] uppercase tracking-widest">Reorder Collections</span>
+                                        <span className="text-sm font-medium text-[var(--brand-text-primary)]">Reorder lists</span>
                                     </button>
                                     <button
                                         onClick={async () => {
@@ -705,7 +706,7 @@ function ListsPageInner() {
                                             setActionSheetList(null)
                                             const confirmed = await confirm({
                                                 title: `Delete "${listToDelete.title}"?`,
-                                                description: 'This collection and all its items will be removed.',
+                                                description: 'This list and everything in it will be removed.',
                                                 confirmText: 'Delete',
                                                 variant: 'destructive',
                                             })
@@ -717,7 +718,7 @@ function ListsPageInner() {
                                         style={{ boxShadow: 'inset 0 0 0 1px rgba(239,68,68,0.15)' }}
                                     >
                                         <Trash2 className="h-4 w-4 text-red-400" />
-                                        <span className="text-sm font-bold text-red-400 uppercase tracking-widest">Delete Collection</span>
+                                        <span className="text-sm font-medium text-red-400">Delete list</span>
                                     </button>
                                 </div>
                             </div>

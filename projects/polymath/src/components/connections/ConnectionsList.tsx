@@ -253,31 +253,30 @@ export function ConnectionsList({ itemType, itemId, itemTitle, onConnectionDelet
 
       </div>
 
-      {/* Manual Link Button */}
-      <div className="pt-2">
-        <button
-          onClick={() => setShowCreateDialog(true)}
-          className="w-full py-3 rounded-xl border border-dashed border-[var(--glass-surface-hover)] flex items-center justify-center gap-2 text-xs font-medium transition-all hover:bg-[var(--glass-surface)] hover:border-white/20 group"
-          style={{ color: "var(--brand-primary)" }}
-        >
-          <Plus className="h-4 w-4 group-hover:text-brand-primary transition-colors" />
-          <span className="group-hover:text-[var(--brand-text-primary)] transition-colors">
-            {displayItems.length >= 5 ? 'Override with Manual Link' : 'Add Link Yourself'}
-          </span>
-        </button>
-      </div>
-
-      {/* "See how this connects to..." button */}
-      <div>
+      {/* One offer, not two. With nothing connected yet this section used to
+          be nothing BUT two dashed buttons stacked under a "Connected"
+          heading — a section whose entire content was calls to action, and
+          two of them competing at the same weight. Tracing a path is the
+          interesting one and it's what the panel is for; linking by hand is
+          the quiet fallback underneath, and only once there is something
+          here to link alongside. */}
+      <div className="space-y-2">
         <button
           onClick={() => setShowPathPicker(true)}
           className="w-full py-3 rounded-xl border border-dashed border-brand-primary/20 flex items-center justify-center gap-2 text-xs font-medium transition-all hover:bg-brand-primary/5 hover:border-brand-primary/30 group"
           style={{ color: "var(--brand-primary)" }}
         >
-          <Route className="h-4 w-4 group-hover:text-brand-primary transition-colors" />
-          <span className="group-hover:text-brand-primary transition-colors">
-            See how this connects to...
-          </span>
+          <Route className="h-4 w-4" />
+          <span>See how this connects to…</span>
+        </button>
+
+        <button
+          onClick={() => setShowCreateDialog(true)}
+          className="w-full py-2 flex items-center justify-center gap-1.5 text-[11px] transition-opacity hover:opacity-100"
+          style={{ color: "var(--brand-text-muted)", opacity: 0.55 }}
+        >
+          <Plus className="h-3 w-3" />
+          <span>{displayItems.length >= 5 ? 'Link one yourself instead' : 'or link one yourself'}</span>
         </button>
       </div>
 

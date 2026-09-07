@@ -47,9 +47,12 @@ function DeferredCloseoutPrompt() {
       </p>
       <VoiceInput onTranscript={setText} maxDuration={30} />
       {text && <p className="text-sm italic" style={secondaryTextStyle}>"{text}"</p>}
-      <div className="flex gap-2">
+      {/* Same close-out card as the home attention slot, so the same shape:
+          one action, and the way out is a line of text under it rather
+          than a second button of equal size arguing with the first. */}
+      <div className="space-y-1">
         <button
-          className="flex-1 py-2 rounded-lg text-sm font-medium disabled:opacity-50"
+          className="w-full py-2 rounded-lg text-sm font-medium disabled:opacity-50"
           style={primaryButtonStyle}
           disabled={closing || !text}
           onClick={() => closeoutForPending(text)}
@@ -57,11 +60,11 @@ function DeferredCloseoutPrompt() {
           Save
         </button>
         <button
-          className="px-4 py-2 rounded-lg border text-sm"
-          style={borderStyle}
+          className="w-full text-[12px] py-1.5 transition-opacity hover:opacity-90"
+          style={{ color: 'var(--brand-text-secondary)', opacity: 0.5 }}
           onClick={dismissPendingCloseout}
         >
-          Skip
+          or skip it
         </button>
       </div>
     </div>
