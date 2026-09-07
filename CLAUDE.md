@@ -50,33 +50,40 @@ Polymath is a **creative harness**. The user opens it with willpower to spend on
 
 1. **Capture.** Voice note in-app → transcribe → tidy prose → title → save as a "thought." Capture-time triage classifies intent (`memory_type`, `triage.category`) so downstream surfaces can find it.
 2. **Feed the corpus.** Thoughts join projects (active / dormant / abandoned with `blockers`), lists (films / books / music / places / etc.), and reading (queue + RSS + highlights). Lists are **identity signals**, not consumption logs — reading *Flowers for Algernon* makes you a different creative person from someone reading *50 Shades*.
-3. **Direct the willpower.** The home stacks a starred project to push on, recently-touched projects to keep warm, an on-demand "suggest a project" surface, and an identity strip showing what you're consuming.
+3. **Direct the willpower.** The home surface is the session contract plus one spark a day — see below. Lists and reading feed the identity layer, which shapes what the spark/composite/morph channel proposes.
 
-### Home surface stack (as shipped — `HomePage.tsx`)
+### Home surface (execution rebuild — `SPEC.md`, `HomePage.tsx`)
 
-A labelled editorial stack, separated by hairline seams:
+Mid-2026 the home page was rebuilt around a different thesis: thinking time is unlimited, execution time is scarce — so capture without limit, but spend zero of the scarce hour deciding what to do. **This replaced the old "review rotation" model.** `ReviewRotation` ("worth a look" — pick it up / still mine / park it) is fully deleted; its job (offering a forgotten project back into play) now lives in the attention slot below, and quiet drift-decay kills dead projects without ever asking you to confirm a kill.
 
-1. **Masthead** — "Aperture." wordmark + search + (after 21:30) bedtime icon.
-2. **Today's answer** — `TodaysAnswerCard`, the single output box. One statement, one action ("Start session" → focus overlay), one quiet redirect ("or steer it"). The redirect panel owns BOTH the Focus chat thread and the full idea deck — these used to be separate stacked cards (`KeepGoingCard` + `FocusChat` + `ProjectIdeasHome`) and were merged. `FeelingPill` sits above it feeding session context.
-3. **Everything else** — `EverythingElseMini`, one swipeable row: still-warm projects then queued ones. Replaced the old separate "still warm" / "the queue" grids.
-4. **Worth a look** — `ReviewRotation`. Forgotten projects reviewed and acted on **in place** (pick it up / still mine / park it) — no navigation. **One card at a time**, the rest stacked behind it; an earlier cut showed all three at once, which put nine buttons on home and broke "guide, not menu". Ordered by shared label with the starred project, so a resurfaced one reads as a building block. Invisible once the batch is clear. See Project review below.
-5. **Now consuming** — `ConsumingWidget`. Active list items on top; Saved reads + New reads dropdowns underneath.
-6. **Thought of the day** — `ThoughtOfTheDay`, an editorial pull-quote from a past memory.
+1. **Masthead** — wordmark + search + (after 21:30) bedtime icon.
+2. **Today's answer = the session contract.** `TodaysAnswerCard` IS the session now, not a card that launches one: the live project, the last close-out played back in your own words, and "Start session" runs window → shapes → timer → close-out inside the same box. Its redirect panel holds the Focus chat thread and the on-demand idea deck (`ProjectIdeasHome`, still live — see caveat below). `FeelingPill` renders inside it, feeding session context into both the redirect and the idea generator.
+3. **The attention slot** — `AttentionSlot`. At most **one** interruption per app open, fixed priority: a deferred close-out > the monthly mirror (once a month) > a live-project re-ask (when behaviour has quietly diverged from your stated live project) > a composite proposal (rare) > a morph proposal > today's spark (the default, most opens). Silent most of the time — this is the piece that stops five different surfaces competing for the same slot.
+4. **Everything else** — `EverythingElseMini`, one swipeable row: still-warm projects then queued ones, always ending in a "suggest a project" card.
+5. **Now consuming** — `ConsumingWidget`, the identity layer. Active list items on top; Saved reads + New reads underneath.
+6. **Thought of the day** — `ThoughtOfTheDay`. Deliberately kept (an earlier rebuild cut removed it as redundant with sparks, then reinstated it): a spark asks something and wants a voice answer back, this just shows something you said and asks nothing. Page's closer, not a competing interruption.
 
-> "Guide, not menu" — one statement, one action, one quiet way to redirect. Never a question next to two competing buttons. Every section below the answer box is invisible when empty.
+> "Guide, not menu" — one statement, one action, one quiet way to redirect. Every section below the answer box is invisible when empty.
 
-### "Suggest a project" — modes inside `ProjectIdeasHome`
+### The mull channel — sparks, morphs, composites, the mirror
 
-The on-demand surface is the killer one. Two cooperating generators, with the UI deriving a visual mode per idea so each card reads as a distinct kind of correspondence from the harness:
+The mechanism behind "the attention slot" and the thing your weekday "what should I think about" question actually is:
 
-- **READ mode** (`mode='read'` in the DB) — the longitudinal pattern reader. Names a through-line across projects/voice notes/lists/reading the user hasn't said out loud, then names the project that breaks or extends it. The pattern is the hero; the project title sits below as the consequence. Cron-only — too slow for the on-demand path. Auto-surfaces on confidence ≥70; below that it sits in the queue.
-- **CROSSOVER mode** (`mode='crossover'`) — locked (centre × arrival) seed pairs. Has four derived visual sub-modes based on evidence:
-  - **new_idea** — a project shape coalescing across recent captures.
-  - **forgotten** (3–16 weeks dormant) — "you set this down — pick it up."
-  - **reshape** (16+ weeks dormant) — "you started this when you were a different person; here's the version that fits who you are now." Honors the original capture, serves the present self.
-  - **extend** — concrete new direction for an active project, prompted by a recent capture.
+- **Sparks** (`spark-generator.ts`, `bake` cron resource, daily 08:00 UTC) — one per day, baked overnight so it's instant and offline-available, not generated on open. Rotates through *types* (noticing, transferred constraint, your own unfinished thought played back, a contradiction between two things you've said, a scale jump, a material fact, and "outside reach" — something from your reading/RSS, not your own corpus, so the system doesn't just recombine you forever). Not a task — answer by voice in 30 seconds or let it expire silently. Usually **not** the live project on purpose.
+- **Morphs** (`generate-morph`, daily) — a project quietly reshapes itself from accumulated fragments. Rate-limited to one project per day, one per project per 14 days. Always a proposal, never a silent rewrite; one-tap "that's not it."
+- **Composites** (`joint-miner.ts` → `mine-joints`, then `composite-generator.ts` → `generate-composite`, both **weekly, Sunday**) — two *stalled* projects fuse, but only from a joint (something you keep saying, quoted, recurring) the corpus actually supplies — joint → pair, not pair → invented bridge. That inversion is what stops it producing forced mashups.
+- **Drift-decay** (`drift-runner.ts` → `drift-decay`, weekly) — the silent, no-confirmation harvest: high drift + no recent capture lets a project go and releases its reusable fragments back into the pool. Never asks you to confirm a kill.
+- **The mirror** (`resource=mirror`) — monthly, logged execution hours per project. Zeros shown only for the live project. No streaks, no capture counts — execution time is the only number the app ever shows. Because most execution happens off-app, there's a once-a-month voice correction ("did two hours on the decks last night") so it doesn't lie by omission.
+- **The different-thing quota** (`different-thing.ts`, `different-thing-status` resource) — one hour a month on something off your usual pattern, exempt from the live-project rule. Never nagged if missed, doesn't roll over.
 
-Cron bakes a deep queue overnight (full pipeline, Read enabled). The on-demand button either reveals a queued idea or runs the fast path (single Flash call over the full corpus, ~10s). Cooldowns enforced at the project level: rejected centres blocked 180d, shown-not-acted-on centres blocked 30d.
+### Known inconsistency: two idea-generation systems run in parallel
+
+`SPEC.md` says the rebuild **replaces** `ProjectIdeasHome` and its READ/CROSSOVER generator — "the idea generator becomes joints and composites." In practice it hasn't been swapped out: `ProjectIdeasHome` is still rendered live (inside `TodaysAnswerCard`'s redirect panel and `EverythingElseMini`), and the daily cron still runs the **old** `projects?resource=evolve` + `utilities?resource=generate-project-ideas` (READ/CROSSOVER, feeding `project_ideas`) *alongside* the **new** `bake` + `generate-morph` + weekly composites. Two mechanisms proposing new projects at once — exactly the fragmentation the rebuild's own doc says to avoid. Separately, `resource=evolve` writes to an `evolution_events` table that nothing in the frontend reads any more — that cron call is pure cost with no UI consumer; treat it as leftover, not intentional. Don't build on either the old generator or `evolution_events` without checking whether the rebuild has actually finished replacing them by the time you read this.
+
+Old description, for what `ProjectIdeasHome` still does while it's alive:
+
+- **READ mode** (`mode='read'`) — the longitudinal pattern reader. Names a through-line across projects/voice notes/lists/reading, then the project that breaks or extends it. Cron-only. Auto-surfaces on confidence ≥70.
+- **CROSSOVER mode** (`mode='crossover'`) — locked seed pairs, four visual sub-modes (new_idea / forgotten / reshape / extend) derived from evidence. Cooldowns: rejected centres blocked 180d, shown-not-acted-on blocked 30d.
 
 ### What's NOT in the user's mental model
 
