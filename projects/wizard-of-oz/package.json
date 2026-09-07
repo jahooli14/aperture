@@ -43,7 +43,7 @@
     "@types/react": "^19.1.16",
     "@types/react-dom": "^19.1.9",
     "@vercel/node": "^5.8.12",
-    "eslint": "^9.39.2",
+    "eslint": "^10.9.1",
     "jsdom": "^29.1.1",
     "vitest": "^3.2.4"
   }
