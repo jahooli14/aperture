@@ -76,11 +76,13 @@ The mechanism behind "the attention slot" and the thing your weekday "what shoul
 - **The mirror** (`resource=mirror`) — monthly, logged execution hours per project. Zeros shown only for the live project. No streaks, no capture counts — execution time is the only number the app ever shows. Because most execution happens off-app, there's a once-a-month voice correction ("did two hours on the decks last night") so it doesn't lie by omission.
 - **The different-thing quota** (`different-thing.ts`, `different-thing-status` resource) — one hour a month on something off your usual pattern, exempt from the live-project rule. Never nagged if missed, doesn't roll over.
 
-### Known inconsistency: two idea-generation systems run in parallel
+### `ProjectIdeasHome` (READ/CROSSOVER) — deliberately kept for now, not a bug
 
-`SPEC.md` says the rebuild **replaces** `ProjectIdeasHome` and its READ/CROSSOVER generator — "the idea generator becomes joints and composites." In practice it hasn't been swapped out: `ProjectIdeasHome` is still rendered live (inside `TodaysAnswerCard`'s redirect panel and `EverythingElseMini`), and the daily cron still runs the **old** `projects?resource=evolve` + `utilities?resource=generate-project-ideas` (READ/CROSSOVER, feeding `project_ideas`) *alongside* the **new** `bake` + `generate-morph` + weekly composites. Two mechanisms proposing new projects at once — exactly the fragmentation the rebuild's own doc says to avoid. Separately, `resource=evolve` writes to an `evolution_events` table that nothing in the frontend reads any more — that cron call is pure cost with no UI consumer; treat it as leftover, not intentional. Don't build on either the old generator or `evolution_events` without checking whether the rebuild has actually finished replacing them by the time you read this.
+`SPEC.md` originally called for the rebuild to **replace** `ProjectIdeasHome` — "the idea generator becomes joints and composites." That hasn't happened, and it's staying that way on purpose: `ProjectIdeasHome` is the only **on-demand** "give me a new project idea right now" surface in the app. Sparks are cron-baked once nightly, morphs and composites are rate-limited proposals — none of them can be triggered on demand. Retiring `ProjectIdeasHome` means either accepting the loss of the on-demand button or building an on-demand path into the spark/morph/composite system first, and that decision hasn't been made. Don't remove it without that decision.
 
-Old description, for what `ProjectIdeasHome` still does while it's alive:
+The old `resource=evolve` cron call (daily, active-projects-only, wrote to an `evolution_events` table nothing read) **has been removed** (2026) — that part of the duplication was genuinely dead weight and is gone. `ProjectIdeasHome` + `generate-project-ideas` (feeding `project_ideas`) is the one on-demand generator left, running alongside sparks/morphs/composites deliberately, not by accident.
+
+What `ProjectIdeasHome` does:
 
 - **READ mode** (`mode='read'`) — the longitudinal pattern reader. Names a through-line across projects/voice notes/lists/reading, then the project that breaks or extends it. Cron-only. Auto-surfaces on confidence ≥70.
 - **CROSSOVER mode** (`mode='crossover'`) — locked seed pairs, four visual sub-modes (new_idea / forgotten / reshape / extend) derived from evidence. Cooldowns: rejected centres blocked 180d, shown-not-acted-on blocked 30d.
@@ -415,9 +417,9 @@ One workflow dispatches every Vercel cron endpoint for Polymath and Pupils. Bran
 |----------|-----------|
 | `0 */2 * * *` | `idea-engine?action=generate` |
 | `0 */6 * * *` | `projects?resource=recompute-heat` |
-| `0 8 * * *` | `projects?resource=evolve`, `utilities?resource=generate-project-ideas` |
+| `0 8 * * *` | `utilities?resource=generate-project-ideas`, `utilities?resource=bake` (spark), `utilities?resource=generate-morph` |
 | `0 9 * * *` | `idea-engine?action=review` then `idea-engine?action=send-digest` (sequential) |
-| `0 8 * * 0` | `projects?resource=generate-digest` |
+| `0 8 * * 0` | `projects?resource=generate-digest`, `utilities?resource=mine-joints` → `generate-composite` (sequential), `utilities?resource=drift-decay` |
 
 > **Note:** the `idea-engine?action=*` endpoints are TypeScript, living in `projects/polymath/api/idea-engine.ts` + `api/_lib/idea-engine-v2/`, deployed as part of the polymath Vercel app — there's no separate standalone project. `idea-engine?action=generate` runs every 2 hours (was hourly, was `*/30 * * * *` before that) — cut because `action=review` only ever processes 10 pending ideas/day, so hourly generation (up to 24/day) was more than double what review could use.
 >

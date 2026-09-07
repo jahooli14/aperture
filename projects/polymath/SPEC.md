@@ -507,9 +507,30 @@ than ten good ones earn.
 
 "Rebuild, don't bolt on." So this is explicit about what stops existing:
 
-**Replaced** — the whole home surface: `TodaysAnswerCard`, `EverythingElseMini`,
-`ReviewRotation`, `ProjectIdeasHome`, `FocusChat`, `ThoughtOfTheDay`, `FeelingPill`.
-Their jobs are absorbed by the session contract and the spark channel.
+**Replaced** — `ReviewRotation` and `FocusChat` (as separate components): their
+jobs are absorbed by the session contract and the spark channel, and both are
+gone from the codebase.
+
+**Rebuilt in place, not replaced** — `TodaysAnswerCard` (became the session
+contract under the same name), `EverythingElseMini`, `FeelingPill`. All still
+exist and are still mounted on home.
+
+**Kept, on reflection** — `ThoughtOfTheDay`. An earlier cut of this rebuild
+removed it as "the spark channel already does quotes from your past," and
+that reasoning was wrong: a spark asks something and wants a voice answer
+back; this shows something you said and asks nothing. Different job, and it's
+the page's closer, not a competing interruption. Component was reinstated —
+see `HomePage.tsx`.
+
+**Not yet retired despite the plan below** — `ProjectIdeasHome` (READ/CROSSOVER).
+This doc calls for the idea generator to become joints and composites, but
+`ProjectIdeasHome` is still live in `TodaysAnswerCard`'s redirect panel and
+`EverythingElseMini`, and there is currently no on-demand replacement for
+it — sparks are baked nightly cron-only, morphs and composites are rate-limited
+proposals, not an instant "give me a new idea now" button. Retiring it means
+either accepting the loss of on-demand generation or building an on-demand
+path into the spark/morph/composite system first. Undecided; don't remove it
+without that decision being made explicitly.
 
 **Retired** — Fix Queue (cron already off), Power Hour, cognitive replay, the Context
 Engine sidebar.

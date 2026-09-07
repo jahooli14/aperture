@@ -350,13 +350,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
       }
 
-      // Evolution events (evolution_events table) are generated once daily
-      // by the GitHub Actions cron at 08:00 UTC via POST
-      // /api/projects?resource=evolve — not here. This job used to also call
-      // evolveProjectsForUser() with an identical prompt against the same
-      // active/upcoming projects, so every project got evolved twice a day
-      // for no benefit (double the Gemini calls, near-duplicate rows). See
-      // git history for the removed duplicate.
+      // `resource=evolve` (and this job's own near-identical copy of it)
+      // were removed in 2026: same prompt run twice a day against every
+      // active project, writing to an evolution_events table nothing in
+      // the frontend read. Morphs and composites do this job properly
+      // now — see git history / CLAUDE.md for the removed duplicate.
 
       return res.status(200).json(results)
 

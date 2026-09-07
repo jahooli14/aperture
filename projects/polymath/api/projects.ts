@@ -26,7 +26,7 @@ const RateRequestSchema = z.object({
 })
 
 /** Cron-triggered resources that use IDEA_ENGINE_SECRET instead of Supabase JWT */
-const CRON_RESOURCES = ['recompute-heat', 'evolve', 'generate-digest']
+const CRON_RESOURCES = ['recompute-heat', 'generate-digest']
 
 function getCronUserId(req: VercelRequest): string | null {
   const authHeader = req.headers.authorization
@@ -1730,126 +1730,15 @@ Return JSON only:
   }
 
   // EVOLVE RESOURCE — POST to trigger project evolution / nightly reshaping
-  if (resource === 'evolve') {
-    if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
-    const { project_id } = req.body || {}
-    try {
-      // Fetch projects to evolve
-      let projectsQuery = supabase.from('projects').select('id, title, description, metadata').eq('user_id', userId)
-      if (project_id) projectsQuery = projectsQuery.eq('id', project_id)
-      else projectsQuery = projectsQuery.in('status', ['active', 'upcoming'])
-
-      const { data: projects, error: projectsError } = await projectsQuery
-      if (projectsError) {
-        console.error('[evolve] projects query failed:', projectsError)
-        return res.status(500).json({ error: projectsError.message, stage: 'fetch_projects' })
-      }
-
-      const candidates = (projects || []).slice(0, 5)
-      console.log(`[evolve] starting: user=${userId} candidates=${candidates.length} (project_id=${project_id || 'auto'})`)
-
-      if (candidates.length === 0) {
-        return res.status(200).json({ evolved: 0, project_ids: [], reason: 'no candidate projects' })
-      }
-
-      // Generate insights in parallel with a per-call timeout so one slow
-      // Gemini call can't hang the whole function until Vercel kills it (504).
-      const CALL_TIMEOUT_MS = 20_000
-      type Outcome = { project_id: string; ok: boolean; error?: string }
-      const outcomes = await Promise.all(candidates.map(async (project): Promise<Outcome> => {
-        try {
-          const prompt = `You're a friend looking at one of my projects and naming a single specific direction it could take — a new angle, a missing intersection, or a reshape. Just one. Real, not decorative.
-
-Project: ${project.title}
-Description: ${project.description || 'No description'}
-Current notes: ${JSON.stringify(project.metadata?.tasks?.slice(0, 3) || [])}
-
-${PLAIN_ENGLISH_RULES}
-Never invent hyphenated phrases in scare-quotes ("friction-over-function," "blind-edit"). If a term needs scare-quotes, rewrite it.
-No coach voice ("you are shifting from X to Y"). Talk to me, not at me.
-
-Bad: "Your reliance on the trial deadline acted as a forcing function for creative momentum."
-Good: "The Logic Pro trial ran out — that's the deadline this song needs."
-
-If nothing real is there, pick "reflection" and just name what the project actually is in one sentence. Don't pad.
-
-Respond with JSON: { "event_type": "intersection"|"reshape"|"reflection", "description": "one specific angle or reshape, max 2 sentences" }`
-
-          const response = await Promise.race([
-            generateText(prompt, { responseFormat: 'json', temperature: 0.8 }),
-            new Promise<never>((_, reject) =>
-              setTimeout(() => reject(new Error('gemini_timeout')), CALL_TIMEOUT_MS)
-            ),
-          ])
-          let insight: { event_type?: string; description?: string }
-          try {
-            insight = JSON.parse(response)
-          } catch (parseErr) {
-            console.warn(`[evolve] JSON parse failed for project ${project.id}:`, parseErr instanceof Error ? parseErr.message : parseErr)
-            return { project_id: project.id, ok: false, error: 'parse_failed' }
-          }
-
-          if (!insight?.description) {
-            return { project_id: project.id, ok: false, error: 'no_description' }
-          }
-
-          // event_type must satisfy the CHECK constraint on evolution_events
-          const validTypes = new Set(['intersection', 'reshape', 'reflection'])
-          const eventType = validTypes.has(insight.event_type ?? '') ? insight.event_type! : 'reshape'
-
-          const { error: insertErr } = await supabase.from('evolution_events').insert({
-            user_id: userId,
-            project_id: project.id,
-            event_type: eventType,
-            highlight: false, // we'll mark one as highlight after the parallel pass
-            description: insight.description,
-            created_at: new Date().toISOString(),
-          })
-          if (insertErr) {
-            console.warn(`[evolve] insert failed for project ${project.id}:`, insertErr.message)
-            return { project_id: project.id, ok: false, error: insertErr.message }
-          }
-          return { project_id: project.id, ok: true }
-        } catch (err) {
-          console.warn(`[evolve] project ${project.id} failed:`, err instanceof Error ? err.message : err)
-          return { project_id: project.id, ok: false, error: err instanceof Error ? err.message : 'unknown' }
-        }
-      }))
-
-      const evolved = outcomes.filter(o => o.ok).map(o => o.project_id)
-      const failed = outcomes.filter(o => !o.ok)
-
-      // Mark the first successful insight as the highlight (post-hoc, since
-      // the parallel pass doesn't know the order).
-      if (evolved.length > 0) {
-        try {
-          const firstEvolvedId = evolved[0]
-          await supabase
-            .from('evolution_events')
-            .update({ highlight: true })
-            .eq('user_id', userId)
-            .eq('project_id', firstEvolvedId)
-            .order('created_at', { ascending: false })
-            .limit(1)
-        } catch (highlightErr) {
-          console.warn('[evolve] highlight update failed (non-fatal):', highlightErr instanceof Error ? highlightErr.message : highlightErr)
-        }
-      }
-
-      console.log(`[evolve] done: ${evolved.length}/${candidates.length} succeeded${failed.length ? `, ${failed.length} failed: ${JSON.stringify(failed)}` : ''}`)
-      return res.status(200).json({
-        evolved: evolved.length,
-        project_ids: evolved,
-        failures: failed.length,
-      })
-    } catch (error) {
-      console.error('[evolve] handler crash:', error)
-      return res.status(500).json({
-        error: error instanceof Error ? error.message : 'Evolution failed',
-        stack: error instanceof Error ? error.stack?.split('\n').slice(0, 4).join('\n') : undefined,
-      })
-    }
-  }
+  // `resource === 'evolve'` removed (2026): it ran daily against every
+  // active/upcoming project, proposing a "new direction" whether or not
+  // anyone was working on it, and wrote to an `evolution_events` table
+  // nothing in the frontend ever read. The thing it was reaching for --
+  // occasional reshape proposals, never for the live project -- is what
+  // morphs (`generate-morph`, one per project per 14 days) and composites
+  // (`generate-composite`, stalled projects only) now do properly. The
+  // `evolution_events` table is left in place but unused; safe to drop in
+  // a later migration if nothing else turns up depending on it.
 
   // SAVE-IDEA RESOURCE — POST to save an onboarding suggestion as a saved idea
   if (resource === 'save-idea') {

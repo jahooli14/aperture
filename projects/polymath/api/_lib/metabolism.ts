@@ -428,8 +428,10 @@ Return JSON only:
   return { warmed: warmed.length, evolutions: evolutions.length }
 }
 
-// Evolution-event generation for active/upcoming projects lives in
-// api/projects.ts (resource=evolve), run once daily by the GitHub Actions
-// cron. A near-identical copy used to live here too, called a second time
-// by the Vercel daily cron — same prompt, same projects, same table —
-// which meant every project got evolved twice a day for no benefit. Removed.
+// `resource=evolve` (api/projects.ts) is gone (2026): it proposed a "new
+// direction" daily for every active/upcoming project and wrote to an
+// evolution_events table nothing in the frontend read. A near-identical
+// copy used to live here too, called a second time by the Vercel daily
+// cron for no benefit — that duplicate was removed first; the whole
+// mechanism followed once morphs/composites (SPEC.md) covered its job
+// properly (rate-limited, stalled/dormant projects only).
