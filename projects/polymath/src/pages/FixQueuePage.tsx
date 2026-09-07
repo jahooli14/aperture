@@ -194,7 +194,7 @@ export function FixQueuePage() {
   const done = items.filter(i => ['completed', 'rejected'].includes(i.metadata?.fix_status || ''))
 
   return (
-    <div className="min-h-screen pb-32" style={{ backgroundColor: 'var(--brand-bg)' }}>
+    <div className="min-h-screen page-bottom" style={{ backgroundColor: 'var(--brand-bg)' }}>
       <SubtleBackground />
 
       {/* Header */}

@@ -84,7 +84,7 @@ export function FeedsPage() {
   return (
     <>
       <SubtleBackground />
-      <div className="min-h-screen pb-24">
+      <div className="min-h-screen page-bottom">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 flex flex-col gap-3">
           <header className="page-masthead">
             <div className="page-masthead-text">

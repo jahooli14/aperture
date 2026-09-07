@@ -151,7 +151,7 @@ export function CognitiveReplayPage() {
   ]
 
   return (
-    <div className="min-h-screen pb-24 relative">
+    <div className="min-h-screen page-bottom relative">
       <SubtleBackground />
 
       <div className="max-w-3xl mx-auto px-4 sm:px-6 relative z-10">

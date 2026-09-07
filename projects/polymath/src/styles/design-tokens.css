@@ -92,6 +92,15 @@
   --glass-card-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.045);
   --glass-card-shadow: 0 6px 22px rgba(0, 0, 0, 0.32);
 
+  /* Clearance under the floating nav.
+     Every page was picking its own bottom padding out of the air —
+     pb-20, pb-24, pb-32, pb-48 — and none of them accounted for the
+     home-indicator safe area, so on a notched phone the last element on
+     the page (Home's Settings link, most visibly) sat underneath the nav
+     pill. The bar is ~56px of chrome plus a 1rem gap plus the inset, so
+     this is that, plus room to breathe. */
+  --nav-clearance: calc(6.5rem + env(safe-area-inset-bottom, 0px));
+
   /* Surface radii */
   --soft-radius: 16px;
   --soft-radius-sm: 12px;
@@ -102,6 +111,14 @@
   --soft-surface-hover: rgba(255, 255, 255, 0.05);
   --soft-border: rgba(255, 255, 255, 0.06);
   --soft-border-focus: rgba(var(--brand-primary-rgb), 0.35);
+}
+
+/* ─── Bottom clearance ─────────────────────────────────────────── */
+/* Put this on a page's outermost scrolling container so its last row
+   clears the floating nav. Don't hand-pick a pb-* for this. */
+
+.page-bottom {
+  padding-bottom: var(--nav-clearance);
 }
 
 /* ─── Page masthead ─────────────────────────────────────────────── */

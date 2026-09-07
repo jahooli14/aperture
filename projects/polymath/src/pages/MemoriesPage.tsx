@@ -525,7 +525,7 @@ function MemoriesPageInner() {
           </div>
         </div>
 
-      <div className="pb-32 relative z-10" style={{ isolation: 'isolate' }}>
+      <div className="page-bottom relative z-10" style={{ isolation: 'isolate' }}>
         <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 pb-6 pt-2">
           {/* Open spread — no nested shadow box. Memories breathe on the
               page background. Day One scrapbook feel, not "premium card." */}

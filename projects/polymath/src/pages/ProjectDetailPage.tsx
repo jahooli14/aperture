@@ -737,7 +737,7 @@ export function ProjectDetailPage() {
   }
 
   return (
-    <div className="min-h-screen pb-24 relative" style={{ backgroundColor: 'var(--brand-bg)' }}>
+    <div className="min-h-screen page-bottom relative" style={{ backgroundColor: 'var(--brand-bg)' }}>
       <SubtleBackground />
       <div className="max-w-2xl mx-auto px-5 sm:px-6 pb-4">
         <header className="page-masthead mb-6">

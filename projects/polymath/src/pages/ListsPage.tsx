@@ -240,7 +240,7 @@ function ListsPageInner() {
     }
 
     return (
-        <div className="min-h-screen pb-32 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto overflow-hidden">
+        <div className="min-h-screen page-bottom px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto overflow-hidden">
             <header className="page-masthead">
                 <div className="page-masthead-text">
                     <h1 className="page-hero">Your lists.</h1>
