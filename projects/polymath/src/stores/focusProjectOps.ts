@@ -43,6 +43,25 @@ export const recentExcluding = (projects: Project[], excludeId?: string | null):
  * makes it the focus, so it leaves the row, and whatever was focused
  * before stops being excluded and takes its place.
  */
+/**
+ * The project the answer box would show if nothing were overriding it.
+ *
+ * Tapping play on a card in "everything else" points the box at that
+ * project, which pushes whatever was there out. That one has to land in
+ * the row -- it was, a moment ago, the single most important thing on the
+ * screen. Left to sort on recency it can fall past the row's two-card
+ * limit and vanish from home altogether, which is how a project gets
+ * "lost" without anything having actually happened to it.
+ */
+export function displacedFocusProjectId(
+  projects: Project[],
+  overrideProjectId?: string | null,
+): string | null {
+  if (!overrideProjectId) return null
+  const natural = resolveFocusProjectId(projects, null)
+  return natural && natural !== overrideProjectId ? natural : null
+}
+
 export function resolveFocusProjectId(
   projects: Project[],
   overrideProjectId?: string | null,
@@ -70,4 +89,42 @@ export function resolveFocusProjectId(
   // exclude here — a star would have returned above, and excluding the
   // focus itself would be circular.
   return recentExcluding(projects)[0]?.id ?? null
+}
+
+/**
+ * The "everything else" row, in the order it actually renders: still-warm
+ * projects first, with a displaced focus pinned to the front.
+ *
+ * Pulled out because the queue half has to exclude exactly what this half
+ * SHOWS. It used to recompute its own version without the displacement
+ * step, so the two disagreed the moment a play tap displaced a project:
+ * one pinned to Up Next got pinned to the front of the warm row AND
+ * passed the queue's filter, and the same project sat on the home screen
+ * twice, once as "2d ago" and once as "#1 in queue".
+ */
+export function warmRow(
+  projects: Project[],
+  focusId: string | null,
+  overrideProjectId: string | null,
+  limit: number,
+): Project[] {
+  const rest = recentExcluding(projects, focusId)
+  const displacedId = displacedFocusProjectId(projects, overrideProjectId)
+  const displaced = displacedId ? rest.find(p => p.id === displacedId) : undefined
+  const ordered = displaced ? [displaced, ...rest.filter(p => p.id !== displaced.id)] : rest
+  return ordered.slice(0, limit)
+}
+
+/** Queued projects that aren't the focus and aren't already on the warm
+ *  half of the row. Something you just worked on is "warm", not "waiting". */
+export function queueRow(
+  projects: Project[],
+  focusId: string | null,
+  overrideProjectId: string | null,
+  warmLimit: number,
+): Project[] {
+  const shown = new Set(warmRow(projects, focusId, overrideProjectId, warmLimit).map(p => p.id))
+  return projects
+    .filter(p => p.up_next_position != null && p.id !== focusId && !shown.has(p.id))
+    .sort((a, b) => (a.up_next_position ?? 99) - (b.up_next_position ?? 99))
 }

@@ -39,7 +39,7 @@ function CompletedProjectsTimeline({ projects, onNavigate }: { projects: Project
   if (sorted.length === 0) {
     return (
       <div className="text-center py-24">
-        <Check className="w-12 h-12 mb-4" style={{ color: '#34d399' }} />
+        <Check className="w-12 h-12 mb-4 mx-auto" style={{ color: '#34d399' }} />
         <p className="text-[var(--brand-text-primary)] font-black uppercase tracking-tight text-lg mb-2">No completed projects yet</p>
         <p className="text-sm" style={{ color: 'var(--brand-text-secondary)' }}>When you finish something, it'll live here.</p>
       </div>

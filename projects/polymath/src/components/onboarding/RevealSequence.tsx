@@ -513,7 +513,7 @@ export function RevealSequence({ analysis, books, transcripts = [], groundingPhr
                 style={{ background: 'linear-gradient(135deg, var(--brand-primary), rgb(var(--color-accent-light-rgb)))', color: 'var(--brand-text-primary)' }}
               >
                 <Lock className="h-3.5 w-3.5" />
-                Sign in to unlock
+                Sign in to keep this
               </button>
             )}
             <button

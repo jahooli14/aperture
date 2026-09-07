@@ -60,11 +60,20 @@ import { handleInputFocus } from '../../utils/keyboard'
 // doesn't swap the question out from under you mid-thought.
 const STEER_PROMPT = "Say what you're actually after…"
 
-export function TodaysAnswerCard() {
+export function TodaysAnswerCard({
+  onExpandedChange,
+}: {
+  /** Fires when the redirect panel opens or closes. The page uses it to
+   *  clear everything below an expanded card — one thing on screen at a
+   *  time, the same rule a running session already follows. */
+  onExpandedChange?: (expanded: boolean) => void
+} = {}) {
   const navigate = useNavigate()
   const { addToast } = useToast()
   const allProjects = useProjectStore(s => s.allProjects)
   const projects = useProjectStore(s => s.projects)
+  const projectsLoading = useProjectStore(s => s.loading)
+  const projectsInitialized = useProjectStore(s => s.initialized)
   const createProject = useProjectStore(s => s.createProject)
   const priorityProject = usePriorityProject()
   const feeling = useSessionContextStore(s => s.feeling)
@@ -129,6 +138,14 @@ export function TodaysAnswerCard() {
   // reason. Every other phase (window/planning/closeout/receipt/done) is
   // brief, so it keeps the richer look.
   const [sessionPhase, setSessionPhase] = useState<Phase | null>(null)
+
+  // The page clears for an open contract in EVERY phase, not just once the
+  // clock is running. The two-minute planning ritual is exactly when the
+  // rest of home is other projects competing with the one you just
+  // committed to -- and it used to sit right there under the countdown.
+  useEffect(() => {
+    onExpandedChange?.(engaged || contractOpen)
+  }, [engaged, contractOpen, onExpandedChange])
   // How long you've got. A control ON the card, never a gate in front of it
   // -- most opens aren't sessions (capture, browse, logging a close-out),
   // and asking those a time question first blocks them for nothing. Picking
@@ -144,10 +161,33 @@ export function TodaysAnswerCard() {
   // engine in the app.
   const startRequestId = useHomeAnswerStore(s => s.startRequestId)
 
+  // Rejoining a session already in flight. `active` lives in the session
+  // store and survives navigation; `contractOpen` is local state and does
+  // not. So stepping off home mid-hour -- to capture the thought the work
+  // just gave you, the most likely reason to leave -- came back to a
+  // normal answer card with a Start button on it, everything below still
+  // hidden because a session was technically running, and no way back into
+  // the hour. Starting again from there opened a second session.
+  const activeSessionProjectId = useSessionStore(s => s.active?.project_id ?? null)
+
   const pickWindow = (m: number) => {
     haptic.light()
     setWindowMinutes(windowMinutes === m ? null : m)
   }
+
+  useEffect(() => {
+    if (!activeSessionProjectId) return
+    if (focusProject?.id === activeSessionProjectId) {
+      setContractOpen(true)
+      return
+    }
+    // The session is on a project this card didn't resolve to (started
+    // from a mini card, then the page remounted). Point the card at the
+    // session rather than showing an unrelated answer beside it.
+    if (allProjects.some(p => p.id === activeSessionProjectId)) {
+      useHomeAnswerStore.getState().setOverride(activeSessionProjectId)
+    }
+  }, [activeSessionProjectId, focusProject?.id, allProjects])
 
   useEffect(() => {
     if (!startRequestId) return
@@ -252,6 +292,19 @@ export function TodaysAnswerCard() {
   // projects at all) points at capture instead of an empty projects list;
   // otherwise the generic "nothing active" empty state.
   if (!focusProject) {
+    // Mid-first-load there are no projects yet because none have arrived,
+    // not because none exist — a returning user opening on a new device
+    // was told "nothing here yet" for as long as the fetch took. Say
+    // nothing until it lands.
+    if (projects.length === 0 && (projectsLoading || !projectsInitialized)) {
+      return (
+        <div
+          className="rounded-2xl p-5 h-[132px]"
+          style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}
+          aria-hidden
+        />
+      )
+    }
     if (projects.length === 0) {
       return (
         <KeepGoingEmpty
@@ -314,7 +367,16 @@ export function TodaysAnswerCard() {
   // Re-entry playback — the user's own words from the end of the last
   // session. This is the line that makes a cold project cheap to restart,
   // so it outranks any generated plan text when it exists.
-  const reEntry = focusProject.last_closeout_text?.trim() || null
+  //
+  // Only when it's actually a path, though. "Done." and "good session" are
+  // acknowledgements, and showing one as the whole answer meant a project
+  // with a real next step on its list said nothing about it. Same 25-char
+  // floor the briefing uses to decide an exit note is worth planning from
+  // (MIN_USEFUL_EXIT_NOTE in api/_lib/session-briefing.ts — repeated
+  // rather than imported, since shipped src/ never reaches into api/_lib).
+  const MIN_USEFUL_CLOSEOUT = 25
+  const closeout = focusProject.last_closeout_text?.trim() || null
+  const reEntry = closeout && closeout.length >= MIN_USEFUL_CLOSEOUT ? closeout : null
 
   // The next step on the project's own list, in plan order — the exact
   // thing the session will open with. This used to be a separate Power
@@ -330,9 +392,13 @@ export function TodaysAnswerCard() {
   // Where they got to on it last time, when a close-out said so.
   const pitch = typeof nextStep?.progress_note === 'string' ? `Last time: ${nextStep.progress_note}` : null
 
-  const dormancyDays = Math.floor(
-    (Date.now() - new Date(focusProject.last_active || focusProject.updated_at || 0).getTime()) / 86_400_000
-  )
+  // No timestamp at all means never touched, not touched in 1970 — the
+  // `|| 0` fallback here dated the project to the epoch and stamped a
+  // brand-new one "long quiet" next to its own "not started yet".
+  const lastTouched = focusProject.last_active || focusProject.updated_at || null
+  const dormancyDays = lastTouched
+    ? Math.floor((Date.now() - new Date(lastTouched).getTime()) / 86_400_000)
+    : 0
   // Amber at both tiers, never red. Red is the destructive/error colour
   // everywhere else in the app, so outlining the hero in it made the one
   // thing you're meant to act on read as something that had gone wrong.
@@ -664,7 +730,7 @@ function SteerPanel({
     >
       <div className="flex items-center justify-between mb-3">
         <span className="text-[10px] font-bold uppercase tracking-[0.28em]" style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.7 }}>
-          {hasThread ? 'focus' : 'already noticed'}
+          {hasThread ? 'focus' : 'projects worth starting'}
         </span>
         <div className="flex items-center gap-3">
           {/* Close only hides the thread (resumable); start over actually

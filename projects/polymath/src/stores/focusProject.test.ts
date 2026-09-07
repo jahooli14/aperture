@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { resolveFocusProjectId } from './focusProjectOps'
+import { resolveFocusProjectId, warmRow, queueRow } from './focusProjectOps'
 import type { Project } from '../types'
 
 const today = new Date().toISOString()
@@ -82,5 +82,55 @@ describe('resolveFocusProjectId', () => {
     // ▶ on "warm" sets an override; the star is no longer the focus and so
     // is no longer the thing being excluded from the row.
     expect(resolveFocusProjectId(shelf, 'warm')).toBe('warm')
+  })
+})
+
+describe('the "everything else" row shows nothing twice', () => {
+  // The row is warm projects then queued ones. A project that is both has
+  // to appear exactly once, and the two halves have to agree on which.
+  const focus = project({ id: 'focus', is_priority: true })
+  const a = project({ id: 'a', last_active: daysAgo(1) })
+  const b = project({ id: 'b', last_active: daysAgo(2) })
+  const queued = project({ id: 'queued', last_active: daysAgo(40), up_next_position: 1 } as any)
+
+  it('drops a queued project from the queue half when it is warm enough to be shown', () => {
+    const alsoWarm = project({ id: 'alsoWarm', last_active: daysAgo(1), up_next_position: 1 } as any)
+    const all = [focus, alsoWarm, b]
+    expect(warmRow(all, 'focus', null, 2).map(p => p.id)).toEqual(['alsoWarm', 'b'])
+    expect(queueRow(all, 'focus', null, 2).map(p => p.id)).toEqual([])
+  })
+
+  it('keeps a queued project that the warm half did not have room for', () => {
+    const all = [focus, a, b, queued]
+    expect(warmRow(all, 'focus', null, 2).map(p => p.id)).toEqual(['a', 'b'])
+    expect(queueRow(all, 'focus', null, 2).map(p => p.id)).toEqual(['queued'])
+  })
+
+  it('does not show a displaced focus in both halves at once', () => {
+    // Play tapped on `a`, so `a` is the focus and `focus` was displaced
+    // into the front of the warm row. `focus` is also pinned to Up Next,
+    // and used to pass the queue filter because that half recomputed the
+    // warm row without the displacement step.
+    const pinnedFocus = project({ id: 'focus', is_priority: true, up_next_position: 1 } as any)
+    const all = [pinnedFocus, a, b]
+    const warm = warmRow(all, 'a', 'a', 2)
+    const queue = queueRow(all, 'a', 'a', 2)
+    expect(warm.map(p => p.id)).toEqual(['focus', 'b'])
+    expect(queue.map(p => p.id)).toEqual([])
+    const shown = [...warm, ...queue].map(p => p.id)
+    expect(new Set(shown).size).toBe(shown.length)
+  })
+
+  it('never shows the focus project itself', () => {
+    const all = [focus, a, b]
+    expect(warmRow(all, 'focus', null, 2).map(p => p.id)).not.toContain('focus')
+    expect(queueRow(all, 'focus', null, 2).map(p => p.id)).not.toContain('focus')
+  })
+
+  it('orders the queue by its position, not by recency', () => {
+    const q1 = project({ id: 'q1', last_active: daysAgo(50), up_next_position: 1 } as any)
+    const q2 = project({ id: 'q2', last_active: daysAgo(45), up_next_position: 2 } as any)
+    const all = [focus, a, b, q2, q1]
+    expect(queueRow(all, 'focus', null, 2).map(p => p.id)).toEqual(['q1', 'q2'])
   })
 })

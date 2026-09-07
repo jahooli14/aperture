@@ -34,7 +34,6 @@ const DebugPanel = lazy(lazyRetry(() => import('./components/DebugPanel').then(m
 const ExtractionSummary = lazy(lazyRetry(() => import('./components/memories/ExtractionSummary').then(m => ({ default: m.ExtractionSummary }))))
 const SteeringCard = lazy(lazyRetry(() => import('./components/memories/SteeringCard').then(m => ({ default: m.SteeringCard }))))
 const FirstConnectionCelebration = lazy(lazyRetry(() => import('./components/home/FirstConnectionCelebration').then(m => ({ default: m.FirstConnectionCelebration }))))
-const ContextSidebar = lazy(lazyRetry(() => import('./components/context/ContextSidebar').then(m => ({ default: m.ContextSidebar }))))
 
 // Lazy load pages with retry logic for chunk loading failures after deployments
 const HomePage = lazy(lazyRetry(() => import('./pages/HomePage').then(m => ({ default: m.HomePage }))))
@@ -400,7 +399,6 @@ export default function App() {
               {/* Context Engine Sidebar */}
               <ErrorBoundary fallback={null}>
                 <Suspense fallback={null}>
-                  <ContextSidebar />
                 </Suspense>
               </ErrorBoundary>
 

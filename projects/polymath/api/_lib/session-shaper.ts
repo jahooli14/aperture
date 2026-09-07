@@ -598,9 +598,20 @@ export async function shapeSession(
     const t = r?.reading_queue?.title
     if (t) addSignal(t, `you've been reading "${t}"`, new Date(r.created_at).getTime())
   })
-  // Captures that never landed on any project -- the half-asleep idea
-  // that's been sitting in the corpus doing nothing.
-  recalled.forEach(m => addSignal(m.text, 'a note of yours that never got filed', Date.now()))
+  // `recalled` deliberately does NOT feed the spark. Every entry in it was
+  // matched against THIS project's own embedding, so it is project
+  // evidence -- and it already reaches the plan that way, cited as "a
+  // capture that connects". Offering the same note to the spark as
+  // something from outside the project manufactured exactly the fake
+  // correspondence the spark's own prompt bans: the app noticing a
+  // connection between a project and a note about that project, and
+  // dressing it up as a leap. It also came in with a Date.now()
+  // timestamp, which walked it straight past the fourteen-day gate every
+  // other signal has to clear.
+  //
+  // So the week is the identity layer only: what you added to a list,
+  // what you've been reading. Fewer sparks, and every one of them a real
+  // crossing.
 
   const pastCloseouts = (sessionRows || [])
     .filter(r => r.closeout_text && r.closeout_text !== project.last_closeout_text)
@@ -657,6 +668,17 @@ export async function shapeSession(
   }
 
   const openTaskCountTotal = allTasks.filter(t => t && !t.done && typeof t.text === 'string' && typeof t.id === 'string').length
+  // The UI renders this as "+N more on your list, not shown today", so it
+  // has to be exactly that: open steps that didn't make today's plan. It
+  // used to be `total - OPEN_TASK_LIMIT` — steps beyond the 24 the shaper
+  // even LOOKS at — which is a different quantity and almost always zero.
+  // Twelve steps with three planned reported nothing left out at all, and
+  // thirty steps with three planned reported six.
+  //
+  // Counted by distinct task id, so a split step showing three pieces of
+  // one step counts as the one step it is.
+  const notShown = (shown: { taskId?: string | null }[]) =>
+    Math.max(0, openTaskCountTotal - new Set(shown.map(i => i.taskId).filter(Boolean)).size)
   const truncatedCount = Math.max(0, openTaskCountTotal - OPEN_TASK_LIMIT)
   const openTasks = toOpenSteps(allTasks)
   const doneTasks = allTasks
@@ -761,6 +783,7 @@ export async function shapeSession(
     const haystack = evidenceHaystack(evidence, project.title)
     return {
       ...base,
+      truncatedCount: notShown(items),
       items,
       doneLooksLike: sanitizeDoneLooksLike(parsed?.done_looks_like, haystack) ?? doneLineForSteps(items),
       source: 'ai',
@@ -949,6 +972,7 @@ export async function shapeSession(
       const spark = await sparkFor(items)
       return {
         ...base, unblocked, friction: setup, packdown,
+        truncatedCount: notShown(items),
         items: spark ? [...items, spark] : items,
         doneLooksLike: briefing.doneLooksLike,
         source: 'briefing',
@@ -1001,6 +1025,7 @@ export async function shapeSession(
       const splitSpark = await sparkFor(splitItems)
       return {
         ...base, unblocked, friction: setup, packdown,
+        truncatedCount: notShown(splitItems),
         items: splitSpark ? [...splitItems, splitSpark] : splitItems,
         doneLooksLike: split.doneLooksLike ?? doneLineForSteps(split.moves),
         source: 'split',
@@ -1041,6 +1066,7 @@ export async function shapeSession(
 
   return {
     ...base, unblocked, friction: setup, packdown,
+    truncatedCount: notShown(items),
     items, doneLooksLike: doneLineForSteps(selected), source: 'tasks',
   }
 }

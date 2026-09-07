@@ -7,7 +7,6 @@ import { useMemoryStore } from '../stores/useMemoryStore'
 import { useToast } from './ui/toast'
 import { haptic } from '../utils/haptics'
 import { ContextMenu, type ContextMenuItem } from './ui/context-menu'
-import { useContextEngineStore } from '../stores/useContextEngineStore'
 import { MemoryDetailModal } from './memories/MemoryDetailModal'
 import { useConfirmDialog } from './ui/confirm-dialog'
 import { motion } from 'framer-motion'
@@ -127,7 +126,6 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
   const pointerMoved = useRef(false)
   const pressOrigin = useRef<{ x: number; y: number } | null>(null)
 
-  const { setContext, toggleSidebar } = useContextEngineStore()
   const deleteMemory = useMemoryStore((state) => state.deleteMemory)
   const pinMemory = useMemoryStore((state) => state.pinMemory)
   const unpinMemory = useMemoryStore((state) => state.unpinMemory)
@@ -257,14 +255,6 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
       onClick: handleTogglePin,
     },
     {
-      label: 'Analyse with AI',
-      icon: <span className="w-5 h-5 flex items-center justify-center"><span className="w-2 h-2 rounded-full bg-[rgb(var(--color-accent-dark-rgb))] block" /></span>,
-      onClick: () => {
-        setContext('memory', memory.id, memory.title, `${memory.title}\n\n${memory.body}`)
-        toggleSidebar(true)
-      },
-    },
-    {
       label: 'Grow into project',
       icon: <Sprout className="h-5 w-5" />,
       onClick: () => setSeedProjectOpen(true),
@@ -285,7 +275,7 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
       onClick: handleDelete,
       variant: 'destructive' as const,
     },
-  ], [memory, handleTogglePin, handleCopyText, handleShare, handleDelete, setContext, toggleSidebar])
+  ], [memory, handleTogglePin, handleCopyText, handleShare, handleDelete])
 
   const isOfflinePending = memory.id.startsWith('offline_') || memory.tags?.includes('offline-pending')
   const typeConfig = memory.memory_type ? MEMORY_TYPE_CONFIG[memory.memory_type] : null

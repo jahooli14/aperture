@@ -14,7 +14,7 @@
  * After save / dismiss / build, the card collapses back to the pill.
  */
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { BookmarkPlus, X } from 'lucide-react'
 import { haptic } from '../../utils/haptics'
@@ -318,6 +318,27 @@ export function ProjectIdeasHome({ startExpanded = false }: { startExpanded?: bo
     await generate()
   }, [generating, ideas.length, generate, resurrectionIndex])
 
+  // `startExpanded` opens the deck without going through the button, so
+  // nothing was ever asking for an idea: `expanded` flipped true, the
+  // queue was empty, `active` stayed null, and every render branch below
+  // was false — a dead button and 260px of nothing. It runs the same
+  // reveal the button does now.
+  //
+  // Gated on `loaded` rather than firing at mount, because the queue fetch
+  // is still in flight then: revealing early would read an empty deck and
+  // burn an LLM call generating an idea that was already baked and waiting.
+  const ideasLoaded = useProjectIdeasStore(s => s.loaded)
+  const autoRevealed = useRef(false)
+  useEffect(() => {
+    if (!startExpanded || autoRevealed.current || !ideasLoaded) return
+    autoRevealed.current = true
+    if (ideas.length > 0) {
+      setActiveIndex(resurrectionIndex >= 0 ? resurrectionIndex : 0)
+      return
+    }
+    void generate()
+  }, [startExpanded, ideasLoaded, ideas.length, generate, resurrectionIndex])
+
   // The hour door. Unlike reveal(), it never opens the queued deck — the
   // user asked for a fresh one-hour thing, so it always generates one
   // (the server skips the queue short-circuit for scope='hour').
@@ -455,6 +476,36 @@ export function ProjectIdeasHome({ startExpanded = false }: { startExpanded?: bo
             >
               A few seconds.
             </p>
+          </div>
+        )}
+
+        {/* Expanded, done loading, and still nothing to show. Every branch
+            above was false here, so the panel rendered an empty 260px box
+            — the "suggest a project button doesn't do anything" bug. Say
+            which of the three real reasons it is, and give a way on. */}
+        {!loading && !generating && expanded && !active && (
+          <div className="flex flex-col items-center gap-3 text-center">
+            <p className="text-[13px] leading-snug" style={{ color: 'var(--brand-text-secondary)' }}>
+              {insufficientSignals !== null
+                ? `Not enough to go on yet — ${insufficientSignals} thing${insufficientSignals === 1 ? '' : 's'} captured, it needs 8 to find a pattern.`
+                : error
+                  ? error
+                  : "Nothing came back this time."}
+            </p>
+            {insufficientSignals === null && (
+              <button
+                type="button"
+                onClick={() => { void generate() }}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-full transition-all"
+                style={{
+                  background: 'rgba(var(--brand-primary-rgb), 0.08)',
+                  color: 'var(--brand-text-secondary)',
+                  border: '1px solid rgba(var(--brand-primary-rgb), 0.18)',
+                }}
+              >
+                <span className="text-[11.5px] tracking-wide">Try again</span>
+              </button>
+            )}
           </div>
         )}
 

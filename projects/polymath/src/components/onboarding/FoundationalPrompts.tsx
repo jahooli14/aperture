@@ -148,14 +148,11 @@ export function FoundationalPrompts() {
                       <p className="line-clamp-2">
                         {prompt.response.bullets.join('  ')}
                       </p>
-                      <button className="hover:underline mt-1" style={{ color: "var(--brand-primary)" }}>
-                        Edit
-                      </button>
                     </div>
                   )}
                   {locked && (
                     <p className="text-xs mt-1" style={{ color: "var(--brand-text-muted)" }}>
-                      Complete previous prompts to unlock
+                      Answer the ones above first
                     </p>
                   )}
                 </div>
