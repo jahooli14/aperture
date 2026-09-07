@@ -48,7 +48,7 @@ export function EverythingElseMini() {
           items-stretch + h-full on the card (not just the wrapper) is what
           keeps a 2-line title and a 1-line title the same height; without
           it the wrapper stretched but the card inside stayed content-sized. */}
-      <div className="flex items-stretch gap-3 overflow-x-auto pb-2 -mx-4 px-4 scroll-pl-4 scroll-pr-4 snap-x snap-mandatory scrollbar-hide">
+      <div className="shelf-fade flex items-stretch gap-3 overflow-x-auto pb-2 -mx-4 px-4 scroll-pl-4 scroll-pr-4 snap-x snap-mandatory scrollbar-hide">
         {recent.map(p => (
           <div key={p.id} className="flex-shrink-0 w-[70vw] max-w-[260px] snap-start flex">
             <ProjectMiniCard project={p} variant="glass" meta={relative(p.last_active || p.updated_at)} />

@@ -782,7 +782,7 @@ function MemoriesPageInner() {
                         <Pin className="w-3.5 h-3.5 text-brand-text-secondary" style={{ fill: 'currentColor' }} />
                         Pinned
                       </h3>
-                      <div className="flex gap-3 overflow-x-auto pb-2 -mx-3 px-3 sm:-mx-1 sm:px-1 scrollbar-hide snap-x snap-mandatory">
+                      <div className="shelf-fade flex gap-3 overflow-x-auto pb-2 -mx-3 px-3 sm:-mx-1 sm:px-1 scrollbar-hide snap-x snap-mandatory">
                         {pinnedMemories.map((memory) => (
                           <motion.div
                             key={memory.id}

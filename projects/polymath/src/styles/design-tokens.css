@@ -31,6 +31,15 @@
  * Section headings (inside pages):
  *   .section-heading      — lowercase, weight 700, ~20px. Outranks cards.
  *   .section-heading .accent — child span for the cyan accent word.
+ *   .section-header       — older name for the same rule. Prefer the above.
+ *
+ * Layout:
+ *   .page-bottom          — clears the floating nav + home-indicator inset.
+ *                           Put it on a page's outer scroller instead of
+ *                           picking a pb-* by eye.
+ *   .shelf-fade           — softens the right edge of a horizontal card
+ *                           row so the peeking card dissolves rather than
+ *                           being cut mid-word.
  *
  * Inputs (Dia-leaning soft surfaces):
  *   .soft-input           — rounded-2xl, italic placeholder, cyan focus
@@ -119,6 +128,19 @@
 
 .page-bottom {
   padding-bottom: var(--nav-clearance);
+}
+
+/* ─── Horizontal shelf edge ────────────────────────────────────── */
+/* Put on a horizontally-scrolling row so the card peeking at the right
+   edge dissolves instead of being guillotined mid-word by the viewport.
+   The peek IS the affordance — it says "swipe, there's more" — but a
+   hard cut through a word reads as a layout bug rather than an
+   invitation. Fades over the last 28px only, so a card that fits is
+   untouched. */
+
+.shelf-fade {
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent 100%);
+  mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent 100%);
 }
 
 /* ─── Page masthead ─────────────────────────────────────────────── */
@@ -218,7 +240,13 @@
    Usage:
      <h2 class="section-heading">keep <span class="accent">going</span></h2>
 */
-.section-heading {
+/* .section-header is the same thing under an older name — the home page
+   reaches for one, Projects and Lists reach for the other, and they were
+   two near-identical blocks living in two different stylesheets. One
+   definition, both names, so a change to the section voice lands
+   everywhere at once. */
+.section-heading,
+.section-header {
   position: relative;
   display: flex;
   align-items: center;
@@ -233,7 +261,8 @@
   margin: 0 0 16px;
 }
 
-.section-heading::before {
+.section-heading::before,
+.section-header::before {
   content: '';
   width: 18px;
   height: 1px;
@@ -242,7 +271,9 @@
   box-shadow: 0 0 8px rgba(var(--brand-primary-rgb), 0.6);
 }
 
-.section-heading .accent {
+.section-heading .accent,
+.section-header .accent,
+.section-header span {
   color: rgb(var(--brand-primary-rgb));
   text-shadow: 0 0 14px rgba(var(--brand-primary-rgb), 0.55), 0 0 4px rgba(var(--brand-primary-rgb), 0.35);
 }
