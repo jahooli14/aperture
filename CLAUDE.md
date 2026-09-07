@@ -142,7 +142,7 @@ Both answers file the article, because answering IS finishing it — there is no
 
 **Typography.** Article body is **Literata** (`--brand-font-reading`), not Playfair. Playfair is a display face: its hairlines vanish at body size on a dark screen, which is what made long reads tiring. Playfair still sets the title. Typeface / size / line spacing / column width live in a settings sheet (`ReaderSettingsSheet`) and persist per device (`src/lib/readerPrefs.ts`, pure + unit-tested) — reading preferences are set once, not per article.
 
-**Nothing floats over the text.** `FloatingNav` (and its voice FAB) hide for the whole `/reading/:id` route, derived from the path — the reader has its own back button, edge swipe and Escape. The offline banner publishes its height as `--global-banner-h` so the reader toolbar sits below it instead of half under it. The old "Connected" block at the end of every article is gone; the connections dialog is still reachable from an article card's menu.
+**Nothing floats over the text.** `FloatingNav` (and its voice FAB) hide for the whole `/reading/:id` route, derived from the path — the reader has its own back button, edge swipe and Escape. The offline banner publishes its height as `--global-banner-h` so the reader toolbar sits below it instead of half under it. Connections are out of the reading surface entirely — the "Connected" block at the end of every article, the Connect button on the card, and `ArticleConnectionsDialog` (deleted). `ItemInsightStrip` lives on and is still used by lists.
 
 ### Session context
 

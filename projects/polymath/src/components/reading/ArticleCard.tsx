@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
-import { Clock, ExternalLink, Archive, Trash2, WifiOff, Link2, Copy, Share2, Edit, Download, CheckCircle, MoreVertical, Loader2, Zap, X, Lightbulb } from 'lucide-react'
+import { Clock, ExternalLink, Archive, Trash2, WifiOff, Copy, Share2, Edit, Download, CheckCircle, MoreVertical, Loader2, Zap, X, Lightbulb } from 'lucide-react'
 import { format } from 'date-fns'
 import type { Article } from '../../types/reading'
 import { useReadingStore } from '../../stores/useReadingStore'
@@ -12,7 +12,6 @@ import { Thumbnail } from '../ui/optimized-image'
 import { PinButton } from '../PinButton'
 
 import { EditArticleDialog } from './EditArticleDialog'
-import { ArticleConnectionsDialog } from './ArticleConnectionsDialog'
 import { useOfflineArticle } from '../../hooks/useOfflineArticle'
 import { Button } from '../ui/button'
 import { ResonanceBadge } from './ArticleVerdict'
@@ -31,7 +30,6 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
   const [progress, setProgress] = useState(0)
   const [showContextMenu, setShowContextMenu] = useState(false)
   const [showEditDialog, setShowEditDialog] = useState(false)
-  const [showConnectionsDialog, setShowConnectionsDialog] = useState(false)
 
   const { isCached: isArticleFullyCached } = useOfflineArticle()
   const { is_rotting } = article
@@ -69,11 +67,9 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
     try {
       await updateArticleStatus(article.id, 'archived')
       // Intentionally no success toast — the card disappearing from the
-      // queue is the confirmation, and the connections dialog opening is
-      // the next step. Stacked "Archived" toasts after speed-archiving
-      // were the "icicles" complaint: visually awful and informationally
-      // empty.
-      setShowConnectionsDialog(true)
+      // queue is the confirmation. Stacked "Archived" toasts after
+      // speed-archiving were the "icicles" complaint: visually awful and
+      // informationally empty.
     } catch (error) {
       addToast({
         title: 'Couldn\'t archive article',
@@ -332,13 +328,6 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
         {/* Action strip — always visible on mobile */}
         <div className="flex items-center gap-1 mt-1 pt-3 border-t border-white/10">
           <button
-            onClick={(e) => { e.stopPropagation(); setShowConnectionsDialog(true) }}
-            className="flex items-center gap-1.5 px-2.5 min-h-[36px] text-[11px] font-bold uppercase tracking-widest rounded-lg active:bg-[rgba(255,255,255,0.08)] transition-colors text-[var(--brand-text-secondary)]"
-          >
-            <Link2 className="h-3.5 w-3.5" />
-            Connect
-          </button>
-          <button
             onClick={(e) => { e.stopPropagation(); openOriginal() }}
             className="flex items-center gap-1.5 px-2.5 min-h-[36px] text-[11px] font-bold uppercase tracking-widest rounded-lg active:bg-[rgba(255,255,255,0.08)] transition-colors text-[var(--brand-text-secondary)]"
           >
@@ -359,17 +348,6 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
         article={article}
         open={showEditDialog}
         onOpenChange={setShowEditDialog}
-      />
-
-      <ArticleConnectionsDialog
-        article={{
-          id: article.id,
-          title: article.title || 'Untitled',
-          content: article.content || '',
-          excerpt: article.excerpt || undefined
-        }}
-        isOpen={showConnectionsDialog}
-        onClose={() => setShowConnectionsDialog(false)}
       />
 
       {confirmDialog}
