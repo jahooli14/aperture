@@ -129,8 +129,19 @@ export async function processMemory(memoryId: string): Promise<void> {
     // 3. Generate embedding for the processed memory content
     const embeddingText = `${metadata.summary_title}\n\n${metadata.insightful_body}`
     logger.info({ memory_id: memoryId, text_length: embeddingText.length }, '🔄 Generating embedding...')
-    const embedding = await generateEmbedding(embeddingText)
-    logger.info({ memory_id: memoryId, embedding_length: embedding.length, embedding_sample: embedding.slice(0, 5) }, '✅ Embedding generated')
+    // The embedding rides along in the same update as the extracted metadata,
+    // so a vector problem used to cost the whole thought: the update failed,
+    // processed never went true, and the daily stuck-memory job retried the
+    // identical failure forever. The vector is the recoverable half —
+    // maintainEmbeddings() backfills anything left null — so let it fail on
+    // its own and still save the thought.
+    let embedding: number[] | null = null
+    try {
+      embedding = await generateEmbedding(embeddingText)
+      logger.info({ memory_id: memoryId, embedding_length: embedding.length, embedding_sample: embedding.slice(0, 5) }, '✅ Embedding generated')
+    } catch (embeddingError) {
+      logger.error({ memory_id: memoryId, error: embeddingError }, '⚠️ Embedding failed — saving the thought without it')
+    }
 
     // 4. Update the memory with extracted metadata and processed content
     logger.info({ memory_id: memoryId }, '🔄 Updating memory in database...')
@@ -157,7 +168,9 @@ export async function processMemory(memoryId: string): Promise<void> {
         ),
         emotional_tone: metadata.emotional_tone,
         triage: metadata.triage,
-        embedding,
+        // Omitted rather than nulled when generation failed, so reprocessing
+        // an already-embedded thought can't wipe a good vector.
+        ...(embedding ? { embedding } : {}),
         processed: true,
         processed_at: new Date().toISOString(),
       })
@@ -183,43 +196,48 @@ export async function processMemory(memoryId: string): Promise<void> {
     logger.info({ memory_id: memoryId }, '🔄 Finding and creating connections...')
     // Use user_id from the memory itself, or fallback to default
     const userId = memory.user_id || 'f2404e61-2010-46c8-8edd-b8a3e702f0fb'
-    // Use shared logic for Top 5 Dynamic connections
-    await updateItemConnections(memoryId, 'thought', embedding, userId)
-    logger.info({ memory_id: memoryId }, '✅ Connections processed')
+    // Everything from here needs a vector to compare against. Without one the
+    // thought is still saved and readable; maintainEmbeddings() fills the gap
+    // on its next run and makes the connections then.
+    if (embedding) {
+      // Use shared logic for Top 5 Dynamic connections
+      await updateItemConnections(memoryId, 'thought', embedding, userId)
+      logger.info({ memory_id: memoryId }, '✅ Connections processed')
 
-    // 6b. Metabolism: bump heat on any drawer project that collides with this
-    // new thought. Fire-and-forget — heat failures never block memory processing.
-    try {
-      const { bumpHeatFromNewMemory } = await import('./metabolism.js')
-      bumpHeatFromNewMemory(supabase, userId, {
-        id: memoryId,
-        content: `${metadata.summary_title} ${metadata.insightful_body}`,
-        embedding,
-      })
-        .then(bumped => {
-          if (bumped > 0) logger.info({ memory_id: memoryId, bumped }, '🔥 Heat bumped on drawer projects')
+      // 6b. Metabolism: bump heat on any drawer project that collides with this
+      // new thought. Fire-and-forget — heat failures never block memory processing.
+      try {
+        const { bumpHeatFromNewMemory } = await import('./metabolism.js')
+        bumpHeatFromNewMemory(supabase, userId, {
+          id: memoryId,
+          content: `${metadata.summary_title} ${metadata.insightful_body}`,
+          embedding,
         })
-        .catch(() => {}) // Non-critical
-    } catch {
-      // Module not available — ignore
-    }
+          .then(bumped => {
+            if (bumped > 0) logger.info({ memory_id: memoryId, bumped }, '🔥 Heat bumped on drawer projects')
+          })
+          .catch(() => {}) // Non-critical
+      } catch {
+        // Module not available — ignore
+      }
 
-    // 6c. Fragments: attach this voicing to its best-matching project with a
-    // role (SPEC.md). Fire-and-forget, same discipline as heat bumping —
-    // a fragment failure must never block memory processing.
-    try {
-      const { attachFragmentFromMemory } = await import('./fragments.js')
-      attachFragmentFromMemory(supabase, userId, {
-        id: memoryId,
-        content: `${metadata.summary_title} ${metadata.insightful_body}`,
-        embedding,
-      })
-        .then(attached => {
-          if (attached > 0) logger.info({ memory_id: memoryId }, '🧩 Fragment attached to a project')
+      // 6c. Fragments: attach this voicing to its best-matching project with a
+      // role (SPEC.md). Fire-and-forget, same discipline as heat bumping —
+      // a fragment failure must never block memory processing.
+      try {
+        const { attachFragmentFromMemory } = await import('./fragments.js')
+        attachFragmentFromMemory(supabase, userId, {
+          id: memoryId,
+          content: `${metadata.summary_title} ${metadata.insightful_body}`,
+          embedding,
         })
-        .catch(() => {}) // Non-critical
-    } catch {
-      // Module not available — ignore
+          .then(attached => {
+            if (attached > 0) logger.info({ memory_id: memoryId }, '🧩 Fragment attached to a project')
+          })
+          .catch(() => {}) // Non-critical
+      } catch {
+        // Module not available — ignore
+      }
     }
 
     // 7. Project genesis detection — find theme clusters with no active project.
@@ -616,7 +634,10 @@ Return only valid JSON.`
  */
 async function generateEmbedding(text: string): Promise<number[]> {
   const model = genAI.getGenerativeModel({ model: MODELS.DEFAULT_EMBEDDING })
-  const result = await model.embedContent({ content: { role: 'user', parts: [{ text }] } })
+  const result = await model.embedContent({
+    content: { role: 'user', parts: [{ text }] },
+    outputDimensionality: MODELS.DEFAULT_EMBEDDING_DIMS,
+  } as Parameters<typeof model.embedContent>[0])
   return result.embedding.values
 }
 

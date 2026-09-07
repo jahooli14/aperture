@@ -469,7 +469,6 @@ export function TodaysAnswerCard({
 
   return (
     <>
-    <FeelingPill />
     <div
       className="rounded-2xl p-5 flex flex-col overflow-hidden relative transition-all duration-700"
       style={{
@@ -600,6 +599,12 @@ export function TodaysAnswerCard({
         {!engaged ? (
           <SteerRow onOpen={openSteer} nudge={nudge.text} />
         ) : (
+          <>
+          {/* Asked here rather than at app open, because here is the only
+              place the answer does anything: it calibrates what the
+              redirect and the idea deck come back with. On the card it was
+              a question with no visible consequence. */}
+          <FeelingPill />
           <SteerPanel
             chips={chips}
             chipsLoaded={chipsLoaded}
@@ -616,6 +621,7 @@ export function TodaysAnswerCard({
             showDeck={showDeck}
             onToggleDeck={() => setShowDeck(v => !v)}
           />
+          </>
         )}
       </div>
     </div>

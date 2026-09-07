@@ -659,7 +659,10 @@ Be specific: mention actual shared concepts. Do not say "both are about X".`
       if (!vector && content) {
         try {
           const model = genAI.getGenerativeModel({ model: MODELS.DEFAULT_EMBEDDING })
-          const result = await model.embedContent({ content: { role: 'user', parts: [{ text: content }] } })
+          const result = await model.embedContent({
+            content: { role: 'user', parts: [{ text: content }] },
+            outputDimensionality: MODELS.DEFAULT_EMBEDDING_DIMS,
+          } as Parameters<typeof model.embedContent>[0])
           vector = result.embedding.values
         } catch (embedError) {
           console.error('[connections] Embedding generation failed:', embedError)

@@ -13,6 +13,7 @@ const supabase = getSupabaseClient()
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
 
 export interface BedtimePrompt {
+  id?: string // Set once the prompt is stored — needed to rate it or mark a breakthrough
   prompt: string
   type: 'connection' | 'divergent' | 'revisit' | 'transform'
   relatedIds: string[] // Memory/project/article IDs that inspired this
@@ -192,9 +193,7 @@ export async function generateBedtimePrompts(userId: string): Promise<BedtimePro
   )
 
   // 5. Store prompts for later viewing
-  await storePrompts(userId, prompts)
-
-  return prompts
+  return storePrompts(userId, prompts)
 }
 
 async function getCapabilities(userId: string) {
@@ -473,14 +472,14 @@ Select strategies based on the inputs to generate 3-4 prompts.
 **OUTPUT INSTRUCTIONS:**
 - Generate 3-4 distinct prompts using different strategies.
 - Keep prompts clear, conversational, and grounded.
-- **context**: A brief, evocative seed thought (1-2 sentences) shown BEFORE drifting to prime the subconscious. This sets the scene — a mood, a tension, a frame to hold loosely as the user falls asleep or takes a break.
+- **context**: One concrete detail from what's above — a real project, article or thought — held loosely before drifting off. Not a mood-scape.
 - **prompt**: The specific question or insight shown AFTER waking from the drift. This should be sharp and actionable — the "aha" moment.
-- **Metaphor**: Provide a simple, concrete visual metaphor (optional).
+- **metaphor**: A short, concrete image (optional), tied to something real in the user's context above — not generic nature imagery. If nothing concrete fits, leave it out.
+  BAD: "Footprints left in fresh snow." "Waves returning to the shore." "A seed waiting to grow."
+  GOOD: "The Logic Pro trial clock, still running." "The half-built shelf still leaning against the wall."
 - **Type**: Must be one of: 'connection', 'divergent', 'revisit', 'transform'.
 
 ${PLAIN_ENGLISH_RULES}
-BAD: "Reflect on how the essence of your creative journey leverages constraint."
-GOOD: "The Logic Pro trial expires Friday. Which song gets the 90 minutes?"
 
 Prompt type distribution preference (higher = generate more of this type):
 ${Object.entries(typeDistribution || { connection: 0.25, divergent: 0.25, revisit: 0.25, transform: 0.25 }).map(([type, score]) => `- ${type}: ${(score * 100).toFixed(0)}%`).join('\n')}
@@ -513,9 +512,29 @@ Return JSON array:
   }
 }
 
-async function storePrompts(_userId: string, _prompts: BedtimePrompt[]) {
-  // Placeholder
-  return
+async function storePrompts(userId: string, prompts: BedtimePrompt[]): Promise<BedtimePrompt[]> {
+  if (prompts.length === 0) return prompts
+
+  const { data, error } = await supabase
+    .from('bedtime_prompts')
+    .insert(prompts.map(p => ({
+      user_id: userId,
+      prompt: p.prompt,
+      type: p.type,
+      related_ids: p.relatedIds,
+      metaphor: p.metaphor ?? null,
+      format: p.format ?? null,
+    })))
+    .select('id')
+
+  if (error) {
+    console.error('[Bedtime] Failed to store prompts:', error)
+    return prompts
+  }
+
+  // Rating and "this led to a breakthrough" both key off the stored row's
+  // id, so a prompt the client can't persist an id for can't be rated.
+  return prompts.map((p, i) => ({ ...p, id: data?.[i]?.id }))
 }
 
 async function getPromptPerformance(_userId: string) {

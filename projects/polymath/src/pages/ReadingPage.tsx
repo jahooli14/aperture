@@ -58,7 +58,7 @@ function useArticleListPath() {
 export function ReadingPage() {
   const navigate = useNavigate()
   const location = useLocation()
-  const { articles, loading, fetchArticles, currentFilter, setFilter, saveArticle, updateArticle, updateArticleStatus, deleteArticle } = useReadingStore()
+  const { articles, loading, fetchArticles, fetchShelf, currentFilter, setFilter, saveArticle, updateArticle, updateArticleStatus, deleteArticle } = useReadingStore()
   const articleListPath = useArticleListPath()
 
   // Sync processing articles with store deletions
@@ -659,6 +659,13 @@ export function ReadingPage() {
   useEffect(() => {
     setVisibleCount(ARTICLES_PER_PAGE)
   }, [activeTab])
+
+  // The kept and archived shelves live outside the default list's recency
+  // window, so they have to be asked for by name when you open them.
+  useEffect(() => {
+    if (activeTab === 'good') fetchShelf('good')
+    if (activeTab === 'archived') fetchShelf('archived')
+  }, [activeTab, fetchShelf])
 
   // Intersection observer to load more articles as user scrolls
   useEffect(() => {

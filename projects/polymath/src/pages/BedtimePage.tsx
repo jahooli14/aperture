@@ -7,9 +7,8 @@
 import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Link, useNavigate } from 'react-router-dom'
-import { Moon, Eye, EyeOff, RefreshCw, Loader2, Star, Maximize2, Link2, Search, Zap, StarIcon, Wind, WifiOff } from 'lucide-react'
+import { Moon, Eye, EyeOff, RefreshCw, Loader2, Star, Maximize2, Link2, Search, Zap, Wind, WifiOff } from 'lucide-react'
 import { useToast } from '../components/ui/toast'
-import { SubtleBackground } from '../components/SubtleBackground'
 import { ZenMode } from '../components/bedtime/ZenMode'
 import { DriftMode } from '../components/bedtime/DriftMode'
 import { readingDb } from '../lib/db'
@@ -248,58 +247,14 @@ export function BedtimePage() {
 
   return (
     <motion.div
-      className="min-h-screen relative overflow-hidden"
+      className="min-h-screen relative overflow-hidden night-wash page-bottom"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.3 }}
     >
-      {/* Deep night wash — bedtime page should *look* like night.
-          Indigo gradient, no daytime cyan orbs. Replaces SubtleBackground. */}
-      <div
-        aria-hidden
-        className="fixed inset-0 pointer-events-none -z-10"
-        style={{
-          background:
-            'radial-gradient(ellipse 100% 60% at 50% 0%, rgba(56, 28, 135, 0.32), transparent 60%), radial-gradient(ellipse 80% 50% at 70% 100%, rgba(15, 24, 41, 0.6), transparent 70%), linear-gradient(180deg, #0a0820 0%, #0a0e18 100%)',
-        }}
-      />
-
-      {/* Fixed Header — softer, less daylight */}
-      <div
-        className="fixed top-0 left-0 right-0 z-40 backdrop-blur-md"
-        style={{
-          backgroundColor: 'rgba(10, 8, 32, 0.7)',
-          paddingTop: 'env(safe-area-inset-top)',
-          borderBottom: '1px solid rgba(255,255,255,0.04)'
-        }}
-      >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2.5 min-w-0 flex-1">
-              <Moon className="h-5 w-5 sm:h-6 sm:w-6 flex-shrink-0 opacity-80" style={{ color: '#c7b8ff' }} />
-              <h1
-                className="truncate"
-                style={{
-                  fontFamily: 'var(--brand-font-serif)',
-                  fontWeight: 500,
-                  fontSize: '1.125rem',
-                  letterSpacing: '-0.018em',
-                  color: 'rgba(255, 255, 255, 0.92)',
-                }}
-              >
-                Bedtime
-              </h1>
-            </div>
-            <button onClick={() => navigate('/search')} aria-label="Search" className="h-11 w-11 flex items-center justify-center rounded-full hover:bg-white/[0.06] transition-colors flex-shrink-0" style={{ border: '1px solid rgba(255,255,255,0.06)' }}>
-              <Search className="h-4 w-4 opacity-70" />
-            </button>
-          </div>
-        </div>
-      </div>
-
       {/* Main Content */}
-      <div className="pb-24 px-4 relative" style={{ paddingTop: 'calc(6rem + env(safe-area-inset-top))' }}>
+      <div className="px-4 relative">
         {/* Starfield — twinkling pinpricks of light */}
         <div className="fixed inset-0 pointer-events-none opacity-50">
           {[
@@ -335,30 +290,26 @@ export function BedtimePage() {
           transition={{ duration: 0.85, ease: [0.22, 1, 0.36, 1] }}
           className="max-w-2xl mx-auto mb-8 relative z-10"
         >
-          <div className="mb-5">
-            <h2
-              style={{
-                fontFamily: 'var(--brand-font-serif)',
-                fontWeight: 500,
-                fontSize: 'clamp(2rem, 5.5vw, 2.5rem)',
-                letterSpacing: '-0.022em',
-                lineHeight: 1.1,
-                color: 'rgba(255, 255, 255, 0.95)',
-              }}
-            >
-              Thoughts before bed.
-            </h2>
-            <p
-              className="mt-3 italic text-base"
-              style={{
-                fontFamily: 'var(--brand-font-serif)',
-                color: 'rgba(199, 184, 255, 0.75)',
-                fontWeight: 400,
-              }}
-            >
-              Let your mind wander into tomorrow's inspiration.
-            </p>
-          </div>
+          <header className="page-masthead">
+            <div className="page-masthead-text">
+              <h1 className="page-hero">Thoughts before bed.</h1>
+              <p
+                className="mt-2 italic text-base"
+                style={{
+                  fontFamily: 'var(--brand-font-serif)',
+                  color: 'rgba(199, 184, 255, 0.75)',
+                  fontWeight: 400,
+                }}
+              >
+                Let your mind wander into tomorrow's inspiration.
+              </p>
+            </div>
+            <div className="page-masthead-actions">
+              <button onClick={() => navigate('/search')} aria-label="Search everything" title="Search everything" className="masthead-action press-spring">
+                <Search className="h-5 w-5" />
+              </button>
+            </div>
+          </header>
 
           {/* Time indicator */}
           <div className="glass-card-subtle rounded-xl p-3 sm:p-4 flex flex-wrap items-center justify-between gap-3">
@@ -380,8 +331,7 @@ export function BedtimePage() {
                 <>
                   <button
                     onClick={() => setDriftModeOpen(true)}
-                    className="min-h-[44px] px-3 rounded-lg transition-all glass-card-subtle hover:bg-[rgba(255,255,255,0.1)] flex items-center gap-1.5"
-                    style={{ border: '1px solid rgba(255, 255, 255, 0.1)' }}
+                    className="glass-button press-spring"
                     title="Drift Mode"
                   >
                     <Wind className="h-4 w-4" style={{ color: "var(--brand-primary)" }} />
@@ -389,8 +339,7 @@ export function BedtimePage() {
                   </button>
                   <button
                     onClick={() => setZenModeOpen(true)}
-                    className="min-h-[44px] px-3 rounded-lg transition-all glass-card-subtle hover:bg-[rgba(255,255,255,0.1)] flex items-center gap-1.5"
-                    style={{ border: '1px solid rgba(255, 255, 255, 0.1)' }}
+                    className="glass-button press-spring"
                     title="Zen Mode"
                   >
                     <Maximize2 className="h-4 w-4" style={{ color: "var(--brand-primary)" }} />
@@ -401,8 +350,8 @@ export function BedtimePage() {
               <button
                 onClick={generateNew}
                 disabled={generating}
-                className="h-11 w-11 flex items-center justify-center rounded-lg transition-all glass-card-subtle hover:bg-[rgba(255,255,255,0.1)]"
-                style={{ border: '1px solid rgba(255, 255, 255, 0.1)' }}
+                className="glass-button press-spring"
+                style={{ padding: '0.625rem', minHeight: '44px', minWidth: '44px' }}
                 title="Refresh prompts"
               >
                 {generating ? (
@@ -418,8 +367,8 @@ export function BedtimePage() {
           <div className="mt-2 flex justify-end">
             <Link
               to="/memories"
-              className="inline-flex items-center gap-1 text-[10px] uppercase tracking-[0.15em] transition-opacity hover:opacity-100"
-              style={{ color: 'rgba(var(--brand-primary-rgb),0.55)', opacity: 0.75 }}
+              className="meta-caps transition-opacity hover:opacity-100"
+              style={{ opacity: 0.75, gap: '4px', display: 'inline-flex', alignItems: 'center' }}
             >
               <Wind className="h-3 w-3" />
               drift mode
@@ -453,21 +402,9 @@ export function BedtimePage() {
                       ease: "easeOut",
                       scale: { duration: 0.2 }
                     }}
-                    className="glass-card p-4 sm:p-6 relative overflow-hidden group cursor-pointer"
-                    style={{
-                      border: `2px solid ${getTypeColor(prompt.type)}40`,
-                      opacity: isViewed ? 0.6 : 1,
-                      boxShadow: `0 10px 40px ${getTypeColor(prompt.type)}15`
-                    }}
+                    className="glass-card glass-card-hover p-4 sm:p-6 relative overflow-hidden group cursor-pointer"
+                    style={{ opacity: isViewed ? 0.6 : 1 }}
                   >
-                    {/* Background glow - stronger on hover */}
-                    <div
-                      className="absolute inset-0 opacity-20 transition-opacity duration-700"
-                      style={{
-                        background: `radial-gradient(circle at 50% 50%, ${getTypeColor(prompt.type)}20, transparent 70%)`
-                      }}
-                    />
-
                     {/* Content */}
                     <div className="relative z-10">
                       {/* Type badge */}
@@ -585,30 +522,6 @@ export function BedtimePage() {
           </div>
         )}
 
-        <div className="relative z-10 max-w-2xl mx-auto px-6 pt-12 pb-24 text-center">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, ease: "easeOut" }}
-          >
-            <div className="inline-flex items-center justify-center p-3 mb-6 rounded-full bg-[var(--glass-surface)] backdrop-blur-xl border border-[var(--glass-surface-hover)] shadow-2xl">
-              <Moon className="w-8 h-8 text-brand-primary" />
-            </div>
-
-            <h1 className="text-4xl md:text-5xl font-serif text-transparent bg-clip-text bg-gradient-to-b from-brand-primary via-brand-primary to-brand-primary mb-6 tracking-tight drop-shadow-[0_0_15px_rgba(var(--brand-primary-rgb),0.3)]">
-              Bedtime Ideas
-            </h1>
-
-            <p className="text-lg md:text-xl text-brand-primary/80 leading-relaxed font-light max-w-lg mx-auto mb-8">
-              Gentle prompts generated from your day's activity to <span className="text-brand-primary font-medium">prime your subconscious</span> for sleep.
-              <br />
-              <span className="text-sm text-brand-primary/60 mt-2 block">
-                Insights often arrive in the morning.
-              </span>
-            </p>
-          </motion.div>
-        </div>
-
         {/* Empty state */}
         {!loading && prompts.length === 0 && (
           <motion.div
@@ -669,11 +582,8 @@ export function BedtimePage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: showWelcome ? 1 : 0, y: showWelcome ? 0 : 20 }}
           transition={{ delay: 1, duration: 0.8 }}
-          className="max-w-2xl mx-auto mt-12 p-6 rounded-xl glass-card-subtle text-center relative z-10 border-2"
-          style={{
-            borderColor: 'rgba(var(--brand-primary-rgb), 0.2)',
-            background: 'linear-gradient(135deg, rgba(var(--brand-primary-rgb), 0.05), rgba(var(--brand-primary-rgb), 0.05))'
-          }}
+          className="max-w-2xl mx-auto mt-12 p-6 rounded-xl glass-card-subtle text-center relative z-10"
+          style={{ borderColor: 'rgba(var(--brand-primary-rgb), 0.2)' }}
         >
           <p className="text-sm leading-relaxed" style={{ color: "var(--brand-text-secondary)" }}>
             <strong className="premium-text-platinum">Reflection ritual:</strong> Quiet prompts for the end of the day. Let them sit overnight — the good answers usually arrive in the morning. Zen Mode shows them one at a time.

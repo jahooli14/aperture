@@ -326,7 +326,17 @@ function ReaskSlot({ suggestion, onResolved }: { suggestion: ReaskSuggestion; on
   const act = async (accept: boolean) => {
     setBusy(true)
     try {
-      if (accept) await declareLive(suggestion.project_id)
+      if (accept) {
+        await declareLive(suggestion.project_id)
+      } else {
+        // Recorded against the project so the answer survives this open —
+        // and this device.
+        await fetch('/api/utilities?resource=live-reask', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ project_id: suggestion.project_id }),
+        }).catch(() => {})
+      }
     } finally {
       setBusy(false)
       onResolved()
@@ -403,6 +413,8 @@ export function AttentionSlot() {
         }
       }
 
+      // No client-side timer: the server drops a project you've already
+      // answered for, so a suggestion arriving here is one you haven't seen.
       const reaskResult = await getJson<{ suggestion: ReaskSuggestion | null }>('/api/utilities?resource=live-reask')
       if (cancelled) return
       if (reaskResult?.suggestion) {
