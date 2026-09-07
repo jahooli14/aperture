@@ -175,35 +175,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         console.error('[cron/jobs/daily] Bedtime prompts failed:', error)
       }
 
-      // 3b. Generate Power Hour Plan (Pre-calculation for instant load)
-      try {
-        const { generatePowerHourPlan } = await import('../_lib/power-hour-generator.js')
-        console.log('[cron/jobs/daily] Generating Power Hour plan...')
-        const tasks = await generatePowerHourPlan(userId)
-
-        if (tasks && tasks.length > 0) {
-          const { error: insertError } = await supabase
-            .from('daily_power_hour')
-            .insert({
-              user_id: userId,
-              tasks: tasks,
-              created_at: new Date().toISOString()
-            })
-
-          if (insertError) throw insertError
-
-          results.tasks.power_hour = { success: true, count: tasks.length }
-          console.log(`[cron/jobs/daily] Saved Power Hour plan with ${tasks.length} tasks`)
-        } else {
-          results.tasks.power_hour = { success: true, count: 0, message: 'No tasks generated' }
-        }
-      } catch (error) {
-        console.error('[cron/jobs/daily] Power Hour generation failed:', error)
-        results.tasks.power_hour = {
-          success: false,
-          error: error instanceof Error ? error.message : 'Unknown error'
-        }
-      }
+      // 3b. was "Generate Power Hour Plan (pre-calculation for instant
+      // load)" -- a nightly Gemini call per user writing `daily_power_hour`,
+      // a table read only by power-hour-cache.ts, which was read only by
+      // /api/power-hour, which nothing in the app called any more. The
+      // Power Hour overlay it served was replaced by the session contract
+      // (SPEC.md). Removed with the rest of that subsystem.
 
       // 4. Send Bedtime Push Notifications (if enabled).
       // Gate only on VAPID config — the daily job is itself scheduled for

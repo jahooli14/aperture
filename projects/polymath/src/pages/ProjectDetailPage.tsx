@@ -204,22 +204,6 @@ export function ProjectDetailPage() {
     setTimeout(() => setFlashTarget(prev => (prev === kind ? null : prev)), 1600)
   }, [])
 
-  // Listen for AI enrichment completion to refresh tasks
-  useEffect(() => {
-    const handleEnriched = (e: CustomEvent<{ projectId: string }>) => {
-      if (e.detail.projectId === id) {
-        console.log('[ProjectDetailPage] AI enrichment completed, refreshing...')
-        loadProjectDetails()
-        addToast({
-          title: 'New task suggestions',
-          description: 'Added below — accept or skip each one.',
-          variant: 'default',
-        })
-      }
-    }
-    window.addEventListener('projectEnriched', handleEnriched as EventListener)
-    return () => window.removeEventListener('projectEnriched', handleEnriched as EventListener)
-  }, [id])
   const [editingTitle, setEditingTitle] = useState(false)
   const [editingGoal, setEditingGoal] = useState(false)
   const [tempTitle, setTempTitle] = useState('')

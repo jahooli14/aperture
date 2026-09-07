@@ -28,10 +28,6 @@ vi.mock('./offlineQueue', () => ({
   }),
 }))
 
-vi.mock('./aiEnrichmentManager', () => ({
-  triggerImmediateEnrichment: vi.fn(),
-}))
-
 // ── Controllable supabase chainable stub ──────────────────────────────────────
 // Records terminal .eq() filters so we can assert which id an update targeted.
 type Result = { data?: any; error?: any }

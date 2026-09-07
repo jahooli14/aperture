@@ -18,7 +18,6 @@ import { queueOperation } from '../lib/offlineQueue'
 import { useHomeAnswerStore } from './useHomeAnswerStore'
 import { isActiveShaped, recentExcluding, resolveFocusProjectId, warmRow, queueRow } from './focusProjectOps'
 import { useOfflineStore } from './useOfflineStore'
-import { scheduleAIEnrichment } from '../lib/aiEnrichmentManager'
 
 // The `api` client's fetchWithTimeout rethrows a raw TypeError for a genuine
 // connectivity failure, and wraps its own abort-timeout as ApiError(408) —
@@ -399,26 +398,6 @@ export const useProjectStore = create<ProjectState>()(
           // But strictly we should update with server response to get generated fields.
           // For speed, we'll skip re-fetching the whole list.
 
-          // Schedule AI enrichment if tasks OR context were touched (debounced 1 min)
-          const hasTaskUpdates = !!data.metadata?.tasks
-          const hasContextUpdates = !!data.description || !!data.title || !!data.metadata?.end_goal || !!data.metadata?.motivation
-
-          if (hasTaskUpdates || hasContextUpdates) {
-            const project = get().allProjects.find(p => p.id === id)
-            const tasks = data.metadata?.tasks || project?.metadata?.tasks || []
-            const currentTaskCount = tasks.length
-
-            let hasNewOrCompletedTasks = false
-            if (hasTaskUpdates) {
-              const hasCompletedTasks = tasks.some((t: { done?: boolean; completed_at?: string }) =>
-                t.done || t.completed_at
-              )
-              const previousTaskCount = project?.metadata?.tasks?.length || 0
-              hasNewOrCompletedTasks = currentTaskCount !== previousTaskCount || hasCompletedTasks
-            }
-
-            scheduleAIEnrichment(id, currentTaskCount, hasNewOrCompletedTasks || hasContextUpdates)
-          }
         } catch (error) {
           // Network failure (not a real server rejection) — queue instead
           // of rolling back the edit the user just made.
