@@ -6,6 +6,28 @@ export type ArticleStatus = 'unread' | 'reading' | 'archived'
 
 export type HighlightColor = 'yellow' | 'blue' | 'green' | 'red'
 
+/**
+ * The end-of-article verdict. This is the ONLY thing that lets an article
+ * into the corpus — 'good' means it can shape project ideas, 'not_for_me'
+ * means it never will, and null means the question hasn't been answered.
+ */
+export type ArticleResonance = 'good' | 'not_for_me'
+
+/** Three bullets, cached on the row so the call happens once per article. */
+export interface ArticleGist {
+  bullets: string[]
+  topics: string[]
+  generated_at: string
+  model?: string
+}
+
+export interface ArticleMetadata {
+  gist?: ArticleGist
+  /** Set when the article was too short to be worth a gist. Stops retries. */
+  gist_skipped_at?: string
+  [key: string]: unknown
+}
+
 export interface Article {
   id: string
   user_id: string
@@ -28,6 +50,10 @@ export interface Article {
   notes: string | null
   processed?: boolean // Whether content extraction is complete
   is_rotting?: boolean // Whether the article has been in the queue too long
+  resonance?: ArticleResonance | null
+  resonance_at?: string | null
+  themes?: string[] | null
+  metadata?: ArticleMetadata | null
 }
 
 export interface ArticleHighlight {
@@ -55,4 +81,10 @@ export interface UpdateArticleRequest {
   id: string
   status?: ArticleStatus
   tags?: string[]
+}
+
+export interface SetResonanceRequest {
+  id: string
+  /** null clears the verdict — that's what Undo sends. */
+  resonance: ArticleResonance | null
 }

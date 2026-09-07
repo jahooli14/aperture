@@ -13,6 +13,7 @@ import { batchGenerateEmbeddings, cosineSimilarity } from './gemini-embeddings.j
 import { MODELS } from './models.js'
 import { auditCandidate } from './intersection-critic.js'
 import { PLAIN_ENGLISH_RULES } from './plain-english.js'
+import { selectCorpusArticles } from './reading-corpus.js'
 
 const logger = {
   info: (objOrMsg: any, msg?: string) => console.log(msg || objOrMsg, typeof objOrMsg === 'object' && msg ? objOrMsg : ''),
@@ -133,17 +134,20 @@ async function loadRichMemories(userId: string): Promise<RichMemory[]> {
 }
 
 async function loadRichArticles(userId: string): Promise<RichArticle[]> {
+  // Only what the user vouched for at the end of the article, plus legacy
+  // hand-saves (see reading-corpus.ts). Unread feed items say nothing.
   const { data, error } = await supabase
     .from('reading_queue')
-    .select('id, title, excerpt, themes, entities, embedding')
+    .select('id, title, excerpt, themes, entities, tags, resonance, embedding')
     .eq('user_id', userId)
+    .or('resonance.is.null,resonance.neq.not_for_me')
     .order('created_at', { ascending: false })
 
   if (error) {
     logger.error({ error }, 'Failed to load articles')
     return []
   }
-  return (data || []).map(a => ({
+  return selectCorpusArticles(data || []).map(a => ({
     id: a.id,
     title: a.title || '',
     excerpt: a.excerpt || '',

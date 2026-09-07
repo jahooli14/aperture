@@ -55,7 +55,6 @@ export function FloatingNav() {
   const { user } = useAuthContext()
 
   const location = useLocation()
-  const [isHidden, setIsHidden] = React.useState(false)
 
   const allMemories = useMemoryStore((s: { memories: Memory[] }) => s.memories)
   const hasRecentMemories = allMemories.some((m: Memory) => {
@@ -66,29 +65,15 @@ export function FloatingNav() {
     return mTime > oneDayAgo
   })
 
-  // Only allow hiding on Reader page
+  // The reader is the one immersive route. The nav and the voice FAB both
+  // go away for as long as you're in an article — two floating buttons
+  // parked over the last paragraph is what made long pieces unreadable on
+  // a phone. The reader has its own way back: a button, an edge swipe and
+  // Escape. Derived from the path rather than an event, so there's no
+  // ordering race between this component mounting and the page's.
   const isReaderPage = location.pathname.startsWith('/reading/') && location.pathname !== '/reading'
-  // Explicitly ensure we never hide on memories page
-  const isMemoriesPage = location.pathname === '/memories' || location.pathname.startsWith('/memories')
 
-  const shouldHide = (isReaderPage && isHidden) && !isMemoriesPage
-
-  // Listen for toggle-nav events from ReaderPage
-  React.useEffect(() => {
-    const handleToggle = (e: CustomEvent) => {
-      // Only respect toggle events if we're actually on the reader page
-      if (location.pathname.startsWith('/reading/')) {
-        setIsHidden(e.detail.hidden)
-      }
-    }
-    window.addEventListener('toggle-nav', handleToggle as EventListener)
-    return () => window.removeEventListener('toggle-nav', handleToggle as EventListener)
-  }, [location.pathname])
-
-  // Reset visibility on route change (e.g. leaving Reader page)
-  React.useEffect(() => {
-    setIsHidden(false)
-  }, [location.pathname])
+  const shouldHide = isReaderPage
 
   // Listen for voice captures queued offline (from useMediaRecorderVoice)
   React.useEffect(() => {

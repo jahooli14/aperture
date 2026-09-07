@@ -15,6 +15,7 @@ import { EditArticleDialog } from './EditArticleDialog'
 import { ArticleConnectionsDialog } from './ArticleConnectionsDialog'
 import { useOfflineArticle } from '../../hooks/useOfflineArticle'
 import { Button } from '../ui/button'
+import { ResonanceBadge } from './ArticleVerdict'
 
 interface ArticleCardProps {
   article: Article & { is_rotting?: boolean }
@@ -209,6 +210,14 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
             )}
             {is_rotting && (
               <span className="text-[10px] px-2 py-0.5 rounded-lg font-black uppercase tracking-wide ml-2 align-middle" style={{ background: 'rgba(239,68,68,0.18)', color: "var(--brand-text-secondary)" }}>Rotting</span>
+            )}
+            {/* The end-of-article verdict, visible from the list — this is
+                what decides whether the piece counts towards project ideas,
+                so it shouldn't only exist inside the reader. */}
+            {article.resonance && (
+              <span className="ml-2 align-middle inline-block">
+                <ResonanceBadge resonance={article.resonance} />
+              </span>
             )}
             <div className="text-xs truncate mt-1 text-brand-text-muted">
               {article.source || new URL(article.url).hostname.replace('www.', '')}
