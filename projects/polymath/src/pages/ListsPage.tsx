@@ -265,7 +265,7 @@ function ListsPageInner() {
                             aria-label="Done reordering"
                             title="Done reordering"
                             className="masthead-action press-spring"
-                            style={{ border: '1px solid rgba(125,211,252,0.5)', background: 'rgba(125,211,252,0.15)' }}
+                            style={{ border: '1px solid rgba(var(--brand-primary-rgb),0.5)', background: 'rgba(var(--brand-primary-rgb),0.15)' }}
                         >
                             <Check className="h-5 w-5" />
                         </button>
@@ -310,7 +310,7 @@ function ListsPageInner() {
                     {/* Hero empty state */}
                     <div className="text-center py-10 px-4 mb-10">
                         <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-brand-primary/10 mb-6"
-                            style={{ boxShadow: 'inset 0 0 0 1px rgba(56,189,248,0.15)' }}>
+                            style={{ boxShadow: 'inset 0 0 0 1px rgba(var(--brand-primary-rgb),0.15)' }}>
                             <ListOrdered className="h-8 w-8 text-brand-primary" />
                         </div>
                         <h3 className="text-xl font-black uppercase tracking-tight text-[var(--brand-text-primary)] mb-2">Add a list</h3>

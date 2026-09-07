@@ -335,9 +335,9 @@ export function ProjectCard({ project, prominent = false }: { project: Project, 
                 {/* Header */}
                 <div className="px-5 pt-5 pb-4 flex items-start justify-between gap-3" style={{ borderBottom: `1px solid rgba(${theme.rgb}, 0.15)` }}>
                   <div>
-                    {project.type && (
-                      <span className="text-[9px] font-black uppercase tracking-[0.3em] opacity-50" style={{ color: theme.text }}>
-                        {project.type}
+                    {((project.metadata?.tags as string[] | undefined) ?? []).slice(0, 3).length > 0 && (
+                      <span className="text-[9px] font-semibold uppercase tracking-[0.3em] opacity-50" style={{ color: theme.text }}>
+                        {((project.metadata?.tags as string[]).slice(0, 3)).join(' · ')}
                       </span>
                     )}
                     <h3 className="section-title mt-1">{project.title}</h3>
@@ -352,10 +352,10 @@ export function ProjectCard({ project, prominent = false }: { project: Project, 
                 </div>
 
                 {/* Actions */}
-                <div className="p-4 space-y-3">
+                <div className="p-4 space-y-1.5">
                   <button
                     onClick={handleTogglePriority}
-                    className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all text-left"
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-left min-h-[48px]"
                     style={{
                       background: project.is_priority ? 'rgba(var(--brand-primary-rgb),0.12)' : 'var(--glass-surface)',
                       border: project.is_priority ? '1.5px solid rgba(var(--brand-primary-rgb),0.3)' : '1.5px solid rgba(255,255,255,0.06)',
@@ -364,18 +364,15 @@ export function ProjectCard({ project, prominent = false }: { project: Project, 
                   >
                     <Star className={`h-5 w-5 flex-shrink-0 ${project.is_priority ? 'fill-current' : ''}`} />
                     <div>
-                      <p className="text-sm font-bold">
-                        {project.is_priority ? 'Remove Priority' : 'Set as Priority'}
-                      </p>
-                      <p className="text-[11px] opacity-60 mt-0.5">
-                        {project.is_priority ? 'Clear this project\'s focus status' : 'Pin this project as your main focus'}
+                      <p className="text-sm font-medium">
+                        {project.is_priority ? 'Remove priority' : 'Make it the priority'}
                       </p>
                     </div>
                   </button>
 
                   <button
                     onClick={handleToggleUpNext}
-                    className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all text-left"
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-left min-h-[48px]"
                     style={{
                       background: project.up_next_position != null ? `rgba(${theme.rgb}, 0.12)` : 'var(--glass-surface)',
                       border: project.up_next_position != null ? `1.5px solid rgba(${theme.rgb}, 0.3)` : '1.5px solid rgba(255,255,255,0.06)',
@@ -384,22 +381,17 @@ export function ProjectCard({ project, prominent = false }: { project: Project, 
                   >
                     <ListOrdered className="h-5 w-5 flex-shrink-0" />
                     <div>
-                      <p className="text-sm font-bold">
+                      <p className="text-sm font-medium">
                         {project.up_next_position != null
-                          ? `Remove from Up Next (#${project.up_next_position})`
-                          : 'Add to Up Next'}
-                      </p>
-                      <p className="text-[11px] opacity-60 mt-0.5">
-                        {project.up_next_position != null
-                          ? 'Drop this project out of the queue'
-                          : 'Queue this project after the current priority'}
+                          ? `Remove from up next (#${project.up_next_position})`
+                          : 'Add to up next'}
                       </p>
                     </div>
                   </button>
 
                   <button
                     onClick={handleViewInsights}
-                    className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all text-left"
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-left min-h-[48px]"
                     style={{
                       background: 'var(--glass-surface)',
                       border: '1.5px solid rgba(255,255,255,0.06)',
@@ -408,14 +400,13 @@ export function ProjectCard({ project, prominent = false }: { project: Project, 
                   >
                     <Zap className="h-5 w-5 flex-shrink-0" style={{ color: theme.text }} />
                     <div>
-                      <p className="text-sm font-bold">View Insights</p>
-                      <p className="text-[11px] opacity-60 mt-0.5">See related memories and context</p>
+                      <p className="text-sm font-medium">What connects here</p>
                     </div>
                   </button>
 
                   <button
                     onClick={handleMarkComplete}
-                    className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all text-left"
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-left min-h-[48px]"
                     style={{
                       background: 'var(--glass-surface)',
                       border: '1.5px solid rgba(255,255,255,0.06)',
@@ -424,14 +415,13 @@ export function ProjectCard({ project, prominent = false }: { project: Project, 
                   >
                     <CheckCircle className="h-5 w-5 flex-shrink-0" style={{ color: 'rgb(34,197,94)' }} />
                     <div>
-                      <p className="text-sm font-bold">Mark Complete</p>
-                      <p className="text-[11px] opacity-60 mt-0.5">Finish it and celebrate</p>
+                      <p className="text-sm font-medium">Mark it finished</p>
                     </div>
                   </button>
 
                   <button
                     onClick={handleSendToGraveyard}
-                    className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all text-left"
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-left min-h-[48px]"
                     style={{
                       background: 'var(--glass-surface)',
                       border: '1.5px solid rgba(255,255,255,0.06)',
@@ -440,8 +430,7 @@ export function ProjectCard({ project, prominent = false }: { project: Project, 
                   >
                     <Archive className="h-5 w-5 flex-shrink-0" style={{ color: 'rgb(161,161,170)' }} />
                     <div>
-                      <p className="text-sm font-bold">Send to Graveyard</p>
-                      <p className="text-[11px] opacity-60 mt-0.5">Archive this project for now</p>
+                      <p className="text-sm font-medium">Send to the graveyard</p>
                     </div>
                   </button>
 
@@ -480,7 +469,7 @@ export function ProjectCard({ project, prominent = false }: { project: Project, 
                   ) : (
                     <button
                       onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowQuickAddTask(true) }}
-                      className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all text-left"
+                      className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-left min-h-[48px]"
                       style={{
                         background: 'var(--glass-surface)',
                         border: '1.5px solid rgba(255,255,255,0.06)',
@@ -489,22 +478,21 @@ export function ProjectCard({ project, prominent = false }: { project: Project, 
                     >
                       <Plus className="h-5 w-5 flex-shrink-0" style={{ color: theme.text }} />
                       <div>
-                        <p className="text-sm font-bold">Quick Add Task</p>
-                        <p className="text-[11px] opacity-60 mt-0.5">Add an action item right now</p>
+                        <p className="text-sm font-medium">Add a step</p>
                       </div>
                     </button>
                   )}
 
                   <button
                     onClick={handleOpenProject}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl font-black uppercase tracking-widest text-sm transition-all"
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl font-semibold text-sm transition-all"
                     style={{
                       background: `rgba(${theme.rgb}, 0.15)`,
                       border: `1.5px solid rgba(${theme.rgb}, 0.3)`,
                       color: theme.text
                     }}
                   >
-                    Open Project →
+                    Open project →
                   </button>
                 </div>
               </div>

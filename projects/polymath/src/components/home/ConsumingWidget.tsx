@@ -790,6 +790,12 @@ export function ConsumingWidget() {
         {shownActive.map((item, i) => {
           const Icon = LIST_TYPE_ICONS[item.listType] || Box
           const accent = LIST_TYPE_ACCENT[item.listType] || LIST_TYPE_ACCENT.generic
+          // Say which list it's from once per run, not under every row.
+          // Three books on the go printed "Books to read" three times in
+          // a stack of three — the same eleven-pixel line repeated is the
+          // only thing your eye finds when it scans the strip, and it's
+          // the least interesting thing in it.
+          const repeatsList = i > 0 && shownActive[i - 1].listTitle === item.listTitle
           return (
             <Link
               key={item.itemId}
@@ -812,7 +818,9 @@ export function ConsumingWidget() {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-[var(--brand-text-primary)] truncate">{item.itemContent}</p>
-                <p className="text-[11px] text-[var(--brand-text-muted)] truncate mt-0.5">{item.listTitle}</p>
+                {!repeatsList && item.listTitle && (
+                  <p className="text-[11px] text-[var(--brand-text-muted)] truncate mt-0.5">{item.listTitle}</p>
+                )}
               </div>
               <ArrowRight className="h-4 w-4 text-[var(--brand-text-muted)] opacity-40 flex-shrink-0 transition-transform group-hover:translate-x-0.5 group-hover:opacity-70" />
             </Link>

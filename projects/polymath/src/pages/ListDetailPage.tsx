@@ -1734,7 +1734,7 @@ export default function ListDetailPage() {
                                     animate={{ opacity: 1, y: 0 }}
                                     exit={{ opacity: 0, y: 10 }}
                                     className="backdrop-blur-2xl bg-zinc-900/90 rounded-2xl p-4 shadow-2xl"
-                                    style={{ boxShadow: 'inset 0 0 0 1px rgba(56,189,248,0.25), 0 25px 50px rgba(0,0,0,0.5)' }}
+                                    style={{ boxShadow: 'inset 0 0 0 1px rgba(var(--brand-primary-rgb),0.25), 0 25px 50px rgba(0,0,0,0.5)' }}
                                 >
                                     <div className="flex items-center justify-between mb-3">
                                         <span className="text-sm text-brand-primary font-medium">Voice Quick-Add</span>

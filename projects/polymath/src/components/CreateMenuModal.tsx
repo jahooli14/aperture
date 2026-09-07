@@ -9,11 +9,13 @@ interface CreateMenuModalProps {
 
 // All actions share the brand cyan accent — icon + label do the work of
 // distinguishing them. Per design system: cyan-only chrome.
+// The description has to earn its line. "Thought — write down a thought"
+// is the label said twice; these say what the thing is FOR.
 const creationActions = [
-    { id: 'thought', label: 'Thought',   description: 'Write down a thought',  icon: Lightbulb },
-    { id: 'project', label: 'Project',   description: 'Start something new',   icon: Rocket },
-    { id: 'list',    label: 'List Item', description: 'Add to one of your lists', icon: ListPlus },
-    { id: 'article', label: 'Article',   description: 'Save a link to read later', icon: Link },
+    { id: 'thought', label: 'Thought',   description: 'Something you noticed', icon: Lightbulb },
+    { id: 'project', label: 'Project',   description: 'Something you want to make', icon: Rocket },
+    { id: 'list',    label: 'List item', description: 'A book, a film, a place', icon: ListPlus },
+    { id: 'article', label: 'Article',   description: 'A link to read later', icon: Link },
 ] as const
 
 export function CreateMenuModal({ isOpen, onClose, onAction }: CreateMenuModalProps) {
