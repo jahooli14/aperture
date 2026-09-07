@@ -132,7 +132,7 @@ export function FixQueuePage() {
     const draft = item.metadata.fix_draft
 
     // Let the server check requirements (it has live env vars, client doesn't)
-    const resp = await fetch('/api/fix-queue?action=approve', {
+    const resp = await fetch('/api/utilities?action=approve', {
       method: 'POST',
       headers,
       body: JSON.stringify({ item_id: item.id })
@@ -150,7 +150,7 @@ export function FixQueuePage() {
 
   const handleReject = async (item: FixItem) => {
     const headers = await getAuthHeaders()
-    const resp = await fetch('/api/fix-queue?action=reject', {
+    const resp = await fetch('/api/utilities?action=reject', {
       method: 'POST',
       headers,
       body: JSON.stringify({ item_id: item.id })

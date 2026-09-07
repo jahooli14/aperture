@@ -317,6 +317,28 @@ npm run type-check           # polymath, relay (tsc)
 
 Push to `main` → Vercel auto-deploys. Env vars live in the Vercel dashboard, never commit them.
 
+### The serverless-function budget
+
+Vercel's Hobby tier caps a deployment at **12 serverless functions**, and
+every `.ts` file under `projects/polymath/api/` that isn't in `_lib/` is one
+of them. Polymath sat at exactly 12 — the next route added would have
+failed the build.
+
+Currently **10**: `brainstorm`, `connections`, `cron/jobs`, `idea-engine`,
+`lists`, `memories`, `projects`, `push`, `reading`, `utilities`.
+
+So a new endpoint is a **resource on an existing route**, not a new file.
+`utilities.ts` is the pattern: it routes on disjoint `resource` name sets
+(`EXECUTION_SESSIONS_RESOURCES` and friends) plus an `action` set for Fix
+Queue, delegating to a handler in `_lib/`. Put the logic in `_lib/` and add
+a name to a set. Anything under `_lib/` is free — it's bundled, not
+deployed.
+
+Count them before adding a route:
+```bash
+find projects/polymath/api -name '*.ts' -not -path '*/_lib/*' -not -name '*.test.ts' | wc -l
+```
+
 ## Debugging checklist
 
 1. Browser console for frontend errors.
@@ -383,7 +405,7 @@ Voice-capture life annoyances → AI drafts automated fixes → approve → runs
 - Triage: voice notes classified as `annoyance` by Gemini (severity + automatable flag)
 - Drafting: AI generates data-driven fix specs
 - Approval: `/fixes` page in Polymath UI
-- Execution: cron (see table above) hits `/api/fix-queue`
+- Execution: cron would hit `/api/utilities?action=run-fixes` (disabled)
 
 **Fix action types**
 - `send_email` — Reminder/notification via Resend
@@ -392,7 +414,7 @@ Voice-capture life annoyances → AI drafts automated fixes → approve → runs
 - `http_request` — Generic API calls
 
 **Key files** (all under `projects/polymath/`)
-- `api/fix-queue.ts` — Main API (draft-pending, run-fixes, approve, reject, list)
+- `api/_lib/fix-queue/route.ts` — Main API (draft-pending, run-fixes, approve, reject, list), served by `/api/utilities?action=…`. It was its own route until the serverless-function budget below made that too expensive; routed on `action`, which nothing else in utilities.ts uses.
 - `api/_lib/fix-queue/drafter.ts` — AI fix generation
 - `api/_lib/fix-queue/runner.ts` — Fix execution (tests in `runner.test.ts`)
 - `api/_lib/fix-queue/types.ts` — FixDraft, FixAction types

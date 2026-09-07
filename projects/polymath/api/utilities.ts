@@ -52,6 +52,7 @@ import { shapeProjectFromDump } from './_lib/project-shaping.js'
 import { generateTaskSpine, generateFirstCutTasks, toStoredTasks } from './_lib/task-spine.js'
 import { debriefSession, type DebriefOpenTask } from './_lib/debrief-matcher.js'
 import { normalizeTaskOrder } from './_lib/task-order.js'
+import { handleFixQueue } from './_lib/fix-queue/route.js'
 import { reconcileCloseout, parseTicked } from './_lib/session-closeout.js'
 import { judgeFinishLine } from './_lib/finish-line.js'
 import { readCycleState, cycleLabel, rollToNextCycle, lastCycleSteps } from './_lib/project-cycles.js'
@@ -83,6 +84,11 @@ const EXECUTION_PROPOSALS_RESOURCES = new Set([
   'generate-morph', 'drift-decay', 'mine-joints', 'generate-composite',
   'pending', 'accept', 'reject',
 ])
+// Fix Queue, folded in from its own serverless function to stay under
+// Vercel's Hobby cap of 12. Routed on `action`, which nothing else in this
+// file uses, so it can't collide with the `resource` sets above -- note
+// 'reject' means different things to each and never meets.
+const FIX_QUEUE_ACTIONS = new Set(['draft-pending', 'run-fixes', 'approve', 'reject', 'list'])
 
 export const config = {
   // Vercel caps execution at 60s by default. Bumped to 300s for
@@ -99,6 +105,9 @@ export const config = {
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const resource = req.query.resource as string
+
+  const action = req.query.action
+  if (typeof action === 'string' && FIX_QUEUE_ACTIONS.has(action)) return handleFixQueue(req, res)
 
   // Execution rebuild (SPEC.md) — routed by disjoint resource-name sets so
   // none of the checks below cost anything extra for the pre-existing
