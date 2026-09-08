@@ -44,6 +44,7 @@ export function StandingQuestion() {
   const [rerolling, setRerolling] = useState(false)
   const [receipt, setReceipt] = useState<string | null>(null)
   const [note, setNote] = useState<string | null>(null)
+  const [loaded, setLoaded] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -54,6 +55,7 @@ export function StandingQuestion() {
         const data = await res.json() as { spark: StandingQuestionSpark | null }
         if (cancelled) return
         if (isStandingQuestion(data.spark)) setSpark(data.spark)
+        setLoaded(true)
       } catch {
         // Offline — the question simply isn't shown. It'll still be there.
       }
@@ -108,7 +110,37 @@ export function StandingQuestion() {
     }
   }
 
-  if (!spark) return null
+  // Nothing standing. This used to render nothing at all, which hid the one
+  // control that fixes it: questions are baked by a daily cron, so a silent
+  // bake — or a question you just answered — left no question and no way to
+  // ask for one until tomorrow. An empty block with a way in is the whole
+  // difference between a feature that works on demand and one you wait for.
+  if (!spark) {
+    if (!loaded) return null
+    return (
+      <div className="pb-3.5 mb-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.09)' }}>
+        <p
+          className="text-[10px] font-bold uppercase tracking-[0.28em] mb-1.5"
+          style={{ color: 'var(--brand-text-secondary)', opacity: 0.4 }}
+        >
+          to mull
+        </p>
+        <button
+          className="text-[13px] transition-opacity hover:opacity-90 disabled:opacity-40"
+          style={{ color: 'var(--brand-text-secondary)', opacity: 0.6 }}
+          disabled={rerolling}
+          onClick={reroll}
+        >
+          {rerolling ? 'thinking…' : 'give me something to think about'}
+        </button>
+        {note && (
+          <p className="text-[11px] mt-1.5" style={{ color: 'var(--brand-text-secondary)', opacity: 0.45 }}>
+            {note}
+          </p>
+        )}
+      </div>
+    )
+  }
 
   if (receipt) {
     return (
