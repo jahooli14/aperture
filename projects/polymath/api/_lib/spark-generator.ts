@@ -29,7 +29,19 @@ import {
 } from './forgotten.js'
 
 const RECENT_FRAGMENT_LIMIT = 40
-const SPARK_SHELF_LIFE_HOURS = 24
+/**
+ * Four days, not one.
+ *
+ * A spark is a question about a project you're not sitting down to work on,
+ * and the whole value is that it gets to sit — you read it, you don't answer
+ * it, and three days later on a walk the answer turns up. At 24 hours it
+ * expired overnight, so it could only ever be answered on the spot or lost,
+ * which is the opposite of how thinking about a thing in the background
+ * works.
+ */
+const SPARK_SHELF_LIFE_HOURS = 96
+/** A material fact is about a moment ("the trial ends Friday"), so it still
+ *  goes stale on its own schedule rather than sitting. */
 const MATERIAL_FACT_SHELF_LIFE_HOURS = 48
 
 export interface BakedSpark {

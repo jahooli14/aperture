@@ -46,6 +46,7 @@ import { toPortfolioSummaries, buildOpeningLine } from './focusChatOps'
 import { formatRelativeTime, KeepGoingEmpty } from './KeepGoingEmpty'
 import { ProjectIdeasHome } from './ProjectIdeasHome'
 import { FocusChat } from './FocusChat'
+import { StandingQuestion } from './StandingQuestion'
 import { SessionContract, type Phase } from '../session/SessionContract'
 import { WINDOW_PRESETS, useSessionStore } from '../../stores/useSessionStore'
 import { useDifferentThingNudge } from './useDifferentThingNudge'
@@ -481,6 +482,20 @@ export function TodaysAnswerCard({
         className="absolute top-0 left-0 right-0 h-px"
         style={{ background: 'linear-gradient(90deg, transparent, rgba(var(--brand-primary-rgb),0.45), transparent)' }}
       />
+
+      {/* Two halves of one card, always in this order. The top quarter is
+          the thing to think about while you're NOT working; everything
+          below the rule is the session. The order doesn't shuffle by time
+          of day — a card that rearranges itself on a clock can't be learned,
+          and the session is what you came to press either way, so it keeps
+          the weight and the space. Resting state only: during a session
+          there's one thing on screen and it isn't a question about another
+          project. */}
+      {!engaged && (
+        <div onClick={(e) => e.stopPropagation()}>
+          <StandingQuestion />
+        </div>
+      )}
 
       <div className="cursor-pointer" onClick={() => navigate(`/projects/${focusProject!.id}`)}>
         <div className="flex items-start justify-between gap-2 mb-1 mt-1">
