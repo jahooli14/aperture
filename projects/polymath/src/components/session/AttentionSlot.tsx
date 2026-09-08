@@ -451,9 +451,13 @@ export function AttentionSlot() {
         return
       }
 
+      // Only the proposal-shaped spark stays here. The question types moved
+      // to the answer card as the standing question, where they get to sit
+      // for days instead of being one open's interruption — showing them in
+      // both places would just be the same question twice.
       const sparkResult = await getJson<{ spark: Spark | null }>('/api/utilities?resource=today')
       if (cancelled) return
-      if (sparkResult?.spark) {
+      if (sparkResult?.spark && sparkResult.spark.type === 'forgotten') {
         setSpark(sparkResult.spark)
         setKind('spark')
         return

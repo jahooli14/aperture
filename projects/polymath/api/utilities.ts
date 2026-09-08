@@ -2751,6 +2751,22 @@ async function handleExecutionSparks(req: VercelRequest, res: VercelResponse) {
     const userId = getCronUserId(req)
     if (!userId) return res.status(401).json({ error: 'Unauthorized' })
 
+    // A question that's still standing is not replaced by a fresh one. It
+    // now lives for days precisely so it can sit unanswered, and baking over
+    // it every morning would take it away on exactly the day the answer was
+    // due to arrive.
+    const { data: standing } = await supabase
+      .from('sparks')
+      .select('id')
+      .eq('user_id', userId)
+      .is('answered_at', null)
+      .gt('expires_at', new Date().toISOString())
+      .limit(1)
+
+    if (standing && standing.length > 0) {
+      return res.status(200).json({ baked: false, reason: 'question still standing' })
+    }
+
     const { data: historyRows } = await supabase
       .from('sparks')
       .select('type, answered_at')

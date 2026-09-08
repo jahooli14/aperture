@@ -46,6 +46,7 @@ import { toPortfolioSummaries, buildOpeningLine } from './focusChatOps'
 import { formatRelativeTime, KeepGoingEmpty } from './KeepGoingEmpty'
 import { ProjectIdeasHome } from './ProjectIdeasHome'
 import { FocusChat } from './FocusChat'
+import { StandingQuestion } from './StandingQuestion'
 import { SessionContract, type Phase } from '../session/SessionContract'
 import { WINDOW_PRESETS, useSessionStore } from '../../stores/useSessionStore'
 import { useDifferentThingNudge } from './useDifferentThingNudge'
@@ -589,6 +590,16 @@ export function TodaysAnswerCard({
           {windowMinutes == null ? 'Pick a time first' : 'Start session'}
         </button>
       </div>
+
+      {/* The other half of the card: the session is the focused hour, this
+          is the thing to think about while you're not having one. Resting
+          state only — during a session there is exactly one thing on
+          screen, and it isn't a question about a different project. */}
+      {!engaged && (
+        <div onClick={(e) => e.stopPropagation()}>
+          <StandingQuestion />
+        </div>
+      )}
 
       {/* Redirect — stopPropagation so tapping anything in here doesn't
           also fire the card's navigate-to-project click above. */}
