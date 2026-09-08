@@ -483,6 +483,20 @@ export function TodaysAnswerCard({
         style={{ background: 'linear-gradient(90deg, transparent, rgba(var(--brand-primary-rgb),0.45), transparent)' }}
       />
 
+      {/* Two halves of one card, always in this order. The top quarter is
+          the thing to think about while you're NOT working; everything
+          below the rule is the session. The order doesn't shuffle by time
+          of day — a card that rearranges itself on a clock can't be learned,
+          and the session is what you came to press either way, so it keeps
+          the weight and the space. Resting state only: during a session
+          there's one thing on screen and it isn't a question about another
+          project. */}
+      {!engaged && (
+        <div onClick={(e) => e.stopPropagation()}>
+          <StandingQuestion />
+        </div>
+      )}
+
       <div className="cursor-pointer" onClick={() => navigate(`/projects/${focusProject!.id}`)}>
         <div className="flex items-start justify-between gap-2 mb-1 mt-1">
           <h3 className="card-title-lg line-clamp-2 flex-1">{focusProject.title}</h3>
@@ -590,16 +604,6 @@ export function TodaysAnswerCard({
           {windowMinutes == null ? 'Pick a time first' : 'Start session'}
         </button>
       </div>
-
-      {/* The other half of the card: the session is the focused hour, this
-          is the thing to think about while you're not having one. Resting
-          state only — during a session there is exactly one thing on
-          screen, and it isn't a question about a different project. */}
-      {!engaged && (
-        <div onClick={(e) => e.stopPropagation()}>
-          <StandingQuestion />
-        </div>
-      )}
 
       {/* Redirect — stopPropagation so tapping anything in here doesn't
           also fire the card's navigate-to-project click above. */}

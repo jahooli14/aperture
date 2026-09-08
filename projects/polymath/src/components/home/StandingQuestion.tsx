@@ -2,20 +2,16 @@
  * The standing question — the app's diffuse-thinking half.
  *
  * A session is focused time: you sit down, you work, you stop. This is the
- * other mode. It's one question about one project, put in front of you when
- * you open the app and left there for days, so it can be carried around and
+ * other mode. One question about one project, put in front of you when you
+ * open the app and left there for days, so it can be carried around and
  * answered on a walk rather than at a desk. Nothing here is a task and
  * nothing is due.
  *
- * It's the same spark the attention slot used to flash for a single open —
- * promoted to permanent space on the answer card and given a project name,
- * because a question you can't place is one you can't think about.
- *
- * Rules it keeps:
- *  - it never nags: leaving it alone is the normal case, and there's no
- *    badge, count or streak on it;
- *  - it says which project it belongs to, so it can be mulled;
- *  - answering is one voice note, or nothing at all.
+ * It sits at the TOP of the answer card, above the session, and stays small:
+ * a label, a line, and a quiet row of two. It's the thing you read on the way
+ * past, not the thing you act on — the session below it is the action, and
+ * this must never grow big enough to compete with it. Reading it and doing
+ * nothing is the normal outcome.
  */
 
 import { useEffect, useState } from 'react'
@@ -38,11 +34,16 @@ export function isStandingQuestion(spark: { type: string } | null | undefined): 
   return !!spark && !PROPOSAL_TYPES.has(spark.type)
 }
 
-export function StandingQuestion({ onAnswered }: { onAnswered?: () => void }) {
+const quietActionStyle = { color: 'var(--brand-text-secondary)', opacity: 0.55 }
+
+export function StandingQuestion() {
   const [spark, setSpark] = useState<StandingQuestionSpark | null>(null)
+  const [answering, setAnswering] = useState(false)
   const [text, setText] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [rerolling, setRerolling] = useState(false)
   const [receipt, setReceipt] = useState<string | null>(null)
+  const [note, setNote] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -76,9 +77,34 @@ export function StandingQuestion({ onAnswered }: { onAnswered?: () => void }) {
           ? `Saved. It'll be there next time you sit down to ${data.project_title}.`
           : 'Saved.'
       )
-      onAnswered?.()
     } catch {
       setSubmitting(false)
+    }
+  }
+
+  const reroll = async () => {
+    setRerolling(true)
+    setNote(null)
+    try {
+      const res = await fetch('/api/utilities?resource=reroll-spark', { method: 'POST' })
+      const data = await res.json().catch(() => ({})) as {
+        rerolled?: boolean
+        spark?: StandingQuestionSpark
+      }
+      if (data.rerolled && data.spark) {
+        haptic.light()
+        setSpark(data.spark)
+        setAnswering(false)
+        setText('')
+      } else {
+        // Honest about silence rather than pretending to think — and the
+        // question you had is still there.
+        setNote('Nothing else worth asking yet.')
+      }
+    } catch {
+      setNote("Couldn't reach the server.")
+    } finally {
+      setRerolling(false)
     }
   }
 
@@ -86,8 +112,8 @@ export function StandingQuestion({ onAnswered }: { onAnswered?: () => void }) {
 
   if (receipt) {
     return (
-      <div className="mt-5 pt-4" style={{ borderTop: '1px solid rgba(255,255,255,0.09)' }}>
-        <p className="text-[13px]" style={{ color: 'var(--brand-text-secondary)' }}>{receipt}</p>
+      <div className="pb-3 mb-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.09)' }}>
+        <p className="text-[12px]" style={{ color: 'var(--brand-text-secondary)', opacity: 0.7 }}>{receipt}</p>
       </div>
     )
   }
@@ -95,37 +121,78 @@ export function StandingQuestion({ onAnswered }: { onAnswered?: () => void }) {
   const projectTitle = spark.projects?.title ?? null
 
   return (
-    <div className="mt-5 pt-4" style={{ borderTop: '1px solid rgba(255,255,255,0.09)' }}>
+    <div className="pb-3.5 mb-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.09)' }}>
       <p
-        className="text-[10px] uppercase tracking-[0.18em] mb-1.5"
-        style={{ color: 'var(--brand-text-secondary)', opacity: 0.55 }}
+        className="text-[10px] font-bold uppercase tracking-[0.28em] mb-1.5"
+        style={{ color: 'var(--brand-text-secondary)', opacity: 0.4 }}
       >
         {projectTitle ? `to mull · ${projectTitle}` : 'to mull'}
       </p>
 
-      <p className="text-[15px] leading-snug" style={{ color: 'var(--brand-text-primary)', textWrap: 'pretty' }}>
+      <p
+        className="text-[14px] leading-[1.45]"
+        style={{ color: 'var(--brand-text-secondary)', textWrap: 'pretty' }}
+      >
         {spark.text}
       </p>
 
-      {/* No prompt to answer now. The voice box is there if the answer has
-          already arrived; otherwise this is just something to carry. */}
-      <div className="mt-3">
-        <VoiceInput onTranscript={setText} maxDuration={30} />
-      </div>
+      {/* Two quiet words, not two buttons. Answering is opt-in — the voice
+          box only appears once you've got something to say, so the resting
+          state of this whole block is three lines. */}
+      {!answering && (
+        <div className="flex items-center gap-3 mt-2">
+          <button
+            className="text-[12px] transition-opacity hover:opacity-90"
+            style={quietActionStyle}
+            onClick={() => setAnswering(true)}
+          >
+            answer it
+          </button>
+          <span style={{ color: 'var(--brand-text-secondary)', opacity: 0.25 }}>·</span>
+          <button
+            className="text-[12px] transition-opacity hover:opacity-90 disabled:opacity-30"
+            style={quietActionStyle}
+            disabled={rerolling}
+            onClick={reroll}
+          >
+            {rerolling ? 'thinking…' : 'ask me something else'}
+          </button>
+        </div>
+      )}
 
-      {text && (
-        <button
-          className="w-full mt-2 py-2 rounded-lg text-sm font-medium disabled:opacity-50"
-          style={{
-            background: 'rgba(var(--brand-primary-rgb), 0.12)',
-            border: '1px solid rgba(var(--brand-primary-rgb), 0.32)',
-            color: 'rgb(var(--brand-primary-rgb))',
-          }}
-          disabled={submitting}
-          onClick={respond}
-        >
-          {submitting ? 'Saving…' : 'Done'}
-        </button>
+      {note && (
+        <p className="text-[11px] mt-1.5" style={{ color: 'var(--brand-text-secondary)', opacity: 0.45 }}>
+          {note}
+        </p>
+      )}
+
+      {answering && (
+        <div className="mt-2.5">
+          <VoiceInput onTranscript={setText} maxDuration={30} />
+          <div className="flex items-center gap-3 mt-2">
+            {text && (
+              <button
+                className="px-3 py-1.5 rounded-lg text-[12px] font-medium disabled:opacity-50"
+                style={{
+                  background: 'rgba(var(--brand-primary-rgb), 0.12)',
+                  border: '1px solid rgba(var(--brand-primary-rgb), 0.32)',
+                  color: 'rgb(var(--brand-primary-rgb))',
+                }}
+                disabled={submitting}
+                onClick={respond}
+              >
+                {submitting ? 'Saving…' : 'Done'}
+              </button>
+            )}
+            <button
+              className="text-[12px] transition-opacity hover:opacity-90"
+              style={quietActionStyle}
+              onClick={() => { setAnswering(false); setText('') }}
+            >
+              leave it
+            </button>
+          </div>
+        </div>
       )}
     </div>
   )

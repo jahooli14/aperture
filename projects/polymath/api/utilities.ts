@@ -79,7 +79,7 @@ const EXECUTION_SESSIONS_RESOURCES = new Set([
   'start', 'close', 'pending-closeout', 'log-retro', 'declare-live',
   'live-reask', 'different-thing-status', 'harvest', 'mirror', 'book',
 ])
-const EXECUTION_SPARKS_RESOURCES = new Set(['bake', 'today', 'respond', 'dismiss-spark'])
+const EXECUTION_SPARKS_RESOURCES = new Set(['bake', 'today', 'respond', 'dismiss-spark', 'reroll-spark'])
 const EXECUTION_PROPOSALS_RESOURCES = new Set([
   'generate-morph', 'drift-decay', 'mine-joints', 'generate-composite',
   'pending', 'accept', 'reject',
@@ -2831,6 +2831,85 @@ async function handleExecutionSparks(req: VercelRequest, res: VercelResponse) {
     }
 
     return res.status(200).json({ spark })
+  }
+
+  // ─── REROLL ─────────────────────────────────────────────────────────
+  // "Ask me something else." Retires the standing question and generates
+  // another through the same pipeline, so the replacement is grounded in the
+  // corpus exactly as the first one was — this is not a shuffle of canned
+  // text. Retiring by expiry rather than by answering keeps the history
+  // honest: an unanswered question stays unanswered, which is what the type
+  // rotation reads to decide what to ask next (and so what comes back is a
+  // different kind of question, not the same one reworded).
+  if (resource === 'reroll-spark') {
+    if (req.method !== 'POST') return res.status(405).json({ error: 'POST required' })
+    const userId = await getUserId(req)
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' })
+
+    const nowIso = new Date().toISOString()
+
+    const { data: current } = await supabase
+      .from('sparks')
+      .select('id, expires_at')
+      .eq('user_id', userId)
+      .is('answered_at', null)
+      .gt('expires_at', nowIso)
+      .order('created_at', { ascending: false })
+      .limit(1)
+
+    const retiring = current?.[0] ?? null
+    if (retiring) {
+      await supabase.from('sparks').update({ expires_at: nowIso }).eq('id', retiring.id).eq('user_id', userId)
+    }
+
+    const { data: historyRows } = await supabase
+      .from('sparks')
+      .select('type, answered_at')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(HISTORY_WINDOW)
+
+    const history: SparkHistoryEntry[] = (historyRows ?? []).map(r => ({
+      type: r.type,
+      answered: r.answered_at != null,
+    }))
+
+    const type = pickNextSparkType(history)
+    const baked = await generateSpark(supabase, userId, type)
+
+    if (!baked) {
+      // The corpus had nothing else worth asking. Put the original back
+      // rather than leaving the slot empty — silence is the right answer
+      // for a NEW question, not a reason to take away the one you had.
+      if (retiring) {
+        await supabase
+          .from('sparks')
+          .update({ expires_at: retiring.expires_at })
+          .eq('id', retiring.id)
+          .eq('user_id', userId)
+      }
+      return res.status(200).json({ rerolled: false, reason: 'nothing else to ask' })
+    }
+
+    const { data: inserted, error: insertErr } = await supabase
+      .from('sparks')
+      .insert({
+        user_id: userId,
+        type: baked.type,
+        project_id: baked.project_id,
+        text: baked.text,
+        expires_at: baked.expires_at,
+        shown_at: nowIso,
+      })
+      .select('id, type, text, project_id, projects(title)')
+      .single()
+
+    if (insertErr) {
+      console.error('[utilities/sparks] reroll insert failed:', insertErr)
+      return res.status(500).json({ error: insertErr.message })
+    }
+
+    return res.status(200).json({ rerolled: true, spark: inserted })
   }
 
   // ─── DISMISS ────────────────────────────────────────────────────────
