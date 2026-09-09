@@ -32,12 +32,30 @@ describe('anyProjectMorphedToday', () => {
     expect(anyProjectMorphedToday([], now)).toBe(false)
   })
 
-  it('is true when any timestamp falls on today (UTC)', () => {
-    expect(anyProjectMorphedToday(['2026-08-24T02:00:00Z'], now)).toBe(true)
+  it('is true when a pending proposal falls on today (UTC)', () => {
+    expect(anyProjectMorphedToday([{ created_at: '2026-08-24T02:00:00Z', status: 'pending' }], now)).toBe(true)
+  })
+
+  it('is true when an accepted proposal falls on today (UTC)', () => {
+    expect(anyProjectMorphedToday([{ created_at: '2026-08-24T02:00:00Z', status: 'accepted' }], now)).toBe(true)
   })
 
   it('is false when the only morph was yesterday', () => {
-    expect(anyProjectMorphedToday(['2026-08-23T23:59:00Z'], now)).toBe(false)
+    expect(anyProjectMorphedToday([{ created_at: '2026-08-23T23:59:00Z', status: 'pending' }], now)).toBe(false)
+  })
+
+  it('is false when today\'s only proposal was rejected -- it should not block others', () => {
+    expect(anyProjectMorphedToday([{ created_at: '2026-08-24T02:00:00Z', status: 'rejected' }], now)).toBe(false)
+  })
+
+  it('is true when a rejected proposal sits alongside a pending one today', () => {
+    expect(anyProjectMorphedToday(
+      [
+        { created_at: '2026-08-24T01:00:00Z', status: 'rejected' },
+        { created_at: '2026-08-24T02:00:00Z', status: 'pending' },
+      ],
+      now
+    )).toBe(true)
   })
 })
 
