@@ -22,6 +22,99 @@ const fontSizeOptions = [
   { value: 'large' as const, label: 'Large' }
 ]
 
+/**
+ * One-off corpus catch-up.
+ *
+ * Embeddings and fragments heal on a small daily allowance — correct as a
+ * steady state, useless for a backlog of thoughts that never got a vector
+ * (embedding writes were being rejected for a long time, and fragments can
+ * only attach to a thought that has one). This runs the same two passes with
+ * no daily cap, calling the endpoint repeatedly because each call works in a
+ * slice that fits the function's time budget.
+ *
+ * It's here rather than on a schedule on purpose: it's a repair, not a
+ * routine, and the daily caps stay where they are.
+ */
+function CatchUpRow() {
+  const [running, setRunning] = useState(false)
+  const [embeddings, setEmbeddings] = useState(0)
+  const [fragments, setFragments] = useState(0)
+  const [finished, setFinished] = useState(false)
+  const [failed, setFailed] = useState<string | null>(null)
+
+  const run = async () => {
+    setRunning(true)
+    setFailed(null)
+    setFinished(false)
+    let totalEmbeddings = 0
+    let totalFragments = 0
+
+    try {
+      // Keep going until the server says there's nothing left. Bounded so a
+      // bug on either side can't spin here forever.
+      for (let pass = 0; pass < 40; pass++) {
+        const res = await fetch('/api/utilities?resource=catch-up', { method: 'POST' })
+        if (!res.ok) throw new Error(`Server said no (${res.status})`)
+        const data = await res.json() as {
+          embeddings_created: number
+          fragments_attached: number
+          done: boolean
+        }
+        totalEmbeddings += data.embeddings_created
+        totalFragments += data.fragments_attached
+        setEmbeddings(totalEmbeddings)
+        setFragments(totalFragments)
+        if (data.done) { setFinished(true); break }
+      }
+    } catch (err) {
+      setFailed(err instanceof Error ? err.message : 'Something went wrong.')
+    } finally {
+      setRunning(false)
+    }
+  }
+
+  return (
+    <div
+      className="w-full p-4 rounded-xl border"
+      style={{ background: 'var(--glass-surface)', borderColor: 'var(--glass-surface)' }}
+    >
+      <p className="text-sm font-semibold text-[var(--brand-text-primary)] mb-1">Catch the corpus up</p>
+      <p className="text-[12px] mb-3" style={{ color: 'var(--brand-text-secondary)', opacity: 0.7 }}>
+        Gives every older thought its embedding and attaches the fragments the
+        daily job would take months to reach. Search and the questions on the
+        home card both read these. Safe to run more than once; it only ever
+        adds what's missing.
+      </p>
+
+      <button
+        onClick={run}
+        disabled={running}
+        className="px-3.5 py-2 rounded-lg text-[12px] font-medium disabled:opacity-50"
+        style={{
+          background: 'rgba(var(--brand-primary-rgb), 0.12)',
+          border: '1px solid rgba(var(--brand-primary-rgb), 0.32)',
+          color: 'rgb(var(--brand-primary-rgb))',
+        }}
+      >
+        {running ? 'Working…' : finished ? 'Run it again' : 'Catch up'}
+      </button>
+
+      {(running || finished || embeddings > 0 || fragments > 0) && (
+        <p className="text-[12px] mt-2" style={{ color: 'var(--brand-text-secondary)', opacity: 0.75 }}>
+          {embeddings} embedded · {fragments} fragments attached
+          {finished ? ' · done' : running ? ' · still going' : ''}
+        </p>
+      )}
+
+      {failed && (
+        <p className="text-[12px] mt-2" style={{ color: 'var(--brand-text-secondary)', opacity: 0.75 }}>
+          {failed}
+        </p>
+      )}
+    </div>
+  )
+}
+
 export function SettingsPage() {
   const navigate = useNavigate()
   const onboardingCompletedAt = useJourneyStore(s => s.onboardingCompletedAt)
@@ -620,6 +713,8 @@ export function SettingsPage() {
             <h2 className="section-heading">under the <span className="accent">bonnet</span></h2>
 
             <div className="space-y-4">
+              <CatchUpRow />
+
               {/* Setup status — tells the user plainly whether onboarding
                   finished (it can bail mid-way on a flaky voice connection)
                   and gives a way back in. */}

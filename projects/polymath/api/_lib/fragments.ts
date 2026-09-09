@@ -132,3 +132,60 @@ export async function attachFragmentFromMemory(
 
   return 1
 }
+
+/**
+ * Attach fragments for thoughts that already have embeddings but never got one.
+ *
+ * Fragments are only ever created at capture time, and creation needs BOTH the
+ * thought's embedding and the project's. Those writes were failing (the model
+ * was asked for its default 3072 dimensions against vector(768) columns), so
+ * every attach returned 0 and this table stayed empty — which silently starved
+ * five of the nine spark generators, since noticing, transferred constraint,
+ * unfinished thought, contradiction and material fact all read fragments and
+ * nothing else. Fixing the dimensions only helps thoughts captured from now on;
+ * the years already in the corpus need this.
+ *
+ * Bounded per run: each attach is a model call.
+ */
+export async function backfillFragments(
+  supabase: SupabaseClient,
+  userId: string,
+  limit = 15
+): Promise<number> {
+  const { data: existing } = await supabase
+    .from('fragments')
+    .select('memory_id')
+    .eq('user_id', userId)
+    .not('memory_id', 'is', null)
+
+  const alreadyAttached = new Set((existing ?? []).map((r: { memory_id: string }) => r.memory_id))
+
+  const { data: memories } = await supabase
+    .from('memories')
+    .select('id, title, body, embedding')
+    .eq('user_id', userId)
+    .not('embedding', 'is', null)
+    .order('created_at', { ascending: false })
+    .limit(200)
+
+  let attached = 0
+  for (const m of (memories ?? []) as Array<{ id: string; title: string | null; body: string | null; embedding: unknown }>) {
+    if (attached >= limit) break
+    if (alreadyAttached.has(m.id)) continue
+
+    // Supabase hands vectors back as a JSON string on some paths.
+    const embedding = Array.isArray(m.embedding)
+      ? m.embedding as number[]
+      : typeof m.embedding === 'string'
+        ? (() => { try { return JSON.parse(m.embedding as string) as number[] } catch { return null } })()
+        : null
+    if (!embedding) continue
+
+    const content = `${m.title ?? ''} ${m.body ?? ''}`.trim()
+    if (!content) continue
+
+    attached += await attachFragmentFromMemory(supabase, userId, { id: m.id, content, embedding })
+  }
+
+  return attached
+}
