@@ -2902,7 +2902,18 @@ async function handleExecutionSparks(req: VercelRequest, res: VercelResponse) {
       answered: r.answered_at != null,
     }))
 
-    const baked = await bakeStandingQuestion(supabase, userId, history)
+    let baked = await bakeStandingQuestion(supabase, userId, history)
+
+    // Silence from every type usually isn't a thin corpus — it's an empty
+    // fragments table, which five of the nine generators read and nothing
+    // else. Attaching a few before giving up turns "ask me something else"
+    // into the thing that repairs the layer it depends on, rather than a
+    // button that reports the same emptiness however many times it's tapped.
+    if (!baked) {
+      const { backfillFragments } = await import('./_lib/fragments.js')
+      const attached = await backfillFragments(supabase, userId, 8)
+      if (attached > 0) baked = await bakeStandingQuestion(supabase, userId, history)
+    }
 
     if (!baked) {
       // The corpus had nothing else worth asking. Put the original back

@@ -21,6 +21,7 @@ import { runSynthesis } from '../_lib/synthesis.js'
 import { processMemory } from '../_lib/process-memory.js'
 import { generateBedtimePrompts } from '../_lib/bedtime-ideas.js'
 import { maintainEmbeddings } from '../_lib/embeddings-maintenance.js'
+import { backfillFragments } from '../_lib/fragments.js'
 import { extractCapabilities } from '../_lib/capabilities-extraction.js'
 import { identifyRottingProjects } from '../_lib/project-maintenance.js'
 import { recomputeHeatForUser } from '../_lib/metabolism.js'
@@ -280,6 +281,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         console.log('[cron/jobs/daily] Running embedding maintenance...')
         const maintenanceStats = await maintainEmbeddings(userId, 20, false)
         results.tasks.embeddings = { success: true, stats: maintenanceStats }
+
+        // Fragments are only attached at capture time, and only when both
+        // the thought and the project already have embeddings — so every
+        // thought captured while embedding writes were failing has none.
+        // Five of the nine spark generators read nothing but fragments, so
+        // an empty table is silence with no explanation. Runs after the
+        // embedding pass on purpose: it can only attach what has a vector.
+        console.log('[cron/jobs/daily] Backfilling fragments...')
+        const fragmentsAttached = await backfillFragments(supabase, userId)
+        results.tasks.fragments = { success: true, attached: fragmentsAttached }
 
         // Weekly (Sunday): Extract capabilities
         if (now.getUTCDay() === 0) {
