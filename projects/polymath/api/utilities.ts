@@ -79,7 +79,7 @@ const EXECUTION_SESSIONS_RESOURCES = new Set([
   'start', 'close', 'pending-closeout', 'log-retro', 'declare-live',
   'live-reask', 'different-thing-status', 'harvest', 'mirror', 'book',
 ])
-const EXECUTION_SPARKS_RESOURCES = new Set(['bake', 'today', 'respond', 'dismiss-spark', 'reroll-spark'])
+const EXECUTION_SPARKS_RESOURCES = new Set(['bake', 'today', 'respond', 'dismiss-spark', 'reroll-spark', 'catch-up'])
 const EXECUTION_PROPOSALS_RESOURCES = new Set([
   'generate-morph', 'drift-decay', 'mine-joints', 'generate-composite',
   'pending', 'accept', 'reject',
@@ -2859,6 +2859,54 @@ async function handleExecutionSparks(req: VercelRequest, res: VercelResponse) {
     }
 
     return res.status(200).json({ spark })
+  }
+
+  // ─── CATCH-UP (one-off) ─────────────────────────────────────────────
+  // Embeddings and fragments both heal on a small daily allowance, which is
+  // right as a steady state and useless for a corpus that has years of
+  // thoughts with no vector at all — at 20 a day it would take months. This
+  // does the same two passes with no per-run cap, in slices that fit inside
+  // the function's 90s budget, and reports what's left so the caller can
+  // press on until it says done. Deliberately not on a schedule: the daily
+  // caps stay where they are.
+  if (resource === 'catch-up') {
+    if (req.method !== 'POST') return res.status(405).json({ error: 'POST required' })
+    const userId = await getUserId(req)
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' })
+
+    const BUDGET_MS = 70_000
+    const startedAt = Date.now()
+    const timeLeft = () => Date.now() - startedAt < BUDGET_MS
+
+    const { maintainEmbeddings } = await import('./_lib/embeddings-maintenance.js')
+    const { backfillFragments } = await import('./_lib/fragments.js')
+
+    let embeddings = 0
+    let embeddingsExhausted = false
+    while (timeLeft()) {
+      const stats = await maintainEmbeddings(userId, 25, false)
+      embeddings += stats.embeddings_created
+      // Nothing created means nothing left without a vector.
+      if (stats.embeddings_created === 0) { embeddingsExhausted = true; break }
+    }
+
+    // Fragments can only attach to a thought that already has a vector, so
+    // this runs second and, on a first pass, may have little to work with
+    // until the embeddings above have landed.
+    let fragments = 0
+    let fragmentsExhausted = false
+    while (timeLeft()) {
+      const attached = await backfillFragments(supabase, userId, 10)
+      fragments += attached
+      if (attached === 0) { fragmentsExhausted = true; break }
+    }
+
+    return res.status(200).json({
+      embeddings_created: embeddings,
+      fragments_attached: fragments,
+      done: embeddingsExhausted && fragmentsExhausted,
+      seconds: Math.round((Date.now() - startedAt) / 1000),
+    })
   }
 
   // ─── REROLL ─────────────────────────────────────────────────────────
