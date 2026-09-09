@@ -34,11 +34,16 @@ export function stripTags(html: string): string {
     .replace(/<style[\s\S]*?<\/style>/gi, ' ')
     .replace(/<[^>]+>/g, ' ')
     .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
+    // &amp; decodes LAST -- decoding it first turns a literal "&amp;lt;"
+    // (an already-escaped ampersand that happens to precede "lt;") into
+    // "&lt;" in time for the very next line to decode that into a real
+    // "<", double-unescaping text that was only ever supposed to become
+    // a plain "&".
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
     .replace(/&#39;|&apos;/g, "'")
     .replace(/&quot;/g, '"')
+    .replace(/&amp;/g, '&')
     .replace(/\s+/g, ' ')
     .trim()
 }

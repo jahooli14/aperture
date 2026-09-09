@@ -100,6 +100,13 @@ describe('stripTags / wordCount', () => {
     expect(wordCount(stripTags('<p>two words</p>'))).toBe(2)
   })
 
+  it('does not double-decode an already-escaped ampersand into a live tag', () => {
+    // "&amp;lt;" is a literal ampersand followed by the text "lt;" -- it
+    // should decode to "&lt;", not all the way to a real "<". Decoding
+    // &amp; before &lt; used to turn this into an actual angle bracket.
+    expect(stripTags('<p>&amp;lt;script&amp;gt;</p>')).toBe('&lt;script&gt;')
+  })
+
   it('counts an empty document as zero', () => {
     expect(wordCount('')).toBe(0)
     expect(wordCount('   ')).toBe(0)
