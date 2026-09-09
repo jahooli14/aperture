@@ -22,6 +22,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useProjectStore } from '../stores/useProjectStore'
 import { useSessionStore } from '../stores/useSessionStore'
+import { localDateKey } from '../stores/focusProjectOps'
 import { SessionContract } from '../components/session/SessionContract'
 import { VoiceInput } from '../components/VoiceInput'
 import type { Project } from '../types'
@@ -138,8 +139,8 @@ export function SessionPage() {
     // intended date and time, and on that day opens pre-loaded with the
     // project, warm, first item ready." Booking a big block only pays off
     // if the app actually honours it without asking again.
-    const today = new Date().toISOString().slice(0, 10)
-    const booked = projects.find(p => p.booked_session_at?.slice(0, 10) === today && p.state !== 'harvested')
+    const today = localDateKey()
+    const booked = projects.find(p => p.booked_session_at && localDateKey(new Date(p.booked_session_at)) === today && p.state !== 'harvested')
 
     const live = booked ?? projects.find(p => p.state === 'live') ?? null
     setLiveProject(live)

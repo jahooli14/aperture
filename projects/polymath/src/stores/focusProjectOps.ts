@@ -16,6 +16,23 @@ import type { Project } from '../types'
 export const isActiveShaped = (p: { status?: string; metadata?: { is_shaped?: boolean } }) =>
   ['active', 'upcoming'].includes(p.status ?? '') && p.metadata?.is_shaped !== false
 
+/**
+ * Local calendar-day key (YYYY-MM-DD) — deliberately NOT
+ * `date.toISOString().slice(0, 10)`, which reads the UTC day. A booking
+ * is a statement about the user's own "today," and comparing it against
+ * the UTC day mismatches for anyone outside UTC: for part of their local
+ * day the UTC date has already rolled to tomorrow (positive offsets) or
+ * hasn't yet rolled off yesterday (negative offsets), so a session booked
+ * for today intermittently reads as booked for the wrong day depending on
+ * what time it's checked.
+ */
+export function localDateKey(d: Date = new Date()): string {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
 export const byRecency = (a: Project, b: Project) => {
   const aTime = new Date(a.last_active || a.updated_at || 0).getTime()
   const bTime = new Date(b.last_active || b.updated_at || 0).getTime()
@@ -73,9 +90,9 @@ export function resolveFocusProjectId(
 
   // A session booked for today is the most explicit statement of intent
   // there is about what today is for, so it outranks the star.
-  const today = new Date().toISOString().slice(0, 10)
+  const today = localDateKey()
   const booked = eligible.find(
-    p => p.booked_session_at?.slice(0, 10) === today && p.state !== 'harvested',
+    p => p.booked_session_at && localDateKey(new Date(p.booked_session_at)) === today && p.state !== 'harvested',
   )
   if (booked) return booked.id
 

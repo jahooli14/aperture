@@ -29,11 +29,15 @@ export function useBedtimeNotifications() {
 
                 const toSchedule: Parameters<typeof LocalNotifications.schedule>[0]['notifications'] = []
                 const now = new Date()
-                const todayYMD = now.toISOString().split('T')[0]
 
                 // Bedtime reflection reminder
                 if (bedtimeEnabled) {
-                    const scheduledTime = new Date(todayYMD + 'T00:00:00')
+                    // Built from `now` itself, not a UTC date string re-parsed as
+                    // local midnight -- that round-trip put the notification on
+                    // the wrong calendar day for anyone outside UTC (a UTC date
+                    // that's already rolled to tomorrow, or hasn't yet rolled to
+                    // today, gets read back as local midnight of the wrong day).
+                    const scheduledTime = new Date(now)
                     scheduledTime.setHours(bedtimeHour, bedtimeMinute, 0, 0)
 
                     if (now >= scheduledTime) {
@@ -63,7 +67,7 @@ export function useBedtimeNotifications() {
 
                 // Morning planning reminder
                 if (morningEnabled) {
-                    const morningTime = new Date(todayYMD + 'T00:00:00')
+                    const morningTime = new Date(now)
                     morningTime.setHours(morningHour, morningMinute, 0, 0)
 
                     if (now >= morningTime) {
