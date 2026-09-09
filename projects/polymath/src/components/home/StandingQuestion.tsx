@@ -17,6 +17,7 @@
 import { useEffect, useState } from 'react'
 import { VoiceInput } from '../VoiceInput'
 import { haptic } from '../../utils/haptics'
+import { api } from '../../lib/apiClient'
 
 export interface StandingQuestionSpark {
   id: string
@@ -50,9 +51,11 @@ export function StandingQuestion() {
     let cancelled = false
     ;(async () => {
       try {
-        const res = await fetch('/api/utilities?resource=today')
-        if (!res.ok) return
-        const data = await res.json() as { spark: StandingQuestionSpark | null }
+        // AttentionSlot's own fallback chain hits this exact same endpoint
+        // on the same home render -- api.get's cache+dedup (apiClient.ts)
+        // means whichever of the two asks first is the only one that
+        // actually goes over the network.
+        const data = await api.get('utilities?resource=today') as { spark: StandingQuestionSpark | null }
         if (cancelled) return
         if (isStandingQuestion(data.spark)) setSpark(data.spark)
         setLoaded(true)
@@ -67,12 +70,9 @@ export function StandingQuestion() {
     if (!text.trim() || !spark) return
     setSubmitting(true)
     try {
-      const res = await fetch('/api/utilities?resource=respond', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ spark_id: spark.id, response_text: text }),
-      })
-      const data = await res.json().catch(() => ({})) as { project_title?: string }
+      const data = await api.post('utilities?resource=respond', {
+        spark_id: spark.id, response_text: text,
+      }).catch(() => ({})) as { project_title?: string }
       haptic.success()
       setReceipt(
         data.project_title
@@ -88,8 +88,7 @@ export function StandingQuestion() {
     setRerolling(true)
     setNote(null)
     try {
-      const res = await fetch('/api/utilities?resource=reroll-spark', { method: 'POST' })
-      const data = await res.json().catch(() => ({})) as {
+      const data = await api.post('utilities?resource=reroll-spark', {}) as {
         rerolled?: boolean
         spark?: StandingQuestionSpark
       }
