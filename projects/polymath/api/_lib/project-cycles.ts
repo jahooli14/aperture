@@ -32,6 +32,8 @@
  * Pure. Every function takes metadata and gives metadata back.
  */
 
+import { normalizeTaskOrder } from './task-order.js'
+
 /** Keep the last few cycles for the planner to learn a shape from. All of
  *  them would grow without bound and swamp the spine prompt. */
 export const CYCLE_HISTORY_LIMIT = 5
@@ -125,7 +127,10 @@ export function rollToNextCycle(
     .filter(t => t?.done && typeof t.text === 'string')
     .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
     .map(t => t.text as string)
-  const openTasks = tasks.filter(t => t && !t.done)
+  // Renumbered contiguous from 0 -- task-order.ts's one invariant every
+  // writer of metadata.tasks has to keep. Filtering out the done steps
+  // otherwise leaves gaps (0, 2, 5, ...) in what's left.
+  const openTasks = normalizeTaskOrder(tasks.filter(t => t && !t.done))
 
   const n = state.done + 1
   const history = [
