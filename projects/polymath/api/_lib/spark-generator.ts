@@ -17,7 +17,6 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { generateText } from './gemini-chat.js'
 import { PLAIN_ENGLISH_RULES } from './plain-english.js'
 import type { SparkType } from './spark-types.js'
-import { pickCrossingPair, type CrossingProject } from './spark-crossing.js'
 import { SPARK_PROJECT_COOLDOWN_DAYS, recentlySparkedProjectIds, preferUnsparked } from './spark-rotation.js'
 import { pickSparkSubject, type SubjectCandidate } from './spark-subject.js'
 import { pickGap, genericGapQuestion } from './session-gap.js'
@@ -135,61 +134,102 @@ async function generateTransferredConstraint(supabase: SupabaseClient, userId: s
   }
   if (byProject.size < 2) return null
 
-  // Labels are what make this a polymath question rather than an
-  // adjacency one -- a rule carried from woodwork into a song has to be
-  // re-derived to survive the trip, and what survives is the part only
-  // this user could have made. Two music projects would be neither.
   const { data: projectRows } = await supabase
     .from('projects')
     .select('id, title, metadata')
     .eq('user_id', userId)
     .in('id', [...byProject.keys()])
 
-  const candidates: CrossingProject[] = (projectRows ?? []).map((p: any) => ({
-    id: p.id,
-    title: p.title,
-    tags: Array.isArray(p.metadata?.tags) ? p.metadata.tags.filter((t: unknown) => typeof t === 'string') : [],
-    fragmentCount: byProject.get(p.id)?.length ?? 0,
-  }))
+  const onCooldown = new Set(
+    await recentlySparkedProjectIds(supabase, userId, SPARK_PROJECT_COOLDOWN_DAYS)
+  )
+
+  const candidates = (projectRows ?? [])
+    .map((p: any) => ({
+      id: p.id as string,
+      title: p.title as string,
+      tags: Array.isArray(p.metadata?.tags) ? p.metadata.tags.filter((t: unknown) => typeof t === 'string') : [],
+      fragments: byProject.get(p.id) ?? [],
+    }))
+    .filter(p => p.fragments.length > 0)
+
   if (candidates.length < 2) return null
 
-  const pair = pickCrossingPair(
-    candidates,
-    await recentlySparkedProjectIds(supabase, userId, SPARK_PROJECT_COOLDOWN_DAYS),
-  )
-  if (!pair) return null
+  // The pair is NOT chosen here. Picking two projects and then asking for a
+  // rule that links them is the machine that produces "you like how Tame
+  // Impala treats synths, does the water dancing scene do that too" — handed
+  // a pair and told to bridge it, the model always finds something, and what
+  // it finds is a resemblance dressed as a rule. Composites were fixed by
+  // inverting exactly this (SPEC/CLAUDE.md: joint → pair, never pair →
+  // invented bridge), so the same inversion applies here: show everything,
+  // ask for a rule that is already visibly load-bearing in one project, and
+  // let the destination fall out of the rule. Most of the time the honest
+  // answer is that no rule travels, which is why silence is the default and
+  // not a footnote.
+  const block = candidates
+    .map(p => {
+      const label = p.tags.length ? ` [${p.tags.join(', ')}]` : ''
+      const quotes = p.fragments.slice(0, 4).map(f => `    - "${f.text}"`).join('\n')
+      return `  ${p.title}${label} (id: ${p.id})\n${quotes}`
+    })
+    .join('\n\n')
 
-  const quote = (id: string) =>
-    (byProject.get(id) ?? []).slice(0, 4).map(f => `- "${f.text}"`).join('\n') || '- (nothing captured)'
+  const eligible = candidates.filter(p => !onCooldown.has(p.id)).map(p => p.id)
+  if (eligible.length === 0) return null
 
-  const distance = pair.crossesDisciplines
-    ? `These two are from different parts of their life${pair.from.tags.length && pair.to.tags.length ? ` (${pair.from.tags.join('/')} and ${pair.to.tags.join('/')})` : ''}. That distance is the point -- a rule that survives the trip is worth more than one that never had to travel.`
-    : `These two are close to each other${pair.sharedTags.length ? ` (both ${pair.sharedTags.join(', ')})` : ''}, so the connection has to be genuinely non-obvious to be worth saying at all.`
+  const prompt = `Here is what the user has captured, grouped by project:
 
-  const prompt = `What the user has captured about "${pair.from.title}":
-${quote(pair.from.id)}
+${block}
 
-And about "${pair.to.title}":
-${quote(pair.to.id)}
+Look for a RULE the user follows — a constraint, a working method, a standard they
+hold themselves to — that is plainly visible in the captures of ONE project, in more
+than one line if possible. Then, and only then, ask whether that same rule applies to
+a DIFFERENT project where they clearly are not applying it yet.
 
-${distance}
+The rule has to be load-bearing: something that changes what you would DO, not a mood,
+a theme, an aesthetic, or a resemblance between two subjects.
 
-Find a RULE or CONSTRAINT that shows up clearly in the "${pair.from.title}" captures, and ask
-whether it applies to "${pair.to.title}". Import the rule, don't invent a new connection -- the
-rule has to actually be visible in what's quoted above. Name both, so they can tell what's being
-carried where.
+Do not build a bridge because two things sound poetic together. Two projects both being
+"about generation" or "about water" or "about memory" is a resemblance, not a
+transferable rule, and a question built on one is worthless.
+
+BAD (a resemblance dressed up as a question — never write this):
+"You love how Tame Impala treats synths as machines that generate ideas on their own.
+Does the water dancing scene in your book do that same work for the story?"
+
+GOOD (a real working rule, carried somewhere it isn't being applied):
+"On the mixes you commit to one take and refuse to fix it afterwards. The book chapters
+have been rewritten four times each — what happens if a first draft has to stand?"
+
+Silence is the normal answer. If no rule in these captures genuinely transfers, return
+{ "spark": null }. Do not lower the bar to produce something.
 
 ${PLAIN_ENGLISH_RULES}
-${SILENCE_INSTRUCTION}
 
-Respond with JSON only: { "spark": "..." | null }`
+Respond with JSON only: { "spark": "..." | null, "to_project_id": "the id of the project the rule is being carried INTO, or null" }`
 
-  const raw = await askForSpark(prompt)
+  const raw = await askForSparkWithProject(prompt)
   if (!raw) return null
-  // Attributed to the project being carried INTO -- that's what the spark
-  // asks them to think about, and what the project rotation records so the
-  // same project isn't the subject two sparks running.
-  return { type: 'transferred_constraint', text: raw, project_id: pair.to.id, expires_at: expiresAt(SPARK_SHELF_LIFE_HOURS) }
+
+  // The rule has to land on a real project that isn't already on cooldown,
+  // otherwise there's nothing honest to attribute the question to.
+  const target = raw.projectId && eligible.includes(raw.projectId) ? raw.projectId : null
+  if (!target) return null
+
+  return { type: 'transferred_constraint', text: raw.text, project_id: target, expires_at: expiresAt(SPARK_SHELF_LIFE_HOURS) }
+}
+
+async function askForSparkWithProject(prompt: string): Promise<{ text: string; projectId: string | null } | null> {
+  try {
+    const response = await generateText(prompt, { responseFormat: 'json' })
+    const parsed = JSON.parse(response)
+    const text = typeof parsed?.spark === 'string' ? parsed.spark.trim() : ''
+    if (text.length === 0) return null
+    return { text, projectId: typeof parsed?.to_project_id === 'string' ? parsed.to_project_id : null }
+  } catch (e) {
+    console.warn('[spark-generator] transferred-constraint generation failed:', e instanceof Error ? e.message : e)
+    return null
+  }
 }
 
 async function generateUnfinishedThought(supabase: SupabaseClient, userId: string): Promise<BakedSpark | null> {

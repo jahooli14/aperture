@@ -6,6 +6,10 @@ interface MaintenanceStats {
   embeddings_created: number
   connections_created: number
   errors: number
+  /** Why it failed, if it did. Without this a run that embedded nothing
+   *  because every call was rejected is indistinguishable from a run that
+   *  embedded nothing because there was nothing left to embed. */
+  last_error?: string
 }
 
 /**
@@ -120,6 +124,7 @@ async function processItem(supabase: any, type: 'project' | 'thought' | 'article
   } catch (error) {
     console.error(`[embeddings] Error processing ${type} ${item.id}:`, error)
     stats.errors++
+    stats.last_error = error instanceof Error ? error.message : String(error)
   }
 }
 
