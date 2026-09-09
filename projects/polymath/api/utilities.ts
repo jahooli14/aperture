@@ -56,7 +56,7 @@ import { handleFixQueue } from './_lib/fix-queue/route.js'
 import { reconcileCloseout, parseTicked } from './_lib/session-closeout.js'
 import { judgeFinishLine } from './_lib/finish-line.js'
 import { readCycleState, cycleLabel, rollToNextCycle, lastCycleSteps } from './_lib/project-cycles.js'
-import { pickNextSparkType, type SparkHistoryEntry } from './_lib/spark-types.js'
+import { pickNextSparkType, SPARK_TYPES, type SparkHistoryEntry, type SparkType } from './_lib/spark-types.js'
 import { generateSpark } from './_lib/spark-generator.js'
 import { canMorphProject, anyProjectMorphedToday, MORPH_COOLDOWN_DAYS } from './_lib/morph.js'
 import { considerMorph } from './_lib/morph-generator.js'
@@ -2740,6 +2740,35 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
   return res.status(404).json({ error: `Unknown resource: ${resource}` })
 }
 
+/**
+ * Bake a question, trying more than one kind before giving up.
+ *
+ * Every generator is allowed to stay silent — there are more than twenty
+ * paths that legitimately return nothing (no stalled pair, no recent
+ * fragment, nothing unread worth reaching for). The picker samples ONE type,
+ * so a single silent draw used to mean no question that day at all, and the
+ * rotation would try again tomorrow with the same odds. Falling through to
+ * the next-best types turns "this kind had nothing" into "ask a different
+ * kind" instead of a wasted day. Capped, because each attempt is a query and
+ * sometimes a model call.
+ */
+const BAKE_ATTEMPTS = 4
+
+async function bakeStandingQuestion(
+  supabase: ReturnType<typeof getSupabaseClient>,
+  userId: string,
+  history: SparkHistoryEntry[],
+) {
+  const first = pickNextSparkType(history)
+  const order: SparkType[] = [first, ...SPARK_TYPES.filter(t => t !== first)]
+
+  for (const type of order.slice(0, BAKE_ATTEMPTS)) {
+    const baked = await generateSpark(supabase, userId, type)
+    if (baked) return baked
+  }
+  return null
+}
+
 async function handleExecutionSparks(req: VercelRequest, res: VercelResponse) {
   const resource = req.query.resource as string
   const supabase = getSupabaseClient()
@@ -2779,12 +2808,11 @@ async function handleExecutionSparks(req: VercelRequest, res: VercelResponse) {
       answered: r.answered_at != null,
     }))
 
-    const type = pickNextSparkType(history)
-    const baked = await generateSpark(supabase, userId, type)
+    const baked = await bakeStandingQuestion(supabase, userId, history)
 
     if (!baked) {
-      console.log(`[utilities/sparks] bake: type=${type} produced silence`)
-      return res.status(200).json({ baked: false, type })
+      console.log('[utilities/sparks] bake: every attempted type produced silence')
+      return res.status(200).json({ baked: false })
     }
 
     const { error: insertErr } = await supabase.from('sparks').insert({
@@ -2874,8 +2902,7 @@ async function handleExecutionSparks(req: VercelRequest, res: VercelResponse) {
       answered: r.answered_at != null,
     }))
 
-    const type = pickNextSparkType(history)
-    const baked = await generateSpark(supabase, userId, type)
+    const baked = await bakeStandingQuestion(supabase, userId, history)
 
     if (!baked) {
       // The corpus had nothing else worth asking. Put the original back
