@@ -50,10 +50,24 @@ function CatchUpRow() {
     let totalFragments = 0
 
     try {
-      // Keep going until the server says there's nothing left. Bounded so a
-      // bug on either side can't spin here forever.
-      for (let pass = 0; pass < 40; pass++) {
-        const res = await fetch('/api/utilities?resource=catch-up', { method: 'POST' })
+      // Each call is a short slice, so there are many more of them than the
+      // one-big-request version this replaced — that one exceeded the
+      // platform's function ceiling and died as an undiagnosable "Failed to
+      // fetch". Bounded so a bug on either side can't spin here forever.
+      for (let pass = 0; pass < 250; pass++) {
+        // A slice that hasn't answered in 45s isn't coming back; say so
+        // rather than hanging on a dead connection.
+        const controller = new AbortController()
+        const timer = window.setTimeout(() => controller.abort(), 45_000)
+        let res: Response
+        try {
+          res = await fetch('/api/utilities?resource=catch-up', {
+            method: 'POST',
+            signal: controller.signal,
+          })
+        } finally {
+          window.clearTimeout(timer)
+        }
         if (!res.ok) {
           // The body says what actually went wrong; a bare status code sent
           // us guessing at a 404 that could have been any of three things.
@@ -82,7 +96,14 @@ function CatchUpRow() {
         if (data.done) { setFinished(true); break }
       }
     } catch (err) {
-      setFailed(err instanceof Error ? err.message : 'Something went wrong.')
+      // "Failed to fetch" and an abort both mean the request never completed,
+      // which reads as a mystery unless it's named.
+      const raw = err instanceof Error ? err.message : 'Something went wrong.'
+      setFailed(
+        raw === 'Failed to fetch' || raw.includes('abort')
+          ? 'The request never completed — the server may have timed out. Progress so far is saved; press again to carry on.'
+          : raw
+      )
     } finally {
       setRunning(false)
     }

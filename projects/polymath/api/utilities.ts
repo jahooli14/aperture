@@ -2874,7 +2874,12 @@ async function handleExecutionSparks(req: VercelRequest, res: VercelResponse) {
     const userId = await getUserId(req)
     if (!userId) return res.status(401).json({ error: 'Unauthorized' })
 
-    const BUDGET_MS = 70_000
+    // Well under the platform's function ceiling (60s on Hobby). At 70s the
+    // function was being killed mid-request, which the browser reports as a
+    // bare "Failed to fetch" — no status, no body, nothing to diagnose. Short
+    // slices always return, and the caller just asks again; progress is
+    // visible as it goes instead of arriving all at once or not at all.
+    const BUDGET_MS = 20_000
     const startedAt = Date.now()
     const timeLeft = () => Date.now() - startedAt < BUDGET_MS
 
