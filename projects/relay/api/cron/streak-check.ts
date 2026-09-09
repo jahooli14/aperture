@@ -55,7 +55,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       for (const member of members) {
         if (!member.timezone) continue
-        if (localHour(now, member.timezone) !== NUDGE_HOUR) continue
+        // GitHub's scheduled workflow doesn't actually fire hourly on the
+        // dot — free-tier cron runs get delayed by several hours under
+        // load, so an exact-hour match against NUDGE_HOUR can miss someone's
+        // 6pm entirely. ">=" instead catches them on the next run that day,
+        // however late it lands. Safe to widen because the streak check
+        // above re-evaluates from scratch each run: if the streak already
+        // lapsed by the time a delayed run fires, it skips on its own, and
+        // `last_streak_alert_sent_on` still caps this at one nudge per
+        // person per local day.
+        if (localHour(now, member.timezone) < NUDGE_HOUR) continue
 
         const today = localDateKey(now, member.timezone)
         if (member.last_streak_alert_sent_on === today) continue
