@@ -56,7 +56,7 @@ import { handleFixQueue } from './_lib/fix-queue/route.js'
 import { reconcileCloseout, parseTicked } from './_lib/session-closeout.js'
 import { judgeFinishLine } from './_lib/finish-line.js'
 import { readCycleState, cycleLabel, rollToNextCycle, lastCycleSteps } from './_lib/project-cycles.js'
-import { pickNextSparkType, SPARK_TYPES, type SparkHistoryEntry, type SparkType } from './_lib/spark-types.js'
+import { pickNextSparkType, weightedFallbackOrder, type SparkHistoryEntry, type SparkType } from './_lib/spark-types.js'
 import { generateSpark } from './_lib/spark-generator.js'
 import { canMorphProject, anyProjectMorphedToday, MORPH_COOLDOWN_DAYS } from './_lib/morph.js'
 import { considerMorph } from './_lib/morph-generator.js'
@@ -2760,8 +2760,13 @@ async function bakeStandingQuestion(
   userId: string,
   history: SparkHistoryEntry[],
 ) {
+  // The first attempt is a genuine weighted sample (the bandit rule 2 is
+  // about). Everything after that falls back in weight order too, not
+  // fixed declaration order -- otherwise only the first attempt ever
+  // honoured the rolling answer rate, and whatever sat right after
+  // 'noticing' in SPARK_TYPES got tried second every single time.
   const first = pickNextSparkType(history)
-  const order: SparkType[] = [first, ...SPARK_TYPES.filter(t => t !== first)]
+  const order: SparkType[] = [first, ...weightedFallbackOrder(history).filter(t => t !== first)]
 
   for (const type of order.slice(0, BAKE_ATTEMPTS)) {
     const baked = await generateSpark(supabase, userId, type)
@@ -2799,14 +2804,21 @@ async function handleExecutionSparks(req: VercelRequest, res: VercelResponse) {
 
     const { data: historyRows } = await supabase
       .from('sparks')
-      .select('type, answered_at')
+      .select('type, response_memory_id')
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
       .limit(HISTORY_WINDOW)
 
+    // "Answered" has to mean real talk-back, not merely retired.
+    // dismiss-spark and the reroll's own retirement both stamp
+    // answered_at so the standing question stops being served -- neither
+    // is the user actually responding, and counting them as such taught
+    // the rotation's bandit that ignored types were doing fine.
+    // response_memory_id is only ever set by the respond handler, so it's
+    // the one signal that's actually "did the user answer."
     const history: SparkHistoryEntry[] = (historyRows ?? []).map(r => ({
       type: r.type,
-      answered: r.answered_at != null,
+      answered: r.response_memory_id != null,
     }))
 
     const baked = await bakeStandingQuestion(supabase, userId, history)
@@ -2954,14 +2966,21 @@ async function handleExecutionSparks(req: VercelRequest, res: VercelResponse) {
 
     const { data: historyRows } = await supabase
       .from('sparks')
-      .select('type, answered_at')
+      .select('type, response_memory_id')
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
       .limit(HISTORY_WINDOW)
 
+    // "Answered" has to mean real talk-back, not merely retired.
+    // dismiss-spark and the reroll's own retirement both stamp
+    // answered_at so the standing question stops being served -- neither
+    // is the user actually responding, and counting them as such taught
+    // the rotation's bandit that ignored types were doing fine.
+    // response_memory_id is only ever set by the respond handler, so it's
+    // the one signal that's actually "did the user answer."
     const history: SparkHistoryEntry[] = (historyRows ?? []).map(r => ({
       type: r.type,
-      answered: r.answered_at != null,
+      answered: r.response_memory_id != null,
     }))
 
     let baked = await bakeStandingQuestion(supabase, userId, history)

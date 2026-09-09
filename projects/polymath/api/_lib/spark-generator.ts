@@ -26,6 +26,7 @@ import {
   FORGOTTEN_SILENCE_DAYS,
   FORGOTTEN_COOLDOWN_DAYS,
 } from './forgotten.js'
+import { selectCorpusArticles, type CorpusArticle } from './reading-corpus.js'
 
 const RECENT_FRAGMENT_LIMIT = 40
 /**
@@ -107,17 +108,30 @@ Respond with JSON only: { "spark": "..." | null, "fragment_id": "the id you used
   return { type: 'noticing', text: raw.text, project_id: findProjectForFragment(fragments, raw.fragmentId), expires_at: expiresAt(SPARK_SHELF_LIFE_HOURS) }
 }
 
-async function askForSparkWithId(prompt: string): Promise<{ text: string; fragmentId: string | null } | null> {
+/** Like askForSpark, but also pulls a second named field out of the same
+ *  JSON response -- the pattern every generator that needs to attribute
+ *  its spark to a specific fragment/project uses, rather than trying to
+ *  recover that attribution by substring-matching the free-text spark
+ *  afterwards. */
+async function askForSparkWithField(
+  prompt: string,
+  field: string,
+): Promise<{ text: string; value: string | null } | null> {
   try {
     const response = await generateText(prompt, { responseFormat: 'json' })
     const parsed = JSON.parse(response)
     const text = typeof parsed?.spark === 'string' ? parsed.spark.trim() : ''
     if (text.length === 0) return null
-    return { text, fragmentId: typeof parsed?.fragment_id === 'string' ? parsed.fragment_id : null }
+    return { text, value: typeof parsed?.[field] === 'string' ? parsed[field] : null }
   } catch (e) {
     console.warn('[spark-generator] generation failed:', e instanceof Error ? e.message : e)
     return null
   }
+}
+
+async function askForSparkWithId(prompt: string): Promise<{ text: string; fragmentId: string | null } | null> {
+  const raw = await askForSparkWithField(prompt, 'fragment_id')
+  return raw ? { text: raw.text, fragmentId: raw.value } : null
 }
 
 function findProjectForFragment(fragments: FragmentRow[], fragmentId: string | null): string | null {
@@ -339,12 +353,33 @@ async function generateOutsideReach(supabase: SupabaseClient, userId: string): P
     .neq('state', 'harvested')
     .limit(20)
 
-  if (!highlights || highlights.length === 0 || !projects || projects.length === 0) return null
+  if (!projects || projects.length === 0) return null
 
-  const prompt = `Recent reading highlights (from outside the user's own projects):
-${highlights.slice(0, 8).map((h: any) => `- "${h.highlight_text}" (from "${h.reading_queue?.title ?? 'an article'}")`).join('\n')}
+  let readingLines: string[]
+  if (highlights && highlights.length > 0) {
+    readingLines = highlights.slice(0, 8).map((h: any) => `- "${h.highlight_text}" (from "${h.reading_queue?.title ?? 'an article'}")`)
+  } else {
+    // Nothing manually highlighted -- fall back to the corpus itself
+    // (reading-corpus.ts's own eligibility rule: vouched-for articles
+    // first, hand-saved ones as the legacy implicit signal). Without
+    // this fallback outside_reach never fired for anyone who reads but
+    // doesn't highlight, despite SPEC.md calling it "not optional."
+    const { data: articles } = await supabase
+      .from('reading_queue')
+      .select('title, excerpt, resonance, tags')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(30)
+    const eligible = selectCorpusArticles((articles ?? []) as (CorpusArticle & { title: string | null; excerpt: string | null })[])
+    if (eligible.length === 0) return null
+    readingLines = eligible.slice(0, 8).map(a => `- "${a.excerpt || a.title || 'an article'}" (from "${a.title ?? 'an article'}")`)
+  }
 
-Their projects: ${projects.map((p: any) => p.title).join(', ')}
+  const prompt = `Recent reading (from outside the user's own projects):
+${readingLines.join('\n')}
+
+Their projects, each with an id:
+${projects.map((p: any) => `- ${p.id}: ${p.title}`).join('\n')}
 
 Find a technique, idea, or approach in the reading that's genuinely from OUTSIDE what they'd
 normally think of for one of these projects, and name a concrete way it could apply. This has to
@@ -353,17 +388,16 @@ actually come from the reading, not just be a generic idea.
 ${PLAIN_ENGLISH_RULES}
 ${SILENCE_INSTRUCTION}
 
-Respond with JSON only: { "spark": "..." | null, "target_project_title": "..." | null }`
+Respond with JSON only: { "spark": "..." | null, "target_project_id": "the id from the list above, or null" }`
 
-  const raw = await askForSpark(prompt)
+  const raw = await askForSparkWithField(prompt, 'target_project_id')
   if (!raw) return null
 
-  const jsonMatch = raw // already extracted text; project matching done loosely below
-  const matchedProject = projects.find((p: any) => jsonMatch.toLowerCase().includes(p.title.toLowerCase()))
+  const matchedProject = projects.find((p: any) => p.id === raw.value)
 
   return {
     type: 'outside_reach',
-    text: raw,
+    text: raw.text,
     project_id: matchedProject?.id ?? null,
     expires_at: expiresAt(SPARK_SHELF_LIFE_HOURS),
   }
