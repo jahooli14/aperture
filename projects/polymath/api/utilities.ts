@@ -78,6 +78,7 @@ const EXECUTION_SESSIONS_RESOURCES = new Set([
   'shape', 'shape-project', 'replan',
   'start', 'close', 'pending-closeout', 'log-retro', 'declare-live',
   'live-reask', 'different-thing-status', 'harvest', 'mirror', 'book',
+  'next-cycle',
 ])
 const EXECUTION_SPARKS_RESOURCES = new Set(['bake', 'today', 'respond', 'dismiss-spark', 'reroll-spark', 'catch-up'])
 const EXECUTION_PROPOSALS_RESOURCES = new Set([
