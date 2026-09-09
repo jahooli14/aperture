@@ -2883,10 +2883,16 @@ async function handleExecutionSparks(req: VercelRequest, res: VercelResponse) {
 
     let embeddings = 0
     let embeddingsExhausted = false
+    let errors = 0
+    let lastError: string | null = null
     while (timeLeft()) {
       const stats = await maintainEmbeddings(userId, 25, false)
       embeddings += stats.embeddings_created
-      // Nothing created means nothing left without a vector.
+      errors += stats.errors
+      if (stats.last_error) lastError = stats.last_error
+      // Creating nothing can mean there was nothing left OR that every call
+      // was rejected. Those are opposite outcomes and reporting both as
+      // "done, 0" is how a total failure looks like success.
       if (stats.embeddings_created === 0) { embeddingsExhausted = true; break }
     }
 
@@ -2904,6 +2910,8 @@ async function handleExecutionSparks(req: VercelRequest, res: VercelResponse) {
     return res.status(200).json({
       embeddings_created: embeddings,
       fragments_attached: fragments,
+      errors,
+      last_error: lastError,
       done: embeddingsExhausted && fragmentsExhausted,
       seconds: Math.round((Date.now() - startedAt) / 1000),
     })

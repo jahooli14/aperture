@@ -54,16 +54,31 @@ function CatchUpRow() {
       // bug on either side can't spin here forever.
       for (let pass = 0; pass < 40; pass++) {
         const res = await fetch('/api/utilities?resource=catch-up', { method: 'POST' })
-        if (!res.ok) throw new Error(`Server said no (${res.status})`)
+        if (!res.ok) {
+          // The body says what actually went wrong; a bare status code sent
+          // us guessing at a 404 that could have been any of three things.
+          const body = await res.text().catch(() => '')
+          throw new Error(body ? `${res.status}: ${body.slice(0, 200)}` : `Server said no (${res.status})`)
+        }
         const data = await res.json() as {
           embeddings_created: number
           fragments_attached: number
+          errors?: number
+          last_error?: string | null
           done: boolean
         }
         totalEmbeddings += data.embeddings_created
         totalFragments += data.fragments_attached
         setEmbeddings(totalEmbeddings)
         setFragments(totalFragments)
+
+        // Nothing done AND errors means the work is failing, not finished.
+        // Saying "done · 0" there would hide the only useful information.
+        if (data.errors && data.embeddings_created === 0 && data.fragments_attached === 0) {
+          setFailed(data.last_error ? `Stopped: ${data.last_error}` : 'Stopped: every attempt failed.')
+          break
+        }
+
         if (data.done) { setFinished(true); break }
       }
     } catch (err) {
