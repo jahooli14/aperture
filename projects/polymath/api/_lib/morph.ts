@@ -24,10 +24,23 @@ export function canMorphProject(lastMorphedAt: string | null, now: Date = new Da
   return days >= MORPH_COOLDOWN_DAYS
 }
 
-/** At most one project may morph per calendar day, portfolio-wide. */
-export function anyProjectMorphedToday(morphTimestampsToday: string[], now: Date = new Date()): boolean {
+export interface ProposalForDailyLimit {
+  created_at: string
+  status: string
+}
+
+/**
+ * At most one project may morph per calendar day, portfolio-wide.
+ *
+ * A proposal the user REJECTED produced nothing -- it shouldn't use up the
+ * day's one slot, or a single rejection would silently block every other
+ * project from getting a morph for the rest of the day. Only a proposal
+ * still live ('pending') or one the user actually took ('accepted') counts
+ * as today's slot being spent.
+ */
+export function anyProjectMorphedToday(proposalsToday: ProposalForDailyLimit[], now: Date = new Date()): boolean {
   const todayKey = now.toISOString().slice(0, 10)
-  return morphTimestampsToday.some(ts => ts.slice(0, 10) === todayKey)
+  return proposalsToday.some(p => p.status !== 'rejected' && p.created_at.slice(0, 10) === todayKey)
 }
 
 export interface FragmentForCitation {

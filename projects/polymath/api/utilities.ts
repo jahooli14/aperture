@@ -3129,12 +3129,12 @@ async function handleExecutionProposals(req: VercelRequest, res: VercelResponse)
 
     const { data: recentProposals } = await supabase
       .from('proposals')
-      .select('created_at')
+      .select('created_at, status')
       .eq('user_id', userId)
       .eq('kind', 'morph')
       .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
 
-    if (anyProjectMorphedToday((recentProposals ?? []).map(p => p.created_at))) {
+    if (anyProjectMorphedToday(recentProposals ?? [])) {
       return res.status(200).json({ proposed: false, reason: 'already morphed a project today' })
     }
 
