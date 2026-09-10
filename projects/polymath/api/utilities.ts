@@ -57,7 +57,7 @@ import { reconcileCloseout, parseTicked } from './_lib/session-closeout.js'
 import { judgeFinishLine } from './_lib/finish-line.js'
 import { readCycleState, cycleLabel, rollToNextCycle, lastCycleSteps } from './_lib/project-cycles.js'
 import { pickNextSparkType, weightedFallbackOrder, type SparkHistoryEntry, type SparkType } from './_lib/spark-types.js'
-import { generateSpark } from './_lib/spark-generator.js'
+import { generateSpark, loadEchoContext } from './_lib/spark-generator.js'
 import { canMorphProject, anyProjectMorphedToday, MORPH_COOLDOWN_DAYS } from './_lib/morph.js'
 import { considerMorph } from './_lib/morph-generator.js'
 import { getStalledProjects, attachFragments, proposeComposite } from './_lib/composite-generator.js'
@@ -2752,6 +2752,11 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
  * the next-best types turns "this kind had nothing" into "ask a different
  * kind" instead of a wasted day. Capped, because each attempt is a query and
  * sometimes a model call.
+ *
+ * A type can also decline because what it produced was the last few days'
+ * question in new words (spark-echo.ts), which is the other reason to try
+ * more than one. The recent-spark history is read once here and handed down,
+ * rather than re-fetched per attempt.
  */
 const BAKE_ATTEMPTS = 4
 
@@ -2767,9 +2772,10 @@ async function bakeStandingQuestion(
   // 'noticing' in SPARK_TYPES got tried second every single time.
   const first = pickNextSparkType(history)
   const order: SparkType[] = [first, ...weightedFallbackOrder(history).filter(t => t !== first)]
+  const echo = await loadEchoContext(supabase, userId)
 
   for (const type of order.slice(0, BAKE_ATTEMPTS)) {
-    const baked = await generateSpark(supabase, userId, type)
+    const baked = await generateSpark(supabase, userId, type, echo)
     if (baked) return baked
   }
   return null
@@ -3149,12 +3155,12 @@ async function handleExecutionProposals(req: VercelRequest, res: VercelResponse)
 
     const { data: recentProposals } = await supabase
       .from('proposals')
-      .select('created_at')
+      .select('created_at, status')
       .eq('user_id', userId)
       .eq('kind', 'morph')
       .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
 
-    if (anyProjectMorphedToday((recentProposals ?? []).map(p => p.created_at))) {
+    if (anyProjectMorphedToday(recentProposals ?? [])) {
       return res.status(200).json({ proposed: false, reason: 'already morphed a project today' })
     }
 

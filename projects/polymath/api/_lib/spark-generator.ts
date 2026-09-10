@@ -19,6 +19,7 @@ import { PLAIN_ENGLISH_RULES } from './plain-english.js'
 import type { SparkType } from './spark-types.js'
 import { SPARK_PROJECT_COOLDOWN_DAYS, recentlySparkedProjectIds, preferUnsparked } from './spark-rotation.js'
 import { pickSparkSubject, type SubjectCandidate } from './spark-subject.js'
+import { avoidBlock, echoesRecent, fetchRecentSparkTexts } from './spark-echo.js'
 import { pickGap, genericGapQuestion } from './session-gap.js'
 import {
   selectForgottenProject,
@@ -49,6 +50,25 @@ export interface BakedSpark {
   text: string
   project_id: string | null
   expires_at: string
+}
+
+/**
+ * What the user has already been asked, carried into every generator.
+ *
+ * Rotating the type and the project isn't enough on its own: a different
+ * type asked about a different project still reached for water and infinity
+ * three days running, because nothing in the prompt or the check knew what
+ * yesterday had said. `avoid` goes into the prompt, `recentTexts` is what
+ * the finished spark is checked against (spark-echo.ts).
+ */
+export interface EchoContext {
+  recentTexts: string[]
+  avoid: string
+}
+
+export async function loadEchoContext(supabase: SupabaseClient, userId: string): Promise<EchoContext> {
+  const recentTexts = await fetchRecentSparkTexts(supabase, userId)
+  return { recentTexts, avoid: avoidBlock(recentTexts) }
 }
 
 interface FragmentRow {
@@ -87,7 +107,7 @@ async function askForSpark(prompt: string): Promise<string | null> {
 
 const SILENCE_INSTRUCTION = `If nothing here is real or interesting enough, respond with { "spark": null } instead of forcing one. A weak spark is worse than no spark.`
 
-async function generateNoticing(supabase: SupabaseClient, userId: string): Promise<BakedSpark | null> {
+async function generateNoticing(supabase: SupabaseClient, userId: string, echo: EchoContext): Promise<BakedSpark | null> {
   const fragments = await fetchRecentFragments(supabase, userId)
   const references = fragments.filter(f => f.role === 'reference')
   if (references.length === 0) return null
@@ -98,6 +118,7 @@ ${references.slice(0, 15).map(f => `- "${f.text}" (project: ${f.projects?.title 
 Pick ONE and hold up something specific and true about it -- a detail, a technique, a structural
 choice -- without asking a question. Just the noticing, one or two sentences.
 
+${echo.avoid}
 ${PLAIN_ENGLISH_RULES}
 ${SILENCE_INSTRUCTION}
 
@@ -139,7 +160,7 @@ function findProjectForFragment(fragments: FragmentRow[], fragmentId: string | n
   return fragments.find(f => f.id === fragmentId)?.project_id ?? null
 }
 
-async function generateTransferredConstraint(supabase: SupabaseClient, userId: string): Promise<BakedSpark | null> {
+async function generateTransferredConstraint(supabase: SupabaseClient, userId: string, echo: EchoContext): Promise<BakedSpark | null> {
   const fragments = await fetchRecentFragments(supabase, userId)
   const byProject = new Map<string, FragmentRow[]>()
   for (const f of fragments) {
@@ -218,6 +239,7 @@ have been rewritten four times each — what happens if a first draft has to sta
 Silence is the normal answer. If no rule in these captures genuinely transfers, return
 { "spark": null }. Do not lower the bar to produce something.
 
+${echo.avoid}
 ${PLAIN_ENGLISH_RULES}
 
 Respond with JSON only: { "spark": "..." | null, "to_project_id": "the id of the project the rule is being carried INTO, or null" }`
@@ -246,7 +268,7 @@ async function askForSparkWithProject(prompt: string): Promise<{ text: string; p
   }
 }
 
-async function generateUnfinishedThought(supabase: SupabaseClient, userId: string): Promise<BakedSpark | null> {
+async function generateUnfinishedThought(supabase: SupabaseClient, userId: string, echo: EchoContext): Promise<BakedSpark | null> {
   const fragments = await fetchRecentFragments(supabase, userId)
   const obstacles = fragments.filter(f => f.role === 'obstacle' || f.role === 'constraint')
   if (obstacles.length === 0) return null
@@ -265,6 +287,7 @@ async function generateUnfinishedThought(supabase: SupabaseClient, userId: strin
 They never finished that thought. Play it back to them plainly and ask what they meant --
 without answering it for them.
 
+${echo.avoid}
 ${PLAIN_ENGLISH_RULES}
 ${SILENCE_INSTRUCTION}
 
@@ -275,7 +298,7 @@ Respond with JSON only: { "spark": "..." | null }`
   return { type: 'unfinished_thought', text: raw, project_id: pick.project_id, expires_at: expiresAt(SPARK_SHELF_LIFE_HOURS) }
 }
 
-async function generateContradiction(supabase: SupabaseClient, userId: string): Promise<BakedSpark | null> {
+async function generateContradiction(supabase: SupabaseClient, userId: string, echo: EchoContext): Promise<BakedSpark | null> {
   const fragments = await fetchRecentFragments(supabase, userId)
   const constraints = fragments.filter(f => f.role === 'constraint')
   if (constraints.length < 2) return null
@@ -286,6 +309,7 @@ ${constraints.slice(0, 10).map(f => `- "${f.text}" (${f.projects?.title ?? 'unfi
 Find two that sit in real tension with each other -- not invented, actually there. Name both,
 side by side, and leave it unresolved. Don't tell them which one is right.
 
+${echo.avoid}
 ${PLAIN_ENGLISH_RULES}
 ${SILENCE_INSTRUCTION}
 
@@ -296,7 +320,7 @@ Respond with JSON only: { "spark": "..." | null }`
   return { type: 'contradiction', text: raw, project_id: null, expires_at: expiresAt(SPARK_SHELF_LIFE_HOURS) }
 }
 
-async function generateScaleJump(supabase: SupabaseClient, userId: string): Promise<BakedSpark | null> {
+async function generateScaleJump(supabase: SupabaseClient, userId: string, echo: EchoContext): Promise<BakedSpark | null> {
   // Same subject rule as the gap: follow what's actually moving this week,
   // and swerve to something quieter every few sparks rather than circling
   // one project until it's the only one left warm enough to spark at all.
@@ -310,6 +334,7 @@ Ask ONE question that jumps to the wrong altitude on purpose: if they've been th
 small details, ask the big-picture question ("what's this about, today, in one sentence?"); if
 the project sounds vague and big, ask a small concrete question instead.
 
+${echo.avoid}
 ${PLAIN_ENGLISH_RULES}
 ${SILENCE_INSTRUCTION}
 
@@ -320,7 +345,7 @@ Respond with JSON only: { "spark": "..." | null }`
   return { type: 'scale_jump', text: raw, project_id: pick.id, expires_at: expiresAt(SPARK_SHELF_LIFE_HOURS) }
 }
 
-async function generateMaterialFact(supabase: SupabaseClient, userId: string): Promise<BakedSpark | null> {
+async function generateMaterialFact(supabase: SupabaseClient, userId: string, _echo: EchoContext): Promise<BakedSpark | null> {
   const fragments = await fetchRecentFragments(supabase, userId)
   const materials = fragments.filter(f => f.role === 'material')
   if (materials.length === 0) return null
@@ -338,7 +363,7 @@ async function generateMaterialFact(supabase: SupabaseClient, userId: string): P
   }
 }
 
-async function generateOutsideReach(supabase: SupabaseClient, userId: string): Promise<BakedSpark | null> {
+async function generateOutsideReach(supabase: SupabaseClient, userId: string, echo: EchoContext): Promise<BakedSpark | null> {
   const { data: highlights } = await supabase
     .from('article_highlights')
     .select('highlight_text, article_id, reading_queue!inner(title)')
@@ -385,6 +410,7 @@ Find a technique, idea, or approach in the reading that's genuinely from OUTSIDE
 normally think of for one of these projects, and name a concrete way it could apply. This has to
 actually come from the reading, not just be a generic idea.
 
+${echo.avoid}
 ${PLAIN_ENGLISH_RULES}
 ${SILENCE_INSTRUCTION}
 
@@ -415,7 +441,7 @@ Respond with JSON only: { "spark": "..." | null, "target_project_id": "the id fr
  * this?" about it instead of proposing something concrete would be strictly
  * worse than staying quiet.
  */
-async function generateForgotten(supabase: SupabaseClient, userId: string): Promise<BakedSpark | null> {
+async function generateForgotten(supabase: SupabaseClient, userId: string, _echo: EchoContext): Promise<BakedSpark | null> {
   const { data: projects } = await supabase
     .from('projects')
     .select('id, title, state, last_active, last_session_ended_at, created_at')
@@ -552,7 +578,7 @@ async function chooseSubject(
  * when you'd sat down to WORK and the app couldn't build you a plan. That
  * is the worst possible moment for a question. This is the right one.
  */
-async function generateGap(supabase: SupabaseClient, userId: string): Promise<BakedSpark | null> {
+async function generateGap(supabase: SupabaseClient, userId: string, _echo: EchoContext): Promise<BakedSpark | null> {
   const subject = await chooseSubject(supabase, userId)
   if (!subject) return null
   const { row } = subject
@@ -588,7 +614,7 @@ async function generateGap(supabase: SupabaseClient, userId: string): Promise<Ba
   return { type: 'gap', text: gap.question, project_id: row.id, expires_at: expiresAt(SPARK_SHELF_LIFE_HOURS) }
 }
 
-const GENERATORS: Record<SparkType, (supabase: SupabaseClient, userId: string) => Promise<BakedSpark | null>> = {
+const GENERATORS: Record<SparkType, (supabase: SupabaseClient, userId: string, echo: EchoContext) => Promise<BakedSpark | null>> = {
   noticing: generateNoticing,
   gap: generateGap,
   transferred_constraint: generateTransferredConstraint,
@@ -603,7 +629,20 @@ const GENERATORS: Record<SparkType, (supabase: SupabaseClient, userId: string) =
 export async function generateSpark(
   supabase: SupabaseClient,
   userId: string,
-  type: SparkType
+  type: SparkType,
+  echo?: EchoContext,
 ): Promise<BakedSpark | null> {
-  return GENERATORS[type](supabase, userId)
+  const context = echo ?? (await loadEchoContext(supabase, userId))
+  const baked = await GENERATORS[type](supabase, userId, context)
+  if (!baked) return null
+
+  // The prompt was asked not to repeat itself; this is the part that makes
+  // it a rule. A dropped spark isn't a lost day — the bake loop tries the
+  // next type, and a fourth question about water is worse than one fewer
+  // question.
+  if (echoesRecent(baked.text, context.recentTexts)) {
+    console.log(`[spark-generator] dropped ${type}: echoes a recent spark`)
+    return null
+  }
+  return baked
 }
