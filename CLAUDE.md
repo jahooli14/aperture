@@ -119,7 +119,7 @@ Active, partly-shaped, dormant, and abandoned are different states. Long-dormant
 - **Admin disguised as build** — "create a file named X.json," "open settings," "research Y." A real next step uses a tool against a workpiece (cut, drill, flash, commit with named first content, drive, phone).
 - **Narrative why_now** — "the April note about X means Y can finally land" asserts a causal connection that isn't real. why_now must name a specific recent acceleration that genuinely unblocks something.
 
-### Project labels + review rotation
+### Project labels
 
 **Labels, not containers.** Projects carry `metadata.tags: string[]` — a field that already existed and was already read by the idea generator (`gather.ts`, `seed-picker.ts`) and the resurface scorer, but had nothing writing to it. `api/_lib/project-tags.ts` fills it. A project can be both `music` and `woodwork`; that overlap is the point. `type` is legacy and is NOT a grouping axis — "creative" labels nothing when every project is creative.
 
@@ -127,16 +127,9 @@ Active, partly-shaped, dormant, and abandoned are different states. Long-dormant
 - `normalizeTag` slugifies (lowercase, hyphenated, 2–24 chars) and drops anything that can't reduce to one. A malformed label is worse than a missing one — it becomes a filter matching exactly one project forever.
 - Max 3 labels per project. Backfill is **idempotent** (skips projects that already have labels), so it's safe to re-run and safe on cron. `projects?resource=backfill-tags` POST, plus a 40-project pass in the Vercel daily cron to catch newly-created projects.
 
-**The review rotation** (`api/_lib/project-review.ts` → `ReviewRotation` on home). A few priority projects live in the user's head fine; everything else goes out of sight and stops being able to spark the next thing. A flat list on another page doesn't fix that — nobody opens a list of forty things on purpose.
+> The old review rotation (`api/_lib/project-review.ts` → `ReviewRotation` — "still mine" / "pick it up" / "park it") is fully deleted, per the execution rebuild above. Its one job worth keeping — offering a long-forgotten project back into play — now lives in `forgotten.ts` and surfaces through the attention slot; the rest (a nag to confirm a project isn't dead) is what quiet drift-decay replaced. Don't recreate `project-review.ts`, `reviewRotationOps.ts`, or their exports (`selectReviewCandidates`, `getReviewQueue`, `REVIEW_BATCH_SIZE`, `REVIEW_COOLDOWN_DAYS`) — none of them exist anymore.
 
-- **Rotation, not a list.** 2–3 at a time (`REVIEW_BATCH_SIZE`), surfaced on home, one tap each.
-- **Acted on in place.** `still mine` / `pick it up` (→ active) / `park it` (→ dormant). Never navigates — the projects page is for *browsing*, the review finishes where it starts.
-- Every action stamps `metadata.last_reviewed_at`, which sets a `REVIEW_COOLDOWN_DAYS` (21d) rest before the project is eligible again. That's what makes it rotate.
-- **Ordering is what makes it useful:** projects sharing a label with the starred project come first (building blocks for what's already in motion), then longest-untouched. Excluded: the priority project, anything pinned to Up Next, unshaped captures, completed/graveyard.
-- Reasons are **cited or plain** — "Also music, like The Album." when there's a real shared label, otherwise "Untouched 4 months." Never an invented causal story about what recent notes "mean" (the narrative `why_now` anti-pattern).
-- Selection logic is pure (`selectReviewCandidates`) and unit-tested; the IO wrapper (`getReviewQueue`) just fetches and delegates. Pure view helpers live in `reviewRotationOps.ts` — the `.tsx` imports the API client, which reaches Supabase's build-time constants and so can't be imported under vitest.
-
-**Labels drive colour** (`getTheme` in `projectTheme.ts`). Colour resolves label → legacy `type` → hashed title. A label with its own palette entry (music, art, writing…) uses it; any other label is hashed on the *label*, so every woodwork project comes out the same colour and the page reads as grouped by craft instead of as confetti. Every project card passes `metadata.tags` now. The review card also dims with dormancy (`dormancyFade`, floors at 0.62 — atmosphere, never an accessibility problem).
+**Labels drive colour** (`getTheme` in `projectTheme.ts`). Colour resolves label → legacy `type` → hashed title. A label with its own palette entry (music, art, writing…) uses it; any other label is hashed on the *label*, so every woodwork project comes out the same colour and the page reads as grouped by craft instead of as confetti. Every project card passes `metadata.tags` now.
 
 ### Identity layer
 

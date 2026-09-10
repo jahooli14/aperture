@@ -2337,6 +2337,7 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
         .from('reading_queue')
         .select('*')
         .eq('id', articleId)
+        .eq('user_id', userId)
         .single()
 
       if (fetchError || !article) {
@@ -2389,6 +2390,7 @@ Return ONLY the JSON, no other text.`
             processed: true
           })
           .eq('id', articleId)
+          .eq('user_id', userId)
 
         if (updateError) throw updateError
 
@@ -2958,6 +2960,7 @@ async function generateArticleEmbeddingAndConnect(
       .from('reading_queue')
       .update({ embedding })
       .eq('id', articleId)
+      .eq('user_id', userId)
 
     if (updateError) {
       console.error('[reading] Failed to store embedding:', updateError)

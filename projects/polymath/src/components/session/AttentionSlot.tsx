@@ -27,10 +27,11 @@
  * whole spec exists to avoid.
  */
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useSessionStore } from '../../stores/useSessionStore'
 import { useProjectStore } from '../../stores/useProjectStore'
 import { VoiceInput } from '../VoiceInput'
+import { api } from '../../lib/apiClient'
 
 const secondaryTextStyle = { color: 'var(--brand-text-secondary)', opacity: 0.7 }
 const borderStyle = { borderColor: 'var(--glass-border-bold)' }
@@ -98,15 +99,20 @@ function markMirrorSeen() {
   try {
     localStorage.setItem(key, '1')
   } catch {
-    // Storage unavailable -- the mirror will just show again next open, harmless.
+    // Storage unavailable -- getItem above almost always fails the same
+    // way (they're not independently broken in practice), and
+    // mirrorSeenThisMonth already fails closed on that, so this doesn't
+    // reopen the mirror on every future open; it just has nothing to save.
   }
 }
 
 async function getJson<T>(url: string): Promise<T | null> {
   try {
-    const res = await fetch(url)
-    if (!res.ok) return null
-    return res.json()
+    // Routed through apiClient's api.get, not a bare fetch, so its
+    // cache+dedup covers `resource=today` -- StandingQuestion (rendered on
+    // the same home page, inside the answer card) hits that exact endpoint
+    // too, and used to always cost a second network round trip for it.
+    return await api.get(url.replace(/^\/api\//, '')) as T
   } catch {
     return null
   }
@@ -125,11 +131,7 @@ function MirrorSlot({ rows, onDismiss }: { rows: MirrorRow[]; onDismiss: () => v
       // retro-parser.ts, so a correction like "did 2 hours on the decks
       // last night" lands on the right project with the right duration,
       // not a guessed one.
-      await fetch('/api/utilities?resource=log-retro', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: missingText }),
-      })
+      await api.post('utilities?resource=log-retro', { text: missingText })
     } finally {
       setSubmitting(false)
       onDismiss()
@@ -177,11 +179,7 @@ function ProposalSlot({ proposal, onResolved }: { proposal: Proposal; onResolved
   const act = async (action: 'accept' | 'reject') => {
     setBusy(true)
     try {
-      await fetch(`/api/utilities?resource=${action}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ proposal_id: proposal.id }),
-      })
+      await api.post(`utilities?resource=${action}`, { proposal_id: proposal.id })
     } finally {
       setBusy(false)
       onResolved()
@@ -263,11 +261,7 @@ function ForgottenSlot({ spark, onResolved }: { spark: Spark; onResolved: () => 
  */
 async function dismissSpark(sparkId: string): Promise<void> {
   try {
-    await fetch('/api/utilities?resource=dismiss-spark', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ spark_id: sparkId }),
-    })
+    await api.post('utilities?resource=dismiss-spark', { spark_id: sparkId })
   } catch {
     // Offline — it'll be offered again, which is the old behaviour, not a
     // new failure.
@@ -283,17 +277,22 @@ function SparkSlot({ spark, onResolved }: { spark: Spark; onResolved: () => void
   const [text, setText] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [receipt, setReceipt] = useState<string | null>(null)
+  const receiptTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Navigating away mid-receipt used to leave the timeout running and call
+  // onResolved (a setState on the parent) after this component had already
+  // unmounted.
+  useEffect(() => () => {
+    if (receiptTimeoutRef.current) clearTimeout(receiptTimeoutRef.current)
+  }, [])
 
   const respond = async () => {
     if (!text.trim()) return
     setSubmitting(true)
     try {
-      const res = await fetch('/api/utilities?resource=respond', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ spark_id: spark.id, response_text: text }),
-      })
-      const data = await res.json().catch(() => ({}))
+      const data = await api.post('utilities?resource=respond', {
+        spark_id: spark.id, response_text: text,
+      }).catch(() => ({})) as { project_title?: string }
       // Say what answering actually did. Not a streak, not a point -- the
       // real mechanism: it goes in the corpus, and the session briefing
       // reads the corpus, so the next sitting on that project starts
@@ -304,7 +303,7 @@ function SparkSlot({ spark, onResolved }: { spark: Spark; onResolved: () => void
         ? `In. It'll be there next time you sit down with ${data.project_title}.`
         : 'In.')
       setSubmitting(false)
-      setTimeout(onResolved, SPARK_RECEIPT_MS)
+      receiptTimeoutRef.current = setTimeout(onResolved, SPARK_RECEIPT_MS)
     } catch {
       setSubmitting(false)
       onResolved()
@@ -349,11 +348,7 @@ function ReaskSlot({ suggestion, onResolved }: { suggestion: ReaskSuggestion; on
       } else {
         // Recorded against the project so the answer survives this open —
         // and this device.
-        await fetch('/api/utilities?resource=live-reask', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ project_id: suggestion.project_id }),
-        }).catch(() => {})
+        await api.post('utilities?resource=live-reask', { project_id: suggestion.project_id }).catch(() => {})
       }
     } finally {
       setBusy(false)

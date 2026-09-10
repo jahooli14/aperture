@@ -27,7 +27,12 @@ export interface ProjectForStall {
 }
 
 export function isStalled(project: ProjectForStall, now: Date = new Date()): boolean {
-  const hasEmptySlot = project.slots.some(s => !s.filled)
+  // No slots at all isn't evidence every question is answered -- it's the
+  // opposite kind of unknown (never seeded, or seeding produced nothing),
+  // and treating it as "no open question" meant a project that never got
+  // slots could never be judged stalled, permanently exempting it from
+  // drift-decay and composite eligibility.
+  const hasEmptySlot = project.slots.length === 0 || project.slots.some(s => !s.filled)
   if (!hasEmptySlot) return false
 
   if (!project.last_session_ended_at) return true // never worked on -- trivially "no recent session"

@@ -386,7 +386,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       // Fetch all items with embeddings (limit per type to avoid timeouts)
       const [memoriesRes, projectsRes, articlesRes] = await Promise.all([
-        supabase.from('memories').select('id, title, body, embedding').not('embedding', 'is', null).limit(50),
+        supabase.from('memories').select('id, title, body, embedding').eq('user_id', userId).not('embedding', 'is', null).limit(50),
         supabase.from('projects').select('id, title, description, embedding').eq('user_id', userId).not('embedding', 'is', null).limit(30),
         supabase.from('reading_queue').select('id, title, excerpt, embedding').eq('user_id', userId).not('embedding', 'is', null).limit(30)
       ])

@@ -46,4 +46,9 @@ describe('isStalled', () => {
     }
     expect(isStalled(project, now)).toBe(true)
   })
+
+  it('is stalled with no slots at all -- unseeded is not the same as fully answered', () => {
+    const project = { last_session_ended_at: '2026-07-01T00:00:00Z', slots: [] }
+    expect(isStalled(project, now)).toBe(true)
+  })
 })

@@ -50,7 +50,12 @@ export interface SparkHistoryEntry {
 
 /** Every type starts with equal weight; only real history shifts it. */
 const BASE_WEIGHT = 1
-/** How many of the answers a type has actually not been able to reach */
+/** outside_reach's floor. weightFor's formula is BASE_WEIGHT * (0.25 +
+ *  rate), which ranges 0.25 (rate 0) to 1.25 (rate 1) -- so this floor
+ *  only actually raises the weight when the rolling answer rate drops
+ *  below 0.25. Above that, outside_reach is weighted the same as every
+ *  other type and the floor is a no-op, which is deliberate: it's a
+ *  guarantee against being crowded out entirely, not a boost. */
 const MIN_OUTSIDE_REACH_WEIGHT = 0.5
 
 /**
@@ -72,22 +77,29 @@ function answerRateByType(history: SparkHistoryEntry[]): Map<SparkType, number> 
   return rates
 }
 
+/** Shared by every picker below, so a change to the weighting formula
+ *  can't drift between them the way pickNextSparkType and
+ *  highestWeightSparkType used to (each carried its own copy). */
+function weightFor(type: SparkType, rates: Map<SparkType, number>): number {
+  const rate = rates.get(type) ?? 0.5
+  const weight = BASE_WEIGHT * (0.25 + rate) // never fully zero out a type
+  return type === 'outside_reach' ? Math.max(weight, MIN_OUTSIDE_REACH_WEIGHT) : weight
+}
+
+function candidatePool(history: SparkHistoryEntry[]): SparkType[] {
+  const lastType = history[0]?.type ?? null
+  const candidates = SPARK_TYPES.filter(t => t !== lastType)
+  return candidates.length > 0 ? candidates : [...SPARK_TYPES]
+}
+
 /**
  * Picks the next spark type. `history` should be ordered most-recent-first;
  * only history[0] is used for the no-repeat rule, the rest for weighting.
  */
 export function pickNextSparkType(history: SparkHistoryEntry[]): SparkType {
-  const lastType = history[0]?.type ?? null
   const rates = answerRateByType(history)
-
-  const candidates = SPARK_TYPES.filter(t => t !== lastType)
-  const pool = candidates.length > 0 ? candidates : [...SPARK_TYPES]
-
-  const weights = pool.map(type => {
-    const rate = rates.get(type) ?? 0.5
-    const weight = BASE_WEIGHT * (0.25 + rate) // never fully zero out a type
-    return type === 'outside_reach' ? Math.max(weight, MIN_OUTSIDE_REACH_WEIGHT) : weight
-  })
+  const pool = candidatePool(history)
+  const weights = pool.map(type => weightFor(type, rates))
 
   const total = weights.reduce((a, b) => a + b, 0)
   let r = Math.random() * total
@@ -103,21 +115,38 @@ export function pickNextSparkType(history: SparkHistoryEntry[]): SparkType {
  * highest-weight type rather than a sampled one (e.g. a preview).
  */
 export function highestWeightSparkType(history: SparkHistoryEntry[]): SparkType {
-  const lastType = history[0]?.type ?? null
   const rates = answerRateByType(history)
-  const candidates = SPARK_TYPES.filter(t => t !== lastType)
-  const pool = candidates.length > 0 ? candidates : [...SPARK_TYPES]
+  const pool = candidatePool(history)
 
   let best = pool[0]
   let bestWeight = -Infinity
   for (const type of pool) {
-    const rate = rates.get(type) ?? 0.5
-    let weight = 0.25 + rate
-    if (type === 'outside_reach') weight = Math.max(weight, MIN_OUTSIDE_REACH_WEIGHT)
+    const weight = weightFor(type, rates)
     if (weight > bestWeight) {
       bestWeight = weight
       best = type
     }
   }
   return best
+}
+
+/**
+ * Every candidate type, ranked highest-weight first, for a caller that
+ * needs to try more than one before giving up (bakeStandingQuestion's
+ * fallback chain).
+ *
+ * This used to be approximated by trying pickNextSparkType's choice
+ * first and then falling back through SPARK_TYPES in fixed declaration
+ * order -- which meant the weighting (rule 2: rolling talk-back rate)
+ * only ever applied to the FIRST attempt. Whatever came right after
+ * 'noticing' in the array above got tried second every single time,
+ * regardless of its actual answer rate, and outside_reach/forgotten
+ * -- last in the array -- were rarely reached within the attempt cap.
+ * Ranking every candidate by the same weight the picks above use keeps
+ * the whole fallback chain honouring rule 2, not just its first link.
+ */
+export function weightedFallbackOrder(history: SparkHistoryEntry[]): SparkType[] {
+  const rates = answerRateByType(history)
+  const pool = candidatePool(history)
+  return [...pool].sort((a, b) => weightFor(b, rates) - weightFor(a, rates))
 }

@@ -1205,11 +1205,12 @@ Return JSON only:
               .from('bedtime_prompts')
               .select('follow_up_memory_ids')
               .eq('id', id)
+              .eq('user_id', userId)
               .single()
             const existing: string[] = prompt?.follow_up_memory_ids ?? []
             await supabase.from('bedtime_prompts').update({
               follow_up_memory_ids: [...existing, memory.id]
-            }).eq('id', id)
+            }).eq('id', id).eq('user_id', userId)
           }
 
           return res.json({ success: true, memory })
@@ -1389,6 +1390,17 @@ Return JSON only:
           })
         }
 
+        // Confirm the project is actually the caller's before attaching a
+        // note to it or touching its last_active — project_id is otherwise
+        // an unchecked cross-user id.
+        const { data: owned } = await supabase
+          .from('projects')
+          .select('id')
+          .eq('id', project_id)
+          .eq('user_id', userId)
+          .single()
+        if (!owned) return res.status(404).json({ error: 'Project not found' })
+
         const { data, error } = await supabase
           .from('project_notes')
           .insert([{
@@ -1407,6 +1419,7 @@ Return JSON only:
           .from('projects')
           .update({ last_active: new Date().toISOString() })
           .eq('id', project_id)
+          .eq('user_id', userId)
 
         return res.status(201).json({
           success: true,
