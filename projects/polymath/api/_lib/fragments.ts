@@ -140,9 +140,9 @@ export async function attachFragmentFromMemory(
  * thought's embedding and the project's. Those writes were failing (the model
  * was asked for its default 3072 dimensions against vector(768) columns), so
  * every attach returned 0 and this table stayed empty — which silently starved
- * five of the nine spark generators, since noticing, transferred constraint,
- * unfinished thought, contradiction and material fact all read fragments and
- * nothing else. Fixing the dimensions only helps thoughts captured from now on;
+ * the mull channel, since a project's captures are most of what a blind spot
+ * is found in and the description alone rarely has one in it.
+ * Fixing the dimensions only helps thoughts captured from now on;
  * the years already in the corpus need this.
  *
  * Bounded per run: each attach is a model call.

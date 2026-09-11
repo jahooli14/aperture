@@ -56,8 +56,7 @@ import { handleFixQueue } from './_lib/fix-queue/route.js'
 import { reconcileCloseout, parseTicked } from './_lib/session-closeout.js'
 import { judgeFinishLine } from './_lib/finish-line.js'
 import { readCycleState, cycleLabel, rollToNextCycle, lastCycleSteps } from './_lib/project-cycles.js'
-import { pickNextSparkType, weightedFallbackOrder, type SparkHistoryEntry, type SparkType } from './_lib/spark-types.js'
-import { generateSpark, loadEchoContext } from './_lib/spark-generator.js'
+import { bakeMull } from './_lib/mull-generator.js'
 import { canMorphProject, anyProjectMorphedToday, MORPH_COOLDOWN_DAYS } from './_lib/morph.js'
 import { considerMorph } from './_lib/morph-generator.js'
 import { getStalledProjects, attachFragments, proposeComposite } from './_lib/composite-generator.js'
@@ -2742,49 +2741,18 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
 }
 
 /**
- * Bake a question, trying more than one kind before giving up.
+ * Bake a question.
  *
- * Every generator is allowed to stay silent — there are more than twenty
- * paths that legitimately return nothing (no stalled pair, no recent
- * fragment, nothing unread worth reaching for). The picker samples ONE type,
- * so a single silent draw used to mean no question that day at all, and the
- * rotation would try again tomorrow with the same odds. Falling through to
- * the next-best types turns "this kind had nothing" into "ask a different
- * kind" instead of a wasted day. Capped, because each attempt is a query and
- * sometimes a model call.
- *
- * A type can also decline because what it produced was the last few days'
- * question in new words (spark-echo.ts), which is the other reason to try
- * more than one. The recent-spark history is read once here and handed down,
- * rather than re-fetched per attempt.
+ * There used to be a fallback chain here, because there used to be nine
+ * shapes of question and a shape that found nothing could hand over to the
+ * next one. There is one mechanism now (mull-generator.ts): a blind spot,
+ * and whatever the corpus says about it. When that finds nothing there is
+ * nothing else to try — the forgotten-project offer inside bakeMull is the
+ * one thing left, and after that the honest answer is no question today.
  */
-const BAKE_ATTEMPTS = 4
-
-async function bakeStandingQuestion(
-  supabase: ReturnType<typeof getSupabaseClient>,
-  userId: string,
-  history: SparkHistoryEntry[],
-) {
-  // The first attempt is a genuine weighted sample (the bandit rule 2 is
-  // about). Everything after that falls back in weight order too, not
-  // fixed declaration order -- otherwise only the first attempt ever
-  // honoured the rolling answer rate, and whatever sat right after
-  // 'noticing' in SPARK_TYPES got tried second every single time.
-  const first = pickNextSparkType(history)
-  const order: SparkType[] = [first, ...weightedFallbackOrder(history).filter(t => t !== first)]
-  const echo = await loadEchoContext(supabase, userId)
-
-  for (const type of order.slice(0, BAKE_ATTEMPTS)) {
-    const baked = await generateSpark(supabase, userId, type, echo)
-    if (baked) return baked
-  }
-  return null
-}
-
 async function handleExecutionSparks(req: VercelRequest, res: VercelResponse) {
   const resource = req.query.resource as string
   const supabase = getSupabaseClient()
-  const HISTORY_WINDOW = 30
 
   // ─── BAKE (cron) ────────────────────────────────────────────────────
   if (resource === 'bake') {
@@ -2808,29 +2776,13 @@ async function handleExecutionSparks(req: VercelRequest, res: VercelResponse) {
       return res.status(200).json({ baked: false, reason: 'question still standing' })
     }
 
-    const { data: historyRows } = await supabase
-      .from('sparks')
-      .select('type, response_memory_id')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
-      .limit(HISTORY_WINDOW)
-
-    // "Answered" has to mean real talk-back, not merely retired.
-    // dismiss-spark and the reroll's own retirement both stamp
-    // answered_at so the standing question stops being served -- neither
-    // is the user actually responding, and counting them as such taught
-    // the rotation's bandit that ignored types were doing fine.
-    // response_memory_id is only ever set by the respond handler, so it's
-    // the one signal that's actually "did the user answer."
-    const history: SparkHistoryEntry[] = (historyRows ?? []).map(r => ({
-      type: r.type,
-      answered: r.response_memory_id != null,
-    }))
-
-    const baked = await bakeStandingQuestion(supabase, userId, history)
+    const baked = await bakeMull(supabase, userId)
 
     if (!baked) {
-      console.log('[utilities/sparks] bake: every attempted type produced silence')
+      // Not a failure. Either nothing in the corpus is genuinely
+      // unexamined, or the corpus had no answer to the question that was —
+      // and a manufactured question is worse than an empty slot.
+      console.log('[utilities/sparks] bake: nothing worth asking today')
       return res.status(200).json({ baked: false })
     }
 
@@ -2970,36 +2922,18 @@ async function handleExecutionSparks(req: VercelRequest, res: VercelResponse) {
       await supabase.from('sparks').update({ expires_at: nowIso }).eq('id', retiring.id).eq('user_id', userId)
     }
 
-    const { data: historyRows } = await supabase
-      .from('sparks')
-      .select('type, response_memory_id')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
-      .limit(HISTORY_WINDOW)
+    let baked = await bakeMull(supabase, userId)
 
-    // "Answered" has to mean real talk-back, not merely retired.
-    // dismiss-spark and the reroll's own retirement both stamp
-    // answered_at so the standing question stops being served -- neither
-    // is the user actually responding, and counting them as such taught
-    // the rotation's bandit that ignored types were doing fine.
-    // response_memory_id is only ever set by the respond handler, so it's
-    // the one signal that's actually "did the user answer."
-    const history: SparkHistoryEntry[] = (historyRows ?? []).map(r => ({
-      type: r.type,
-      answered: r.response_memory_id != null,
-    }))
-
-    let baked = await bakeStandingQuestion(supabase, userId, history)
-
-    // Silence from every type usually isn't a thin corpus — it's an empty
-    // fragments table, which five of the nine generators read and nothing
-    // else. Attaching a few before giving up turns "ask me something else"
-    // into the thing that repairs the layer it depends on, rather than a
-    // button that reports the same emptiness however many times it's tapped.
+    // Silence often isn't a thin corpus — it's an empty fragments table.
+    // A project's captures are most of what a blind spot is found in, so
+    // with none attached the first step has almost nothing to read.
+    // Attaching a few before giving up turns "ask me something else" into
+    // the thing that repairs the layer it depends on, rather than a button
+    // that reports the same emptiness however many times it's tapped.
     if (!baked) {
       const { backfillFragments } = await import('./_lib/fragments.js')
       const attached = await backfillFragments(supabase, userId, 8)
-      if (attached > 0) baked = await bakeStandingQuestion(supabase, userId, history)
+      if (attached > 0) baked = await bakeMull(supabase, userId)
     }
 
     if (!baked) {
