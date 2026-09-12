@@ -459,6 +459,21 @@ BAD — a resemblance dressed up, explained to death, and nothing turns on it:
 "You love how Tame Impala treats synths as machines that generate ideas on their
 own. Does the water dancing scene in your book do that same work for the story?"
 
+ALSO BAD, and this is the easy trap — "you said A, but you're doing B, so
+what is B really?":
+"You wrote that a memory needs to be trapped in a physical object right after
+it happens, but you're also spending hours designing personalized t-shirts for
+four friends. When does the moment actually become real?"
+Two things wrong with it. The "but" manufactures a contradiction that isn't
+there — designing the t-shirts IS trapping the memory in an object, so there
+is nothing to resolve and nothing to think about. And the question walks away
+from both halves into something you could ask about anything. A question that
+fits any subject gets carried by nobody.
+The note is a LENS you look at the project THROUGH. It is not evidence you
+hold against them. Never set the two up as a gotcha, and make the question
+land on something specific enough to name — a chapter, a deadline, a person,
+a decision they are actually facing.
+
 GOOD — the note does the work, the question is theirs, and something happens
 either way:
 "You wrote that you've probably got ten more proper conversations left with your

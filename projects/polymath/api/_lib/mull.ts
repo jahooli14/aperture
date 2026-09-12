@@ -121,6 +121,11 @@ const EXPLAINER_PATTERNS: readonly RegExp[] = [
   /\bthere'?s a (parallel|connection|link|resonance)\b/i,
   /\b(interestingly|notably|tellingly)\b/i,
   /\bboth (of these|are about)\b/i,
+  // The gotcha construction. "You said A, but you're also doing B" asserts a
+  // contradiction rather than finding one, and the questions that follow it
+  // walk away from both halves into something that would fit any subject. A
+  // real tension does not need "but" to announce itself.
+  /,\s*(but|yet)\s+you('re| are|r)?\s+(also|still|now|actually)\b/i,
 ]
 
 export function sharesDomain(a: string, b: string, limit = DOMAIN_OVERLAP_LIMIT): boolean {
