@@ -19,8 +19,13 @@ coffee in March.
 | `corpus/` | 200 notes. Six months (16 Mar – 11 Sep 2026), 22 fictitious client organisations plus the internal firm. About 40% is genuine noise — timesheets, mandatory training, parking fines, `-`. |
 | `calendar.md` | Two weeks ahead. Client and internal meetings both. |
 | `eval/answer-key.md` | What's buried in the corpus. Ten findings to hit, four traps to avoid. Ground truth. |
-| `AGENTS.md` | **The deliverable.** Seven detectors, four gates, derived component by component from what the answer key demands. |
+| `AGENTS.md` | **The design.** Seven detectors, four gates, derived component by component from what the answer key demands — updated with what actually running them found. |
+| `layer1/` | The corpus, hand-extracted into structured claims, accounts and commitments — what a real capture pipeline would produce automatically. |
+| `scripts/detect.mjs` | The seven detectors, as deterministic code, run against `layer1/`. |
+| `scripts/score.mjs` | Scores a detector run against the answer key — recall on the ten findings, precision on the four traps, plus a guard ablation. |
 | `scripts/corpus-stats.sh` | Corpus facts, computed not asserted. |
+| `eval/results.md` | Run 1: 14/14 recall, 0/4 traps, and the seven bugs the run found that the design alone didn't catch. |
+| `demo/throughline.html` | A working mock-up of the weekly digest and meeting prep, built from Run 1's actual output — not a wireframe. |
 
 ## The point of the corpus
 
@@ -53,5 +58,12 @@ exactly like a market trend.
 2. `AGENTS.md` — what the system has to look like as a result.
 3. `corpus/` — spot-check. Start with `2026-03-24-duraflex-graham-tull.md`,
    `2026-03-24-internal-saskia-boateng.md`, `2026-08-19-copperfield-ed-battery.md`.
+4. `eval/results.md` — run `node scripts/score.mjs` yourself, or read what running it once
+   already found: the design was wrong in seven places, all of them bugs that made findings
+   disappear or traps fire, none of them things a read-through of `AGENTS.md` alone caught.
+5. `demo/throughline.html` — what it looks like on a Monday. Every quote in it is checked
+   verbatim against the note it cites (word-for-word; a bracketed letter marks the one
+   allowed edit — capitalising a quote lifted from mid-sentence). Two entries are drawn from
+   narration rather than speech and are labelled as such rather than styled like a quote.
 
 All names, firms, partners and events are invented. The firm itself is deliberately unnamed.

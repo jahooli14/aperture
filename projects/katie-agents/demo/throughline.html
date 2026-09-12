@@ -157,6 +157,14 @@
     font-family:var(--font-display); font-style:italic; font-size:.95rem; color:var(--ink);
     border-left:2px solid var(--line); padding-left:.7rem;
   }
+  .evidence__fact{
+    font-family:var(--font-body); font-style:normal; font-size:.92rem; color:var(--ink-soft);
+    border-left:2px solid var(--line); padding-left:.7rem;
+  }
+  .evidence__fact-tag{
+    display:block; font-family:var(--font-mono); font-size:.68rem; text-transform:uppercase;
+    letter-spacing:.05em; color:var(--ink-faint); margin-top:.35em;
+  }
 
   /* ---------- suppressed ---------- */
   .suppressed{
@@ -243,7 +251,7 @@
           <p class="finding__meta">148 days apart · never mentioned in the same note · introduced 20 Aug</p>
         </div>
       </div>
-      <p class="finding__body">Graham Tull described a £2.8m programme nobody would price properly. Ed Maslin, five months later, described the capability that prices exactly it. Neither used the same word for it — he said <em>battery storage</em>, Ed said <em>BESS</em> — which is most of why nobody had joined it before.</p>
+      <p class="finding__body">Graham Tull described a £2.8m programme nobody would price properly. Ed Maslin, five months later, described the capability that prices exactly it — a £25m line, already secured. Neither used the same word for it — he said <em>battery storage</em>, Ed said <em>BESS</em> — which is most of why nobody had joined it before.</p>
       <div class="timeline">
         <div class="timeline__point start">
           <span class="who">Graham Tull</span>
@@ -265,10 +273,10 @@
         <summary>Show the evidence — 5 notes</summary>
         <ul class="evidence__list">
           <li><time>24 Mar</time><div><div class="evidence__who">Graham Tull · Duraflex Industries</div><blockquote class="evidence__quote">I have four sites with battery storage and I cannot get anyone to write it properly at a sane price.</blockquote></div></li>
-          <li><time>24 Mar</time><div><div class="evidence__who">Graham Tull · Duraflex Industries</div><blockquote class="evidence__quote">If anyone will write this properly I'll move the whole programme to them. The whole thing.</blockquote></div></li>
-          <li><time>19 Aug</time><div><div class="evidence__who">Ed Maslin · Copperfield Underwriting</div><blockquote class="evidence__quote">We've hired people who actually know what they're looking at. £25m line secured.</blockquote></div></li>
+          <li><time>24 Mar</time><div><div class="evidence__who">Graham Tull · Duraflex Industries</div><blockquote class="evidence__quote">[I]f anyone will write this properly I'll move the whole programme to them. The whole thing.</blockquote></div></li>
+          <li><time>19 Aug</time><div><div class="evidence__who">Ed Maslin · Copperfield Underwriting</div><blockquote class="evidence__quote">We've hired people who actually know what they're looking at.</blockquote></div></li>
           <li><time>19 Aug</time><div><div class="evidence__who">Ed Maslin · Copperfield Underwriting</div><blockquote class="evidence__quote">We have no relationships with the brokers who touch this business and we don't know who the buyers are. We could sit here with a beautiful book and write nothing.</blockquote></div></li>
-          <li><time>21 Aug</time><div><div class="evidence__who">Katie, note to self</div><blockquote class="evidence__quote">Graham told me his problem on 24 March. Ed told me his in a form I could act on five months later… I'd stopped thinking about March.</blockquote></div></li>
+          <li><time>21 Aug</time><div><div class="evidence__who">Katie, note to self</div><blockquote class="evidence__quote">Graham told me his problem on 24 March. Ed told me his in a form I could act on five months later. […] [B]y August I had stopped thinking about March.</blockquote></div></li>
         </ul>
       </details>
     </article>
@@ -293,13 +301,13 @@
       <details class="evidence">
         <summary>Show the evidence — 7 notes</summary>
         <ul class="evidence__list">
-          <li><time>6 Apr</time><div><div class="evidence__who">Nadia Hoyle · Bellwether MGA</div><blockquote class="evidence__quote">Three sets of homework. Same business, same underwriters.</blockquote></div></li>
-          <li><time>28 Apr</time><div><div class="evidence__who">Ines Delacroix · Pallister Speciality</div><blockquote class="evidence__quote">£180,000 proving we're allowed to do the thing we were already doing.</blockquote></div></li>
-          <li><time>3 Jun</time><div><div class="evidence__who">Marcus Deyn · Ravensbourne Underwriting</div><blockquote class="evidence__quote">A seven figure sum a year to be able to say we looked.</blockquote></div></li>
-          <li><time>16 Jun</time><div><div class="evidence__who">Derek Ainsworth · Castleford Mutual</div><blockquote class="evidence__quote">Forty binders and three people looking after them.</blockquote></div></li>
-          <li><time>8 Jun</time><div><div class="evidence__who">Jonah Pike · Lattice Capital</div><blockquote class="evidence__quote">We can't diligence forty coverholders.</blockquote></div></li>
+          <li><time>6 Apr</time><div><div class="evidence__who">Nadia Hoyle · Bellwether MGA</div><blockquote class="evidence__quote">Same business. Same underwriters. Three sets of homework.</blockquote></div></li>
+          <li><time>28 Apr</time><div><div class="evidence__who">Ines Delacroix · Pallister Speciality</div><blockquote class="evidence__quote">We spent a hundred and eighty thousand pounds last year proving that we're allowed to do the thing we were already doing.</blockquote></div></li>
+          <li><time>3 Jun</time><div><div class="evidence__who">Marcus Deyn · Ravensbourne Underwriting</div><blockquote class="evidence__quote">We are spending a seven figure sum a year to be able to say we looked.</blockquote></div></li>
+          <li><time>16 Jun</time><div><div class="evidence__who">Derek Ainsworth · Castleford Mutual</div><blockquote class="evidence__quote">We have forty binders and three people looking after them.</blockquote></div></li>
+          <li><time>8 Jun</time><div><div class="evidence__who">Jonah Pike · Lattice Capital</div><blockquote class="evidence__quote">[W]e can't diligence forty coverholders.</blockquote></div></li>
           <li><time>6 Jul</time><div><div class="evidence__who">Charlotte Pym · Aldgate &amp; Vane</div><blockquote class="evidence__quote">Same coverholder. Three times over. My team spend more time on that than on placing.</blockquote></div></li>
-          <li><time>7 Sep</time><div><div class="evidence__who">Fern Achebe · Bellwether MGA (new CUO)</div><blockquote class="evidence__quote">Four carriers and four audit regimes and I've been here six weeks and it's already what I complain about most.</blockquote></div></li>
+          <li><time>7 Sep</time><div><div class="evidence__who">Fern Achebe · Bellwether MGA (new CUO)</div><blockquote class="evidence__quote">I've got four carriers and four audit regimes and I've been here six weeks and it's already what I complain about most.</blockquote></div></li>
         </ul>
       </details>
     </article>
@@ -329,11 +337,12 @@
       <details class="evidence">
         <summary>Show the evidence — 5 notes</summary>
         <ul class="evidence__list">
-          <li><time>21 Apr</time><div><div class="evidence__who">Klaus Beringer · Trans-Meridian Re</div><blockquote class="evidence__quote">This will show up at one-one. Not this one-one, the one after. Almost nobody is saying this.</blockquote></div></li>
-          <li><time>16 Jun</time><div><div class="evidence__who">Derek Ainsworth · Castleford Mutual</div><blockquote class="evidence__quote">The lawyers have got more organised.</blockquote></div></li>
+          <li><time>21 Apr</time><div><div class="evidence__who">Klaus Beringer · Trans-Meridian Re</div><blockquote class="evidence__quote">This will show up at one-one. Not this one-one, the one after. And the people who get hurt are the ones who grew casualty in 2024 and 2025 because it looked cheap.</blockquote></div></li>
+          <li><time>21 Apr</time><div><div class="evidence__who">Klaus Beringer · Trans-Meridian Re</div><blockquote class="evidence__quote">Almost nobody, which is what worries me.</blockquote></div></li>
+          <li><time>16 Jun</time><div><div class="evidence__who">Derek Ainsworth · Castleford Mutual</div><blockquote class="evidence__quote">[T]he lawyers have got more organised.</blockquote></div></li>
           <li><time>24 Jun</time><div><div class="evidence__who">Ivan Kroll · Pemberton Broking</div><blockquote class="evidence__quote">The markets aren't explaining it, they're just asking for more.</blockquote></div></li>
-          <li><time>11 Aug</time><div><div class="evidence__who">Giles Overton · Thackeray Syndicate 2884</div><blockquote class="evidence__quote">The direction is one way and it's the same direction every quarter.</blockquote></div></li>
-          <li><time>13 Jul</time><div><div class="evidence__who">Hal Brennan · internal, New York</div><blockquote class="evidence__quote">The severity numbers out of the US right now are not something the London market has priced.</blockquote></div></li>
+          <li><time>11 Aug</time><div><div class="evidence__who">Giles Overton · Thackeray Syndicate 2884</div><blockquote class="evidence__quote">[T]he direction is one way and it's the same direction every quarter.</blockquote></div></li>
+          <li><time>13 Jul</time><div><div class="evidence__who">Hal Brennan · internal, New York</div><blockquote class="evidence__quote">[T]he severity numbers out of the US right now are not something the London market has priced.</blockquote></div></li>
         </ul>
       </details>
     </article>
@@ -351,10 +360,11 @@
       <details class="evidence">
         <summary>Show the evidence — 4 notes</summary>
         <ul class="evidence__list">
-          <li><time>24 Mar</time><div><div class="evidence__who">Saskia Boateng · Actuarial (internal)</div><blockquote class="evidence__quote">Two engagements so far, both via the audit relationship. I don't meet these people. You do.</blockquote></div></li>
+          <li><time>24 Mar</time><div><div class="evidence__who">Saskia Boateng · Actuarial (internal)</div><blockquote class="evidence__quote">We've run it twice and both times the client's inflation assumption was wrong in the same direction. Nobody's assumptions have caught up with what's actually happening in casualty severity.</blockquote></div></li>
+          <li><time>24 Mar</time><div><div class="evidence__who">Saskia Boateng · Actuarial (internal)</div><blockquote class="evidence__quote">I don't meet these people. You do.</blockquote></div></li>
           <li><time>1 Sep</time><div><div class="evidence__who">Ana Castellane · Harrow Point Speciality</div><blockquote class="evidence__quote">We've assumed three points of claims inflation. If it's eight we've got a different plan.</blockquote></div></li>
-          <li><time>27 Aug</time><div><div class="evidence__who">Derek Ainsworth · Castleford Mutual</div><blockquote class="evidence__quote">Asked whether anyone could test his assumptions rather than just worry at him.</blockquote></div></li>
-          <li><time>9 Sep</time><div><div class="evidence__who">Sofia Marchetti · Kestrel Re</div><blockquote class="evidence__quote">Wants her own assumptions tested against external data before she writes a line — and will pay.</blockquote></div></li>
+          <li><time>27 Aug</time><div><div class="evidence__who">Derek Ainsworth · Castleford Mutual</div><p class="evidence__fact">Asked whether anyone could actually test his assumptions rather than just worry at him.<span class="evidence__fact-tag">From the note — not a direct quote</span></p></div></li>
+          <li><time>9 Sep</time><div><div class="evidence__who">Sofia Marchetti · Kestrel Re</div><p class="evidence__fact">Now wants her own assumptions tested against external data before she writes a line. Will pay for it.<span class="evidence__fact-tag">From the note — not a direct quote</span></p></div></li>
         </ul>
       </details>
     </article>
