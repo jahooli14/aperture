@@ -195,32 +195,48 @@ export function rejectionReason(input: ValidationInput): string | null {
 }
 
 /**
- * Which kind of thing today's mull is about.
+ * Which of the day's candidate questions actually get written.
  *
- * Mostly a project, because that's what the app is for and a project has
- * enough shape to have an unexamined assumption in the first place. But
- * not always: a note you made three weeks ago and never went back to has
- * its own blind spot, and an article you vouched for is the one input
- * that doesn't come from inside your own head. Weighted, not rotated —
- * a fixed cycle would make the channel predictable, which is the same
- * habituation problem the old type rotation existed to solve.
+ * The model calls are the expensive part and retrieval is nearly free, so
+ * the channel builds several (blind spot → connector) pairs per run and
+ * writes up the best ones in one go. Ranking them is deterministic: no
+ * third model call to choose, because choosing is the kind of judgement a
+ * score makes better than a paragraph of reasoning.
+ *
+ * Similarity does most of the work — it is already inside the band, so
+ * higher means "answers the blind spot more squarely" rather than "is
+ * more similar to the subject". A project subject gets a small nudge
+ * because that's what the user is actually trying to make.
  */
-const SUBJECT_WEIGHTS: Record<MullSourceKind, number> = {
-  project: 0.55,
-  memory: 0.3,
-  article: 0.15,
+const SUBJECT_BONUS: Record<MullSourceKind, number> = {
+  project: 0.06,
+  memory: 0.02,
+  article: 0,
 }
 
-export function pickSubjectKind(
-  available: MullSourceKind[],
-  rand: number = Math.random(),
-): MullSourceKind | null {
-  if (available.length === 0) return null
-  const total = available.reduce((sum, k) => sum + SUBJECT_WEIGHTS[k], 0)
-  let r = rand * total
-  for (const kind of available) {
-    r -= SUBJECT_WEIGHTS[kind]
-    if (r <= 0) return kind
+export interface RankablePair {
+  subjectKind: MullSourceKind
+  subjectId: string
+  connectorId: string
+  similarity: number
+}
+
+export function rankPairs<T extends RankablePair>(pairs: T[], limit = 2): T[] {
+  const scored = [...pairs].sort(
+    (a, b) => (b.similarity + SUBJECT_BONUS[b.subjectKind]) - (a.similarity + SUBJECT_BONUS[a.subjectKind]),
+  )
+  const chosen: T[] = []
+  const usedSubjects = new Set<string>()
+  const usedConnectors = new Set<string>()
+  for (const pair of scored) {
+    // Two questions about the same project, or built on the same note, is
+    // one question and a repeat — and the second one is what the user gets
+    // days later, when the repeat is most obvious.
+    if (usedSubjects.has(pair.subjectId) || usedConnectors.has(pair.connectorId)) continue
+    chosen.push(pair)
+    usedSubjects.add(pair.subjectId)
+    usedConnectors.add(pair.connectorId)
+    if (chosen.length >= limit) break
   }
-  return available[available.length - 1]
+  return chosen
 }

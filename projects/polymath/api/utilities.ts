@@ -56,7 +56,7 @@ import { handleFixQueue } from './_lib/fix-queue/route.js'
 import { reconcileCloseout, parseTicked } from './_lib/session-closeout.js'
 import { judgeFinishLine } from './_lib/finish-line.js'
 import { readCycleState, cycleLabel, rollToNextCycle, lastCycleSteps } from './_lib/project-cycles.js'
-import { bakeMull } from './_lib/mull-generator.js'
+import { bakeMull, SHELF_LIFE_HOURS } from './_lib/mull-generator.js'
 import { canMorphProject, anyProjectMorphedToday, MORPH_COOLDOWN_DAYS } from './_lib/morph.js'
 import { considerMorph } from './_lib/morph-generator.js'
 import { getStalledProjects, attachFragments, proposeComposite } from './_lib/composite-generator.js'
@@ -2778,7 +2778,7 @@ async function handleExecutionSparks(req: VercelRequest, res: VercelResponse) {
 
     const baked = await bakeMull(supabase, userId)
 
-    if (!baked) {
+    if (baked.length === 0) {
       // Not a failure. Either nothing in the corpus is genuinely
       // unexamined, or the corpus had no answer to the question that was —
       // and a manufactured question is worse than an empty slot.
@@ -2786,19 +2786,28 @@ async function handleExecutionSparks(req: VercelRequest, res: VercelResponse) {
       return res.status(200).json({ baked: false })
     }
 
-    const { error: insertErr } = await supabase.from('sparks').insert({
+    // A run writes up to two questions for the price of one. The banked
+    // one is stored a second older so `today` (newest first) keeps serving
+    // the first until it's answered or runs out, then hands over with no
+    // cron run and no model call at all. That's the cheapest question the
+    // channel can produce: one already paid for.
+    const now = Date.now()
+    const rows = baked.map((spark, i) => ({
       user_id: userId,
-      type: baked.type,
-      project_id: baked.project_id,
-      text: baked.text,
-      expires_at: baked.expires_at,
-    })
+      type: spark.type,
+      project_id: spark.project_id,
+      text: spark.text,
+      expires_at: spark.expires_at,
+      created_at: new Date(now - i * 1000).toISOString(),
+    }))
+
+    const { error: insertErr } = await supabase.from('sparks').insert(rows)
     if (insertErr) {
       console.error('[utilities/sparks] bake insert failed:', insertErr)
       return res.status(500).json({ error: insertErr.message })
     }
 
-    return res.status(200).json({ baked: true, type: baked.type })
+    return res.status(200).json({ baked: true, count: rows.length, type: baked[0].type })
   }
 
   // ─── TODAY ──────────────────────────────────────────────────────────
@@ -2826,7 +2835,17 @@ async function handleExecutionSparks(req: VercelRequest, res: VercelResponse) {
       // Mark shown on first read, not on bake -- shown_at is "the user
       // actually saw this," which the mirror/attention-budget logic and
       // future analytics need distinct from when it was generated.
-      await supabase.from('sparks').update({ shown_at: new Date().toISOString() }).eq('id', spark.id)
+      //
+      // The shelf life starts here too, not at generation. A banked
+      // question can sit behind another one for days before anyone sees
+      // it, and four days to think about something has to mean four days
+      // from first sight or the banked one arrives half spent.
+      const seenAt = new Date()
+      spark.expires_at = new Date(seenAt.getTime() + SHELF_LIFE_HOURS * 3600_000).toISOString()
+      await supabase
+        .from('sparks')
+        .update({ shown_at: seenAt.toISOString(), expires_at: spark.expires_at })
+        .eq('id', spark.id)
     }
 
     return res.status(200).json({ spark })
@@ -2922,6 +2941,37 @@ async function handleExecutionSparks(req: VercelRequest, res: VercelResponse) {
       await supabase.from('sparks').update({ expires_at: nowIso }).eq('id', retiring.id).eq('user_id', userId)
     }
 
+    // The bank first, always. A bake writes up to two questions in one run
+    // and holds the second one back, so "ask me something else" usually
+    // costs nothing at all — no model call, and it comes back instantly
+    // instead of after ten seconds of thinking. Its shelf life is stamped
+    // from now, since until this moment it had never been seen.
+    const { data: bankedRows } = await supabase
+      .from('sparks')
+      .select('id')
+      .eq('user_id', userId)
+      .is('answered_at', null)
+      .is('shown_at', null)
+      .gt('expires_at', nowIso)
+      .order('created_at', { ascending: false })
+      .limit(1)
+
+    const fromBank = bankedRows?.[0] ?? null
+    if (fromBank) {
+      const { data: served } = await supabase
+        .from('sparks')
+        .update({
+          shown_at: nowIso,
+          expires_at: new Date(Date.now() + SHELF_LIFE_HOURS * 3600_000).toISOString(),
+        })
+        .eq('id', fromBank.id)
+        .eq('user_id', userId)
+        .select('id, type, text, project_id, projects(title)')
+        .single()
+
+      if (served) return res.status(200).json({ rerolled: true, spark: served })
+    }
+
     let baked = await bakeMull(supabase, userId)
 
     // Silence often isn't a thin corpus — it's an empty fragments table.
@@ -2930,13 +2980,13 @@ async function handleExecutionSparks(req: VercelRequest, res: VercelResponse) {
     // Attaching a few before giving up turns "ask me something else" into
     // the thing that repairs the layer it depends on, rather than a button
     // that reports the same emptiness however many times it's tapped.
-    if (!baked) {
+    if (baked.length === 0) {
       const { backfillFragments } = await import('./_lib/fragments.js')
       const attached = await backfillFragments(supabase, userId, 8)
       if (attached > 0) baked = await bakeMull(supabase, userId)
     }
 
-    if (!baked) {
+    if (baked.length === 0) {
       // The corpus had nothing else worth asking. Put the original back
       // rather than leaving the slot empty — silence is the right answer
       // for a NEW question, not a reason to take away the one you had.
@@ -2950,23 +3000,28 @@ async function handleExecutionSparks(req: VercelRequest, res: VercelResponse) {
       return res.status(200).json({ rerolled: false, reason: 'nothing else to ask' })
     }
 
-    const { data: inserted, error: insertErr } = await supabase
+    // Same as the bake: anything past the first is banked behind it, one
+    // second older, so the next reroll is free.
+    const rerollNow = Date.now()
+    const { data: insertedRows, error: insertErr } = await supabase
       .from('sparks')
-      .insert({
+      .insert(baked.map((spark, i) => ({
         user_id: userId,
-        type: baked.type,
-        project_id: baked.project_id,
-        text: baked.text,
-        expires_at: baked.expires_at,
-        shown_at: nowIso,
-      })
-      .select('id, type, text, project_id, projects(title)')
-      .single()
+        type: spark.type,
+        project_id: spark.project_id,
+        text: spark.text,
+        expires_at: spark.expires_at,
+        created_at: new Date(rerollNow - i * 1000).toISOString(),
+        shown_at: i === 0 ? nowIso : null,
+      })))
+      .select('id, type, text, project_id, shown_at, projects(title)')
 
     if (insertErr) {
       console.error('[utilities/sparks] reroll insert failed:', insertErr)
       return res.status(500).json({ error: insertErr.message })
     }
+
+    const inserted = (insertedRows ?? []).find((r: any) => r.shown_at) ?? insertedRows?.[0] ?? null
 
     return res.status(200).json({ rerolled: true, spark: inserted })
   }

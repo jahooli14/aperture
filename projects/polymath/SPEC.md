@@ -328,6 +328,15 @@ never pair → invented bridge):
    there is nothing left to invent. The model quotes the note's own words and
    asks one question. It is not allowed to explain the link.
 
+**Two model calls a run, and the run feeds the channel for about a week.**
+The calls are the only real cost, so everything else is stacked around them:
+one call names the blind spot for all three subjects at once, retrieval runs
+three searches (the step most likely to come back empty, and the one that's
+free to repeat), and one call writes up the best two pairs. The second question
+is banked behind the first — it becomes the next standing question, and the
+instant answer to "ask me something else", with no further calls. Silence now
+means all three subjects found nothing, not one unlucky draw.
+
 **Bands, not top hits** (`mull.ts`). A match above ~0.82 is the note restated
 and worth nothing to think about; below ~0.45 it is noise. Inside the band, a
 candidate sharing two distinctive words with the subject is thrown out however

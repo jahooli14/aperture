@@ -5,7 +5,7 @@ import {
   quoteIsReal,
   usesQuote,
   rejectionReason,
-  pickSubjectKind,
+  rankPairs,
   CONNECTOR_FLOOR,
   CONNECTOR_CEILING,
   type MullCandidate,
@@ -139,20 +139,49 @@ describe('rejectionReason', () => {
   })
 })
 
-describe('pickSubjectKind', () => {
-  it('returns nothing when the corpus offers nothing', () => {
-    expect(pickSubjectKind([])).toBeNull()
+describe('rankPairs', () => {
+  const pair = (over: any) => ({
+    subjectKind: 'project' as const, subjectId: 's1', connectorId: 'c1', similarity: 0.6, ...over,
   })
 
-  it('always picks the only kind available', () => {
-    expect(pickSubjectKind(['article'], 0)).toBe('article')
-    expect(pickSubjectKind(['article'], 0.99)).toBe('article')
+  it('takes the best answers to the blind spot first', () => {
+    const ranked = rankPairs([
+      pair({ subjectId: 'a', connectorId: 'ca', similarity: 0.5 }),
+      pair({ subjectId: 'b', connectorId: 'cb', similarity: 0.75 }),
+    ])
+    expect(ranked.map(p => p.subjectId)).toEqual(['b', 'a'])
   })
 
-  it('leans towards projects but reaches notes and articles too', () => {
-    const seen = new Set(
-      Array.from({ length: 20 }, (_, i) => pickSubjectKind(['project', 'memory', 'article'], i / 20)),
-    )
-    expect(seen).toEqual(new Set(['project', 'memory', 'article']))
+  it('nudges a project ahead of an article at the same score', () => {
+    const ranked = rankPairs([
+      pair({ subjectKind: 'article', subjectId: 'art', connectorId: 'c1' }),
+      pair({ subjectKind: 'project', subjectId: 'proj', connectorId: 'c2' }),
+    ], 1)
+    expect(ranked[0].subjectId).toBe('proj')
+  })
+
+  it('never banks a second question about the same subject', () => {
+    const ranked = rankPairs([
+      pair({ subjectId: 'same', connectorId: 'c1', similarity: 0.8 }),
+      pair({ subjectId: 'same', connectorId: 'c2', similarity: 0.7 }),
+    ])
+    expect(ranked).toHaveLength(1)
+  })
+
+  it('never builds both questions on the same note', () => {
+    const ranked = rankPairs([
+      pair({ subjectId: 'a', connectorId: 'shared', similarity: 0.8 }),
+      pair({ subjectId: 'b', connectorId: 'shared', similarity: 0.7 }),
+    ])
+    expect(ranked).toHaveLength(1)
+  })
+
+  it('stops at the limit even when more survive', () => {
+    const ranked = rankPairs([
+      pair({ subjectId: 'a', connectorId: 'c1' }),
+      pair({ subjectId: 'b', connectorId: 'c2' }),
+      pair({ subjectId: 'c', connectorId: 'c3' }),
+    ])
+    expect(ranked).toHaveLength(2)
   })
 })

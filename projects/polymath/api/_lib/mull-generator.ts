@@ -2,27 +2,40 @@
  * The mull channel: one thing to carry around, built in three steps.
  *
  * See mull.ts for why it works this way. This file is the IO half —
- * choose a subject, ask what it never examines, search the corpus with
- * that question stripped of the subject's own words, and write the
- * collision that comes back. Two model calls and one embedding, once a
- * day, plus whatever rerolls the user asks for.
+ * choose what to look at, ask what each one never examines, search the
+ * corpus with those questions stripped of their own vocabulary, and write
+ * the collisions that come back.
  *
- * Every step is allowed to return null and most days at least one of them
- * does. That is the design: the old channel's nine generators each had a
- * way to always produce something, and always producing something is what
- * made it produce rubbish.
+ * It is built around which parts cost money. Model calls are the expense;
+ * Postgres and embeddings are close to free. So the run spends exactly TWO
+ * model calls whatever happens, and puts as much work as it can either
+ * side of them:
+ *
+ *   - Call one asks about every subject at once — a project, a recent
+ *     note, an article — so three blind spots cost what one did.
+ *   - Retrieval then runs three searches instead of one, which is the step
+ *     most likely to come back empty, and the one that costs nothing to
+ *     repeat.
+ *   - Call two writes up the best TWO surviving pairs together. The second
+ *     question is banked, unexpired, behind the first: it becomes the next
+ *     standing question and the instant answer to "ask me something else",
+ *     with no further calls at all.
+ *
+ * The earlier version of this file asked about one subject, searched once,
+ * and wrote one question — so a single empty search wasted both calls and
+ * the day. Same price, and now a run usually feeds the channel for a week.
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { generateText } from './gemini-chat.js'
-import { generateEmbedding } from './gemini-embeddings.js'
+import { batchGenerateEmbeddings } from './gemini-embeddings.js'
 import { PLAIN_ENGLISH_RULES } from './plain-english.js'
 import { avoidBlock, echoesRecent, fetchRecentSparkTexts } from './spark-echo.js'
 import { pickSparkSubject, type SubjectCandidate } from './spark-subject.js'
 import { selectCorpusArticles, type CorpusArticle } from './reading-corpus.js'
 import {
   selectConnector,
-  pickSubjectKind,
+  rankPairs,
   rejectionReason,
   type MullCandidate,
   type MullSourceKind,
@@ -43,7 +56,7 @@ import {
  * spot or lost, which is the opposite of how thinking about a thing in
  * the background works.
  */
-const SHELF_LIFE_HOURS = 96
+export const SHELF_LIFE_HOURS = 96
 
 /** A little over a week, so a project worked on last Sunday still counts
  *  as warm on Tuesday. */
@@ -58,6 +71,10 @@ export interface BakedSpark {
   text: string
   project_id: string | null
   expires_at: string
+  /** Written now, shown later. Held behind the standing question rather
+   *  than replacing it — the channel's cheapest question is the one that
+   *  was already paid for days ago. */
+  banked?: boolean
 }
 
 export interface EchoContext {
@@ -230,42 +247,55 @@ async function articleSubject(supabase: SupabaseClient, userId: string): Promise
   }
 }
 
-async function chooseSubject(supabase: SupabaseClient, userId: string): Promise<Subject | null> {
-  const [project, memory, article] = await Promise.all([
+/**
+ * Everything today could be about. All of them, not one — the whole point
+ * of asking about three subjects in a single call is that two of them can
+ * come back with nothing and the run still produces a question.
+ */
+async function gatherSubjects(supabase: SupabaseClient, userId: string): Promise<Subject[]> {
+  const found = await Promise.all([
     projectSubject(supabase, userId),
     memorySubject(supabase, userId),
     articleSubject(supabase, userId),
   ])
-  const found: Record<MullSourceKind, Subject | null> = { project, memory, article }
-  const available = (Object.keys(found) as MullSourceKind[]).filter(k => found[k] !== null)
-
-  const kind = pickSubjectKind(available)
-  return kind ? found[kind] : null
+  return found.filter((s): s is Subject => s !== null)
 }
 
-// ─── Step 2: the blind spot, and the query that leaves the subject behind ──
+// ─── Step 2: the blind spots, and the queries that leave them behind ──
 
 interface BlindSpot {
+  subject: Subject
   blindSpot: string
   searchQuery: string
 }
 
-async function nameBlindSpot(subject: Subject): Promise<BlindSpot | null> {
-  const prompt = `Here is one thing from the user's own corpus.
+/**
+ * One call for every subject there is.
+ *
+ * Naming an assumption and stripping a sentence of its jargon is close to
+ * extraction, so this is the call that gets its thinking capped — the
+ * prose budget belongs to the draft, which is the half the user reads.
+ */
+async function nameBlindSpots(subjects: Subject[], echo: EchoContext): Promise<BlindSpot[]> {
+  const blocks = subjects
+    .map((s, i) => `--- SUBJECT ${i + 1} ---\n${s.block}`)
+    .join('\n\n')
 
-${subject.block}
+  const prompt = `Here are ${subjects.length} things from the user's own corpus.
 
-TWO jobs.
+${blocks}
 
-1. Name the BLIND SPOT: the one thing this takes for granted and has never
+For EACH one, two jobs.
+
+1. Name the BLIND SPOT: the one thing it takes for granted and has never
 examined. Not a missing next step — a step is work, not a blind spot. The
 assumption underneath it that would change what they make if it turned out to
 be wrong. One plain sentence.
 
 2. Write a SEARCH QUERY for it. This is the part that matters and it is NOT the
-blind spot reworded. Take out every word that belongs to this subject — its
+blind spot reworded. Take out every word that belongs to that subject — its
 title, its medium, its craft words, the names in it — and write the same
-question as a plain human one, the way someone who had never heard of this
+question as a plain human one, the way someone who had never heard of the
 project would ask it.
 
 Example of the two together:
@@ -274,80 +304,103 @@ Example of the two together:
   search_query: "what it's like when someone you know turns into a different person, and whether you can tell being left behind from them simply changing"
 
 Notice the search query has no novel, no characters, no chapters in it. That is
-the whole point: it gets matched against everything the user has ever written
-or read, and if it still carries this subject's words it will only ever find
-this subject again.
+the whole point: each one gets matched against everything the user has ever
+written or read, and a query still carrying its subject's words will only ever
+find that subject again.
 
-If nothing here is genuinely unexamined — if the honest answer is that they've
-thought about all of it — return { "blind_spot": null }.
-
+A subject with nothing genuinely unexamined about it gets "blind_spot": null.
+Say so rather than reaching — the other subjects are there for exactly this.
+${echo.avoid}
 ${PLAIN_ENGLISH_RULES}
 
-Respond with JSON only: { "blind_spot": "..." | null, "search_query": "..." }`
+Respond with JSON only:
+{ "subjects": [ { "n": 1, "blind_spot": "..." | null, "search_query": "..." }, ... ] }`
 
   try {
-    const parsed = JSON.parse(await generateText(prompt, { responseFormat: 'json' }))
-    const blindSpot = typeof parsed?.blind_spot === 'string' ? parsed.blind_spot.trim() : ''
-    const searchQuery = typeof parsed?.search_query === 'string' ? parsed.search_query.trim() : ''
-    if (!blindSpot || !searchQuery) return null
-    return { blindSpot, searchQuery }
+    const parsed = JSON.parse(await generateText(prompt, { responseFormat: 'json', thinkingLevel: 'low' }))
+    const rows = Array.isArray(parsed?.subjects) ? parsed.subjects : []
+    const out: BlindSpot[] = []
+    for (const row of rows) {
+      const subject = subjects[Number(row?.n) - 1]
+      const blindSpot = typeof row?.blind_spot === 'string' ? row.blind_spot.trim() : ''
+      const searchQuery = typeof row?.search_query === 'string' ? row.search_query.trim() : ''
+      if (subject && blindSpot && searchQuery) out.push({ subject, blindSpot, searchQuery })
+    }
+    return out
   } catch (e) {
-    console.warn('[mull] blind spot failed:', e instanceof Error ? e.message : e)
-    return null
+    console.warn('[mull] blind spots failed:', e instanceof Error ? e.message : e)
+    return []
   }
 }
 
-// ─── Step 3: what the corpus says about that question ─────────────────
+// ─── Step 3: what the corpus says about those questions ───────────────
 
 /** Deliberately below mull.ts's floor: the band does the filtering, and
  *  asking Postgres for a wider set means the vocabulary rule has
  *  something left to choose from after it throws the near ones out. */
 const RPC_THRESHOLD = 0.35
 
-async function findConnector(
-  supabase: SupabaseClient,
-  userId: string,
-  subject: Subject,
-  query: string,
-): Promise<MullCandidate | null> {
-  let embedding: number[]
-  try {
-    embedding = await generateEmbedding(query)
-  } catch (e) {
-    console.warn('[mull] embedding failed:', e instanceof Error ? e.message : e)
-    return null
-  }
-  const queryEmbedding = `[${embedding.join(',')}]`
-  const args = { query_embedding: queryEmbedding, filter_user_id: userId, match_threshold: RPC_THRESHOLD }
-
-  const [memories, projects, reading] = await Promise.all([
-    supabase.rpc('match_memories', { ...args, match_count: 20 }),
-    supabase.rpc('match_projects', { ...args, match_count: 10 }),
-    supabase.rpc('match_reading', { ...args, match_count: 10 }),
-  ])
-
-  const candidates: MullCandidate[] = [
-    ...(memories.data ?? []).map((m: any) => ({
-      kind: 'memory' as const, id: m.id, title: m.title ?? 'a note', text: m.body ?? '', similarity: m.similarity,
-    })),
-    ...(projects.data ?? []).map((p: any) => ({
-      kind: 'project' as const, id: p.id, title: p.title, text: p.description ?? '', similarity: p.similarity,
-    })),
-    ...(reading.data ?? []).map((a: any) => ({
-      kind: 'article' as const, id: a.id, title: a.title ?? 'an article', text: a.excerpt ?? '', similarity: a.similarity,
-    })),
-  ]
-
-  // A project subject excludes itself both as a row and as the parent of
-  // the notes filed under it — those are the subject in other words, and
-  // the band alone wouldn't catch a briefly-worded one.
-  const excludeIds = [subject.id]
-  if (subject.projectId) excludeIds.push(subject.projectId)
-
-  return selectConnector(candidates, { subjectText: subject.ownWords, excludeIds })
+interface Pairing extends BlindSpot {
+  connector: MullCandidate
 }
 
-// ─── Step 4: the collision, written down ──────────────────────────────
+/**
+ * Search every blind spot at once. Nine RPCs and one batched embedding
+ * call — the cheapest part of the run, and the part most likely to come
+ * back with nothing, which is exactly why it's the part that gets
+ * repeated rather than the model calls.
+ */
+async function findConnectors(
+  supabase: SupabaseClient,
+  userId: string,
+  blindSpots: BlindSpot[],
+): Promise<Pairing[]> {
+  let embeddings: number[][]
+  try {
+    embeddings = await batchGenerateEmbeddings(blindSpots.map(b => b.searchQuery))
+  } catch (e) {
+    console.warn('[mull] embedding failed:', e instanceof Error ? e.message : e)
+    return []
+  }
+
+  const searches = await Promise.all(blindSpots.map(async (blind, i) => {
+    const args = {
+      query_embedding: `[${embeddings[i].join(',')}]`,
+      filter_user_id: userId,
+      match_threshold: RPC_THRESHOLD,
+    }
+    const [memories, projects, reading] = await Promise.all([
+      supabase.rpc('match_memories', { ...args, match_count: 20 }),
+      supabase.rpc('match_projects', { ...args, match_count: 10 }),
+      supabase.rpc('match_reading', { ...args, match_count: 10 }),
+    ])
+
+    const candidates: MullCandidate[] = [
+      ...(memories.data ?? []).map((m: any) => ({
+        kind: 'memory' as const, id: m.id, title: m.title ?? 'a note', text: m.body ?? '', similarity: m.similarity,
+      })),
+      ...(projects.data ?? []).map((p: any) => ({
+        kind: 'project' as const, id: p.id, title: p.title, text: p.description ?? '', similarity: p.similarity,
+      })),
+      ...(reading.data ?? []).map((a: any) => ({
+        kind: 'article' as const, id: a.id, title: a.title ?? 'an article', text: a.excerpt ?? '', similarity: a.similarity,
+      })),
+    ]
+
+    // A project subject excludes itself both as a row and as the parent of
+    // the notes filed under it — those are the subject in other words, and
+    // the band alone wouldn't catch a briefly-worded one.
+    const excludeIds = [blind.subject.id]
+    if (blind.subject.projectId) excludeIds.push(blind.subject.projectId)
+
+    const connector = selectConnector(candidates, { subjectText: blind.subject.ownWords, excludeIds })
+    return connector ? { ...blind, connector } : null
+  }))
+
+  return searches.filter((p): p is Pairing => p !== null)
+}
+
+// ─── Step 4: the collisions, written down ─────────────────────────────
 
 const CONNECTOR_LABEL: Record<MullSourceKind, string> = {
   memory: 'A note they made, about something else entirely',
@@ -355,27 +408,37 @@ const CONNECTOR_LABEL: Record<MullSourceKind, string> = {
   article: 'Something they read and vouched for',
 }
 
-async function draft(
-  subject: Subject,
-  blind: BlindSpot,
-  connector: MullCandidate,
-  echo: EchoContext,
-): Promise<{ text: string; quote: string } | null> {
-  const prompt = `What the user has been working on:
-${subject.block}
+interface Drafted {
+  pairing: Pairing
+  text: string
+  quote: string
+}
+
+/**
+ * One call, both questions. The second is not a spare in case the first
+ * fails validation — it's banked and served days later, so the channel
+ * keeps going without another run. Writing them together also means the
+ * model can see it's about to say the same thing twice.
+ */
+async function draftAll(pairings: Pairing[], echo: EchoContext): Promise<Drafted[]> {
+  const blocks = pairings.map((p, i) => `--- PAIR ${i + 1} ---
+What they've been working on:
+${p.subject.block}
 
 The thing it never examines:
-"${blind.blindSpot}"
+"${p.blindSpot}"
 
-${CONNECTOR_LABEL[connector.kind]} — "${connector.title}":
-"${connector.text.slice(0, 1200)}"
+${CONNECTOR_LABEL[p.connector.kind]} — "${p.connector.title}":
+"${p.connector.text.slice(0, 1200)}"`).join('\n\n')
 
-That note was not picked because it looks like the project. It was found by
-searching for the unexamined question above, in plain words. So the link is
-already there before you write anything.
+  const prompt = `${blocks}
 
-Write ONE thing for them to carry around today. At most three sentences, and it
-has to end in a question they could answer out loud in thirty seconds.
+Each note above was NOT picked because it looks like the project it sits with.
+It was found by searching for that pair's unexamined question, in plain words.
+So the link is already there before you write anything.
+
+For each pair, write ONE thing for them to carry around. At most three
+sentences, ending in a question they could answer out loud in thirty seconds.
 
 What makes it good:
 - The note is the LENS. The question should be one they could only ask because
@@ -387,8 +450,10 @@ What makes it good:
   about", you have explained it, and explaining it is the tell that there was
   nothing there.
 - Do not resolve it. No advice, no "you could try". They answer, not you.
-- If the only honest link is that the two things are broadly about the same
-  topic, there is no link. Return { "spark": null }.
+- The pairs get read days apart, so they must not be two versions of the same
+  question. If the second one would be, return null for it.
+- If the only honest link in a pair is that the two things are broadly about
+  the same topic, there is no link. Return null for that pair.
 
 BAD — a resemblance dressed up, and explained to death:
 "You love how Tame Impala treats synths as machines that generate ideas on their
@@ -402,17 +467,22 @@ ${echo.avoid}
 ${PLAIN_ENGLISH_RULES}
 
 Respond with JSON only:
-{ "spark": "..." | null, "quote": "the words from the note you used, copied out exactly" }`
+{ "pairs": [ { "n": 1, "spark": "..." | null, "quote": "the words from that pair's note you used, copied out exactly" }, ... ] }`
 
   try {
     const parsed = JSON.parse(await generateText(prompt, { responseFormat: 'json' }))
-    const text = typeof parsed?.spark === 'string' ? parsed.spark.trim() : ''
-    const quote = typeof parsed?.quote === 'string' ? parsed.quote.trim() : ''
-    if (!text || !quote) return null
-    return { text, quote }
+    const rows = Array.isArray(parsed?.pairs) ? parsed.pairs : []
+    const out: Drafted[] = []
+    for (const row of rows) {
+      const pairing = pairings[Number(row?.n) - 1]
+      const text = typeof row?.spark === 'string' ? row.spark.trim() : ''
+      const quote = typeof row?.quote === 'string' ? row.quote.trim() : ''
+      if (pairing && text && quote) out.push({ pairing, text, quote })
+    }
+    return out
   } catch (e) {
     console.warn('[mull] draft failed:', e instanceof Error ? e.message : e)
-    return null
+    return []
   }
 }
 
@@ -422,48 +492,78 @@ export async function generateMull(
   supabase: SupabaseClient,
   userId: string,
   echo: EchoContext,
-): Promise<BakedSpark | null> {
-  const subject = await chooseSubject(supabase, userId)
-  if (!subject) return null
+): Promise<BakedSpark[]> {
+  const subjects = await gatherSubjects(supabase, userId)
+  if (subjects.length === 0) return []
 
-  const blind = await nameBlindSpot(subject)
-  if (!blind) {
-    console.log('[mull] nothing unexamined about', subject.title)
-    return null
+  const blindSpots = await nameBlindSpots(subjects, echo)
+  if (blindSpots.length === 0) {
+    console.log('[mull] nothing unexamined in', subjects.length, 'subjects')
+    return []
   }
 
-  const connector = await findConnector(supabase, userId, subject, blind.searchQuery)
-  if (!connector) {
-    console.log('[mull] corpus had no answer to:', blind.searchQuery)
-    return null
+  const pairings = await findConnectors(supabase, userId, blindSpots)
+  if (pairings.length === 0) {
+    console.log('[mull] corpus had no answer to any of:', blindSpots.map(b => b.searchQuery))
+    return []
   }
 
-  const drafted = await draft(subject, blind, connector, echo)
-  if (!drafted) return null
+  const chosen = rankPairs(
+    pairings.map(p => ({
+      ...p,
+      subjectKind: p.subject.kind,
+      subjectId: p.subject.id,
+      connectorId: p.connector.id,
+      similarity: p.connector.similarity,
+    })),
+  )
 
-  const reason = rejectionReason({ ...drafted, connectorText: connector.text })
-  if (reason) {
-    console.log(`[mull] dropped: ${reason}`)
-    return null
+  const drafts = await draftAll(chosen, echo)
+  const baked: BakedSpark[] = []
+  // Each draft stands on its own: one failing a gate doesn't take the
+  // other with it, which is most of why they're written together.
+  const seen = [...echo.recentTexts]
+
+  for (const draft of drafts) {
+    const reason = rejectionReason({
+      text: draft.text,
+      quote: draft.quote,
+      connectorText: draft.pairing.connector.text,
+    })
+    if (reason) {
+      console.log(`[mull] dropped: ${reason}`)
+      continue
+    }
+    // Checked against the questions already asked AND against the other
+    // draft from this same run — two questions written in one breath are
+    // where a repeated image is most likely and least excusable.
+    if (echoesRecent(draft.text, seen)) {
+      console.log('[mull] dropped: echoes a recent question')
+      continue
+    }
+    seen.push(draft.text)
+
+    // Attribute to a project where there is one, so the card can say what
+    // it's about and the answer files itself somewhere. A note with no
+    // project and an article both leave this null rather than guessing.
+    baked.push({
+      type: 'mull',
+      text: draft.text,
+      project_id: draft.pairing.subject.projectId,
+      expires_at: expiresAt(SHELF_LIFE_HOURS),
+      // The second question is not shown yet: it waits behind the first
+      // and only becomes the standing question once that one is answered
+      // or runs out. Its shelf life is measured from then, not from now,
+      // or it would expire in the queue having never been seen.
+      banked: baked.length > 0,
+    })
   }
 
-  // The prompt was asked not to repeat itself; this is the part that makes
-  // it a rule. A dropped mull isn't a lost day — a fourth question about
-  // water is worse than one fewer question.
-  if (echoesRecent(drafted.text, echo.recentTexts)) {
-    console.log('[mull] dropped: echoes a recent question')
-    return null
+  if (baked.length > 1) {
+    baked[1].expires_at = expiresAt(SHELF_LIFE_HOURS * 2)
   }
 
-  // Attribute to a project where there is one, so the card can say what
-  // it's about and the answer files itself somewhere. A note with no
-  // project and an article both leave this null rather than guessing.
-  return {
-    type: 'mull',
-    text: drafted.text,
-    project_id: subject.projectId,
-    expires_at: expiresAt(SHELF_LIFE_HOURS),
-  }
+  return baked
 }
 
 /**
@@ -534,16 +634,18 @@ export async function generateForgotten(
 }
 
 /**
- * What the bake and the reroll both call. One real attempt at a question,
- * then the forgotten-project offer as the only fallback — there is no
- * second shape of question to try any more, and trying the same one twice
- * would just spend another two model calls to fail the same way.
+ * What the bake and the reroll both call. Two model calls, up to two
+ * questions, and the forgotten-project offer if there were none — it costs
+ * nothing and it's the only other thing the channel has to say.
  */
 export async function bakeMull(
   supabase: SupabaseClient,
   userId: string,
   echo?: EchoContext,
-): Promise<BakedSpark | null> {
+): Promise<BakedSpark[]> {
   const context = echo ?? (await loadEchoContext(supabase, userId))
-  return (await generateMull(supabase, userId, context)) ?? (await generateForgotten(supabase, userId))
+  const mulls = await generateMull(supabase, userId, context)
+  if (mulls.length > 0) return mulls
+  const forgotten = await generateForgotten(supabase, userId)
+  return forgotten ? [forgotten] : []
 }
