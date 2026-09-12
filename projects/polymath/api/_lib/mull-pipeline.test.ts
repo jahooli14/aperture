@@ -248,14 +248,9 @@ describe('the mull channel, end to end', () => {
     expect(trace.join('\n')).toMatch(/search \[\w+\]: \d+ candidates, best [\d.]+, band/)
   })
 
-  it('offers a forgotten project at most once a fortnight', async () => {
+  it('never resurfaces a project on elapsed time alone', async () => {
     generateText.mockResolvedValue('not json at all')
-    const data = corpus() as any
-    data.sparks = [{ user_id: 'u1', id: 's-old', type: 'forgotten', project_id: 'p-book', created_at: ago(3) }]
-
-    const baked = await bakeMull(fakeSupabase(data).client, 'u1')
-    // Per-project cooldowns alone let this run daily on a different
-    // project forever, which is the nag drift-decay replaced.
+    const baked = await bakeMull(fakeSupabase(corpus() as any).client, 'u1')
     expect(baked).toEqual([])
   })
 
@@ -265,14 +260,15 @@ describe('the mull channel, end to end', () => {
     await expect(bakeMull(fakeSupabase(empty).client, 'u1')).resolves.toEqual([])
   })
 
-  it('falls back to the forgotten-project offer when the model is useless', async () => {
-    // No model call can succeed here, and the fallback needs none: it is
-    // deterministic, and a long-silent project is still worth offering
-    // back. Better than an empty slot, and it costs nothing.
+  it('shows nothing rather than a calendar fact when the model is useless', async () => {
+    // There used to be a consolation prize here: "you set down <project> N
+    // months ago". Elapsed time is not insight, and as the FALLBACK it only
+    // ever appeared when the channel had found none — so it was a card that
+    // by construction carried none. An empty slot is the honest answer and
+    // the home surface renders nothing for it.
     generateText.mockResolvedValue('not json at all')
     const baked = await bakeMull(fakeSupabase(corpus() as any).client, 'u1')
-    expect(baked.filter(s => s.type === 'mull')).toHaveLength(0)
-    expect(baked.map(s => s.type)).toEqual(['forgotten'])
+    expect(baked).toEqual([])
   })
 })
 

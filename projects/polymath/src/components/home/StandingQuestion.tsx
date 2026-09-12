@@ -27,12 +27,12 @@ export interface StandingQuestionSpark {
   projects?: { title: string } | null
 }
 
-/** Attention-slot kinds that are proposals, not questions — those stay in
- *  the attention slot, which is built for one-off interruptions. */
-const PROPOSAL_TYPES = new Set(['forgotten'])
-
+/** Every spark is a question now. The one kind that wasn't -- the
+ *  forgotten-project offer, "you set down X N months ago" -- is gone:
+ *  elapsed time is a fact about the calendar, not a reason to care, and it
+ *  only ever appeared when the channel had found no insight at all. */
 export function isStandingQuestion(spark: { type: string } | null | undefined): boolean {
-  return !!spark && !PROPOSAL_TYPES.has(spark.type)
+  return !!spark
 }
 
 const quietActionStyle = { color: 'var(--brand-text-secondary)', opacity: 0.55 }
