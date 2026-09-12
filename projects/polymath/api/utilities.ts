@@ -2786,19 +2786,18 @@ async function handleExecutionSparks(req: VercelRequest, res: VercelResponse) {
       return res.status(200).json({ baked: false })
     }
 
-    // A run writes up to two questions for the price of one. The banked
-    // one is stored a second older so `today` (newest first) keeps serving
-    // the first until it's answered or runs out, then hands over with no
-    // cron run and no model call at all. That's the cheapest question the
-    // channel can produce: one already paid for.
-    const now = Date.now()
-    const rows = baked.map((spark, i) => ({
+    // A run writes up to two questions for the price of one. Queue order
+    // is carried by expires_at, which the generator already staggers (the
+    // banked one gets a longer life so it can't expire unseen while it
+    // waits) -- so `today` serves the soonest-to-expire and the banked one
+    // takes over with no cron run and no model call. That's the cheapest
+    // question the channel can produce: one already paid for.
+    const rows = baked.map(spark => ({
       user_id: userId,
       type: spark.type,
       project_id: spark.project_id,
       text: spark.text,
       expires_at: spark.expires_at,
-      created_at: new Date(now - i * 1000).toISOString(),
     }))
 
     const { error: insertErr } = await supabase.from('sparks').insert(rows)
@@ -2822,7 +2821,10 @@ async function handleExecutionSparks(req: VercelRequest, res: VercelResponse) {
       .eq('user_id', userId)
       .is('answered_at', null)
       .gt('expires_at', new Date().toISOString())
-      .order('created_at', { ascending: false })
+      // Soonest to expire first. A banked question is written with a
+      // longer life precisely so it sorts behind the standing one, which
+      // means the queue needs no created_at juggling to stay in order.
+      .order('expires_at', { ascending: true })
       .limit(1)
 
     if (error) {
@@ -2953,7 +2955,7 @@ async function handleExecutionSparks(req: VercelRequest, res: VercelResponse) {
       .is('answered_at', null)
       .is('shown_at', null)
       .gt('expires_at', nowIso)
-      .order('created_at', { ascending: false })
+      .order('expires_at', { ascending: true })
       .limit(1)
 
     const fromBank = bankedRows?.[0] ?? null
@@ -3000,9 +3002,8 @@ async function handleExecutionSparks(req: VercelRequest, res: VercelResponse) {
       return res.status(200).json({ rerolled: false, reason: 'nothing else to ask' })
     }
 
-    // Same as the bake: anything past the first is banked behind it, one
-    // second older, so the next reroll is free.
-    const rerollNow = Date.now()
+    // Same as the bake: anything past the first is banked behind it, with
+    // a longer expiry, so the next reroll is free.
     const { data: insertedRows, error: insertErr } = await supabase
       .from('sparks')
       .insert(baked.map((spark, i) => ({
@@ -3011,7 +3012,6 @@ async function handleExecutionSparks(req: VercelRequest, res: VercelResponse) {
         project_id: spark.project_id,
         text: spark.text,
         expires_at: spark.expires_at,
-        created_at: new Date(rerollNow - i * 1000).toISOString(),
         shown_at: i === 0 ? nowIso : null,
       })))
       .select('id, type, text, project_id, shown_at, projects(title)')

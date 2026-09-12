@@ -21,6 +21,8 @@ import { selectCorpusArticles, type CorpusArticle } from './reading-corpus.js'
 import {
   describeTimeline,
   classifyTimeline,
+  buildActivityBaseline,
+  type ActivityBaseline,
   findSimultaneous,
   findDrift,
   simultaneityFact,
@@ -119,6 +121,7 @@ async function jointSubjects(
   supabase: SupabaseClient,
   userId: string,
   fragments: (CorpusRow & { projectTitle: string | null })[],
+  baseline: ActivityBaseline,
 ): Promise<Subject[]> {
   const { data: joints } = await supabase
     .from('joints')
@@ -149,7 +152,7 @@ async function jointSubjects(
     const hasProject =
       members.some(m => m.projectId !== null) || projectTitles.has(String(joint.text ?? '').toLowerCase())
 
-    const found = classifyTimeline({ timeline, hasProject, label: joint.text })
+    const found = classifyTimeline({ timeline, hasProject, label: joint.text, baseline })
     if (!found) continue
 
     const drift = findDrift(members, motifWords)
@@ -184,6 +187,7 @@ async function projectSubjects(
   userId: string,
   fragments: (CorpusRow & { projectTitle: string | null })[],
   thoughts: CorpusRow[],
+  baseline: ActivityBaseline,
 ): Promise<Subject[]> {
   const { data: projects } = await supabase
     .from('projects')
@@ -206,7 +210,7 @@ async function projectSubjects(
     const timeline = describeTimeline(rows.map(r => r.createdAt))
     if (!timeline) continue
 
-    const found = classifyTimeline({ timeline, hasProject: true, label: project.title })
+    const found = classifyTimeline({ timeline, hasProject: true, label: project.title, baseline })
     if (!found) continue
 
     out.push({
@@ -369,9 +373,14 @@ ${shown.map((i: any) => `  - ${i.content}${i.lists?.type ? ` (${i.lists.type})` 
 export async function gatherSubjects(supabase: SupabaseClient, userId: string): Promise<Subject[]> {
   const { thoughts, fragments } = await loadCaptures(supabase, userId)
 
+  // Built once from every capture there is, and handed to every shape: the
+  // denominator that stops a life event reading as a decision about one
+  // project (corpus-time.ts).
+  const baseline = buildActivityBaseline([...thoughts, ...fragments].map(r => r.createdAt))
+
   const [joints, projects, longHeld, article] = await Promise.all([
-    jointSubjects(supabase, userId, fragments),
-    projectSubjects(supabase, userId, fragments, thoughts),
+    jointSubjects(supabase, userId, fragments, baseline),
+    projectSubjects(supabase, userId, fragments, thoughts, baseline),
     longHeldSubject(supabase, userId),
     articleSubject(supabase, userId),
   ])

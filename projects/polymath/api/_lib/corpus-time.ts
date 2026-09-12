@@ -113,6 +113,93 @@ function typicalGap(gaps: number[]): number {
   return rest[Math.floor(rest.length / 2)]
 }
 
+/**
+ * How much the user was capturing at all, month by month.
+ *
+ * Capture time is not thought time, and that is the confound running under
+ * every shape in this file. A project that goes quiet in August might have
+ * been abandoned — or a baby arrived, or work got busy, and everything
+ * went quiet at once. The first is worth a question. The second is the app
+ * misreading someone's calendar as a loss of interest, and saying it out
+ * loud with a date attached makes it worse, not better.
+ *
+ * The corpus can tell them apart without knowing why: a month where the
+ * whole corpus fell silent explains any one project falling silent, and a
+ * month where everything spiked explains any one burst. No model call, no
+ * guess about the cause — just the denominator that was missing.
+ */
+export interface ActivityBaseline {
+  byMonth: Map<string, number>
+  median: number
+  /** Months where the whole corpus went quiet. Life, not a decision. */
+  quietMonths: Set<string>
+  /** Months where everything spiked. A week off, not a fixation. */
+  busyMonths: Set<string>
+}
+
+/** Below this the corpus is too sparse for "unusually quiet" to mean
+ *  anything — everything would look like a lull. */
+const BASELINE_MIN_MEDIAN = 4
+const QUIET_FRACTION = 0.35
+const BUSY_MULTIPLE = 2.5
+
+export function monthKey(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+}
+
+export function buildActivityBaseline(isoDates: string[]): ActivityBaseline {
+  const byMonth = new Map<string, number>()
+  for (const iso of isoDates) {
+    const d = new Date(iso)
+    if (!Number.isFinite(d.getTime())) continue
+    const key = monthKey(d)
+    byMonth.set(key, (byMonth.get(key) ?? 0) + 1)
+  }
+
+  const counts = [...byMonth.values()].sort((a, b) => a - b)
+  const median = counts.length > 0 ? counts[Math.floor(counts.length / 2)] : 0
+
+  const quietMonths = new Set<string>()
+  const busyMonths = new Set<string>()
+  if (median >= BASELINE_MIN_MEDIAN) {
+    for (const [key, count] of byMonth) {
+      if (count <= median * QUIET_FRACTION) quietMonths.add(key)
+      if (count >= median * BUSY_MULTIPLE) busyMonths.add(key)
+    }
+  }
+
+  return { byMonth, median, quietMonths, busyMonths }
+}
+
+/**
+ * Did the whole corpus go quiet while this one thing was silent?
+ *
+ * A gap is only evidence about a project if the user was capturing other
+ * things through it. Months with no row at all count as quiet — an absent
+ * month is the strongest possible version of a lull.
+ */
+export function silenceExplainedByLife(
+  from: Date,
+  to: Date,
+  baseline: ActivityBaseline,
+): boolean {
+  if (baseline.median < BASELINE_MIN_MEDIAN) return false
+  const months: string[] = []
+  const cursor = new Date(from.getFullYear(), from.getMonth(), 1)
+  const end = new Date(to.getFullYear(), to.getMonth(), 1)
+  while (cursor <= end && months.length < 120) {
+    months.push(monthKey(cursor))
+    cursor.setMonth(cursor.getMonth() + 1)
+  }
+  // The endpoints are months the thing WAS mentioned, so they aren't part
+  // of the silence.
+  const inner = months.slice(1, -1)
+  if (inner.length === 0) return false
+
+  const quiet = inner.filter(m => baseline.quietMonths.has(m) || !baseline.byMonth.has(m)).length
+  return quiet / inner.length >= 0.6
+}
+
 export type TemporalShape =
   | 'conviction'
   | 'return'
@@ -153,6 +240,9 @@ export interface ClassifyInput {
   /** Has this ever become a project with work logged against it? */
   hasProject?: boolean
   label: string
+  /** How much the user was capturing at all. Without it, a life event
+   *  reads as a decision about one project. */
+  baseline?: ActivityBaseline
 }
 
 /**
@@ -187,7 +277,10 @@ export function classifyTimeline(input: ClassifyInput): ShapeFinding | null {
   if (
     t.longestGapDays >= RETURN_SILENCE_DAYS &&
     t.quietDays <= RETURN_FRESH_DAYS &&
-    t.longestGapDays >= 2 * typicalGap(t.gaps)
+    t.longestGapDays >= 2 * typicalGap(t.gaps) &&
+    // If the whole corpus was quiet through that gap, they didn't drop
+    // this and come back to it — they stopped writing anything down.
+    !(input.baseline && silenceExplainedByLife(t.first, t.last, input.baseline))
   ) {
     return {
       shape: 'return',
@@ -207,7 +300,14 @@ export function classifyTimeline(input: ClassifyInput): ShapeFinding | null {
 
   // A real rhythm that stopped on a date. Not "this died" — something
   // changed in August, and the corpus can say which August.
-  if (t.evenness >= 0.4 && t.count >= 3 && t.spanDays >= MIN_SPAN_DAYS && t.quietDays >= WENT_QUIET_DAYS) {
+  // "It stopped in August" is only worth saying if August wasn't the month
+  // everything stopped.
+  const stopExplainedByLife =
+    !!input.baseline && input.baseline.quietMonths.has(monthKey(t.last))
+  if (
+    t.evenness >= 0.4 && t.count >= 3 && t.spanDays >= MIN_SPAN_DAYS &&
+    t.quietDays >= WENT_QUIET_DAYS && !stopExplainedByLife
+  ) {
     return {
       shape: 'went_quiet',
       fact: `This came up about every ${humanDuration(t.spanDays / Math.max(1, t.count - 1))} from ${monthYear(t.first)} — and then stopped in ${monthYear(t.last)}, ${humanDuration(t.quietDays)} ago.`,
@@ -218,7 +318,14 @@ export function classifyTimeline(input: ClassifyInput): ShapeFinding | null {
   // One sitting, long ago, never returned to. It mattered enough to say
   // several times in a week and then never again, and nobody has ever
   // asked why.
-  if (t.spanDays <= BURST_WINDOW_DAYS && t.count >= 3 && t.quietDays >= BURST_COLD_DAYS) {
+  // Three mentions in a week is a fixation in a normal month and just
+  // Tuesday in a month where they wrote down fifty things.
+  const burstExplainedByLife =
+    !!input.baseline && input.baseline.busyMonths.has(monthKey(t.first))
+  if (
+    t.spanDays <= BURST_WINDOW_DAYS && t.count >= 3 &&
+    t.quietDays >= BURST_COLD_DAYS && !burstExplainedByLife
+  ) {
     return {
       shape: 'burst',
       fact: `They said this ${t.count} times inside one week in ${monthYear(t.first)}, and never again — that was ${humanDuration(t.quietDays)} ago.`,

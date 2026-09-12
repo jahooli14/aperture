@@ -1,0 +1,226 @@
+/**
+ * The whole channel, end to end, against a fake corpus.
+ *
+ * Everything else here tests a pure function. Nothing tested that the five
+ * subject gatherers, nine vector searches and two model calls actually fit
+ * together — that the columns asked for exist in the shape the code reads,
+ * that a silent step declines instead of throwing, and that a realistic
+ * corpus produces a question at all. Those are the failures that would only
+ * have shown up as an empty slot in production, which is silent by design.
+ */
+
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+
+const generateText = vi.fn()
+// Each query gets a vector that encodes its index, so the fake vector
+// search can answer per-subject instead of per-call-order — the real
+// searches run concurrently and arrive in no fixed order.
+const batchGenerateEmbeddings = vi.fn(async (texts: string[]) => texts.map((_, i) => [i, 0, 0]))
+
+vi.mock('./gemini-chat.js', () => ({ generateText: (...a: unknown[]) => generateText(...a) }))
+vi.mock('./gemini-embeddings.js', () => ({
+  batchGenerateEmbeddings: (t: string[]) => batchGenerateEmbeddings(t),
+  generateEmbedding: async () => [0.1, 0.2, 0.3],
+  cosineSimilarity: () => 0.6,
+}))
+
+const { bakeMull } = await import('./mull-generator.js')
+
+const DAY = 86_400_000
+const ago = (days: number) => new Date(Date.now() - days * DAY).toISOString()
+
+/** Two years of a real-shaped corpus: a conviction never built, a project
+ *  with a rhythm, notes filed against both, lists, and reading. */
+function corpus() {
+  const fragments = [
+    // Said across two years, never became a project. The strongest shape.
+    { user_id: 'u1', id: 'f1', text: 'it only works if it is one take', created_at: ago(760), project_id: null, projects: null },
+    { user_id: 'u1', id: 'f2', text: 'the good mixes were always the first pass', created_at: ago(420), project_id: null, projects: null },
+    { user_id: 'u1', id: 'f3', text: 'one take or it is not honest', created_at: ago(90), project_id: null, projects: null },
+    // A project with captures spread over a year.
+    { user_id: 'u1', id: 'f4', text: 'chapter nine needs to feel like arriving', created_at: ago(500), project_id: 'p-book', projects: { title: 'The book' } },
+    { user_id: 'u1', id: 'f5', text: 'rewrote chapter three again', created_at: ago(300), project_id: 'p-book', projects: { title: 'The book' } },
+    { user_id: 'u1', id: 'f6', text: 'four passes on chapter three now', created_at: ago(120), project_id: 'p-book', projects: { title: 'The book' } },
+    { user_id: 'u1', id: 'f7', text: 'cut the mitres at 5am', created_at: ago(450), project_id: 'p-deck', projects: { title: 'Deck stand' } },
+    { user_id: 'u1', id: 'f8', text: 'the stand is square at last', created_at: ago(200), project_id: 'p-deck', projects: { title: 'Deck stand' } },
+  ]
+  return {
+    fragments,
+    memories: [
+      { user_id: 'u1', id: 'm1', title: 'Dad', body: 'Ten more proper conversations with dad, probably, and we spend them on the greenhouse. It is the only tidy room in a messy house and I do not know why that matters to me but it does.', created_at: ago(280), project_id: null },
+      { user_id: 'u1', id: 'm2', title: 'Mixing', body: 'Kept the first take of the whole side even though the drop is late. It breathes. Every version I tightened afterwards was worse and I deleted them all.', created_at: ago(150), project_id: null },
+    ],
+    projects: [
+      { user_id: 'u1', id: 'p-book', title: 'The book', description: 'A novel where characters get swapped out partway through', metadata: { end_goal: 'a finished manuscript' }, last_closeout_text: 'Got through the chapter nine rewrite', created_at: ago(600), state: 'mull', status: 'active' },
+      { user_id: 'u1', id: 'p-deck', title: 'Deck stand', description: 'A stand for the decks, out of oak offcuts', metadata: {}, last_closeout_text: null, created_at: ago(500), state: 'mull', status: 'dormant' },
+    ],
+    joints: [{ user_id: 'u1', id: 'j1', text: 'it only works if it is one take', fragment_ids: ['f1', 'f2', 'f3'], occurrence_count: 3, last_seen_at: ago(90) }],
+    list_items: [
+      { user_id: 'u1', id: 'l1', content: 'Burden of Dreams', user_rating: 5, status: 'active', created_at: ago(500), lists: { title: 'Films', type: 'film' } },
+      { user_id: 'u1', id: 'l2', content: 'Learn to solder properly', user_rating: null, status: 'active', created_at: ago(600), lists: { title: 'To do', type: 'skill' } },
+    ],
+    reading_queue: [
+      { user_id: 'u1', id: 'r1', title: 'On first takes', excerpt: 'The recording is not a document of the performance, it is the performance. Once you accept that, editing becomes a different kind of lie, and the whole practice of fixing things afterwards starts to look strange.', resonance: 'good', tags: [], created_at: ago(400) },
+    ],
+    sparks: [],
+  }
+}
+
+type Row = Record<string, any>
+
+/** Minimal PostgREST-shaped stub: real predicates, so a query that filters
+ *  wrongly comes back empty here too rather than quietly passing. */
+function fakeSupabase(data: Record<string, Row[]>) {
+  const rpcCalls: string[] = []
+  const inserted: Row[] = []
+
+  const builder = (table: string) => {
+    let rows = [...(data[table] ?? [])]
+    const chain: any = {
+      select: () => chain,
+      eq: (c: string, v: unknown) => { rows = rows.filter(r => r[c] === v); return chain },
+      neq: (c: string, v: unknown) => { rows = rows.filter(r => r[c] !== v && r[c] != null); return chain },
+      in: (c: string, v: unknown[]) => { rows = rows.filter(r => v.includes(r[c])); return chain },
+      gte: (c: string, v: string) => { rows = rows.filter(r => String(r[c]) >= v); return chain },
+      lt: (c: string, v: string) => { rows = rows.filter(r => String(r[c]) < v); return chain },
+      gt: (c: string, v: string) => { rows = rows.filter(r => String(r[c]) > v); return chain },
+      is: (c: string, v: null) => { rows = rows.filter(r => (v === null ? r[c] == null : r[c] === v)); return chain },
+      not: (c: string, _op: string, v: null) => { rows = rows.filter(r => (v === null ? r[c] != null : true)); return chain },
+      or: () => chain,
+      order: () => chain,
+      limit: () => chain,
+      insert: (payload: Row | Row[]) => {
+        inserted.push(...(Array.isArray(payload) ? payload : [payload]))
+        return chain
+      },
+      update: () => chain,
+      single: async () => ({ data: rows[0] ?? null, error: null }),
+      then: (resolve: (v: { data: Row[]; error: null }) => unknown) => resolve({ data: rows, error: null }),
+    }
+    return chain
+  }
+
+  return {
+    client: {
+      from: (table: string) => builder(table),
+      rpc: async (name: string, args: Row) => {
+        rpcCalls.push(name)
+        // The connector: a note in a different vocabulary, inside the band.
+        if (name === 'match_memories') {
+          // A different note per blind spot, chosen by the query vector
+          // rather than by call order -- the real searches run
+          // concurrently and arrive in no fixed order. One note for every
+          // search would be right to refuse: rankPairs will not build two
+          // questions on the same lens.
+          const which = Number(String(args.query_embedding).replace('[', '').split(',')[0]) || 0
+          const note = data.memories[which % data.memories.length]
+          return {
+            data: [{ id: note.id, title: note.title, body: note.body, similarity: 0.58 }],
+            error: null,
+          }
+        }
+        return { data: [], error: null }
+      },
+    } as any,
+    rpcCalls,
+    inserted,
+  }
+}
+
+const BLIND_SPOTS = JSON.stringify({
+  subjects: [
+    { n: 1, blind_spot: 'It assumes a first take is honest because it is unedited, and never says what honesty costs.', search_query: 'whether doing a thing once and leaving it alone is braver than getting it right, or just easier' },
+    { n: 2, blind_spot: 'It assumes the chapter can be fixed by rewriting, and has never tested leaving one alone.', search_query: 'when trying again makes a thing worse instead of better' },
+    { n: 3, blind_spot: null, search_query: '' },
+  ],
+})
+
+const DRAFTS = JSON.stringify({
+  pairs: [
+    {
+      n: 1,
+      spark: 'You wrote that you get maybe ten more proper conversations with dad, and you spend them on the greenhouse. You have said since 2023 that it only works if it is one take. What are you doing twice?',
+      quote: 'ten more proper conversations with dad',
+      stake: 'He stops re-recording and keeps the next first pass.',
+    },
+    {
+      n: 2,
+      spark: 'You kept the first take of the whole side even though the drop is late. Chapter three has had four passes and chapter nine has had one. Which one are you going to leave alone?',
+      quote: 'Kept the first take of the whole side even though the drop is late',
+      stake: 'He leaves chapter nine alone and ships it.',
+    },
+  ],
+})
+
+describe('the mull channel, end to end', () => {
+  beforeEach(() => {
+    generateText.mockReset()
+    batchGenerateEmbeddings.mockClear()
+  })
+
+  it('turns two years of corpus into two questions', async () => {
+    generateText.mockResolvedValueOnce(BLIND_SPOTS).mockResolvedValueOnce(DRAFTS)
+    const { client, rpcCalls } = fakeSupabase(corpus() as any)
+
+    const baked = await bakeMull(client, 'u1')
+
+    expect(baked).toHaveLength(2)
+    expect(baked[0].type).toBe('mull')
+    expect(baked[0].text).toContain('ten more proper conversations with dad')
+    // Exactly two model calls, whatever the corpus looks like.
+    expect(generateText).toHaveBeenCalledTimes(2)
+    expect(batchGenerateEmbeddings).toHaveBeenCalledTimes(1)
+    // All three searches ran, not one.
+    expect(rpcCalls.filter(n => n === 'match_memories').length).toBeGreaterThan(1)
+  })
+
+  it('asks about every subject in one call, and the dates are real', async () => {
+    generateText.mockResolvedValueOnce(BLIND_SPOTS).mockResolvedValueOnce(DRAFTS)
+    await bakeMull(fakeSupabase(corpus() as any).client, 'u1')
+
+    const blindSpotPrompt = generateText.mock.calls[0][0] as string
+    expect(blindSpotPrompt).toMatch(/SUBJECT 1/)
+    expect(blindSpotPrompt).toMatch(/SUBJECT 2/)
+    // A dated fact computed from the corpus, not a model invention.
+    expect(blindSpotPrompt).toMatch(/since \w+ 20\d\d/)
+    // Lists reach the prompt as register.
+    expect(blindSpotPrompt).toContain('Burden of Dreams')
+  })
+
+  it('banks the second question with a longer life, so it cannot expire unseen', async () => {
+    generateText.mockResolvedValueOnce(BLIND_SPOTS).mockResolvedValueOnce(DRAFTS)
+    const baked = await bakeMull(fakeSupabase(corpus() as any).client, 'u1')
+
+    expect(new Date(baked[1].expires_at).getTime())
+      .toBeGreaterThan(new Date(baked[0].expires_at).getTime())
+  })
+
+  it('stays silent rather than shipping an ungrounded question', async () => {
+    generateText.mockResolvedValueOnce(BLIND_SPOTS).mockResolvedValueOnce(JSON.stringify({
+      pairs: [{
+        n: 1,
+        spark: 'Your love of first takes connects to your reading about impermanence. What might that unlock?',
+        quote: 'ten more summers with dad',
+        stake: 'A deeper sense of his practice.',
+      }],
+    }))
+    const baked = await bakeMull(fakeSupabase(corpus() as any).client, 'u1')
+    expect(baked.filter(s => s.type === 'mull')).toHaveLength(0)
+  })
+
+  it('declines quietly on an empty corpus instead of throwing', async () => {
+    generateText.mockResolvedValue(JSON.stringify({ subjects: [] }))
+    const empty = { fragments: [], memories: [], projects: [], joints: [], list_items: [], reading_queue: [], sparks: [] }
+    await expect(bakeMull(fakeSupabase(empty).client, 'u1')).resolves.toEqual([])
+  })
+
+  it('falls back to the forgotten-project offer when the model is useless', async () => {
+    // No model call can succeed here, and the fallback needs none: it is
+    // deterministic, and a long-silent project is still worth offering
+    // back. Better than an empty slot, and it costs nothing.
+    generateText.mockResolvedValue('not json at all')
+    const baked = await bakeMull(fakeSupabase(corpus() as any).client, 'u1')
+    expect(baked.filter(s => s.type === 'mull')).toHaveLength(0)
+    expect(baked.map(s => s.type)).toEqual(['forgotten'])
+  })
+})
