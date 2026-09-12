@@ -1,0 +1,209 @@
+RECALL
+  PASS  F1    Delegated authority oversight cost
+  PASS  F2    Cyber war attribution, slow convergence
+  PASS  F2b   Forensics capability matched to it
+  PASS  F3    Parametric contradiction
+  PASS  F4    Klaus called casualty severity first
+  PASS  F4b   Hal Brennan reached it independently
+  PASS  F5    June deadline stopped
+  PASS  F5b   ...tied to idle regulatory capacity
+  PASS  F6    Saskia's diagnostic -> client demand
+  PASS  F7    Duraflex <-> Copperfield
+  PASS  F8    Audit client flagged, not dropped
+  PASS  F9    Nobody owns Calloway
+  PASS  F10   Nine Elms dormant with open thread
+  PASS  F10b  Unclosed debts to internal partners
+
+PRECISION (must not fire)
+  ok    T1    GenAI as one subject
+  ok    T2    One broker's migration as a market
+  ok    T3    The firm's own report echoed back
+  ok    T4    Cyber hiring below threshold
+
+GUARD ABLATION
+  all guards off        traps through: T2, T3, T4
+  only provenance     blocks: T3
+  only orgCount       blocks: T2
+  only strength       blocks: -
+  only attribution    blocks: T4
+  only externalOnly   blocks: -
+  only subjectSense   blocks: T4
+  SOLE GUARD: provenance is the only thing stopping T3
+  SOLE GUARD: orgCount is the only thing stopping T2
+
+SCORE  recall 14/14  |  traps fired 0/4  |  total findings 43
+# guards off: none
+
+[D1] Convergence (fast, 8wk): Who decides if an attack was state-backed
+    3 independent organisations, 3 claims
+    cites: c083 2026-07-20 beatrice-ofori (norton-hale) | c088 2026-07-31 eleanor-strand (whitcombe) | c103 2026-09-07 fern-achebe (bellwether)
+
+[D1] Convergence (fast, 8wk): Cost of delegated authority / binder oversight
+    4 independent organisations, 5 claims
+    cites: c084 2026-07-21 marc-deschamps (firm) | c087 2026-07-29 nadia-hoyle (bellwether) | c091 2026-08-12 marcus-deyn (ravensbourne) | c100 2026-08-27 derek-ainsworth (castleford) | +1 more
+
+[D1] Convergence (fast, 8wk): Are our casualty severity assumptions right
+    4 independent organisations, 4 claims
+    cites: c094 2026-08-18 rosalind-hyde (calloway) | c099 2026-08-27 derek-ainsworth (castleford) | c101 2026-09-01 ana-castellane (harrow-point) | c107 2026-09-09 sofia-marchetti (kestrel)
+
+[D1] Convergence (slow, full): Project cargo submission flow
+    3 independent organisations, 4 claims
+    cites: c002 2026-03-17 charlotte-pym (aldgate) | c016 2026-03-26 meredith-sowande (ashfield) | c040 2026-04-27 hannah-leith (ravensbourne) | c065 2026-06-12 meredith-sowande (ashfield)
+
+[D1] Convergence (slow, full): The 30 June regulatory reporting deadline
+    6 independent organisations, 6 claims
+    cites: c003 2026-03-18 rob-gilder (harrow-point) | c018 2026-03-30 derek-ainsworth (castleford) | c025 2026-04-08 alun-price (severn) | c030 2026-04-15 piotr-zawada (bellwether) | +2 more
+
+[D1] Convergence (slow, full): Whether parametric works in specialty
+    4 independent organisations, 6 claims
+    cites: c005 2026-03-19 marcus-deyn (ravensbourne) | c043 2026-05-05 ana-castellane (harrow-point) | c044 2026-05-05 ana-castellane (harrow-point) | c048 2026-05-13 marcus-deyn (ravensbourne) | +2 more
+
+[D1] Convergence (slow, full): Cost of delegated authority / binder oversight
+    7 independent organisations, 12 claims
+    cites: c006 2026-03-19 marcus-deyn (ravensbourne) | c022 2026-04-06 nadia-hoyle (bellwether) | c041 2026-04-28 ines-delacroix (pallister) | c059 2026-06-03 marcus-deyn (ravensbourne) | +8 more
+
+[D1] Convergence (slow, full): US liability severity running ahead of assumptions
+    4 independent organisations, 9 claims
+    cites: c010 2026-03-23 ivan-kroll (pemberton) | c035 2026-04-21 klaus-beringer (trans-meridian) | c036 2026-04-21 klaus-beringer (trans-meridian) | c055 2026-05-28 klaus-beringer (trans-meridian) | +5 more
+
+[D1] Convergence (slow, full): Who decides if an attack was state-backed
+    4 independent organisations, 8 claims
+    cites: c017 2026-03-27 fern-achebe (thackeray) | c026 2026-04-09 eleanor-strand (whitcombe) | c046 2026-05-08 eleanor-strand (whitcombe) | c057 2026-06-02 fern-achebe (thackeray) | +4 more
+
+[D1] Convergence (slow, full): Growing into casualty
+    3 independent organisations, 3 claims
+    cites: c019 2026-03-30 derek-ainsworth (castleford) | c027 2026-04-10 sofia-marchetti (kestrel) | c072 2026-06-25 ana-castellane (harrow-point)
+
+[D1] Convergence (slow, full): Are our casualty severity assumptions right
+    4 independent organisations, 6 claims
+    cites: c052 2026-05-20 sofia-marchetti (kestrel) | c073 2026-06-26 sofia-marchetti (kestrel) | c094 2026-08-18 rosalind-hyde (calloway) | c099 2026-08-27 derek-ainsworth (castleford) | +2 more
+
+[D2] Contradiction: Whether parametric works in specialty
+    marcus-deyn, beatrice-ofori for; ana-castellane against
+    cites: c005 2026-03-19 marcus-deyn (ravensbourne) | c048 2026-05-13 marcus-deyn (ravensbourne) | c097 2026-08-25 beatrice-ofori (norton-hale) | c043 2026-05-05 ana-castellane (harrow-point) | +1 more
+
+[D3] First voice: charlotte-pym (Aldgate & Vane) on Project cargo submission flow
+    Led the next speaker by 41 days. Since echoed by 2: meredith-sowande, hannah-leith
+    cites: c002 2026-03-17 charlotte-pym (aldgate) | c016 2026-03-26 meredith-sowande (ashfield) | c040 2026-04-27 hannah-leith (ravensbourne) | c065 2026-06-12 meredith-sowande (ashfield)
+
+[D3] First voice: marcus-deyn (Ravensbourne Underwriting) on Whether parametric works in specialty
+    Led the next speaker by 47 days. Since echoed by 3: ana-castellane, graham-tull, beatrice-ofori
+    cites: c005 2026-03-19 marcus-deyn (ravensbourne) | c043 2026-05-05 ana-castellane (harrow-point) | c044 2026-05-05 ana-castellane (harrow-point) | c049 2026-05-15 graham-tull (duraflex) | +1 more
+
+[D3] First voice: klaus-beringer (Trans-Meridian Re) on US liability severity running ahead of assumptions
+    Led the next speaker by 64 days. Since echoed by 3: derek-ainsworth, ivan-kroll, giles-overton. Reached independently inside the firm by hal-brennan
+    cites: c035 2026-04-21 klaus-beringer (trans-meridian) | c068 2026-06-16 derek-ainsworth (castleford) | c070 2026-06-24 ivan-kroll (pemberton) | c074 2026-07-02 giles-overton (thackeray) | +2 more
+
+[D3] First voice: fern-achebe (Thackeray Syndicate 2884) on Who decides if an attack was state-backed
+    Led the next speaker by 42 days. Since echoed by 2: eleanor-strand, beatrice-ofori
+    cites: c017 2026-03-27 fern-achebe (thackeray) | c026 2026-04-09 eleanor-strand (whitcombe) | c046 2026-05-08 eleanor-strand (whitcombe) | c060 2026-06-04 beatrice-ofori (norton-hale) | +2 more
+
+[D3] First voice: sofia-marchetti (Kestrel Re) on Are our casualty severity assumptions right
+    Led the next speaker by 90 days. Since echoed by 3: rosalind-hyde, derek-ainsworth, ana-castellane. Reached independently inside the firm by saskia-boateng
+    cites: c052 2026-05-20 sofia-marchetti (kestrel) | c094 2026-08-18 rosalind-hyde (calloway) | c099 2026-08-27 derek-ainsworth (castleford) | c101 2026-09-01 ana-castellane (harrow-point) | +1 more
+
+[D4] Stopped: The 30 June regulatory reporting deadline
+    6 claims across 6 orgs to May, 1 since July (none stated directly) — and internally: "His three deadline hires have nothing booked past October."
+    cites: c003 2026-03-18 rob-gilder (harrow-point) | c018 2026-03-30 derek-ainsworth (castleford) | c025 2026-04-08 alun-price (severn) | c030 2026-04-15 piotr-zawada (bellwether) | +5 more
+
+[D5] Capability: ines-delacroix (Pallister Speciality) -> 6 unmet needs
+    marcus-deyn (Ravensbourne Underwriting), 96d; nadia-hoyle (Bellwether MGA), 78d; jonah-pike (Lattice Capital), 15d; derek-ainsworth (Castleford Mutual), 7d; charlotte-pym (Aldgate & Vane), 13d; marc-deschamps (firm), 28d
+    cites: c069 2026-06-23 ines-delacroix (pallister) | c006 2026-03-19 marcus-deyn (ravensbourne) | c022 2026-04-06 nadia-hoyle (bellwether) | c061 2026-06-08 jonah-pike (lattice) | +3 more
+
+[D5] Internal capability: gareth-lowry (firm) -> 6 unmet needs
+    marcus-deyn (Ravensbourne Underwriting), 54d; nadia-hoyle (Bellwether MGA), 36d; ines-delacroix (Pallister Speciality), 14d; jonah-pike (Lattice Capital), 27d; derek-ainsworth (Castleford Mutual), 35d; charlotte-pym (Aldgate & Vane), 55d [matched via curated subject link]
+    cites: c047 2026-05-12 gareth-lowry (firm) | c006 2026-03-19 marcus-deyn (ravensbourne) | c022 2026-04-06 nadia-hoyle (bellwether) | c041 2026-04-28 ines-delacroix (pallister) | +3 more
+
+[D5] Internal capability: teodora-iliev (firm) -> 4 unmet needs
+    fern-achebe (Thackeray Syndicate 2884), 27d; eleanor-strand (Whitcombe LLP), 15d; beatrice-ofori (Norton Hale Logistics), 42d; fern-achebe (Bellwether MGA), 137d [matched via curated subject link]
+    cites: c038 2026-04-23 teodora-iliev (firm) | c017 2026-03-27 fern-achebe (thackeray) | c046 2026-05-08 eleanor-strand (whitcombe) | c060 2026-06-04 beatrice-ofori (norton-hale) | +1 more
+
+[D5] Internal capability: saskia-boateng (firm) -> 4 unmet needs
+    sofia-marchetti (Kestrel Re), 57d; rosalind-hyde (Calloway Global), 147d; derek-ainsworth (Castleford Mutual), 156d; ana-castellane (Harrow Point Speciality), 161d [AUDIT CLIENT — advisory restricted]
+    cites: c013 2026-03-24 saskia-boateng (firm) | c052 2026-05-20 sofia-marchetti (kestrel) | c094 2026-08-18 rosalind-hyde (calloway) | c099 2026-08-27 derek-ainsworth (castleford) | +1 more
+
+[D5] Internal capability: hal-brennan (firm) -> 4 unmet needs
+    sofia-marchetti (Kestrel Re), 54d; rosalind-hyde (Calloway Global), 36d; derek-ainsworth (Castleford Mutual), 45d; ana-castellane (Harrow Point Speciality), 50d [AUDIT CLIENT — advisory restricted] [matched via curated subject link]
+    cites: c080 2026-07-13 hal-brennan (firm) | c052 2026-05-20 sofia-marchetti (kestrel) | c094 2026-08-18 rosalind-hyde (calloway) | c099 2026-08-27 derek-ainsworth (castleford) | +1 more
+
+[D5] Capability: ed-maslin (Copperfield Underwriting) -> 1 unmet need
+    graham-tull (Duraflex Industries), 148d
+    cites: c095 2026-08-19 ed-maslin (copperfield) | c011 2026-03-24 graham-tull (duraflex)
+
+[D5] Internal capability: hema-sundaram (firm) -> 1 unmet need
+    giles-overton (Thackeray Syndicate 2884), 23d
+    cites: c062 2026-06-09 hema-sundaram (firm) | c075 2026-07-02 giles-overton (thackeray)
+
+[D6] Unclosed: owed to nils-ekstrom (firm)
+    170 days open — CRO introductions
+    cites: 2026-03-25 2026-03-25-internal-nils-ekstrom
+
+[D6] Unclosed: owed to teodora-iliev (firm)
+    141 days open — where the sector needs forensics
+    cites: 2026-04-23 2026-04-23-internal-teodora-iliev
+
+[D6] Unclosed: owed to gareth-lowry (firm)
+    122 days open — an industrialisable sector process
+    cites: 2026-05-12 2026-05-12-internal-gareth-lowry
+
+[D6] Unclosed: owed to yusuf-baptiste (nine-elms)
+    135 days open — retained advisory conversation
+    cites: 2026-04-29 2026-04-29-nine-elms-yusuf-last
+
+[D6] Unclosed: owed to charlotte-pym (aldgate)
+    178 days open — someone who survived a PAS migration
+    cites: 2026-03-17 2026-03-17-aldgate-charlotte-pym
+
+[D6] Unclosed: owed to saskia-boateng (firm)
+    171 days open — non-audit leads for the casualty diagnostic
+    cites: 2026-03-24 2026-03-24-internal-saskia-boateng
+
+[D6] Unclosed: owed to miriam-oyelaran (firm)
+    63 days open — an MGA sell-side target
+    cites: 2026-07-10 2026-07-10-internal-miriam-oyelaran
+
+[D6] Unclosed: owed to ana-castellane (harrow-point)
+    10 days open — test the claims inflation assumption
+    cites: 2026-09-01 2026-09-01-harrow-point-ana-casualty
+
+[D6] Dormant: Aldgate & Vane
+    67 days since last substantive contact — left open: someone who survived a PAS migration
+    cites: last: 2026-07-06
+
+[D6] Dormant: Nine Elms Risk
+    176 days since last substantive contact — left open: retained advisory conversation
+    cites: last: 2026-03-19
+
+[D6] Dormant: Pemberton Broking
+    79 days since last substantive contact — nothing left open
+    cites: last: 2026-06-24
+
+[D6] Dormant: Ashfield Partners
+    91 days since last substantive contact — nothing left open
+    cites: last: 2026-06-12
+
+[D6] Dormant: Lattice Capital
+    95 days since last substantive contact — nothing left open
+    cites: last: 2026-06-08
+
+[D6] Dormant: Severn Chemical
+    156 days since last substantive contact — nothing left open
+    cites: last: 2026-04-08
+
+[D6] Dormant: Sandbrook Risk Services
+    147 days since last substantive contact — nothing left open
+    cites: last: 2026-04-17
+
+[D6] Dormant: Trans-Meridian Re
+    65 days since last substantive contact — nothing left open
+    cites: last: 2026-07-08
+
+[D6] Dormant: Hexley Group
+    105 days since last substantive contact — nothing left open
+    cites: last: 2026-05-29
+
+[D7] Account coherence: Calloway Global
+    2 partners in unconnected internal threads (nils-ekstrom, callum-fraser); recorded owner: DISPUTED
+    cites: c051 2026-05-19 nils-ekstrom (firm) | c064 2026-06-10 callum-fraser (firm)
+
+# 43 findings

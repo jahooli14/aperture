@@ -1,0 +1,27 @@
+subject	label	related
+da-oversight-cost	Cost of delegated authority / binder oversight	managed-services-proposition
+cyber-war-attribution	Who decides if an attack was state-backed	forensic-attribution
+parametric-viability	Whether parametric works in specialty	
+us-casualty-severity	US liability severity running ahead of assumptions	casualty-reserving-assumptions
+casualty-reserving-assumptions	Are our casualty severity assumptions right	us-casualty-severity
+june-reg-deadline	The 30 June regulatory reporting deadline	regulatory-practice-capacity
+battery-storage-capacity	Insuring lithium battery energy storage	
+managing-agent-consolidation	Half of Lloyd's managing agents gone by 2030	
+genai-submission-triage	Machine triage of inbound submissions	
+genai-claims-fraud	Model-driven claims fraud detection	
+genai-vendor-tooling	Whether bought-in tools are worth the money	
+pas-migration	Policy admin system migration pain	
+lloyds-modernisation	Pace of Lloyd's market modernisation	
+cyber-underwriter-hiring	Shortage of senior cyber underwriters	
+marine-cargo-flow	Project cargo submission flow	
+mga-acquisition-criteria	What makes an MGA worth buying	
+specialty-capital-deployment	ILS capital looking for specialty risk	
+hull-market-conditions	Hull rates and claims inflation	
+process-risk-capacity	Markets willing to write heavy chemical	
+mga-broker-distribution	MGAs needing broker distribution	
+forensic-attribution	Evidential attribution of attacks	cyber-war-attribution
+managed-services-proposition	An industrialisable sector process	da-oversight-cost
+regulatory-practice-capacity	Regulatory practice utilisation	june-reg-deadline
+firm-account-ownership	Who owns a client relationship	
+audit-relationship	Which firm audits this client	
+casualty-diversification	Growing into casualty	casualty-reserving-assumptions
