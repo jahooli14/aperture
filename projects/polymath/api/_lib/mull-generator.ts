@@ -30,7 +30,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { generateText } from './gemini-chat.js'
 import { batchGenerateEmbeddings } from './gemini-embeddings.js'
 import { PLAIN_ENGLISH_RULES } from './plain-english.js'
-import { avoidBlock, echoesRecent, fetchRecentSparkTexts } from './spark-echo.js'
+import { avoidBlock, echoesRecent, fetchRecentSparkTexts, motifWords } from './spark-echo.js'
 import { gatherSubjects, identityBlock, type Subject } from './mull-subjects.js'
 import {
   selectConnectors,
@@ -559,7 +559,12 @@ export async function generateMull(
     // draft from this same run — two questions written in one breath are
     // where a repeated image is most likely and least excusable.
     if (echoesRecent(draft.text, seen)) {
-      trace.push('dropped: echoes a recent question')
+      // Name the overlap. "Echoes a recent question" four times in a row
+      // says the filter fired, not what it caught -- and what it caught
+      // was a project title carried in by the forgotten offer.
+      const shared = motifWords(draft.text).filter(w =>
+        seen.some(prev => motifWords(prev).includes(w)))
+      trace.push(`dropped: echoes a recent question (shared: ${shared.slice(0, 6).join(', ') || 'a repeated motif'})`)
       console.log('[mull] dropped: echoes a recent question')
       continue
     }

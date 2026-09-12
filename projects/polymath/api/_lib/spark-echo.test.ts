@@ -80,3 +80,18 @@ describe('avoidBlock', () => {
     expect(block).toContain('spark": null')
   })
 })
+
+describe('what counts as "a recent question"', () => {
+  it('a project title is not a motif', () => {
+    // The forgotten offer is "you set down <project> N months ago". Its
+    // distinctive words are the project's NAME, so leaving it in the echo
+    // history makes every real question about that project an echo of it.
+    // fetchRecentSparkTexts filters to type='mull' for this reason; the
+    // pure check below shows what happens if it does not.
+    const forgottenOffer = 'You set down Social Coaster Memory Framework 3 months ago.'
+    const realQuestion =
+      'The Social Coaster Memory Framework has sat since March. You wrote that the loft boxes never got opened. What would you keep if you only kept one?'
+    expect(echoesRecent(realQuestion, [forgottenOffer])).toBe(true)
+    expect(echoesRecent(realQuestion, [])).toBe(false)
+  })
+})
