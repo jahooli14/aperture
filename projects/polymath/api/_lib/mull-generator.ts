@@ -490,7 +490,7 @@ export async function generateMull(
   echo: EchoContext,
   trace: MullTrace = [],
 ): Promise<BakedSpark[]> {
-  const subjects = await gatherSubjects(supabase, userId)
+  const subjects = await gatherSubjects(supabase, userId, trace)
   trace.push(
     subjects.length === 0
       ? 'subjects: none — no joint, project, thought, list item or article qualified'
