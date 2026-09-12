@@ -95,3 +95,24 @@ describe('what counts as "a recent question"', () => {
     expect(echoesRecent(realQuestion, [])).toBe(false)
   })
 })
+
+describe('the channel\'s own framing is not a motif', () => {
+  it('two questions about different things are not echoes', () => {
+    // Taken from a real bake: four drafts written, this one dropped with
+    // "shared: wrote, actually". Every mull question plays back the user's
+    // words ("You wrote that...") and the prompt requires a real date, so
+    // that framing is in every draft. Counted as motif it spends both
+    // strikes before the question has said anything.
+    const aboutCoasters =
+      'You wrote that a memory needs to be trapped in a physical object right after it happens, but you are actually spending hours designing t-shirts for four friends. When does the moment become real?'
+    const aboutBios =
+      'You wrote in March that you would actually rather ask the same question twice than a new one. What do you learn the second time?'
+    expect(echoesRecent(aboutCoasters, [aboutBios])).toBe(false)
+  })
+
+  it('still catches two questions reaching for the same image', () => {
+    const first = 'The ripples multiply outward and the reflection never settles.'
+    const second = 'What if the reflection in those ripples is the whole point?'
+    expect(echoesRecent(second, [first])).toBe(true)
+  })
+})

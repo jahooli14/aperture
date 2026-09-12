@@ -59,6 +59,24 @@ const STOPWORDS = new Set([
   'well', 'went', 'were', 'what', 'when', 'where', 'which', 'while', 'will',
   'with', 'without', 'work', 'worked', 'working', 'would', 'year', 'your',
   'yours', 'youre',
+
+  // The mull channel's own scaffolding. Every question it writes opens by
+  // playing back the user's words ("You wrote that...") and is REQUIRED to
+  // carry a real date, so "wrote" and "March" are in essentially every
+  // draft by construction — not because two questions share a subject.
+  // Counted as motif they spend both of a draft's two strikes before it has
+  // said anything, which is how a good question was dropped for "shared:
+  // wrote, actually". A word the prompt puts in every question can never
+  // distinguish one question from another.
+  'wrote', 'write', 'writes', 'written', 'saying', 'asked', 'asking',
+  'answer', 'answered', 'question', 'note', 'notes', 'recorded',
+  'actual', 'actually', 'real', 'instead', 'maybe', 'perhaps', 'whether',
+  'became', 'become', 'becomes', 'becoming', 'happen', 'happens',
+  'happened', 'matter', 'matters', 'means', 'meant', 'seemed', 'tried',
+  'trying', 'yourself', 'once', 'everything', 'anyone', 'nobody',
+  'different', 'difference', 'later', 'earlier', 'days', 'month', 'years',
+  'january', 'february', 'march', 'april', 'june', 'july', 'august',
+  'september', 'october', 'november', 'december',
 ])
 
 /** Crude singular. "ripples" and "ripple" are the same motif; "glass" and

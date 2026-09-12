@@ -65,7 +65,14 @@ const MOMENTUM_WINDOW_DAYS = 10
 /** How far back a note or an article can be and still be worth examining. */
 const SUBJECT_LOOKBACK_DAYS = 45
 
-export type SparkType = 'mull'
+/** Every `sparks.type` this channel can write. A runtime array rather than
+ *  a bare union because `sparks_type_check` has to list the same values, and
+ *  the one time it didn't, every insert 500'd for four days while the trace
+ *  showed questions being written fine (`bake?explain=1` skips the insert).
+ *  `spark-type-schema.test.ts` checks this against the migration. */
+export const SPARK_TYPES_WRITTEN = ['mull'] as const
+
+export type SparkType = (typeof SPARK_TYPES_WRITTEN)[number]
 
 export interface BakedSpark {
   type: SparkType
@@ -451,6 +458,21 @@ ${echo.resonance}
 BAD — a resemblance dressed up, explained to death, and nothing turns on it:
 "You love how Tame Impala treats synths as machines that generate ideas on their
 own. Does the water dancing scene in your book do that same work for the story?"
+
+ALSO BAD, and this is the easy trap — "you said A, but you're doing B, so
+what is B really?":
+"You wrote that a memory needs to be trapped in a physical object right after
+it happens, but you're also spending hours designing personalized t-shirts for
+four friends. When does the moment actually become real?"
+Two things wrong with it. The "but" manufactures a contradiction that isn't
+there — designing the t-shirts IS trapping the memory in an object, so there
+is nothing to resolve and nothing to think about. And the question walks away
+from both halves into something you could ask about anything. A question that
+fits any subject gets carried by nobody.
+The note is a LENS you look at the project THROUGH. It is not evidence you
+hold against them. Never set the two up as a gotcha, and make the question
+land on something specific enough to name — a chapter, a deadline, a person,
+a decision they are actually facing.
 
 GOOD — the note does the work, the question is theirs, and something happens
 either way:

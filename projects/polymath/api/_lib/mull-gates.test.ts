@@ -126,3 +126,39 @@ describe('the two bugs the harness found', () => {
     }
   })
 })
+
+describe('the manufactured contrast', () => {
+  const connector = 'A memory needs to be trapped in a physical object right after it happens or it goes.'
+
+  it('rejects "you said A, but you are also doing B"', () => {
+    // From a real bake. The "but" asserts a contradiction that is not there
+    // -- designing the t-shirts IS trapping the memory in an object -- and
+    // the question then walks away from both halves into something that
+    // would fit any subject at all.
+    const text =
+      'You wrote that a memory needs to be trapped in a physical object right after it happens, but you are also spending hours designing t-shirts for four friends. When does the moment become real?'
+    expect(rejectionReason({
+      text, quote: 'trapped in a physical object', stake: 'They print the coasters this month.',
+      connectorText: connector,
+    })).toMatch(/explains the link/)
+  })
+
+  it('keeps two things set side by side without the gotcha', () => {
+    const text =
+      'You wrote that a memory needs to be trapped in a physical object right after it happens. The coasters from that night have sat unprinted since. What goes on them?'
+    expect(rejectionReason({
+      text, quote: 'trapped in a physical object', stake: 'They print a run of coasters this month.',
+      connectorText: connector,
+    })).toBeNull()
+  })
+
+  it('leaves a real contrast alone when it is not announced', () => {
+    const text =
+      'You wrote that you get maybe ten more proper conversations with dad, and you spend them on the greenhouse. You have said since 2023 that it only works if it is one take. What are you doing twice?'
+    expect(rejectionReason({
+      text, quote: 'ten more proper conversations with dad', stake: 'He leaves chapter nine alone and ships it.',
+      connectorText: 'I get maybe ten more proper conversations with dad and we spend them on the greenhouse.',
+    })).toBeNull()
+  })
+})
+
