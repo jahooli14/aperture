@@ -69,40 +69,81 @@ interface CorpusRow {
 /** Thoughts and fragments, all of them, with dates. Small columns only —
  *  this is a whole-corpus read and the bodies are fetched later, for the
  *  handful of captures that end up in a chosen shape. */
-async function loadCaptures(supabase: SupabaseClient, userId: string): Promise<{
+async function loadCaptures(
+  supabase: SupabaseClient,
+  userId: string,
+  trace: string[] = [],
+): Promise<{
   thoughts: CorpusRow[]
   fragments: (CorpusRow & { projectTitle: string | null })[]
+  /** memory_id -> project_id, via the fragments link table. */
+  filedMemoryIds: Set<string>
 }> {
-  const [{ data: memories }, { data: fragments }] = await Promise.all([
+  // `memories` has no project_id column -- fragments is the link table
+  // (memory_id + project_id), which is how the rest of the app relates a
+  // thought to a project. Selecting a column that does not exist makes
+  // PostgREST reject the whole query, and an unchecked `data` then looks
+  // exactly like an empty corpus.
+  const [memoriesRes, fragmentsRes] = await Promise.all([
     supabase
       .from('memories')
-      .select('id, title, body, created_at, project_id')
+      .select('id, title, body, created_at')
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
       .limit(CORPUS_LIMIT),
     supabase
       .from('fragments')
-      .select('id, text, created_at, project_id, projects(title)')
+      .select('id, text, created_at, memory_id, project_id, projects(title)')
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
       .limit(CORPUS_LIMIT),
   ])
 
+  noteQuery(trace, 'memories', memoriesRes)
+  noteQuery(trace, 'fragments', fragmentsRes)
+
+  const fragments = (fragmentsRes.data ?? []).map((f: any) => ({
+    id: f.id,
+    text: f.text ?? '',
+    createdAt: f.created_at,
+    projectId: f.project_id ?? null,
+    projectTitle: f.projects?.title ?? null,
+    memoryId: f.memory_id ?? null,
+  })).filter(r => r.text.trim().length > 0)
+
+  const projectOfMemory = new Map<string, string>()
+  const filedMemoryIds = new Set<string>()
+  for (const f of fragments) {
+    if (!f.memoryId) continue
+    filedMemoryIds.add(f.memoryId)
+    if (f.projectId) projectOfMemory.set(f.memoryId, f.projectId)
+  }
+
   return {
-    thoughts: (memories ?? []).map((m: any) => ({
+    thoughts: (memoriesRes.data ?? []).map((m: any) => ({
       id: m.id,
       text: typeof m.body === 'string' && m.body.trim() ? m.body : (m.title ?? ''),
       createdAt: m.created_at,
-      projectId: m.project_id ?? null,
+      projectId: projectOfMemory.get(m.id) ?? null,
     })).filter(r => r.text.trim().length > 0),
-    fragments: (fragments ?? []).map((f: any) => ({
-      id: f.id,
-      text: f.text ?? '',
-      createdAt: f.created_at,
-      projectId: f.project_id ?? null,
-      projectTitle: f.projects?.title ?? null,
-    })).filter(r => r.text.trim().length > 0),
+    fragments,
+    filedMemoryIds,
   }
+}
+
+/**
+ * A failed query and an empty table are the same value.
+ *
+ * Every read here was `const { data } = await ...`, so a rejected query --
+ * a column that does not exist, an RLS policy, a bad filter -- produced
+ * `undefined` and was read as "the user has nothing". That is how a
+ * missing column turned into "subjects: none" and cost a day. The error
+ * goes in the trace now, where it is the first thing you see.
+ */
+function noteQuery(trace: string[], label: string, res: { data: unknown[] | null; error: unknown }) {
+  const err = res.error as { message?: string } | null
+  if (err) trace.push(`!! ${label} query FAILED: ${err.message ?? String(err)}`)
+  else trace.push(`${label}: ${res.data?.length ?? 0} rows`)
 }
 
 function quoteLines(rows: { text: string; createdAt: string }[], limit = 6): string {
@@ -280,18 +321,27 @@ function simultaneitySubjects(
  * was invisible to the channel that exists to find exactly that. Its shape
  * is not recurrence; it is that nobody ever did anything with it.
  */
-async function unfiledThoughtSubject(supabase: SupabaseClient, userId: string): Promise<Subject | null> {
+async function unfiledThoughtSubject(
+  supabase: SupabaseClient,
+  userId: string,
+  filedMemoryIds: Set<string>,
+  trace: string[] = [],
+): Promise<Subject | null> {
   const cutoff = new Date(Date.now() - UNFILED_DAYS * 86_400_000).toISOString()
-  const { data } = await supabase
+  // "Never filed" = no fragment points at it. There is no project_id on
+  // memories to be null.
+  const res = await supabase
     .from('memories')
-    .select('id, title, body, created_at, project_id')
+    .select('id, title, body, created_at')
     .eq('user_id', userId)
-    .is('project_id', null)
     .lt('created_at', cutoff)
     .order('created_at', { ascending: false })
-    .limit(30)
+    .limit(120)
+  noteQuery(trace, 'unfiled-candidates', res)
 
-  const usable = (data ?? []).filter((m: any) => typeof m.body === 'string' && m.body.trim().length > 150)
+  const usable = (res.data ?? [])
+    .filter((m: any) => !filedMemoryIds.has(m.id))
+    .filter((m: any) => typeof m.body === 'string' && m.body.trim().length > 150)
   if (usable.length === 0) return null
   const pick: any = usable[Math.floor(Math.random() * Math.min(usable.length, 8))]
   const age = humanDuration((Date.now() - new Date(pick.created_at).getTime()) / 86_400_000)
@@ -316,7 +366,9 @@ async function longHeldSubject(supabase: SupabaseClient, userId: string): Promis
     .from('list_items')
     .select('id, content, created_at, status, lists(title, type)')
     .eq('user_id', userId)
-    .eq('status', 'active')
+    // gather.ts's vocabulary: a wanted-but-not-done item can be 'pending'
+    // as well as 'active'. Taking only 'active' silently skipped most lists.
+    .in('status', ['pending', 'active'])
     .lt('created_at', cutoff)
     .order('created_at', { ascending: true })
     .limit(20)
@@ -380,7 +432,7 @@ export async function identityBlock(supabase: SupabaseClient, userId: string): P
     .from('list_items')
     .select('content, user_rating, created_at, lists(title, type)')
     .eq('user_id', userId)
-    .in('status', ['active', 'completed'])
+    .in('status', ['pending', 'active', 'completed'])
     .order('created_at', { ascending: false })
     .limit(60)
 
@@ -410,8 +462,12 @@ ${shown.map((i: any) => `  - ${i.content}${i.lists?.type ? ` (${i.lists.type})` 
  * Ordering is by the shape's own strength — a thing said since 2023 and
  * never built outranks an article every time.
  */
-export async function gatherSubjects(supabase: SupabaseClient, userId: string): Promise<Subject[]> {
-  const { thoughts, fragments } = await loadCaptures(supabase, userId)
+export async function gatherSubjects(
+  supabase: SupabaseClient,
+  userId: string,
+  trace: string[] = [],
+): Promise<Subject[]> {
+  const { thoughts, fragments, filedMemoryIds } = await loadCaptures(supabase, userId, trace)
 
   // Built once from every capture there is, and handed to every shape: the
   // denominator that stops a life event reading as a decision about one
@@ -421,7 +477,7 @@ export async function gatherSubjects(supabase: SupabaseClient, userId: string): 
   const [joints, projects, unfiled, longHeld, article] = await Promise.all([
     jointSubjects(supabase, userId, fragments, baseline),
     projectSubjects(supabase, userId, fragments, thoughts, baseline),
-    unfiledThoughtSubject(supabase, userId),
+    unfiledThoughtSubject(supabase, userId, filedMemoryIds, trace),
     longHeldSubject(supabase, userId),
     articleSubject(supabase, userId),
   ])
@@ -434,6 +490,14 @@ export async function gatherSubjects(supabase: SupabaseClient, userId: string): 
     ...(longHeld ? [longHeld] : []),
     ...(article ? [article] : []),
   ].sort((a, b) => b.strength - a.strength)
+
+  // Per-gatherer counts. "subjects: none" was true and useless: five paths
+  // decline for five different reasons and only the totals were visible.
+  trace.push(
+    `gatherers: joints ${joints.length}, projects ${projects.length}, ` +
+    `pairs ${simultaneitySubjects(fragments, thoughts).length}, ` +
+    `unfiled ${unfiled ? 1 : 0}, long-held ${longHeld ? 1 : 0}, article ${article ? 1 : 0}`,
+  )
 
   // Strongest first, but never more than two of one kind.
   //

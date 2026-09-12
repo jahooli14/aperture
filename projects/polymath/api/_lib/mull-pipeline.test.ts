@@ -35,25 +35,25 @@ const ago = (days: number) => new Date(Date.now() - days * DAY).toISOString()
 function corpus() {
   const fragments = [
     // Said across two years, never became a project. The strongest shape.
-    { user_id: 'u1', id: 'f1', text: 'it only works if it is one take', created_at: ago(760), project_id: null, projects: null },
-    { user_id: 'u1', id: 'f2', text: 'the good mixes were always the first pass', created_at: ago(420), project_id: null, projects: null },
-    { user_id: 'u1', id: 'f3', text: 'one take or it is not honest', created_at: ago(90), project_id: null, projects: null },
+    { user_id: 'u1', id: 'f1', text: 'it only works if it is one take', created_at: ago(760), project_id: null, memory_id: null, projects: null },
+    { user_id: 'u1', id: 'f2', text: 'the good mixes were always the first pass', created_at: ago(420), project_id: null, memory_id: null, projects: null },
+    { user_id: 'u1', id: 'f3', text: 'one take or it is not honest', created_at: ago(90), project_id: null, memory_id: null, projects: null },
     // A project with captures spread over a year.
-    { user_id: 'u1', id: 'f4', text: 'chapter nine needs to feel like arriving', created_at: ago(500), project_id: 'p-book', projects: { title: 'The book' } },
-    { user_id: 'u1', id: 'f5', text: 'rewrote chapter three again', created_at: ago(300), project_id: 'p-book', projects: { title: 'The book' } },
-    { user_id: 'u1', id: 'f6', text: 'four passes on chapter three now', created_at: ago(120), project_id: 'p-book', projects: { title: 'The book' } },
-    { user_id: 'u1', id: 'f7', text: 'cut the mitres at 5am', created_at: ago(450), project_id: 'p-deck', projects: { title: 'Deck stand' } },
-    { user_id: 'u1', id: 'f8', text: 'the stand is square at last', created_at: ago(200), project_id: 'p-deck', projects: { title: 'Deck stand' } },
+    { user_id: 'u1', id: 'f4', text: 'chapter nine needs to feel like arriving', created_at: ago(500), project_id: 'p-book', memory_id: null, projects: { title: 'The book' } },
+    { user_id: 'u1', id: 'f5', text: 'rewrote chapter three again', created_at: ago(300), project_id: 'p-book', memory_id: null, projects: { title: 'The book' } },
+    { user_id: 'u1', id: 'f6', text: 'four passes on chapter three now', created_at: ago(120), project_id: 'p-book', memory_id: null, projects: { title: 'The book' } },
+    { user_id: 'u1', id: 'f7', text: 'cut the mitres at 5am', created_at: ago(450), project_id: 'p-deck', memory_id: null, projects: { title: 'Deck stand' } },
+    { user_id: 'u1', id: 'f8', text: 'the stand is square at last', created_at: ago(200), project_id: 'p-deck', memory_id: null, projects: { title: 'Deck stand' } },
   ]
   return {
     fragments,
     memories: [
-      { user_id: 'u1', id: 'm1', title: 'Dad', body: 'Ten more proper conversations with dad, probably, and we spend them on the greenhouse. It is the only tidy room in a messy house and I do not know why that matters to me but it does.', created_at: ago(280), project_id: null },
-      { user_id: 'u1', id: 'm2', title: 'Mixing', body: 'Kept the first take of the whole side even though the drop is late. It breathes. Every version I tightened afterwards was worse and I deleted them all.', created_at: ago(150), project_id: null },
+      { user_id: 'u1', id: 'm1', title: 'Dad', body: 'Ten more proper conversations with dad, probably, and we spend them on the greenhouse. It is the only tidy room in a messy house and I do not know why that matters to me but it does.', created_at: ago(280) },
+      { user_id: 'u1', id: 'm2', title: 'Mixing', body: 'Kept the first take of the whole side even though the drop is late. It breathes. Every version I tightened afterwards was worse and I deleted them all.', created_at: ago(150) },
     ],
     projects: [
-      { user_id: 'u1', id: 'p-book', title: 'The book', description: 'A novel where characters get swapped out partway through', metadata: { end_goal: 'a finished manuscript' }, last_closeout_text: 'Got through the chapter nine rewrite', created_at: ago(600), state: 'mull', status: 'active' },
-      { user_id: 'u1', id: 'p-deck', title: 'Deck stand', description: 'A stand for the decks, out of oak offcuts', metadata: {}, last_closeout_text: null, created_at: ago(500), state: 'mull', status: 'dormant' },
+      { user_id: 'u1', id: 'p-book', title: 'The book', description: 'A novel where characters get swapped out partway through', metadata: { end_goal: 'a finished manuscript' }, last_closeout_text: 'Got through the chapter nine rewrite', created_at: ago(600), last_active: ago(120), last_session_ended_at: ago(120), state: 'mull', status: 'active' },
+      { user_id: 'u1', id: 'p-deck', title: 'Deck stand', description: 'A stand for the decks, out of oak offcuts', metadata: {}, last_closeout_text: null, created_at: ago(500), last_active: ago(400), last_session_ended_at: null, state: 'mull', status: 'dormant' },
     ],
     joints: [{ user_id: 'u1', id: 'j1', text: 'it only works if it is one take', fragment_ids: ['f1', 'f2', 'f3'], occurrence_count: 3, last_seen_at: ago(90) }],
     list_items: [
@@ -77,8 +77,25 @@ function fakeSupabase(data: Record<string, Row[]>) {
 
   const builder = (table: string) => {
     let rows = [...(data[table] ?? [])]
+    // PostgREST rejects a select naming a column the table does not have,
+    // and an unchecked `data` then reads as an empty table. A stub that
+    // answers any column hides exactly the bug that cost a day.
+    const columnsOf = (t: string) => new Set(Object.keys((data[t] ?? [{}])[0] ?? {}))
     const chain: any = {
-      select: () => chain,
+      select: (cols?: string) => {
+        const known = columnsOf(table)
+        if (cols && known.size > 0) {
+          const asked = cols
+            .replace(/\([^)]*\)/g, '')   // drop embeds: lists(title, type) -> lists
+            .split(',').map(c => c.trim()).filter(Boolean)
+          const missing = asked.filter(c => c !== '*' && !known.has(c))
+          if (missing.length > 0) {
+            rows = []
+            chain.__error = { message: `column ${table}.${missing[0]} does not exist` }
+          }
+        }
+        return chain
+      },
       eq: (c: string, v: unknown) => { rows = rows.filter(r => r[c] === v); return chain },
       neq: (c: string, v: unknown) => { rows = rows.filter(r => r[c] !== v && r[c] != null); return chain },
       in: (c: string, v: unknown[]) => { rows = rows.filter(r => v.includes(r[c])); return chain },
@@ -95,8 +112,10 @@ function fakeSupabase(data: Record<string, Row[]>) {
         return chain
       },
       update: () => chain,
+      __error: null as { message: string } | null,
       single: async () => ({ data: rows[0] ?? null, error: null }),
-      then: (resolve: (v: { data: Row[]; error: null }) => unknown) => resolve({ data: rows, error: null }),
+      then: (resolve: (v: { data: Row[] | null; error: unknown }) => unknown) =>
+        resolve(chain.__error ? { data: null, error: chain.__error } : { data: rows, error: null }),
     }
     return chain
   }
@@ -264,13 +283,13 @@ describe('what the three subjects are allowed to be', () => {
     const c = corpus() as any
     c.fragments.push(
       // A conviction: years of mentions, still alive, filed to a project.
-      { user_id: 'u1', id: 'g1', text: 'the room has to be the subject not the setting', created_at: ago(780), project_id: 'p-book', projects: { title: 'The book' } },
-      { user_id: 'u1', id: 'g2', text: 'the room is the subject', created_at: ago(400), project_id: 'p-book', projects: { title: 'The book' } },
-      { user_id: 'u1', id: 'g3', text: 'make the room the subject', created_at: ago(40), project_id: 'p-book', projects: { title: 'The book' } },
+      { user_id: 'u1', id: 'g1', text: 'the room has to be the subject not the setting', created_at: ago(780), project_id: 'p-book', memory_id: null, projects: { title: 'The book' } },
+      { user_id: 'u1', id: 'g2', text: 'the room is the subject', created_at: ago(400), project_id: 'p-book', memory_id: null, projects: { title: 'The book' } },
+      { user_id: 'u1', id: 'g3', text: 'make the room the subject', created_at: ago(40), project_id: 'p-book', memory_id: null, projects: { title: 'The book' } },
       // A return: dropped for a year, back last month.
-      { user_id: 'u1', id: 'h1', text: 'learn to bind a book by hand', created_at: ago(800), project_id: null, projects: null },
-      { user_id: 'u1', id: 'h2', text: 'binding again, the thread matters', created_at: ago(760), project_id: null, projects: null },
-      { user_id: 'u1', id: 'h3', text: 'bought linen thread for binding', created_at: ago(25), project_id: null, projects: null },
+      { user_id: 'u1', id: 'h1', text: 'learn to bind a book by hand', created_at: ago(800), project_id: null, memory_id: null, projects: null },
+      { user_id: 'u1', id: 'h2', text: 'binding again, the thread matters', created_at: ago(760), project_id: null, memory_id: null, projects: null },
+      { user_id: 'u1', id: 'h3', text: 'bought linen thread for binding', created_at: ago(25), project_id: null, memory_id: null, projects: null },
     )
     c.joints.push(
       { user_id: 'u1', id: 'j2', text: 'the room has to be the subject', fragment_ids: ['g1', 'g2', 'g3'], occurrence_count: 3 },
@@ -291,6 +310,26 @@ describe('what the three subjects are allowed to be', () => {
     // A corpus-only channel can only ever recombine the user.
     const subjects = await gatherSubjects(fakeSupabase(jointHeavy()).client, 'u1')
     expect(subjects.map(s => s.kind)).toContain('article')
+  })
+
+  it('links a thought to its project through fragments, not a column that does not exist', async () => {
+    // memories has no project_id; fragments (memory_id + project_id) is the
+    // link table. Selecting the missing column made every thought vanish.
+    const data = corpus() as any
+    data.fragments[0].memory_id = 'm1'
+    const trace: string[] = []
+    await gatherSubjects(fakeSupabase(data).client, 'u1', trace)
+    expect(trace.join('\n')).not.toMatch(/FAILED/)
+    expect(trace.join('\n')).toMatch(/memories: \d+ rows/)
+  })
+
+  it('puts a rejected query in the trace instead of reading it as an empty corpus', async () => {
+    const data = corpus() as any
+    // Simulate the real failure: the column simply is not there.
+    data.memories = data.memories.map(({ ...m }: any) => { delete m.created_at; return m })
+    const trace: string[] = []
+    await gatherSubjects(fakeSupabase(data).client, 'u1', trace)
+    expect(trace.join('\n')).toMatch(/!! memories query FAILED/)
   })
 
   it('asks about an old thought nobody ever filed', async () => {
