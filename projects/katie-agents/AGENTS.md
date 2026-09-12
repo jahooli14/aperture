@@ -123,8 +123,15 @@ Each is a separate job with its own threshold and its own silence condition.
 at least two rated *stated directly*. Runs weekly over 8 weeks and monthly over everything
 — the monthly pass is what catches F2.
 
-Guards: organisations not mentions and not people (kills T2); same subject not same word
-(kills T1); drop claims marked as repeating a firm publication (kills T3).
+Evidence is narrower than eligibility: a claim only counts toward convergence if it is
+**attributed** (a named person at a named external organisation) and is a **problem or a
+view**. An overheard corridor remark is not an organisation, and an internal partner
+describing her own service line is not a market signal — both let T4 through until fixed.
+
+Guards, in measured order of how much they earn their place (see `eval/results.md`):
+`provenance` (sole defence against T3), `orgCount` (sole defence against T2),
+`attribution` and `subjectSense` (redundant pair against T4), then `strength` and
+`externalOnly`, which block nothing on their own against this corpus's traps.
 
 ### D2 · Contradiction — *who disagrees, and neither knows?*
 **Produces F3.** Same subject, opposed stance, both *stated directly*, both senior. One or
@@ -133,7 +140,10 @@ get any other way.
 
 ### D3 · First voice — *who called this before everyone else?*
 **Produces F4.** Takes a D1 cluster, orders by date, fires when the earliest claim leads the
-next by 30+ days and later speakers don't cite it. Output names a **person**, not a topic:
+next by 30+ days and later speakers don't cite it. **A candidate first voice must have stated
+it outright** — allowing a hunch mentioned in passing both names the wrong person and drags
+the lead time under the threshold, which is how F4 was missed by a single day on the first
+run. Output names a **person**, not a topic:
 "Klaus Beringer said this in April; four people have since said it back to you in their own
 words." Cross-references `side` so an independent internal source (Hal Brennan, with data)
 attaches to the same finding.
@@ -142,8 +152,9 @@ This one changes her behaviour more than any other — it tells her whose call t
 
 ### D4 · What stopped — *what has gone quiet?*
 **Produces F5.** Quarter-over-quarter subject frequency diff. Fires on a subject with 4+
-mentions across 3+ orgs in one window and zero in the next. A comparison, not a search —
-no retrieval finds an absence.
+mentions across 3+ orgs in one window that **declines by ~80% with nothing stated directly**
+in the next. Not strict zero: one passing mention in an August note was enough to suppress F5
+entirely on the first run. A comparison, not a search — no retrieval finds an absence.
 
 At this firm it has a second leg: cross-reference against internal capacity. "Clients
 stopped talking about the June deadline" is a curiosity. "Clients stopped talking about the
@@ -161,10 +172,23 @@ the full standing register on the other — whole corpus, no window, because F7'
 **Event-driven, not scheduled.** A capability landing on 19 August against a 1 October
 renewal is worth days. Weekly batching nearly cost that one.
 
+**One capability against N needs is one finding, not N.** Ungrouped, Gareth Lowry's six
+matches and Ines Delacroix's six buried Duraflex↔Copperfield under 28 alerts. Group by
+capability, list every matched organisation once, rank by sellable demand (audit-clean
+first) then by how long the pair sat unnoticed.
+
 Match on the described need, not on vocabulary. "Nobody will write my battery storage" and
 "we're opening a BESS book and don't know who the buyers are" share almost no words and are
 the same finding. "I can't tell whether that's skill or lag" and "a diagnostic that tests
 severity assumptions against external claims data" share none at all.
+
+**Client-to-client matching works on subject identity. Internal matching does not.** A
+practice describes what it sells in different words from how a client describes what hurts,
+so every internal match in the run needed a curated link in the subject vocabulary
+(`forensic-attribution ~ cyber-war-attribution`, `managed-services-proposition ~
+da-oversight-cost`). That vocabulary has to be maintained *with the practices*, not derived
+from client notes alone — and if it isn't, the internal half of the system stops working
+silently rather than loudly.
 
 Vacancies and departures are the same shape — a job opening is a problem, a senior person
 leaving is a capability. That gets Fern Achebe's move flagged in June from two notes the
@@ -193,9 +217,11 @@ weeks apart. The client found it instead, in August, and said so.
 
 Three channels and, unlike a smaller firm, **two audiences**.
 
-**Monday digest, to her** — whatever fired. Typically two or three items, often none. One
-line naming the finding, the quotes with names and dates, one line on what is now possible.
-No analysis paragraph.
+**Monday digest, to her** — whatever fired, **ranked and hard-capped at three**. The first
+run emitted 43 findings, 17 of them from D6 alone: every unclosed commitment and every
+dormant account, every week, forever. Without a cap and a decay rule on repeats, the digest
+is wallpaper inside a month. One line naming the finding, the quotes with names and dates,
+one line on what is now possible. No analysis paragraph.
 
 **Capability alerts, to the partner** — when D5 matches demand to an internal capability, the
 partner who owns it hears about it too. Saskia asked for casualty leads in March and again
@@ -273,6 +299,11 @@ feels like an improvement.
 
 Suggested pass mark before it touches real notes: **F1, F4, F6 and F7 found; T3 not
 reported; F8 flagged.**
+
+Run 1 scored **14/14 recall, 0/4 traps** — see `eval/results.md`, which also records the
+seven bugs the run found and the two guards this corpus does *not* justify. Note what that
+number does and doesn't cover: Layer 1 was done by hand by someone who knew where the
+patterns were, so extraction quality is untested and a real run will be worse.
 
 ---
 
