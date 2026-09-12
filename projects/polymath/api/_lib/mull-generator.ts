@@ -391,9 +391,13 @@ interface Drafted {
  * model can see it's about to say the same thing twice.
  */
 async function draftAll(pairings: Pairing[], echo: EchoContext): Promise<Drafted[]> {
+  // `line`, never `block`. A project's block quotes every fragment it has,
+  // and handed ten of the user's own statements the model picks two and
+  // collides them -- pair-first invention rebuilt inside one subject, with
+  // the connector left doing nothing. See Subject.line.
   const blocks = pairings.map((p, i) => `--- PAIR ${i + 1} ---
 What they've been working on:
-${p.subject.block}
+${p.subject.line}
 
 The thing it never examines:
 "${p.blindSpot}"
@@ -443,6 +447,16 @@ What makes it good:
   question. If you write "which mirrors" or "this connects to" or "both are
   about", you have explained it, and explaining it is the tell that there was
   nothing there.
+- Never pivot on "but you", "yet you", "though you". That construction always
+  means the same thing — you have decided they are being inconsistent and are
+  about to catch them out. You are not catching them out. Two facts, side by
+  side, and a question.
+- Their work gets their words. "Painting wood" for a set of painted coasters
+  is you being clever at their expense, and it is the fastest way to make
+  someone close the app. Call the thing what they call it.
+- One fact about the project, one thing from the note. Not three things. If
+  the question needs a second fact about the project to make sense, it isn't
+  a question yet.
 - Do not resolve it. No advice, no "you could try". They answer, not you.
 - At most three sentences, ending in the question.
 - The pairs get read days apart, so they must not be two versions of the same

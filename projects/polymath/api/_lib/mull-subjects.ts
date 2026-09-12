@@ -50,8 +50,27 @@ export interface Subject {
   id: string
   projectId: string | null
   title: string
-  /** Everything the prompt sees, already formatted. */
+  /** Everything the BLIND-SPOT call sees, already formatted. Rich on
+   *  purpose: naming what a project never examines needs its whole history. */
   block: string
+  /**
+   * What the DRAFT call sees instead — one dated fact, no quoted fragments.
+   *
+   * The draft used to get `block` too, and a project's block quotes every
+   * fragment it has. Handed ten of the user's own statements, the model does
+   * the obvious thing: it picks two and sets them against each other. That
+   * is pair-first invention rebuilt inside a single subject, and the
+   * connector never gets to do any work. A real run produced "You wanted to
+   * map all 198 countries to a memory palace. Yet you left your painted
+   * coasters sitting for eleven months after writing down the Esqui ice
+   * saga" — three fragments of one project, collided, with the connector
+   * absent and the user asking what any of it had to do with the rest.
+   *
+   * So the draft gets one line. The only quotable language left in front of
+   * it is the connector's, which is the whole design: joint → pair, never
+   * pair → invented bridge.
+   */
+  line: string
   /** The same content unformatted — what the vocabulary rule compares
    *  connectors against. */
   ownWords: string
@@ -167,19 +186,24 @@ async function jointSubjects(
   userId: string,
   fragments: (CorpusRow & { projectTitle: string | null })[],
   baseline: ActivityBaseline,
+  trace: string[] = [],
 ): Promise<Subject[]> {
-  const { data: joints } = await supabase
+  const jointsRes = await supabase
     .from('joints')
     .select('id, text, fragment_ids')
     .eq('user_id', userId)
     .limit(40)
+  noteQuery(trace, 'joints', jointsRes)
+  const joints = jointsRes.data
 
   const byId = new Map(fragments.map(f => [f.id, f]))
-  const { data: projectRows } = await supabase
+  const projectsRes = await supabase
     .from('projects')
     .select('id, title')
     .eq('user_id', userId)
     .limit(200)
+  noteQuery(trace, 'joint-project-titles', projectsRes)
+  const projectRows = projectsRes.data
   const projectTitles = new Set((projectRows ?? []).map((p: any) => (p.title ?? '').toLowerCase()))
 
   const out: Subject[] = []
@@ -212,6 +236,7 @@ async function jointSubjects(
       projectId: members.find(m => m.projectId)?.projectId ?? null,
       title: joint.text,
       block: `Something they keep coming back to: "${joint.text}"\n${found.fact}${driftLine}\nIn their own words, oldest first:\n${quoteLines(members)}`,
+      line: `Something they keep saying: "${joint.text}". ${found.fact}`,
       ownWords: `${joint.text} ${members.map(m => m.text).join(' ')}`,
       strength: found.strength,
     })
@@ -233,13 +258,16 @@ async function projectSubjects(
   fragments: (CorpusRow & { projectTitle: string | null })[],
   thoughts: CorpusRow[],
   baseline: ActivityBaseline,
+  trace: string[] = [],
 ): Promise<Subject[]> {
-  const { data: projects } = await supabase
+  const projectsRes = await supabase
     .from('projects')
     .select('id, title, description, metadata, last_closeout_text, created_at')
     .eq('user_id', userId)
     .neq('state', 'harvested')
     .limit(100)
+  noteQuery(trace, 'projects', projectsRes)
+  const projects = projectsRes.data
 
   const byProject = new Map<string, CorpusRow[]>()
   for (const row of [...fragments, ...thoughts]) {
@@ -272,6 +300,11 @@ async function projectSubjects(
         project.last_closeout_text ? `Last time they worked on it: "${project.last_closeout_text}"` : null,
         `What they've said about it, oldest first:\n${quoteLines(rows)}`,
       ].filter(Boolean).join('\n'),
+      line: [
+        `Their project "${project.title}"`,
+        project.description ? `— ${project.description}` : null,
+        `. ${found.fact}`,
+      ].filter(Boolean).join(' '),
       ownWords: `${project.title} ${project.description ?? ''} ${rows.map(r => r.text).join(' ')}`,
       strength: found.strength,
     })
@@ -308,6 +341,9 @@ function simultaneitySubjects(
 
   Under ${titleOf.get(pair.a.projectId!) ?? 'one project'}: "${pair.a.text.slice(0, 400)}"
   Under ${titleOf.get(pair.b.projectId!) ?? 'another project'}: "${pair.b.text.slice(0, 400)}"`,
+    // The only subject whose two halves are both the point -- the fact IS
+    // that these two were said days apart and never joined.
+    line: `${simultaneityFact(pair)}\n  One: "${pair.a.text.slice(0, 260)}"\n  The other: "${pair.b.text.slice(0, 260)}"`,
     ownWords: `${pair.a.text} ${pair.b.text}`,
     strength: 0.8,
   }))
@@ -353,6 +389,7 @@ async function unfiledThoughtSubject(
     projectId: null,
     title: pick.title ?? 'a note',
     block: `They said this in ${monthYear(new Date(pick.created_at))} — ${age} ago — and it has never been attached to a project or acted on:\n"${pick.body}"`,
+    line: `Said in ${monthYear(new Date(pick.created_at))}, ${age} ago, never attached to a project: "${pick.body.slice(0, 400)}"`,
     ownWords: `${pick.title ?? ''} ${pick.body}`,
     strength: 0.7,
   }
@@ -360,9 +397,11 @@ async function unfiledThoughtSubject(
 
 /** A thing wanted for a year and still not done. A list is a record of
  *  intentions with dates on them, which nothing has ever read as one. */
-async function longHeldSubject(supabase: SupabaseClient, userId: string): Promise<Subject | null> {
+async function longHeldSubject(
+  supabase: SupabaseClient, userId: string, trace: string[] = [],
+): Promise<Subject | null> {
   const cutoff = new Date(Date.now() - LONG_HELD_DAYS * 86_400_000).toISOString()
-  const { data } = await supabase
+  const res = await supabase
     .from('list_items')
     .select('id, content, created_at, status, lists(title, type)')
     .eq('user_id', userId)
@@ -372,8 +411,9 @@ async function longHeldSubject(supabase: SupabaseClient, userId: string): Promis
     .lt('created_at', cutoff)
     .order('created_at', { ascending: true })
     .limit(20)
+  noteQuery(trace, 'long-held-candidates', res)
 
-  const items = (data ?? []).filter((i: any) => typeof i.content === 'string' && i.content.trim())
+  const items = (res.data ?? []).filter((i: any) => typeof i.content === 'string' && i.content.trim())
   if (items.length === 0) return null
   const pick: any = items[Math.floor(Math.random() * Math.min(items.length, 6))]
   const age = humanDuration((Date.now() - new Date(pick.created_at).getTime()) / 86_400_000)
@@ -385,6 +425,7 @@ async function longHeldSubject(supabase: SupabaseClient, userId: string): Promis
     projectId: null,
     title: pick.content,
     block: `They put "${pick.content}" on their ${pick.lists?.title ?? 'list'} in ${monthYear(new Date(pick.created_at))} — ${age} ago — and it is still sitting there, not done, not removed.`,
+    line: `They put "${pick.content}" on their ${pick.lists?.title ?? 'list'} in ${monthYear(new Date(pick.created_at))}, ${age} ago, and it is still sitting there.`,
     ownWords: pick.content,
     strength: 0.55,
   }
@@ -392,16 +433,19 @@ async function longHeldSubject(supabase: SupabaseClient, userId: string): Promis
 
 /** Reading, no longer windowed: an article that earned its place two years
  *  ago is still something they vouched for. */
-async function articleSubject(supabase: SupabaseClient, userId: string): Promise<Subject | null> {
-  const { data } = await supabase
+async function articleSubject(
+  supabase: SupabaseClient, userId: string, trace: string[] = [],
+): Promise<Subject | null> {
+  const res = await supabase
     .from('reading_queue')
     .select('id, title, excerpt, resonance, tags, created_at')
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
     .limit(300)
+  noteQuery(trace, 'article-candidates', res)
 
   const eligible = selectCorpusArticles(
-    (data ?? []) as (CorpusArticle & { id: string; title: string | null; excerpt: string | null })[],
+    (res.data ?? []) as (CorpusArticle & { id: string; title: string | null; excerpt: string | null })[],
   ).filter((a: any) => typeof a.excerpt === 'string' && a.excerpt.trim().length > 120)
 
   if (eligible.length === 0) return null
@@ -414,6 +458,7 @@ async function articleSubject(supabase: SupabaseClient, userId: string): Promise
     projectId: null,
     title: pick.title ?? 'an article',
     block: `Something they ${framing} in ${monthYear(new Date(pick.created_at))} — "${pick.title ?? 'an article'}":\n"${pick.excerpt}"`,
+    line: `Something they ${framing} in ${monthYear(new Date(pick.created_at))}, "${pick.title ?? 'an article'}": "${pick.excerpt.slice(0, 400)}"`,
     ownWords: `${pick.title ?? ''} ${pick.excerpt}`,
     strength: 0.4,
   }
@@ -427,16 +472,19 @@ async function articleSubject(supabase: SupabaseClient, userId: string): Promise
  * set the register, and a question that reads as though the app has never
  * met you doesn't sit for three days.
  */
-export async function identityBlock(supabase: SupabaseClient, userId: string): Promise<string> {
-  const { data } = await supabase
+export async function identityBlock(
+  supabase: SupabaseClient, userId: string, trace: string[] = [],
+): Promise<string> {
+  const res = await supabase
     .from('list_items')
     .select('content, user_rating, created_at, lists(title, type)')
     .eq('user_id', userId)
     .in('status', ['pending', 'active', 'completed'])
     .order('created_at', { ascending: false })
     .limit(60)
+  noteQuery(trace, 'identity-list-items', res)
 
-  const items = (data ?? []).filter((i: any) => typeof i.content === 'string' && i.content.trim())
+  const items = (res.data ?? []).filter((i: any) => typeof i.content === 'string' && i.content.trim())
   if (items.length === 0) return ''
 
   const loved = items.filter((i: any) => (i.user_rating ?? 0) >= 4)
@@ -475,11 +523,11 @@ export async function gatherSubjects(
   const baseline = buildActivityBaseline([...thoughts, ...fragments].map(r => r.createdAt))
 
   const [joints, projects, unfiled, longHeld, article] = await Promise.all([
-    jointSubjects(supabase, userId, fragments, baseline),
-    projectSubjects(supabase, userId, fragments, thoughts, baseline),
+    jointSubjects(supabase, userId, fragments, baseline, trace),
+    projectSubjects(supabase, userId, fragments, thoughts, baseline, trace),
     unfiledThoughtSubject(supabase, userId, filedMemoryIds, trace),
-    longHeldSubject(supabase, userId),
-    articleSubject(supabase, userId),
+    longHeldSubject(supabase, userId, trace),
+    articleSubject(supabase, userId, trace),
   ])
 
   const all = [

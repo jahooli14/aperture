@@ -136,6 +136,12 @@ const EXPLAINER_PATTERNS: readonly RegExp[] = [
   // walk away from both halves into something that would fit any subject. A
   // real tension does not need "but" to announce itself.
   /,\s*(but|yet)\s+you('re| are|r)?\s+(also|still|now|actually)\b/i,
+  // Same move, any connective. "You wanted to map all 198 countries to a
+  // memory palace. Yet you left your painted coasters sitting for eleven
+  // months" -- the pivot decides the user is being inconsistent and sets up
+  // to catch them out. Banning only ", but you're also" just moved the model
+  // onto "Yet you". Two facts side by side need no pivot between them.
+  /(^|[.;,]\s*)(yet|but|though|whereas)\s+you\b/i,
 ]
 
 export function sharesDomain(a: string, b: string, limit = DOMAIN_OVERLAP_LIMIT): boolean {

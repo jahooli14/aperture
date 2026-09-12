@@ -372,3 +372,33 @@ describe('what the three subjects are allowed to be', () => {
     expect(subjects.some(s => s.shape === 'unfiled')).toBe(true)
   })
 })
+
+describe('the draft call cannot collide a project with itself', () => {
+  beforeEach(() => {
+    generateText.mockReset()
+    batchGenerateEmbeddings.mockClear()
+  })
+
+  it('gets one dated line per subject, not every fragment it has', async () => {
+    // A project block quotes every fragment. Handed that, the model picks
+    // two and sets them against each other -- which is what produced "You
+    // wanted to map all 198 countries... Yet you left your painted coasters
+    // sitting for eleven months after writing down the Esqui ice saga":
+    // three fragments of one project, collided, connector absent.
+    generateText.mockResolvedValueOnce(BLIND_SPOTS).mockResolvedValueOnce(DRAFTS)
+    await bakeMull(fakeSupabase(corpus() as any).client, 'u1')
+
+    const blindSpotPrompt = generateText.mock.calls[0][0] as string
+    const draftPrompt = generateText.mock.calls[1][0] as string
+
+    // The blind-spot call still needs the whole history to find an assumption.
+    expect(blindSpotPrompt).toContain('rewrote chapter three again')
+    expect(blindSpotPrompt).toContain('four passes on chapter three now')
+
+    // The draft call gets the project named and dated, and nothing to collide.
+    expect(draftPrompt).toContain('The book')
+    expect(draftPrompt).not.toContain('rewrote chapter three again')
+    expect(draftPrompt).not.toContain('four passes on chapter three now')
+    expect(draftPrompt).not.toContain('cut the mitres at 5am')
+  })
+})

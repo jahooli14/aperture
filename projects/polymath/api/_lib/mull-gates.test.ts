@@ -162,3 +162,41 @@ describe('the manufactured contrast', () => {
   })
 })
 
+
+describe('the question the user actually got, and rejected', () => {
+  // Shipped to production and immediately called out: "I don't see how the
+  // Esqui nor painting wood are relevant". Three fragments of one project
+  // collided against each other, the connector absent, the user's own work
+  // paraphrased into a put-down.
+  const text =
+    'You wanted to map all 198 countries to a memory palace continent by continent. Yet you left your painted coasters sitting in silence for eleven months after writing down the Esqui ice saga. Are you mapping the world to remember it, or are you just painting wood so you do not forget?'
+
+  it('is rejected for the pivot', () => {
+    expect(rejectionReason({
+      text,
+      quote: 'map all 198 countries to a memory palace',
+      stake: 'He picks one continent and paints it.',
+      connectorText: 'I want to map all 198 countries to a memory palace, continent by continent.',
+    })).toMatch(/explains the link/)
+  })
+
+  it('the ban is on the move, not on one connective', () => {
+    for (const pivot of ['Yet you', 'But you', 'Though you', 'Whereas you']) {
+      expect(rejectionReason({
+        text: `You said the coasters were the whole point. ${pivot} have not touched them since March. What are they for?`,
+        quote: 'the coasters were the whole point',
+        stake: 'He paints one this week.',
+        connectorText: 'The coasters were the whole point of that night.',
+      })).toMatch(/explains the link/)
+    }
+  })
+
+  it('leaves "but" alone when it is not a pivot onto the user', () => {
+    expect(rejectionReason({
+      text: 'You wrote that your uncle remembers the boat but not the year he sold it. The letters are filed by date. Which one would you read first?',
+      quote: 'remembers the boat but not the year he sold it',
+      stake: 'Letter eleven opens the folder.',
+      connectorText: 'He remembers the boat but not the year he sold it.',
+    })).toBeNull()
+  })
+})
