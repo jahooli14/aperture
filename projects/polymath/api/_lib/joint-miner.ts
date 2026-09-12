@@ -12,6 +12,7 @@ import { generateText } from './gemini-chat.js'
 import { generateEmbedding, cosineSimilarity } from './gemini-embeddings.js'
 import { PLAIN_ENGLISH_RULES } from './plain-english.js'
 import { findRecurringThemes, type FragmentForClustering } from './joints.js'
+import { describeTimeline, MIN_SPAN_DAYS } from './corpus-time.js'
 
 const EXISTING_JOINT_SIM_THRESHOLD = 0.85
 
@@ -39,18 +40,37 @@ Respond with JSON only: { "joint": "..." }`
 }
 
 export async function mineJoints(supabase: SupabaseClient, userId: string): Promise<number> {
+  // The whole corpus, not the newest 150.
+  //
+  // This used to read one recency window, which made a "recurrence" mean
+  // "said twice lately" — five fragments from one Tuesday afternoon
+  // counted, and a thing said every autumn since 2023 did not. That is
+  // backwards: the years are where someone's convictions are, and they
+  // were the part being thrown away.
   const { data: fragmentRows } = await supabase
     .from('fragments')
-    .select('id, text, memory_id, memories(embedding)')
+    .select('id, text, created_at, memory_id, memories(embedding)')
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
-    .limit(150)
+    .limit(2000)
 
   const fragments: FragmentForClustering[] = (fragmentRows ?? [])
     .map((f: any) => ({ id: f.id, text: f.text, embedding: f.memories?.embedding ?? [] }))
     .filter((f: FragmentForClustering) => f.embedding.length > 0)
 
-  const clusters = findRecurringThemes(fragments)
+  const datesById = new Map<string, string>(
+    (fragmentRows ?? []).map((f: any) => [f.id, f.created_at]),
+  )
+
+  // Span, not count. A cluster confined to one sitting is one thought
+  // however many fragments it left behind, and summarising it into a
+  // "joint" spends a model call to manufacture a recurrence that isn't one.
+  const clusters = findRecurringThemes(fragments).filter(cluster => {
+    const timeline = describeTimeline(
+      cluster.fragmentIds.map(id => datesById.get(id)).filter((d): d is string => !!d),
+    )
+    return timeline !== null && timeline.spanDays >= MIN_SPAN_DAYS
+  })
   if (clusters.length === 0) return 0
 
   const { data: existingJoints } = await supabase

@@ -312,11 +312,15 @@ not make them *true*.
 The replacement inverts it, the same way composites were fixed (joint → pair,
 never pair → invented bridge):
 
-1. **One subject.** Best of all a *joint* — something said more than once,
-   already mined and quoted in the `joints` table. Recurrence beats recency:
-   the thing you keep circling and have never made is the shortest path to
-   "oh, I should make that". Otherwise a project (momentum-weighted with a
-   swerve), a recent note, or an article that earned its place.
+1. **One subject, chosen by its shape in time.** Not "what's warm" — the
+   session contract already answers that all day. A subject is a *temporal
+   shape* (`corpus-time.ts`): said since March 2023 and never built; dropped
+   for fourteen months and picked back up; a rhythm that stopped in a
+   nameable month; one week two years ago and never again; two things
+   captured days apart under different projects and never joined since. All
+   computed from timestamps over the **whole** corpus, so the years are
+   reachable and the facts are ones a model cannot invent. Span beats count:
+   five fragments from one Tuesday is one thought, not a recurrence.
 2. **Name the blind spot.** What does it take for granted and never examine?
    Not a missing next step — a step is work. The assumption underneath that
    would change what gets made if it were wrong.

@@ -148,7 +148,7 @@ describe('rejectionReason', () => {
 
 describe('rankPairs', () => {
   const pair = (over: any) => ({
-    subjectKind: 'project' as const, subjectId: 's1', connectorId: 'c1', similarity: 0.6, ...over,
+    subjectId: 's1', connectorId: 'c1', similarity: 0.6, subjectStrength: 0.6, ...over,
   })
 
   it('takes the best answers to the blind spot first', () => {
@@ -159,12 +159,20 @@ describe('rankPairs', () => {
     expect(ranked.map(p => p.subjectId)).toEqual(['b', 'a'])
   })
 
-  it('nudges a project ahead of an article at the same score', () => {
+  it('a thing said since 2023 outranks a saved article answered just as well', () => {
     const ranked = rankPairs([
-      pair({ subjectKind: 'article', subjectId: 'art', connectorId: 'c1' }),
-      pair({ subjectKind: 'project', subjectId: 'proj', connectorId: 'c2' }),
+      pair({ subjectId: 'article', connectorId: 'c1', subjectStrength: 0.4 }),
+      pair({ subjectId: 'since-2023', connectorId: 'c2', subjectStrength: 1.4 }),
     ], 1)
-    expect(ranked[0].subjectId).toBe('proj')
+    expect(ranked[0].subjectId).toBe('since-2023')
+  })
+
+  it('but a strong subject cannot rescue a connector that barely answers it', () => {
+    const ranked = rankPairs([
+      pair({ subjectId: 'strong', connectorId: 'c1', subjectStrength: 1.0, similarity: 0.46 }),
+      pair({ subjectId: 'ordinary', connectorId: 'c2', subjectStrength: 0.4, similarity: 0.80 }),
+    ], 1)
+    expect(ranked[0].subjectId).toBe('ordinary')
   })
 
   it('never banks a second question about the same subject', () => {

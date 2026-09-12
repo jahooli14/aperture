@@ -31,8 +31,7 @@ import { generateText } from './gemini-chat.js'
 import { batchGenerateEmbeddings } from './gemini-embeddings.js'
 import { PLAIN_ENGLISH_RULES } from './plain-english.js'
 import { avoidBlock, echoesRecent, fetchRecentSparkTexts } from './spark-echo.js'
-import { pickSparkSubject, type SubjectCandidate } from './spark-subject.js'
-import { selectCorpusArticles, type CorpusArticle } from './reading-corpus.js'
+import { gatherSubjects, identityBlock, type Subject } from './mull-subjects.js'
 import {
   selectConnector,
   rankPairs,
@@ -166,266 +165,6 @@ function expiresAt(hours: number): string {
   return new Date(Date.now() + hours * 60 * 60 * 1000).toISOString()
 }
 
-/** The thing today's question is about, flattened so one prompt can take
- *  a project, a note or an article without three shapes of prompt. */
-interface Subject {
-  kind: MullSubjectKind
-  id: string
-  projectId: string | null
-  title: string
-  /** Everything the prompt gets to see, already formatted. */
-  block: string
-  /** The same content unformatted — what the vocabulary rule compares
-   *  connectors against. */
-  ownWords: string
-}
-
-// ─── Step 1: what today is about ──────────────────────────────────────
-
-interface ProjectRow extends SubjectCandidate {
-  description: string | null
-  metadata: any
-  last_closeout_text: string | null
-}
-
-async function projectSubject(supabase: SupabaseClient, userId: string): Promise<Subject | null> {
-  const since = new Date(Date.now() - MOMENTUM_WINDOW_DAYS * 86_400_000).toISOString()
-  const [{ data: projects }, { data: frags }, { data: sessions }, { data: recentSubjects }] = await Promise.all([
-    supabase
-      .from('projects')
-      .select('id, title, description, metadata, last_closeout_text, last_active, last_session_ended_at, created_at')
-      .eq('user_id', userId)
-      .neq('state', 'harvested')
-      .in('status', ['active', 'upcoming', 'dormant'])
-      .limit(30),
-    supabase.from('fragments').select('project_id').eq('user_id', userId).gte('created_at', since),
-    supabase.from('sessions').select('project_id').eq('user_id', userId).gte('started_at', since),
-    supabase
-      .from('sparks')
-      .select('project_id, created_at')
-      .eq('user_id', userId)
-      .not('project_id', 'is', null)
-      .order('created_at', { ascending: false })
-      .limit(6),
-  ])
-  if (!projects || projects.length === 0) return null
-
-  const countBy = (rows: any[] | null) => {
-    const m = new Map<string, number>()
-    for (const r of rows ?? []) if (r?.project_id) m.set(r.project_id, (m.get(r.project_id) ?? 0) + 1)
-    return m
-  }
-  const fragCounts = countBy(frags)
-  const sessionCounts = countBy(sessions)
-
-  const candidates: ProjectRow[] = projects.map((p: any) => ({
-    id: p.id,
-    title: p.title,
-    recentFragments: fragCounts.get(p.id) ?? 0,
-    recentSessions: sessionCounts.get(p.id) ?? 0,
-    lastTouchedAt: [p.last_session_ended_at, p.last_active, p.created_at].filter(Boolean).sort().pop() ?? null,
-    description: p.description ?? null,
-    metadata: p.metadata ?? {},
-    last_closeout_text: p.last_closeout_text ?? null,
-  }))
-
-  const choice = pickSparkSubject(candidates, (recentSubjects ?? []).map((s: any) => s.project_id))
-  if (!choice) return null
-  const row = candidates.find(c => c.id === choice.project.id)
-  if (!row) return null
-
-  // The captures are what make a blind spot findable: a description says
-  // what the project is, the fragments say what the user keeps saying
-  // about it, and an assumption only shows up in the second one.
-  const { data: fragmentRows } = await supabase
-    .from('fragments')
-    .select('text, role')
-    .eq('user_id', userId)
-    .eq('project_id', row.id)
-    .order('created_at', { ascending: false })
-    .limit(8)
-
-  const parts = [
-    `Project: ${row.title}`,
-    row.description ? `What it is: ${row.description}` : null,
-    row.metadata?.end_goal ? `Where it ends: ${row.metadata.end_goal}` : null,
-    row.last_closeout_text ? `Last time they worked on it: "${row.last_closeout_text}"` : null,
-    (fragmentRows ?? []).length > 0
-      ? `Things they've said about it:\n${(fragmentRows ?? []).map((f: any) => `  - "${f.text}"`).join('\n')}`
-      : null,
-  ].filter(Boolean)
-
-  return {
-    kind: 'project',
-    id: row.id,
-    projectId: row.id,
-    title: row.title,
-    block: parts.join('\n'),
-    ownWords: parts.join(' '),
-  }
-}
-
-async function memorySubject(supabase: SupabaseClient, userId: string): Promise<Subject | null> {
-  const cutoff = new Date(Date.now() - SUBJECT_LOOKBACK_DAYS * 86_400_000).toISOString()
-  const { data } = await supabase
-    .from('memories')
-    .select('id, title, body, project_id, created_at')
-    .eq('user_id', userId)
-    .gte('created_at', cutoff)
-    .order('created_at', { ascending: false })
-    .limit(25)
-
-  const usable = (data ?? []).filter((m: any) => typeof m.body === 'string' && m.body.trim().length > 120)
-  if (usable.length === 0) return null
-  const pick: any = usable[Math.floor(Math.random() * usable.length)]
-
-  const block = `Something they said on ${new Date(pick.created_at).toDateString()}:\n"${pick.body}"`
-  return {
-    kind: 'memory',
-    id: pick.id,
-    projectId: pick.project_id ?? null,
-    title: pick.title ?? 'a note',
-    block,
-    ownWords: `${pick.title ?? ''} ${pick.body}`,
-  }
-}
-
-async function articleSubject(supabase: SupabaseClient, userId: string): Promise<Subject | null> {
-  const cutoff = new Date(Date.now() - SUBJECT_LOOKBACK_DAYS * 86_400_000).toISOString()
-  const { data } = await supabase
-    .from('reading_queue')
-    .select('id, title, excerpt, resonance, tags, created_at')
-    .eq('user_id', userId)
-    .gte('created_at', cutoff)
-    .order('created_at', { ascending: false })
-    .limit(40)
-
-  // Only an article that earned its place. An unread RSS headline is not
-  // something the user has a blind spot about (reading-corpus.ts).
-  const eligible = selectCorpusArticles(
-    (data ?? []) as (CorpusArticle & { id: string; title: string | null; excerpt: string | null })[],
-  ).filter((a: any) => typeof a.excerpt === 'string' && a.excerpt.trim().length > 120)
-
-  if (eligible.length === 0) return null
-  const pick: any = eligible[Math.floor(Math.random() * eligible.length)]
-
-  const vouched = pick.resonance === 'good'
-  const framing = vouched ? 'Something they read and marked good' : 'Something they saved to read'
-  const block = `${framing} — "${pick.title ?? 'an article'}":\n"${pick.excerpt}"`
-  return {
-    kind: 'article',
-    id: pick.id,
-    projectId: null,
-    title: pick.title ?? 'an article',
-    block,
-    ownWords: `${pick.title ?? ''} ${pick.excerpt}`,
-  }
-}
-
-/**
- * The strongest subject there is: something said more than once.
- *
- * `joints` is already mined weekly for composites (joint-miner.ts) and was
- * read by nothing else. It is the corpus answering "what does this person
- * keep coming back to" — clustered from their own fragments, quoted, with
- * an occurrence count. A blind spot found on a recurrence is not "what
- * does this project assume"; it is "you have said this four times and
- * never made the thing it implies", which is the shortest path there is to
- * a revelation.
- *
- * Preferred over recency everywhere: it gets the largest ranking bonus,
- * and the most-repeated joint that hasn't been asked about recently wins.
- */
-async function jointSubject(supabase: SupabaseClient, userId: string): Promise<Subject | null> {
-  const { data } = await supabase
-    .from('joints')
-    .select('id, text, fragment_ids, occurrence_count, last_seen_at')
-    .eq('user_id', userId)
-    .order('occurrence_count', { ascending: false })
-    .limit(10)
-
-  const usable = (data ?? []).filter((j: any) => typeof j.text === 'string' && j.text.trim().length > 0)
-  if (usable.length === 0) return null
-
-  // Rotate: the top joint every week is the same joint every week.
-  const pick: any = usable[Math.floor(Math.random() * Math.min(usable.length, 4))]
-
-  // The joint sentence is a summary; the fragments are the user's actual
-  // words. Both go in, because the question has to quote them and not it.
-  const { data: fragments } = await supabase
-    .from('fragments')
-    .select('text, project_id, projects(title)')
-    .eq('user_id', userId)
-    .in('id', (pick.fragment_ids ?? []).slice(0, 8))
-
-  const lines = (fragments ?? []).map((f: any) => `  - "${f.text}" (${f.projects?.title ?? 'unfiled'})`)
-  const block = [
-    `Something they keep coming back to, said ${pick.occurrence_count ?? lines.length} times across different projects:`,
-    `  "${pick.text}"`,
-    lines.length > 0 ? `In their own words each time:\n${lines.join('\n')}` : null,
-  ].filter(Boolean).join('\n')
-
-  return {
-    kind: 'joint',
-    id: pick.id,
-    // Attribute to whichever project the recurrence touched most recently,
-    // so an answer files itself somewhere rather than floating.
-    projectId: (fragments ?? [])[0]?.project_id ?? null,
-    title: pick.text,
-    block,
-    ownWords: `${pick.text} ${(fragments ?? []).map((f: any) => f.text).join(' ')}`,
-  }
-}
-
-/**
- * Who they are, as distinct from what they're doing.
- *
- * Lists are identity signals, not consumption logs — the films, books and
- * records someone chose say something their project notes never will. They
- * are never the subject and never the thing quoted (they carry no words of
- * the user's own). They set the register: a question framed for someone
- * whose list is Herzog and Bach lands differently from the same question
- * framed for someone else, and a question that reads as though the app has
- * never met you doesn't sit for three days.
- */
-async function identityBlock(supabase: SupabaseClient, userId: string): Promise<string> {
-  const { data } = await supabase
-    .from('list_items')
-    .select('content, user_rating, lists(title, type)')
-    .eq('user_id', userId)
-    .in('status', ['active', 'completed'])
-    .order('created_at', { ascending: false })
-    .limit(40)
-
-  const items = (data ?? []).filter((i: any) => typeof i.content === 'string' && i.content.trim())
-  if (items.length === 0) return ''
-
-  const loved = items.filter((i: any) => (i.user_rating ?? 0) >= 4)
-  const shown = (loved.length >= 5 ? loved : items).slice(0, 18)
-
-  return `
-Who they are, from what they've chosen to watch, read and listen to (context
-only — never the subject of a question, and never quoted, since none of these
-are their words):
-${shown.map((i: any) => `  - ${i.content}${i.lists?.type ? ` (${i.lists.type})` : ''}`).join('\n')}
-`
-}
-
-/**
- * Everything today could be about. All of them, not one — the whole point
- * of asking about three subjects in a single call is that two of them can
- * come back with nothing and the run still produces a question.
- */
-async function gatherSubjects(supabase: SupabaseClient, userId: string): Promise<Subject[]> {
-  const found = await Promise.all([
-    jointSubject(supabase, userId),
-    projectSubject(supabase, userId),
-    memorySubject(supabase, userId),
-    articleSubject(supabase, userId),
-  ])
-  return found.filter((s): s is Subject => s !== null)
-}
-
 // ─── Step 2: the blind spots, and the queries that leave them behind ──
 
 interface BlindSpot {
@@ -450,6 +189,17 @@ async function nameBlindSpots(subjects: Subject[], echo: EchoContext): Promise<B
 
 ${blocks}
 ${echo.identity}
+Each one comes with DATES — when it was first said, how often, how long the
+silences were, when it stopped. Those lines are computed from their actual
+capture history. They are true, you cannot improve them, and you must not
+contradict them or invent new ones.
+
+The dates are usually where the blind spot is. Someone who has said a thing
+since 2023 and never built it is not short of the idea; they are assuming
+something about what it would have to be. Someone who dropped a thing for a
+year and came back did not need it and came back anyway. Read the timeline
+first, then the words.
+
 For EACH one, two jobs.
 
 1. Name the BLIND SPOT: the one thing it takes for granted and has never
@@ -466,9 +216,13 @@ someone deciding to make something:
     because they've never said it out loud.
   - A RULE visible across several of these at once, which none of them is
     purely made of yet.
-  - A THING THEY KEEP MENTIONING AND HAVE NEVER STARTED. If the subject is
-    something they've said more than once, this is almost always the one:
-    what do they believe it would have to be before they'd begin?
+  - A THING THEY KEEP MENTIONING AND HAVE NEVER STARTED. If the dates say
+    years and no project, this is almost always the one: what do they
+    believe it would have to be before they'd begin?
+  - A CHANGE THEY HAVEN'T NOTICED. The dates sometimes say the wording
+    drifted, or a rhythm stopped in a particular month. They were there for
+    it and still can't see it from inside; the shape only shows from
+    outside, across years.
 
 2. Write a SEARCH QUERY for it. This is the part that matters and it is NOT the
 blind spot reworded. Take out every word that belongs to that subject — its
@@ -641,6 +395,11 @@ What makes it good:
 - Use the note's own concrete detail. Not "your recent reflections on family" —
   say the thing it actually said. Their words, not a summary of their words:
   they can dismiss you, they can't dismiss themselves from eight months ago.
+- USE THE DATE. "Since March 2023", "you stopped in August", "fourteen months
+  later" — a real date is the most load-bearing thing you have, because it is
+  the one part they cannot argue with and the one part they had no way of
+  seeing themselves. Never round it into "a while ago" or "recently", and
+  never state a date the lines above didn't give you.
 - Specific enough to be WRONG. A question they could answer "no, it's not that
   at all" to is doing its job — that's a revelation too. A question that can't
   be wrong ("what's this really about?") is inert.
@@ -720,10 +479,10 @@ export async function generateMull(
   const chosen = rankPairs(
     pairings.map(p => ({
       ...p,
-      subjectKind: p.subject.kind,
       subjectId: p.subject.id,
       connectorId: p.connector.id,
       similarity: p.connector.similarity,
+      subjectStrength: p.subject.strength,
     })),
   )
 

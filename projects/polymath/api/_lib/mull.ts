@@ -240,37 +240,31 @@ export function rejectionReason(input: ValidationInput): string | null {
  * third model call to choose, because choosing is the kind of judgement a
  * score makes better than a paragraph of reasoning.
  *
- * Similarity does most of the work — it is already inside the band, so
- * higher means "answers the blind spot more squarely" rather than "is
- * more similar to the subject". A project subject gets a small nudge
- * because that's what the user is actually trying to make.
+ * Two halves. `similarity` says how squarely the connector answers the
+ * blind spot — already inside the band, so higher is better. `strength`
+ * comes from the subject's temporal shape (corpus-time.ts): a thing said
+ * since 2023 and never built outranks an article someone saved, and it
+ * does so by arithmetic over dates rather than by a hardcoded preference
+ * for one table over another.
  */
-const SUBJECT_BONUS: Record<MullSubjectKind, number> = {
-  // Recurrence over recency. A revelation comes far more often from the
-  // thing you keep circling than from the thing you touched on Tuesday,
-  // and the corpus can tell the difference — so the score does too.
-  joint: 0.1,
-  project: 0.06,
-  memory: 0.02,
-  article: 0,
-}
+const SUBJECT_WEIGHT = 0.35
 
 export interface RankablePair {
-  subjectKind: MullSubjectKind
   subjectId: string
   connectorId: string
   similarity: number
+  /** The temporal shape's own strength, 0–1.5. */
+  subjectStrength: number
 }
 
 export function rankPairs<T extends RankablePair>(pairs: T[], limit = 2): T[] {
-  const scored = [...pairs].sort(
-    (a, b) => (b.similarity + SUBJECT_BONUS[b.subjectKind]) - (a.similarity + SUBJECT_BONUS[a.subjectKind]),
-  )
+  const score = (p: T) => p.similarity + p.subjectStrength * SUBJECT_WEIGHT
+  const scored = [...pairs].sort((a, b) => score(b) - score(a))
   const chosen: T[] = []
   const usedSubjects = new Set<string>()
   const usedConnectors = new Set<string>()
   for (const pair of scored) {
-    // Two questions about the same project, or built on the same note, is
+    // Two questions about the same subject, or built on the same note, is
     // one question and a repeat — and the second one is what the user gets
     // days later, when the repeat is most obvious.
     if (usedSubjects.has(pair.subjectId) || usedConnectors.has(pair.connectorId)) continue
