@@ -31,6 +31,7 @@ import { generateText } from './gemini-chat.js'
 import { batchGenerateEmbeddings } from './gemini-embeddings.js'
 import { PLAIN_ENGLISH_RULES } from './plain-english.js'
 import { avoidBlock, echoesRecent, fetchRecentSparkTexts, motifWords } from './spark-echo.js'
+import { examplesBlock } from './mull-examples.js'
 import { gatherSubjects, identityBlock, type Subject } from './mull-subjects.js'
 import {
   selectConnectors,
@@ -475,11 +476,10 @@ land on something specific enough to name — a chapter, a deadline, a person,
 a decision they are actually facing.
 
 GOOD — the note does the work, the question is theirs, and something happens
-either way:
-"You wrote that you've probably got ten more proper conversations left with your
-dad, and you're spending them on the garden. The book swaps Lena out in chapter
-nine and nobody left in it notices. What are those chapters for?"
-  stake: "If the answer is nothing, chapters nine to twelve come out."
+either way. Ten of them, and they are not ten versions of one question. Some
+end in a choice, some in a name, some in a counterfactual, some ask for a fact
+you have and the notes don't. Copy the register, never the skeleton:
+${examplesBlock()}
 ${echo.avoid}
 ${PLAIN_ENGLISH_RULES}
 
