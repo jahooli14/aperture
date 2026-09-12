@@ -292,40 +292,101 @@ same spark until it's answered; once answered, the slot is empty until tomorrow.
 Sparks are **baked overnight**, not generated on open. That makes them instant, offline-
 available, and cheap.
 
-**Shelf life.** Only ever today's spark. Unanswered ones expire silently and are never
-stacked up or re-shown — five days away should not produce five sparks. Material-fact
-sparks (*"the saw's still out"*) expire after 48 hours because they make a claim about
-the physical world that goes stale.
+**Shelf life.** Four days, so a question can sit: you read it, you don't answer it, and
+the answer turns up on a walk three days later. Unanswered ones expire silently and are
+never stacked up or re-shown — five days away should not produce five sparks.
 
 A spark is not a task. It's something you can carry on a walk and answer by voice in
 thirty seconds.
 
-### Spark types
+### How a spark is built
 
-Rotate across **types**, not just projects. Never the same type twice running.
+One mechanism, not a menu of question shapes. The nine rotating types this
+section used to describe are gone: each of them picked its own slice of the
+corpus and asked the model to link two things, so the model always found a
+link, and what it found was a resemblance dressed up as a thought ("you like
+how Tame Impala treats synths — does the water scene do that too?"). Rotating
+the type, the project and the motif made those collisions *varied*. It could
+not make them *true*.
 
-| Type | Shape | Example |
-|---|---|---|
-| Noticing | An observation, no question | *"The Four Tet track — drums don't come in for 90 seconds."* |
-| Transferred constraint | A rule imported across domains | *"That set worked on three sounds. What's the chapter with three scenes?"* |
-| Unfinished thought | Your own, played back | *"You said the second half doesn't earn its ending. You never said what you meant."* |
-| Contradiction | Two of your statements, side by side, unresolved | *"You want it quiet. You also say nothing happens in chapter 3."* |
-| Scale jump | Same project, wrong altitude on purpose | *"Forget the chapter — what's the book about in one sentence, today?"* |
-| Material fact | Concrete, available | *"Offcuts are still there and the saw's out."* |
-| **Outside reach** | Something not from your corpus | A technique from a discipline you don't practise |
+The replacement inverts it, the same way composites were fixed (joint → pair,
+never pair → invented bridge):
 
-**Outside reach is not optional.** A corpus-only system can only recombine you —
-sophisticated navel-gazing. If the aperture is meant to widen, something has to come in
-that you didn't put there. Reading queue and RSS are the existing bridge.
+1. **One subject, chosen by its shape in time.** Not "what's warm" — the
+   session contract already answers that all day. A subject is a *temporal
+   shape* (`corpus-time.ts`): said since March 2023 and never built; dropped
+   for fourteen months and picked back up; a rhythm that stopped in a
+   nameable month; one week two years ago and never again; two things
+   captured days apart under different projects and never joined since. All
+   computed from timestamps over the **whole** corpus, so the years are
+   reachable and the facts are ones a model cannot invent. Span beats count:
+   five fragments from one Tuesday is one thought, not a recurrence.
+2. **Name the blind spot.** What does it take for granted and never examine?
+   Not a missing next step — a step is work. The assumption underneath that
+   would change what gets made if it were wrong.
+3. **Strip the vocabulary and search that.** The blind spot is rewritten as a
+   plain human question with none of the subject's own words in it, and *that*
+   is what gets embedded and matched across everything the user has written or
+   read. This is the load-bearing step. Search "how is replacing a character
+   different from developing one" and the nearest hit is the chapter outline —
+   the subject restated. Search "what it's like when someone you know becomes a
+   different person" and it reaches the note about your dad's garden.
+4. **Write the collision.** The connector was chosen *by* the blind spot, so
+   there is nothing left to invent. The model quotes the note's own words and
+   asks one question. It is not allowed to explain the link.
+
+**Two model calls a run, and the run feeds the channel for about a week.**
+The calls are the only real cost, so everything else is stacked around them:
+one call names the blind spot for all three subjects at once, retrieval runs
+three searches (the step most likely to come back empty, and the one that's
+free to repeat), and one call writes up the best two pairs. The second question
+is banked behind the first — it becomes the next standing question, and the
+instant answer to "ask me something else", with no further calls. Silence now
+means all three subjects found nothing, not one unlucky draw.
+
+**Bands, not top hits** (`mull.ts`). A match above ~0.82 is the note restated
+and worth nothing to think about; below ~0.45 it is noise. Inside the band, a
+candidate sharing two distinctive words with the subject is thrown out however
+well it scores — relevance comes from the vector, distance from the vocabulary.
+That pairing is the whole mechanism.
+
+**Tuned for resonance, not interest.** The question has to sit for three days
+and end in something to make, so: it must land in the answerability band (too
+easy is a quiz, gone in five seconds; too hard is a riddle, dismissed; right is
+knowing you have the answer and not quite reaching it); it must be specific
+enough to be *wrong*, since "no, it's not that at all" is a revelation too; it
+must quote the user's own words rather than summarise them, because you can
+dismiss the app and you can't dismiss yourself from eight months ago; and it
+stops one step short — naming the project is the one move that guarantees the
+user doesn't get there themselves. A **stake** is declared with every question
+(what they'd *do* differently) and checked: no consequence, no background
+cycles. The channel also learns from itself — the questions that got a real
+voice answer, and the ones left to expire, go into the prompt as examples.
+
+**Every gate is a rule, not a preference.** The quote has to actually appear in
+the note (the Context Engine's invented article titles are what happens without
+this); the question has to use it rather than append it; it has to end in a
+question; it has to fit in sixty words; it may not contain "which mirrors",
+"this connects to" or "both are about" — a real collision needs no connective
+tissue, and explaining it is the tell that there was nothing there.
+
+**Outside reach is not optional.** A corpus-only system can only recombine you
+— sophisticated navel-gazing. It is no longer a separate type: articles are
+eligible as the subject and as the connector, so reading enters through the
+same door as everything else.
+
+The one thing left that isn't a question: the **forgotten-project offer**
+(`forgotten.ts`), which runs only when the channel has nothing. Its useful
+answer is a tap, not words, so the attention slot renders it with an action.
 
 ### Rules
 
 - Not always the live project. Sparking the non-live ones is the entire point.
 - **Success metric: did you talk back.** Not did you agree. Store `spark_id`,
-  `shown_at`, `answered_at`, `response_capture_id`. Rolling answer-rate per type weights
-  type selection. Simple bandit, no ML.
+  `shown_at`, `answered_at`, `response_capture_id`.
 - A spark that fills an empty slot fills it. That's how mull lowers MVS.
-- Silence beats a weak spark. Nothing is a valid nightly output.
+- Silence beats a weak spark, and it is now the common case: most nights at
+  least one of the four steps declines. Nothing is a valid nightly output.
 
 ---
 
@@ -561,7 +622,7 @@ the review rotation becomes the live-project re-ask.
    and it needs months of data before it says anything.
 3. **Session shapes + MVS** — derivation, seeding question, measured replacement, booking
    flow when MVS exceeds real windows.
-4. **Spark channel** — nightly bake, types, no-repeat rule, talk-back tracking.
+4. **Spark channel** — nightly bake, blind spot → search → collision, talk-back tracking.
 5. **Slots and fragments** — roles at capture, empty slots as the dormancy model.
 6. **Morph, drift, harvest** — rate-limited proposals, cite-or-silent.
 7. **Joints and composites** — mine recurring joints, invert crossover to joint → pair.

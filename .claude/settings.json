@@ -15,6 +15,17 @@
           }
         ]
       }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/response-style.sh",
+            "timeout": 5
+          }
+        ]
+      }
     ]
   }
 }
