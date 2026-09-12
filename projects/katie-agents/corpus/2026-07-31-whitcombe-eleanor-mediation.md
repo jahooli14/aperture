@@ -1,9 +1,9 @@
 # 31 Jul — Whitcombe LLP (call)
 
-Eleanor. The attribution mediation settled. Confidential, obviously.
+Eleanor. The attribution dispute settled at mediation. Confidential.
 
 - Her read: it settled because neither side could afford to find out what the wording meant.
 - "Nothing was decided. The hole is still there and now there's one fewer chance of it being filled."
-- Asked whether she'd speak to a corporate buyer about it in general terms. She said yes if it's framed as education not advice.
+- Would speak to a corporate buyer about it in general terms if it's framed as education.
 
-Action: Eleanor <> Beatrice at Norton Hale.
+Action: Eleanor <> Beatrice.

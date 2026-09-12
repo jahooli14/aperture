@@ -1,1 +1,1 @@
-Panel organisers want slides. There will be no slides.
+Panel organisers again. Told them no slides, firmly.

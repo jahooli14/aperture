@@ -2,9 +2,9 @@
 
 **Who:** Ivan Kroll (Placement Director)
 
-Lunch. Mostly gossip, some useful.
+Lunch. Mostly gossip, some of it useful.
 
-- Pemberton lost two big accounts to Ashfield last quarter and he's sore about it.
-- Got pitched some AI submission tool last month by a vendor whose name he couldn't remember. "It read the slip and told me things I already knew. Forty grand a year to be told things I already knew." Not a fan.
-- Thinks the market is softening in property and hardening quietly in casualty. No detail behind it, more a feel.
-- Asked after Tom.
+- Lost two large accounts to Ashfield last quarter. Sore about it.
+- Got pitched a GenAI submission tool by a vendor whose name he'd forgotten. "It read the slip and told me things I already knew. Forty grand a year to be told things I already knew."
+- Thinks property is softening and casualty is quietly hardening. No evidence behind it, more a feel.
+- Asked whether we do broker M&A advisory. We do, it's Miriam's team.

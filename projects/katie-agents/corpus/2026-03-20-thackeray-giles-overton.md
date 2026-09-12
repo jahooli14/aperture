@@ -2,10 +2,9 @@
 
 **Who:** Giles Overton (Active Underwriter)
 
-Half an hour, he was between meetings.
+Half an hour, he was between things.
 
-- Not much new. Plan for the year is submitted and approved, he's comfortable.
-- Casualty is the line he watches. Didn't elaborate.
-- Fern runs cyber for him and he rates her highly, said so twice.
-
-Short one.
+- Plan submitted and approved, he's comfortable.
+- Casualty is the line he watches. Wouldn't expand.
+- Rates Fern Achebe, his Head of Cyber, very highly. Said so twice unprompted.
+- No appetite for advisory spend this year. Said that plainly, which I'd rather have than politeness.

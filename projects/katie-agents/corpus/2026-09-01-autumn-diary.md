@@ -1,1 +1,1 @@
-Autumn diary filling up. Renewals season. Block out October.
+Autumn diary filling. Renewal season. Block out October.

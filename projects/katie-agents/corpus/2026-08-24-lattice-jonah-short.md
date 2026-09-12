@@ -1,1 +1,1 @@
-Jonah, short call. Sidecar still stuck on reporting. He's losing interest, I think.
+Jonah, short call. Still hunting a specialty deployment route. Losing interest, I think.

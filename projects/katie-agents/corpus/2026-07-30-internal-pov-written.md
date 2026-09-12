@@ -1,1 +1,0 @@
-Wrote the point-of-view document. It's thin. The only genuinely interesting things in it are things clients told me and I'm not sure I'm allowed to use any of them. That's a problem worth thinking about.

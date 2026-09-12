@@ -1,7 +1,7 @@
-# 21 Aug — internal
+# 21 Aug — note to self
 
-The Duraflex/Copperfield thing has been bothering me.
+The Duraflex thing has been bothering me since yesterday.
 
-Graham told me his problem on 24 March. Ed told me his in a form I could act on five months later. In between I had about forty other conversations and it never once occurred to me to connect them, because by August I'd stopped thinking about March.
+Graham told me his problem on 24 March. Ed told me his in a form I could act on five months later. In between I had about forty other conversations and it never once occurred to me to connect them, because by August I had stopped thinking about March.
 
-I asked Tom whether we have any way of catching that. We don't. We have a CRM full of company names and no memory of what anyone actually said.
+Rupert asks what our differentiated proposition is. It might be this, if we could do it on purpose. We have four hundred of these conversations a year across the sector team and no memory of any of them beyond whoever was in the room.
