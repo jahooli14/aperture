@@ -411,7 +411,7 @@ Conventional commits. PR metadata is short.
 
 ## Cron (`.github/workflows/cron.yml`)
 
-One workflow dispatches every Vercel cron endpoint for Polymath and Pupils. Branches on `github.event.schedule` (the cron string that fired) — never wall-clock time, because GitHub delays scheduled runs. `BASE` is hardcoded to `https://aper-ture.vercel.app`. `workflow_dispatch` with `force=true` runs everything.
+One workflow dispatches every Vercel cron endpoint for Polymath and Pupils. Branches on `github.event.schedule` (the cron string that fired) — never wall-clock time, because GitHub delays scheduled runs. `BASE` is hardcoded to `https://aper-ture.vercel.app`. `workflow_dispatch` with `force=true` runs everything; **`job=<name>` runs exactly one and stops** (`bake-explain`, `bake`, `mine-joints`, `recompute-heat`) — `force` for a single endpoint also pays for two digests, the idea-engine generator, a morph and a whole-corpus joint mine. `hit()` prints the response body into the Actions log, so `job=bake-explain` is a full diagnosis of the mull channel from a phone: no terminal, no Vercel dashboard, no cron secret.
 
 > Relay has its own separate `.github/workflows/relay-cron.yml` — it hardcodes a different `BASE` (Relay's own domain), so it's deliberately not folded into this file. See the Relay section above for what it does.
 
