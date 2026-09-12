@@ -30,7 +30,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { generateText } from './gemini-chat.js'
 import { batchGenerateEmbeddings } from './gemini-embeddings.js'
 import { PLAIN_ENGLISH_RULES } from './plain-english.js'
-import { avoidBlock, echoesRecent, fetchRecentSparkTexts } from './spark-echo.js'
+import { avoidBlock, echoesRecent, fetchRecentSparkTexts, motifWords } from './spark-echo.js'
 import { gatherSubjects, identityBlock, type Subject } from './mull-subjects.js'
 import {
   selectConnectors,
@@ -42,13 +42,6 @@ import {
   type MullSourceKind,
   type MullSubjectKind,
 } from './mull.js'
-import {
-  selectForgottenProject,
-  forgottenSparkText,
-  FORGOTTEN_SILENCE_DAYS,
-  FORGOTTEN_COOLDOWN_DAYS,
-  FORGOTTEN_GLOBAL_COOLDOWN_DAYS,
-} from './forgotten.js'
 
 /**
  * Four days.
@@ -72,7 +65,7 @@ const MOMENTUM_WINDOW_DAYS = 10
 /** How far back a note or an article can be and still be worth examining. */
 const SUBJECT_LOOKBACK_DAYS = 45
 
-export type SparkType = 'mull' | 'forgotten'
+export type SparkType = 'mull'
 
 export interface BakedSpark {
   type: SparkType
@@ -559,7 +552,12 @@ export async function generateMull(
     // draft from this same run — two questions written in one breath are
     // where a repeated image is most likely and least excusable.
     if (echoesRecent(draft.text, seen)) {
-      trace.push('dropped: echoes a recent question')
+      // Name the overlap. "Echoes a recent question" four times in a row
+      // says the filter fired, not what it caught -- and what it caught
+      // was a project title carried in by the forgotten offer.
+      const shared = motifWords(draft.text).filter(w =>
+        seen.some(prev => motifWords(prev).includes(w)))
+      trace.push(`dropped: echoes a recent question (shared: ${shared.slice(0, 6).join(', ') || 'a repeated motif'})`)
       console.log('[mull] dropped: echoes a recent question')
       continue
     }
@@ -591,89 +589,21 @@ export async function generateMull(
 }
 
 /**
- * The one thing the mull channel doesn't do: offer a long-silent project
- * back into play.
- *
- * It isn't a question — the useful answer is a tap, not words — which is
- * why the attention slot renders it with an action instead of a
- * microphone, and why StandingQuestion filters it out. Deterministic, no
- * model call: the useful output is a plain fact about how long it's been.
- *
- * It runs only when the mull channel has nothing, and it declines on its
- * own most nights. A project the corpus is still talking about belongs to
- * the morph path, and a vague "still want this?" about it would be
- * strictly worse than silence.
- */
-export async function generateForgotten(
-  supabase: SupabaseClient,
-  userId: string,
-): Promise<BakedSpark | null> {
-  const { data: projects } = await supabase
-    .from('projects')
-    .select('id, title, state, last_active, last_session_ended_at, created_at')
-    .eq('user_id', userId)
-    .neq('state', 'harvested')
-    .limit(200)
-
-  if (!projects || projects.length === 0) return null
-
-  // Not more than one of these a fortnight, whatever project it is about.
-  // Per-project cooldowns alone let it run daily across a dozen dormant
-  // projects, which is a nag wearing a different name each morning.
-  const globalCutoff = new Date(Date.now() - FORGOTTEN_GLOBAL_COOLDOWN_DAYS * 86400000).toISOString()
-  const { data: recentAny } = await supabase
-    .from('sparks')
-    .select('id')
-    .eq('user_id', userId)
-    .eq('type', 'forgotten')
-    .gte('created_at', globalCutoff)
-    .limit(1)
-  if (recentAny && recentAny.length > 0) return null
-
-  const silenceCutoff = new Date(Date.now() - FORGOTTEN_SILENCE_DAYS * 86400000).toISOString()
-  const { data: recentFragments } = await supabase
-    .from('fragments')
-    .select('project_id')
-    .eq('user_id', userId)
-    .gte('created_at', silenceCutoff)
-
-  const cooldownCutoff = new Date(Date.now() - FORGOTTEN_COOLDOWN_DAYS * 86400000).toISOString()
-  const { data: recentOffers } = await supabase
-    .from('sparks')
-    .select('project_id')
-    .eq('user_id', userId)
-    .eq('type', 'forgotten')
-    .gte('created_at', cooldownCutoff)
-    .not('project_id', 'is', null)
-
-  const picked = selectForgottenProject({
-    projects: projects.map((p: any) => ({
-      id: p.id,
-      title: p.title,
-      state: p.state,
-      last_touched_at: [p.last_session_ended_at, p.last_active, p.created_at]
-        .filter(Boolean)
-        .sort()
-        .pop() ?? null,
-    })),
-    projectIdsWithRecentFragments: (recentFragments ?? []).map((f: any) => f.project_id),
-    recentlyOfferedProjectIds: (recentOffers ?? []).map((s: any) => s.project_id),
-  })
-
-  if (!picked) return null
-
-  return {
-    type: 'forgotten',
-    text: forgottenSparkText(picked.project.title, picked.daysUntouched),
-    project_id: picked.project.id,
-    expires_at: expiresAt(SHELF_LIFE_HOURS),
-  }
-}
-
-/**
  * What the bake and the reroll both call. Two model calls, up to two
- * questions, and the forgotten-project offer if there were none — it costs
- * nothing and it's the only other thing the channel has to say.
+ * questions, and nothing at all when the corpus has nothing to say.
+ *
+ * There used to be a consolation prize here: "you set down <project> N
+ * months ago". Elapsed time is a fact about the calendar, not a reason to
+ * care, and because it was the FALLBACK it only ever appeared when the
+ * channel had found no insight — a card that by construction carried
+ * none. It also held the slot for four days and, being made of project
+ * titles, blocked every real question about those projects as an echo of
+ * itself.
+ *
+ * Resurfacing a dormant project is still the channel's job; it just has to
+ * earn it. `long_unfinished` and `return` (corpus-time.ts) do exactly
+ * that, with a dated fact and a question attached. An empty slot is the
+ * honest alternative, and the home surface already renders nothing there.
  */
 export async function bakeMull(
   supabase: SupabaseClient,
@@ -683,12 +613,6 @@ export async function bakeMull(
 ): Promise<BakedSpark[]> {
   const context = echo ?? (await loadEchoContext(supabase, userId))
   const mulls = await generateMull(supabase, userId, context, trace)
-  if (mulls.length > 0) return mulls
-  const forgotten = await generateForgotten(supabase, userId)
-  trace.push(
-    forgotten
-      ? 'fell back to the forgotten-project offer'
-      : 'no forgotten offer either (global cooldown, or nothing silent enough) — empty slot',
-  )
-  return forgotten ? [forgotten] : []
+  if (mulls.length === 0) trace.push('nothing worth asking — empty slot')
+  return mulls
 }

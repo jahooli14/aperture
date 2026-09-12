@@ -2780,6 +2780,7 @@ async function handleExecutionSparks(req: VercelRequest, res: VercelResponse) {
       .from('sparks')
       .select('id, type, text, created_at, expires_at')
       .eq('user_id', userId)
+      .eq('type', 'mull')
       .is('answered_at', null)
       .gt('expires_at', new Date().toISOString())
       .limit(1)
@@ -2853,6 +2854,10 @@ async function handleExecutionSparks(req: VercelRequest, res: VercelResponse) {
       .eq('user_id', userId)
       .is('answered_at', null)
       .gt('expires_at', new Date().toISOString())
+      // Legacy `forgotten` rows are no longer generated (see bakeMull) and
+      // are not served either: one squats in the slot for four days at a
+      // time and there is no reason to wait it out.
+      .eq('type', 'mull')
       // Soonest to expire first. A banked question is written with a
       // longer life precisely so it sorts behind the standing one, which
       // means the queue needs no created_at juggling to stay in order.

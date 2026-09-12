@@ -154,10 +154,17 @@ export async function fetchRecentSparkTexts(
   limit: number = ECHO_WINDOW_SPARKS,
 ): Promise<string[]> {
   const cutoff = new Date(Date.now() - ECHO_LOOKBACK_DAYS * 86_400_000).toISOString()
+  // Questions only. A `forgotten` spark is not a question — it is "you set
+  // down <project> N months ago", so its distinctive words are a project
+  // TITLE. Left in the history it made every real question about that
+  // project read as an echo of itself, which is how four good drafts were
+  // thrown away in one run. The filter exists to stop the same question
+  // recurring, and a project name is not a question.
   const { data, error } = await supabase
     .from('sparks')
     .select('text')
     .eq('user_id', userId)
+    .eq('type', 'mull')
     .gte('created_at', cutoff)
     .order('created_at', { ascending: false })
     .limit(limit)

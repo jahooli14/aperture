@@ -212,62 +212,6 @@ function ProposalSlot({ proposal, onResolved }: { proposal: Proposal; onResolved
   )
 }
 
-/**
- * The 'forgotten' spark is the last branch of the stale router (see
- * api/_lib/forgotten.ts). It's the one spark type whose useful answer isn't
- * words -- it's putting the project back in play -- so it gets an action
- * instead of a microphone. Still one statement, one action, one quiet out.
- */
-function ForgottenSlot({ spark, onResolved }: { spark: Spark; onResolved: () => void }) {
-  const { declareLive } = useSessionStore()
-  const [busy, setBusy] = useState(false)
-
-  const makeLive = async () => {
-    if (!spark.project_id) return onResolved()
-    setBusy(true)
-    try {
-      await declareLive(spark.project_id)
-      await useProjectStore.getState().fetchProjects()
-    } finally {
-      setBusy(false)
-      onResolved()
-    }
-  }
-
-  return (
-    <div className="glass-card p-6 space-y-3">
-      <p className="text-base">{spark.text}</p>
-      <div className="space-y-1">
-        <button
-          className="w-full py-2 rounded-lg text-sm font-medium disabled:opacity-50"
-          style={primaryButtonStyle}
-          disabled={busy || !spark.project_id}
-          onClick={makeLive}
-        >
-          Make it live
-        </button>
-        <button className={quietOutClass} style={quietOutStyle} disabled={busy} onClick={() => { void dismissSpark(spark.id); onResolved() }}>
-          not now
-        </button>
-      </div>
-    </div>
-  )
-}
-
-/**
- * Retire a spark the user waved away. A spark is served until it's answered
- * or expires, so without this "not now" only cleared the screen and the same
- * one came back on the next open.
- */
-async function dismissSpark(sparkId: string): Promise<void> {
-  try {
-    await api.post('utilities?resource=dismiss-spark', { spark_id: sparkId })
-  } catch {
-    // Offline — it'll be offered again, which is the old behaviour, not a
-    // new failure.
-  }
-}
-
 /** How long the "here's what that did" line stays up before the slot
  *  clears itself. Long enough to read, short enough that it never becomes
  *  another thing to dismiss. */
@@ -450,13 +394,6 @@ export function AttentionSlot() {
       // to the answer card as the standing question, where they get to sit
       // for days instead of being one open's interruption — showing them in
       // both places would just be the same question twice.
-      const sparkResult = await getJson<{ spark: Spark | null }>('/api/utilities?resource=today')
-      if (cancelled) return
-      if (sparkResult?.spark && sparkResult.spark.type === 'forgotten') {
-        setSpark(sparkResult.spark)
-        setKind('spark')
-        return
-      }
 
     }
 
@@ -549,11 +486,7 @@ export function AttentionSlot() {
   if (kind === 'spark' && spark) {
     return (
       <div className="mt-5 mb-4">
-        {spark.type === 'forgotten' ? (
-          <ForgottenSlot spark={spark} onResolved={() => setResolved(true)} />
-        ) : (
-          <SparkSlot spark={spark} onResolved={() => setResolved(true)} />
-        )}
+        <SparkSlot spark={spark} onResolved={() => setResolved(true)} />
       </div>
     )
   }
