@@ -37,6 +37,21 @@ export const FORGOTTEN_SILENCE_DAYS = 90
 
 /** Don't re-offer the same project for this long after offering it once. */
 export const FORGOTTEN_COOLDOWN_DAYS = 21
+/**
+ * How long the channel waits before offering ANY forgotten project again.
+ *
+ * The per-project cooldown was the only limit, so with a dozen dormant
+ * projects the offer could run every single day on a different one — "you
+ * set down X two months ago", then Y, then Z, forever. That is a nag, and
+ * a nag is exactly what quiet drift-decay replaced. It is also what you
+ * get by default whenever the mull channel is silent, which makes the
+ * consolation prize the main event.
+ *
+ * One offer a fortnight, across all projects. When the channel has nothing
+ * and this is on cooldown, the slot stays empty — which is honest, and the
+ * home surface is built to render nothing there.
+ */
+export const FORGOTTEN_GLOBAL_COOLDOWN_DAYS = 14
 
 export interface ForgottenCandidate {
   id: string

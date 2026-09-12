@@ -2776,14 +2776,31 @@ async function handleExecutionSparks(req: VercelRequest, res: VercelResponse) {
       return res.status(200).json({ baked: false, reason: 'question still standing' })
     }
 
-    const baked = await bakeMull(supabase, userId)
+    // ?explain=1 runs the whole pipeline and returns why it decided what it
+    // decided, without writing a row. Silence is the designed outcome of
+    // four separate steps and they are indistinguishable from outside, so
+    // "the channel is quiet" was an unanswerable bug report until this.
+    const explain = req.query.explain === '1' || req.query.explain === 'true'
+    const trace: string[] = []
+    const baked = await bakeMull(supabase, userId, undefined, trace)
+
+    if (explain) {
+      return res.status(200).json({
+        explain: true,
+        wouldBake: baked.length,
+        trace,
+        questions: baked.map(s => ({ type: s.type, text: s.text })),
+      })
+    }
 
     if (baked.length === 0) {
       // Not a failure. Either nothing in the corpus is genuinely
       // unexamined, or the corpus had no answer to the question that was —
       // and a manufactured question is worse than an empty slot.
-      console.log('[utilities/sparks] bake: nothing worth asking today')
-      return res.status(200).json({ baked: false })
+      console.log('[utilities/sparks] bake: nothing worth asking today', trace)
+      // The reason travels with the response, not only to a log that
+      // expires in an hour.
+      return res.status(200).json({ baked: false, trace })
     }
 
     // A run writes up to two questions for the price of one. Queue order
