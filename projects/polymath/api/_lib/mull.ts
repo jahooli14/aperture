@@ -166,6 +166,34 @@ export function selectConnector(
   return eligible.reduce((best, c) => (c.similarity > best.similarity ? c : best))
 }
 
+/**
+ * Every connector worth a question, not just the best one.
+ *
+ * A blind spot with forty candidates in the corpus produced exactly one
+ * pair, and one pair means one draft, and one draft means any single
+ * quality gate ends the run with nothing. The narrowing was a choice, not
+ * a limit in the data. Returning the top few costs nothing — the search
+ * has already run — and turns one shot into several.
+ */
+export function selectConnectors(
+  candidates: MullCandidate[],
+  filter: ConnectorFilter,
+  limit = 3,
+): MullCandidate[] {
+  const excluded = new Set(filter.excludeIds)
+  const ceiling = connectorCeiling(filter.subjectText)
+  return candidates
+    .filter(c =>
+      c.text.trim().length > 0 &&
+      !excluded.has(c.id) &&
+      c.similarity >= CONNECTOR_FLOOR &&
+      c.similarity <= ceiling &&
+      !sharesDomain(filter.subjectText, `${c.title} ${c.text}`)
+    )
+    .sort((a, b) => b.similarity - a.similarity)
+    .slice(0, limit)
+}
+
 /** Quotes get retyped with different punctuation and spacing; matching has
  *  to survive that without becoming a fuzzy match that lets invention in. */
 function normalise(text: string): string {
@@ -281,6 +309,28 @@ export function stakeIsHollow(stake: string): boolean {
   return HOLLOW_STAKE_PATTERNS.some(re => re.test(text))
 }
 
+/**
+ * The longest run of the note's own words that survives into the question.
+ *
+ * The `quote` field is the model's report of what it used, and it keeps
+ * getting it slightly wrong — a word dropped, a tense changed, a phrase
+ * tightened. Loosening the quote matcher to chase that is a rearguard
+ * action, and it was already loosened twice. What actually matters is
+ * whether the QUESTION carries the user's own words, which can be checked
+ * on the question itself without trusting the report at all.
+ */
+export function longestSharedRun(text: string, source: string, minWords = 4): string | null {
+  const words = flattenPerson(normalise(source)).split(' ').filter(Boolean)
+  const haystack = flattenPerson(normalise(text))
+  for (let len = Math.min(words.length, 14); len >= minWords; len--) {
+    for (let i = 0; i + len <= words.length; i++) {
+      const run = words.slice(i, i + len).join(' ')
+      if (haystack.includes(run)) return run
+    }
+  }
+  return null
+}
+
 export interface ValidationInput extends MullDraft {
   connectorText: string
   /** What changes depending on the answer, in the model's own words. */
@@ -300,8 +350,16 @@ export function rejectionReason(input: ValidationInput): string | null {
   if (text.length === 0) return 'empty'
   if (!text.includes('?')) return 'not a question'
   if (text.split(/\s+/).length > MAX_MULL_WORDS) return 'too long to carry around'
-  if (!quoteIsReal(input.quote, input.connectorText)) return 'quote is not in the note'
-  if (!usesQuote(text, input.quote)) return 'the note is decoration, not a lens'
+  // Grounding, checked two ways. Either the model's quote really is in the
+  // note, or the question itself carries a run of the note's own words --
+  // in which case the report was sloppy but the question is sound, and
+  // throwing it away produces an empty slot for a clerical reason.
+  const quoted = quoteIsReal(input.quote, input.connectorText)
+  const carried = longestSharedRun(text, input.connectorText)
+  if (!quoted && !carried) return 'nothing of the note survives into the question'
+  if (quoted && !usesQuote(text, input.quote) && !carried) {
+    return 'the note is decoration, not a lens'
+  }
 
   const explainer = EXPLAINER_PATTERNS.find(re => re.test(text))
   if (explainer) return `explains the link: ${explainer.source}`
@@ -340,21 +398,44 @@ export interface RankablePair {
   subjectStrength: number
 }
 
-export function rankPairs<T extends RankablePair>(pairs: T[], limit = 2): T[] {
+/**
+ * How many pairs get written up in the one draft call.
+ *
+ * Two was the number of questions wanted, which quietly became the number
+ * attempted — so the gates had no slack: one rejection and the run was
+ * empty. Drafting four costs nothing extra (it is the same single call,
+ * a little more output) and the run only needs two of them to survive.
+ * Depth belongs before the quality bar, not in place of it.
+ */
+export const PAIRS_TO_DRAFT = 4
+
+export function rankPairs<T extends RankablePair>(pairs: T[], limit = PAIRS_TO_DRAFT): T[] {
   const score = (p: T) => p.similarity + p.subjectStrength * SUBJECT_WEIGHT
   const scored = [...pairs].sort((a, b) => score(b) - score(a))
+
+  // Distinct subjects and distinct notes first: two questions about the
+  // same thing is one question and a repeat, and the second is what the
+  // user gets days later when the repeat is most obvious.
   const chosen: T[] = []
   const usedSubjects = new Set<string>()
   const usedConnectors = new Set<string>()
   for (const pair of scored) {
-    // Two questions about the same subject, or built on the same note, is
-    // one question and a repeat — and the second one is what the user gets
-    // days later, when the repeat is most obvious.
     if (usedSubjects.has(pair.subjectId) || usedConnectors.has(pair.connectorId)) continue
     chosen.push(pair)
     usedSubjects.add(pair.subjectId)
     usedConnectors.add(pair.connectorId)
     if (chosen.length >= limit) break
+  }
+
+  // Then top up from what was skipped. A near-duplicate pair is a poor
+  // question to SHIP, but a fine one to have in reserve when the gates
+  // reject the others — and only the survivors are ever shown, in order.
+  if (chosen.length < limit) {
+    for (const pair of scored) {
+      if (chosen.includes(pair)) continue
+      chosen.push(pair)
+      if (chosen.length >= limit) break
+    }
   }
   return chosen
 }

@@ -499,21 +499,18 @@ export async function gatherSubjects(
     `unfiled ${unfiled ? 1 : 0}, long-held ${longHeld ? 1 : 0}, article ${article ? 1 : 0}`,
   )
 
-  // Strongest first, but never more than two of one kind.
+  // Strongest first, never more than two of one kind.
   //
-  // Deduping by kind-and-shape was not enough: joints carry several shapes
-  // and outrank everything, so three joints could take all three slots and
-  // the run would ask three questions about the user's own recurring
-  // thoughts. A cap by kind is what actually keeps the three subjects
-  // different in nature rather than merely differently labelled.
+  // The cap is by KIND only. Deduping by kind-and-shape as well collapsed
+  // ten project subjects into one, because they all happened to classify
+  // the same way -- and one subject means one blind spot, one pair, one
+  // draft, so a single gate rejection at the end produces nothing at all.
+  // Three subjects exist precisely so two can fail. Two projects with the
+  // same shape are still two different projects.
   const perKind = new Map<string, number>()
-  const seenShape = new Set<string>()
   const picked: Subject[] = []
   for (const subject of all) {
-    const shapeKey = `${subject.kind}:${subject.shape ?? 'none'}`
-    if (seenShape.has(shapeKey)) continue
     if ((perKind.get(subject.kind) ?? 0) >= 2) continue
-    seenShape.add(shapeKey)
     perKind.set(subject.kind, (perKind.get(subject.kind) ?? 0) + 1)
     picked.push(subject)
     if (picked.length >= SUBJECT_SLOTS) break
