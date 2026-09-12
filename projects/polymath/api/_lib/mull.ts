@@ -281,6 +281,28 @@ export function stakeIsHollow(stake: string): boolean {
   return HOLLOW_STAKE_PATTERNS.some(re => re.test(text))
 }
 
+/**
+ * The longest run of the note's own words that survives into the question.
+ *
+ * The `quote` field is the model's report of what it used, and it keeps
+ * getting it slightly wrong — a word dropped, a tense changed, a phrase
+ * tightened. Loosening the quote matcher to chase that is a rearguard
+ * action, and it was already loosened twice. What actually matters is
+ * whether the QUESTION carries the user's own words, which can be checked
+ * on the question itself without trusting the report at all.
+ */
+export function longestSharedRun(text: string, source: string, minWords = 4): string | null {
+  const words = flattenPerson(normalise(source)).split(' ').filter(Boolean)
+  const haystack = flattenPerson(normalise(text))
+  for (let len = Math.min(words.length, 14); len >= minWords; len--) {
+    for (let i = 0; i + len <= words.length; i++) {
+      const run = words.slice(i, i + len).join(' ')
+      if (haystack.includes(run)) return run
+    }
+  }
+  return null
+}
+
 export interface ValidationInput extends MullDraft {
   connectorText: string
   /** What changes depending on the answer, in the model's own words. */
@@ -300,8 +322,16 @@ export function rejectionReason(input: ValidationInput): string | null {
   if (text.length === 0) return 'empty'
   if (!text.includes('?')) return 'not a question'
   if (text.split(/\s+/).length > MAX_MULL_WORDS) return 'too long to carry around'
-  if (!quoteIsReal(input.quote, input.connectorText)) return 'quote is not in the note'
-  if (!usesQuote(text, input.quote)) return 'the note is decoration, not a lens'
+  // Grounding, checked two ways. Either the model's quote really is in the
+  // note, or the question itself carries a run of the note's own words --
+  // in which case the report was sloppy but the question is sound, and
+  // throwing it away produces an empty slot for a clerical reason.
+  const quoted = quoteIsReal(input.quote, input.connectorText)
+  const carried = longestSharedRun(text, input.connectorText)
+  if (!quoted && !carried) return 'nothing of the note survives into the question'
+  if (quoted && !usesQuote(text, input.quote) && !carried) {
+    return 'the note is decoration, not a lens'
+  }
 
   const explainer = EXPLAINER_PATTERNS.find(re => re.test(text))
   if (explainer) return `explains the link: ${explainer.source}`

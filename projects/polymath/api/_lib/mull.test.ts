@@ -122,8 +122,20 @@ describe('rejectionReason', () => {
       .toBe('not a question')
   })
 
-  it('rejects an invented quote', () => {
-    expect(rejectionReason({ ...good, quote: 'ten more summers with dad' })).toBe('quote is not in the note')
+  it('keeps a sound question whose quote field is sloppy', () => {
+    // The model mis-reports what it used more often than it invents: a word
+    // dropped, a tense changed. What matters is whether the QUESTION
+    // carries the note's own words, and this one does.
+    expect(rejectionReason({ ...good, quote: 'ten more summers with dad' })).toBeNull()
+  })
+
+  it('rejects a question with nothing of the note in it, however it is labelled', () => {
+    expect(rejectionReason({
+      ...good,
+      text: 'What would the book be if you stopped rewriting chapter three?',
+      quote: 'ten more proper conversations with dad',
+      connectorText: 'A completely unrelated note about the bird feeder and the frost.',
+    })).toBe('nothing of the note survives into the question')
   })
 
   it('rejects a draft that explains its own link', () => {
