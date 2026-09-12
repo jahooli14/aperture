@@ -6,6 +6,7 @@ import {
   usesQuote,
   rejectionReason,
   rankPairs,
+  PAIRS_TO_DRAFT,
   stakeIsHollow,
   CONNECTOR_FLOOR,
   CONNECTOR_CEILING,
@@ -188,20 +189,25 @@ describe('rankPairs', () => {
     expect(ranked[0].subjectId).toBe('ordinary')
   })
 
-  it('never banks a second question about the same subject', () => {
+  it('puts every distinct pair ahead of any repeat', () => {
+    // Repeats are reserves: fine to attempt when the gates reject the
+    // others, never the first thing tried. Distinctness of what actually
+    // ships is enforced downstream, on the survivors.
     const ranked = rankPairs([
-      pair({ subjectId: 'same', connectorId: 'c1', similarity: 0.8 }),
-      pair({ subjectId: 'same', connectorId: 'c2', similarity: 0.7 }),
+      pair({ subjectId: 'same', connectorId: 'c1', similarity: 0.9 }),
+      pair({ subjectId: 'same', connectorId: 'c2', similarity: 0.8 }),
+      pair({ subjectId: 'other', connectorId: 'c3', similarity: 0.5 }),
     ])
-    expect(ranked).toHaveLength(1)
+    expect(ranked.slice(0, 2).map(p => p.subjectId)).toEqual(['same', 'other'])
   })
 
-  it('never builds both questions on the same note', () => {
+  it('keeps repeats as reserve rather than dropping them', () => {
+    // Dropping them is what made one gate rejection empty the whole run.
     const ranked = rankPairs([
       pair({ subjectId: 'a', connectorId: 'shared', similarity: 0.8 }),
       pair({ subjectId: 'b', connectorId: 'shared', similarity: 0.7 }),
     ])
-    expect(ranked).toHaveLength(1)
+    expect(ranked).toHaveLength(2)
   })
 
   it('stops at the limit even when more survive', () => {
@@ -209,8 +215,10 @@ describe('rankPairs', () => {
       pair({ subjectId: 'a', connectorId: 'c1' }),
       pair({ subjectId: 'b', connectorId: 'c2' }),
       pair({ subjectId: 'c', connectorId: 'c3' }),
+      pair({ subjectId: 'd', connectorId: 'c4' }),
+      pair({ subjectId: 'e', connectorId: 'c5' }),
     ])
-    expect(ranked).toHaveLength(2)
+    expect(ranked).toHaveLength(PAIRS_TO_DRAFT)
   })
 })
 

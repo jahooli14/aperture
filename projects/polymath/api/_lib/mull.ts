@@ -166,6 +166,34 @@ export function selectConnector(
   return eligible.reduce((best, c) => (c.similarity > best.similarity ? c : best))
 }
 
+/**
+ * Every connector worth a question, not just the best one.
+ *
+ * A blind spot with forty candidates in the corpus produced exactly one
+ * pair, and one pair means one draft, and one draft means any single
+ * quality gate ends the run with nothing. The narrowing was a choice, not
+ * a limit in the data. Returning the top few costs nothing — the search
+ * has already run — and turns one shot into several.
+ */
+export function selectConnectors(
+  candidates: MullCandidate[],
+  filter: ConnectorFilter,
+  limit = 3,
+): MullCandidate[] {
+  const excluded = new Set(filter.excludeIds)
+  const ceiling = connectorCeiling(filter.subjectText)
+  return candidates
+    .filter(c =>
+      c.text.trim().length > 0 &&
+      !excluded.has(c.id) &&
+      c.similarity >= CONNECTOR_FLOOR &&
+      c.similarity <= ceiling &&
+      !sharesDomain(filter.subjectText, `${c.title} ${c.text}`)
+    )
+    .sort((a, b) => b.similarity - a.similarity)
+    .slice(0, limit)
+}
+
 /** Quotes get retyped with different punctuation and spacing; matching has
  *  to survive that without becoming a fuzzy match that lets invention in. */
 function normalise(text: string): string {
@@ -370,21 +398,44 @@ export interface RankablePair {
   subjectStrength: number
 }
 
-export function rankPairs<T extends RankablePair>(pairs: T[], limit = 2): T[] {
+/**
+ * How many pairs get written up in the one draft call.
+ *
+ * Two was the number of questions wanted, which quietly became the number
+ * attempted — so the gates had no slack: one rejection and the run was
+ * empty. Drafting four costs nothing extra (it is the same single call,
+ * a little more output) and the run only needs two of them to survive.
+ * Depth belongs before the quality bar, not in place of it.
+ */
+export const PAIRS_TO_DRAFT = 4
+
+export function rankPairs<T extends RankablePair>(pairs: T[], limit = PAIRS_TO_DRAFT): T[] {
   const score = (p: T) => p.similarity + p.subjectStrength * SUBJECT_WEIGHT
   const scored = [...pairs].sort((a, b) => score(b) - score(a))
+
+  // Distinct subjects and distinct notes first: two questions about the
+  // same thing is one question and a repeat, and the second is what the
+  // user gets days later when the repeat is most obvious.
   const chosen: T[] = []
   const usedSubjects = new Set<string>()
   const usedConnectors = new Set<string>()
   for (const pair of scored) {
-    // Two questions about the same subject, or built on the same note, is
-    // one question and a repeat — and the second one is what the user gets
-    // days later, when the repeat is most obvious.
     if (usedSubjects.has(pair.subjectId) || usedConnectors.has(pair.connectorId)) continue
     chosen.push(pair)
     usedSubjects.add(pair.subjectId)
     usedConnectors.add(pair.connectorId)
     if (chosen.length >= limit) break
+  }
+
+  // Then top up from what was skipped. A near-duplicate pair is a poor
+  // question to SHIP, but a fine one to have in reserve when the gates
+  // reject the others — and only the survivors are ever shown, in order.
+  if (chosen.length < limit) {
+    for (const pair of scored) {
+      if (chosen.includes(pair)) continue
+      chosen.push(pair)
+      if (chosen.length >= limit) break
+    }
   }
   return chosen
 }

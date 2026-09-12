@@ -33,7 +33,7 @@ import { PLAIN_ENGLISH_RULES } from './plain-english.js'
 import { avoidBlock, echoesRecent, fetchRecentSparkTexts } from './spark-echo.js'
 import { gatherSubjects, identityBlock, type Subject } from './mull-subjects.js'
 import {
-  selectConnector,
+  selectConnectors,
   connectorCeiling,
   CONNECTOR_FLOOR,
   rankPairs,
@@ -60,6 +60,11 @@ import {
  * the background works.
  */
 export const SHELF_LIFE_HOURS = 96
+
+/** One to show, one banked behind it. Extra survivors are dropped: the
+ *  depth exists so the gates have slack, not to fill the app with
+ *  questions. */
+const QUESTIONS_PER_RUN = 2
 
 /** A little over a week, so a project worked on last Sunday still counts
  *  as warm on Tuesday. */
@@ -341,7 +346,7 @@ async function findConnectors(
     const excludeIds = [blind.subject.id]
     if (blind.subject.projectId) excludeIds.push(blind.subject.projectId)
 
-    const connector = selectConnector(candidates, { subjectText: blind.subject.ownWords, excludeIds })
+    const connectors = selectConnectors(candidates, { subjectText: blind.subject.ownWords, excludeIds })
     // The numbers, not a verdict: how many the vector returned at all, the
     // best score it saw, and the band it had to fit. An empty search and a
     // search whose every hit was a restatement look identical from outside
@@ -350,12 +355,14 @@ async function findConnectors(
     trace.push(
       `search [${blind.subject.kind}]: ${candidates.length} candidates, best ${best.toFixed(2)}, ` +
       `band ${CONNECTOR_FLOOR}-${connectorCeiling(blind.subject.ownWords).toFixed(2)} -> ` +
-      (connector ? `${connector.kind} @ ${connector.similarity.toFixed(2)}` : 'nothing in band'),
+      (connectors.length > 0
+        ? `${connectors.length} in band (${connectors.map(c => c.similarity.toFixed(2)).join(', ')})`
+        : 'nothing in band'),
     )
-    return connector ? { ...blind, connector } : null
+    return connectors.map(connector => ({ ...blind, connector }))
   }))
 
-  return searches.filter((p): p is Pairing => p !== null)
+  return searches.flat()
 }
 
 // ─── Step 4: the collisions, written down ─────────────────────────────
@@ -522,14 +529,21 @@ export async function generateMull(
     })),
   )
 
+  trace.push(`pairs: ${pairings.length} found, ${chosen.length} sent to draft`)
   const drafts = await draftAll(chosen, echo)
   trace.push(`drafts: ${drafts.length} of ${chosen.length} pairs written`)
   const baked: BakedSpark[] = []
   // Each draft stands on its own: one failing a gate doesn't take the
   // other with it, which is most of why they're written together.
   const seen = [...echo.recentTexts]
+  // Distinctness is enforced on what SHIPS, not on what gets attempted.
+  // Reserve pairs may repeat a subject; they exist so the gates have slack.
+  // Two questions about the same thing is one question and a repeat, and
+  // the second is what the user gets days later when it is most obvious.
+  const shippedSubjects = new Set<string>()
 
   for (const draft of drafts) {
+    if (shippedSubjects.has(draft.pairing.subject.id)) continue
     const reason = rejectionReason({
       text: draft.text,
       quote: draft.quote,
@@ -550,10 +564,12 @@ export async function generateMull(
       continue
     }
     seen.push(draft.text)
+    shippedSubjects.add(draft.pairing.subject.id)
 
     // Attribute to a project where there is one, so the card can say what
     // it's about and the answer files itself somewhere. A note with no
     // project and an article both leave this null rather than guessing.
+    if (baked.length >= QUESTIONS_PER_RUN) break
     baked.push({
       type: 'mull',
       text: draft.text,

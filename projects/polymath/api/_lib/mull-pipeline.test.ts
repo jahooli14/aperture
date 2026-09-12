@@ -276,6 +276,42 @@ describe('the mull channel, end to end', () => {
   })
 })
 
+describe('the funnel is wide enough that one rejection is not fatal', () => {
+  it('carries several connectors per blind spot, not just the best one', async () => {
+    generateText.mockResolvedValueOnce(BLIND_SPOTS).mockResolvedValueOnce(DRAFTS)
+    const data = corpus() as any
+    const { client } = fakeSupabase(data)
+    const trace: string[] = []
+    await bakeMull(client, 'u1', undefined, trace)
+    // "40 candidates -> 1 pair -> 1 draft -> 1 rejection -> nothing" was the
+    // production failure. Depth before the quality bar, not instead of it.
+    expect(trace.join('\n')).toMatch(/pairs: \d+ found, \d+ sent to draft/)
+  })
+
+  it('still ships a question when the first draft is rejected', async () => {
+    const twoDrafts = JSON.stringify({
+      pairs: [
+        // Ungrounded: nothing of the note in it. Must be refused.
+        { n: 1, spark: 'What is the book really about, underneath?', quote: 'invented words entirely', stake: 'He rewrites the opening.' },
+        // Sound, and built on a different subject.
+        {
+          n: 2,
+          spark: 'You wrote that you get maybe ten more proper conversations with dad and you spend them on the greenhouse. What are those chapters for?',
+          quote: 'ten more proper conversations with dad',
+          stake: 'Chapters nine to twelve come out.',
+        },
+      ],
+    })
+    generateText.mockResolvedValueOnce(BLIND_SPOTS).mockResolvedValueOnce(twoDrafts)
+    // One note in the corpus, so every pair is built on it and the second
+    // draft's quote is checkable whichever pair it landed on.
+    const data = corpus() as any
+    data.memories = [data.memories[0]]
+    const baked = await bakeMull(fakeSupabase(data).client, 'u1')
+    expect(baked.map(s => s.type)).toContain('mull')
+  })
+})
+
 describe('what the three subjects are allowed to be', () => {
   /** A corpus whose joints alone could fill every slot: three recurring
    *  things, each with a different temporal shape. */
