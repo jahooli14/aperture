@@ -23,6 +23,7 @@ This file is the **single source of truth** for working on this repo. If somethi
 | **Golf Masters** | `projects/golf-masters/` | Active | Masters pool tracker with live ESPN scores |
 | **Heart Recovery** | `projects/heart-recovery/` | Active | Day-by-day post-heart-attack (stent/PCI) recovery guide — single user, no backend, localStorage only |
 | **Relay** | `projects/relay/` | Active | Write a story with friends, a line at a time. PWA + web push. Up to 10 writers per story. |
+| **Katie agents** | `projects/katie-agents/` | Active | Sample corpus (200 meeting notes, 6 months, fictitious clients) plus the agent system reverse-engineered from it — cross-client pattern detection for business development. Docs + fixtures, no app. |
 | **Fix Queue** | `projects/polymath/` (feature) | **Needs review** — owner doesn't actively use this; code may still be running. Don't extend without checking. |
 
 > **Sonically Sound** ships from outside this repo.

@@ -1,0 +1,1 @@
+Eleanor spoke to Beatrice. Beatrice has gone back to her broker with specific questions in writing. Eleanor said she was "the best-briefed buyer I've spoken to in a year", which is entirely because Eleanor briefed her.
