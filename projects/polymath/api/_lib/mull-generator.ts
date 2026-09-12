@@ -65,7 +65,14 @@ const MOMENTUM_WINDOW_DAYS = 10
 /** How far back a note or an article can be and still be worth examining. */
 const SUBJECT_LOOKBACK_DAYS = 45
 
-export type SparkType = 'mull'
+/** Every `sparks.type` this channel can write. A runtime array rather than
+ *  a bare union because `sparks_type_check` has to list the same values, and
+ *  the one time it didn't, every insert 500'd for four days while the trace
+ *  showed questions being written fine (`bake?explain=1` skips the insert).
+ *  `spark-type-schema.test.ts` checks this against the migration. */
+export const SPARK_TYPES_WRITTEN = ['mull'] as const
+
+export type SparkType = (typeof SPARK_TYPES_WRITTEN)[number]
 
 export interface BakedSpark {
   type: SparkType

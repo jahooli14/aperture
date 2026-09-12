@@ -102,8 +102,18 @@ export function StandingQuestion() {
         // question you had is still there.
         setNote('Nothing else worth asking yet.')
       }
-    } catch {
-      setNote("Couldn't reach the server.")
+    } catch (err) {
+      // A rejected request and an unreachable one are different problems and
+      // only one of them is worth retrying. Saying "couldn't reach the
+      // server" for both sent four days of debugging at the network when the
+      // server was answering every time -- with a 500, because `mull` was
+      // missing from the sparks type constraint.
+      const status = (err as { status?: number } | null)?.status
+      setNote(
+        status && status >= 500
+          ? 'Something broke writing that one.'
+          : "Couldn't reach the server."
+      )
     } finally {
       setRerolling(false)
     }
