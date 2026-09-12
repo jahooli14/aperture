@@ -312,8 +312,11 @@ not make them *true*.
 The replacement inverts it, the same way composites were fixed (joint → pair,
 never pair → invented bridge):
 
-1. **One subject.** A project (usually — momentum-weighted with a swerve), or
-   a recent note, or an article that earned its place in the corpus.
+1. **One subject.** Best of all a *joint* — something said more than once,
+   already mined and quoted in the `joints` table. Recurrence beats recency:
+   the thing you keep circling and have never made is the shortest path to
+   "oh, I should make that". Otherwise a project (momentum-weighted with a
+   swerve), a recent note, or an article that earned its place.
 2. **Name the blind spot.** What does it take for granted and never examine?
    Not a missing next step — a step is work. The assumption underneath that
    would change what gets made if it were wrong.
@@ -342,6 +345,19 @@ and worth nothing to think about; below ~0.45 it is noise. Inside the band, a
 candidate sharing two distinctive words with the subject is thrown out however
 well it scores — relevance comes from the vector, distance from the vocabulary.
 That pairing is the whole mechanism.
+
+**Tuned for resonance, not interest.** The question has to sit for three days
+and end in something to make, so: it must land in the answerability band (too
+easy is a quiz, gone in five seconds; too hard is a riddle, dismissed; right is
+knowing you have the answer and not quite reaching it); it must be specific
+enough to be *wrong*, since "no, it's not that at all" is a revelation too; it
+must quote the user's own words rather than summarise them, because you can
+dismiss the app and you can't dismiss yourself from eight months ago; and it
+stops one step short — naming the project is the one move that guarantees the
+user doesn't get there themselves. A **stake** is declared with every question
+(what they'd *do* differently) and checked: no consequence, no background
+cycles. The channel also learns from itself — the questions that got a real
+voice answer, and the ones left to expire, go into the prompt as examples.
 
 **Every gate is a rule, not a preference.** The quote has to actually appear in
 the note (the Context Engine's invented article titles are what happens without

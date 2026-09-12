@@ -35,6 +35,13 @@ import { findVoiceViolations } from './plain-english.js'
  *  one, so a project subject keeps its id and a note doesn't invent one. */
 export type MullSourceKind = 'memory' | 'project' | 'article'
 
+/** What today's question is built on. `joint` is the fourth and the best:
+ *  something said more than once, already quoted and clustered by
+ *  joint-miner.ts, sitting in the corpus unused by this channel until now.
+ *  A thing you keep saying and have never made is the shortest path there
+ *  is to "oh — I should make that." */
+export type MullSubjectKind = MullSourceKind | 'joint'
+
 export interface MullCandidate {
   kind: MullSourceKind
   id: string
@@ -165,8 +172,36 @@ export interface MullDraft {
   quote: string
 }
 
+/**
+ * A question with no consequence gets no background cycles.
+ *
+ * "What changes if they answer this?" has an honest answer for a real
+ * question — they cut the chapters, they stop buying the third synth, they
+ * finally start the thing. It has only a hollow one for a question that is
+ * really an observation with a question mark on the end, and this is what
+ * hollow sounds like. Making the model declare the stake and then checking
+ * it is a cheap forcing function: it can't write the consequence down
+ * without noticing there isn't one.
+ */
+const HOLLOW_STAKE_PATTERNS: readonly RegExp[] = [
+  /\b(their|the) (understanding|perspective|awareness|thinking|mindset|approach to)\b/i,
+  /\bhow (they|the user) (think|thinks|sees?|views?|feels?) about\b/i,
+  /\b(deeper|better|clearer|renewed) (insight|clarity|sense|appreciation)\b/i,
+  /\bthey (might|could|may) (reflect|consider|realise|realize|reconsider)\b/i,
+  /\bnothing (concrete|specific|in particular)\b/i,
+  /\bit (would|could) (help|inform) them\b/i,
+]
+
+export function stakeIsHollow(stake: string): boolean {
+  const text = stake.trim()
+  if (text.split(/\s+/).length < 4) return true
+  return HOLLOW_STAKE_PATTERNS.some(re => re.test(text))
+}
+
 export interface ValidationInput extends MullDraft {
   connectorText: string
+  /** What changes depending on the answer, in the model's own words. */
+  stake: string
 }
 
 /**
@@ -188,6 +223,8 @@ export function rejectionReason(input: ValidationInput): string | null {
   const explainer = EXPLAINER_PATTERNS.find(re => re.test(text))
   if (explainer) return `explains the link: ${explainer.source}`
 
+  if (stakeIsHollow(input.stake)) return `nothing changes either way: "${input.stake}"`
+
   const voice = findVoiceViolations(text)
   if (voice.length > 0) return voice[0]
 
@@ -208,14 +245,18 @@ export function rejectionReason(input: ValidationInput): string | null {
  * more similar to the subject". A project subject gets a small nudge
  * because that's what the user is actually trying to make.
  */
-const SUBJECT_BONUS: Record<MullSourceKind, number> = {
+const SUBJECT_BONUS: Record<MullSubjectKind, number> = {
+  // Recurrence over recency. A revelation comes far more often from the
+  // thing you keep circling than from the thing you touched on Tuesday,
+  // and the corpus can tell the difference — so the score does too.
+  joint: 0.1,
   project: 0.06,
   memory: 0.02,
   article: 0,
 }
 
 export interface RankablePair {
-  subjectKind: MullSourceKind
+  subjectKind: MullSubjectKind
   subjectId: string
   connectorId: string
   similarity: number

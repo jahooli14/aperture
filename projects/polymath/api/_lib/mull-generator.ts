@@ -39,6 +39,7 @@ import {
   rejectionReason,
   type MullCandidate,
   type MullSourceKind,
+  type MullSubjectKind,
 } from './mull.js'
 import {
   selectForgottenProject,
@@ -80,11 +81,85 @@ export interface BakedSpark {
 export interface EchoContext {
   recentTexts: string[]
   avoid: string
+  /** Questions this person actually answered, and what they said back —
+   *  plus the ones they read and ignored. See loadResonance. */
+  resonance: string
+  /** Lists: films, books, records. Register, not material. */
+  identity: string
+}
+
+/**
+ * What has actually landed with THIS person, and what hasn't.
+ *
+ * `sparks.response_memory_id` is set only when a question got a real voice
+ * answer, and that answer is a row in `memories`. Since the type bandit was
+ * deleted nothing read either of them, which means the app was throwing
+ * away the only evidence it has about what makes this particular person
+ * stop and talk back. Generic advice about what makes a good question is
+ * worth much less than six examples of the ones that worked on them.
+ *
+ * The ignored ones matter just as much and are cheaper to be honest about:
+ * a question shown and left to expire is a question that didn't land, and
+ * saying so in the prompt costs nothing.
+ */
+async function loadResonance(supabase: SupabaseClient, userId: string): Promise<string> {
+  const [{ data: answered }, { data: ignored }] = await Promise.all([
+    supabase
+      .from('sparks')
+      .select('text, response_memory_id')
+      .eq('user_id', userId)
+      .not('response_memory_id', 'is', null)
+      .order('answered_at', { ascending: false })
+      .limit(6),
+    supabase
+      .from('sparks')
+      .select('text')
+      .eq('user_id', userId)
+      .not('shown_at', 'is', null)
+      .is('response_memory_id', null)
+      .lt('expires_at', new Date().toISOString())
+      .order('shown_at', { ascending: false })
+      .limit(6),
+  ])
+
+  const memoryIds = (answered ?? []).map((s: any) => s.response_memory_id).filter(Boolean)
+  const replies = new Map<string, string>()
+  if (memoryIds.length > 0) {
+    const { data: memories } = await supabase
+      .from('memories')
+      .select('id, body')
+      .eq('user_id', userId)
+      .in('id', memoryIds)
+    for (const m of memories ?? []) {
+      if (typeof (m as any).body === 'string') replies.set((m as any).id, (m as any).body)
+    }
+  }
+
+  const landed = (answered ?? [])
+    .map((s: any) => {
+      const reply = replies.get(s.response_memory_id)
+      return reply ? `  Q: "${s.text}"\n  They said back: "${reply.slice(0, 400)}"` : null
+    })
+    .filter(Boolean)
+
+  const missed = (ignored ?? []).map((s: any) => `  - "${s.text}"`)
+  if (landed.length === 0 && missed.length === 0) return ''
+
+  return `
+${landed.length > 0 ? `THESE ONES WORKED — they stopped and answered out loud:\n${landed.join('\n\n')}\n` : ''}${missed.length > 0 ? `\nTHESE ONES DIDN'T — read, and left to expire without a word:\n${missed.join('\n')}\n` : ''}
+Whatever is different between those two groups is what matters here. Match the
+first group. Not their subject — their shape, their nerve, how much they left
+for the reader to do.
+`
 }
 
 export async function loadEchoContext(supabase: SupabaseClient, userId: string): Promise<EchoContext> {
-  const recentTexts = await fetchRecentSparkTexts(supabase, userId)
-  return { recentTexts, avoid: avoidBlock(recentTexts) }
+  const [recentTexts, resonance, identity] = await Promise.all([
+    fetchRecentSparkTexts(supabase, userId),
+    loadResonance(supabase, userId),
+    identityBlock(supabase, userId),
+  ])
+  return { recentTexts, avoid: avoidBlock(recentTexts), resonance, identity }
 }
 
 function expiresAt(hours: number): string {
@@ -94,7 +169,7 @@ function expiresAt(hours: number): string {
 /** The thing today's question is about, flattened so one prompt can take
  *  a project, a note or an article without three shapes of prompt. */
 interface Subject {
-  kind: MullSourceKind
+  kind: MullSubjectKind
   id: string
   projectId: string | null
   title: string
@@ -248,12 +323,102 @@ async function articleSubject(supabase: SupabaseClient, userId: string): Promise
 }
 
 /**
+ * The strongest subject there is: something said more than once.
+ *
+ * `joints` is already mined weekly for composites (joint-miner.ts) and was
+ * read by nothing else. It is the corpus answering "what does this person
+ * keep coming back to" — clustered from their own fragments, quoted, with
+ * an occurrence count. A blind spot found on a recurrence is not "what
+ * does this project assume"; it is "you have said this four times and
+ * never made the thing it implies", which is the shortest path there is to
+ * a revelation.
+ *
+ * Preferred over recency everywhere: it gets the largest ranking bonus,
+ * and the most-repeated joint that hasn't been asked about recently wins.
+ */
+async function jointSubject(supabase: SupabaseClient, userId: string): Promise<Subject | null> {
+  const { data } = await supabase
+    .from('joints')
+    .select('id, text, fragment_ids, occurrence_count, last_seen_at')
+    .eq('user_id', userId)
+    .order('occurrence_count', { ascending: false })
+    .limit(10)
+
+  const usable = (data ?? []).filter((j: any) => typeof j.text === 'string' && j.text.trim().length > 0)
+  if (usable.length === 0) return null
+
+  // Rotate: the top joint every week is the same joint every week.
+  const pick: any = usable[Math.floor(Math.random() * Math.min(usable.length, 4))]
+
+  // The joint sentence is a summary; the fragments are the user's actual
+  // words. Both go in, because the question has to quote them and not it.
+  const { data: fragments } = await supabase
+    .from('fragments')
+    .select('text, project_id, projects(title)')
+    .eq('user_id', userId)
+    .in('id', (pick.fragment_ids ?? []).slice(0, 8))
+
+  const lines = (fragments ?? []).map((f: any) => `  - "${f.text}" (${f.projects?.title ?? 'unfiled'})`)
+  const block = [
+    `Something they keep coming back to, said ${pick.occurrence_count ?? lines.length} times across different projects:`,
+    `  "${pick.text}"`,
+    lines.length > 0 ? `In their own words each time:\n${lines.join('\n')}` : null,
+  ].filter(Boolean).join('\n')
+
+  return {
+    kind: 'joint',
+    id: pick.id,
+    // Attribute to whichever project the recurrence touched most recently,
+    // so an answer files itself somewhere rather than floating.
+    projectId: (fragments ?? [])[0]?.project_id ?? null,
+    title: pick.text,
+    block,
+    ownWords: `${pick.text} ${(fragments ?? []).map((f: any) => f.text).join(' ')}`,
+  }
+}
+
+/**
+ * Who they are, as distinct from what they're doing.
+ *
+ * Lists are identity signals, not consumption logs — the films, books and
+ * records someone chose say something their project notes never will. They
+ * are never the subject and never the thing quoted (they carry no words of
+ * the user's own). They set the register: a question framed for someone
+ * whose list is Herzog and Bach lands differently from the same question
+ * framed for someone else, and a question that reads as though the app has
+ * never met you doesn't sit for three days.
+ */
+async function identityBlock(supabase: SupabaseClient, userId: string): Promise<string> {
+  const { data } = await supabase
+    .from('list_items')
+    .select('content, user_rating, lists(title, type)')
+    .eq('user_id', userId)
+    .in('status', ['active', 'completed'])
+    .order('created_at', { ascending: false })
+    .limit(40)
+
+  const items = (data ?? []).filter((i: any) => typeof i.content === 'string' && i.content.trim())
+  if (items.length === 0) return ''
+
+  const loved = items.filter((i: any) => (i.user_rating ?? 0) >= 4)
+  const shown = (loved.length >= 5 ? loved : items).slice(0, 18)
+
+  return `
+Who they are, from what they've chosen to watch, read and listen to (context
+only — never the subject of a question, and never quoted, since none of these
+are their words):
+${shown.map((i: any) => `  - ${i.content}${i.lists?.type ? ` (${i.lists.type})` : ''}`).join('\n')}
+`
+}
+
+/**
  * Everything today could be about. All of them, not one — the whole point
  * of asking about three subjects in a single call is that two of them can
  * come back with nothing and the run still produces a question.
  */
 async function gatherSubjects(supabase: SupabaseClient, userId: string): Promise<Subject[]> {
   const found = await Promise.all([
+    jointSubject(supabase, userId),
     projectSubject(supabase, userId),
     memorySubject(supabase, userId),
     articleSubject(supabase, userId),
@@ -284,13 +449,26 @@ async function nameBlindSpots(subjects: Subject[], echo: EchoContext): Promise<B
   const prompt = `Here are ${subjects.length} things from the user's own corpus.
 
 ${blocks}
-
+${echo.identity}
 For EACH one, two jobs.
 
 1. Name the BLIND SPOT: the one thing it takes for granted and has never
 examined. Not a missing next step — a step is work, not a blind spot. The
 assumption underneath it that would change what they make if it turned out to
 be wrong. One plain sentence.
+
+The four shapes worth looking for, in rough order of how often they end in
+someone deciding to make something:
+  - A TENSION they've carried for months without noticing. Two things they
+    keep saying that can't both be true. Naming it is the whole job; the way
+    out of it is usually the thing they make.
+  - A CONSTRAINT they think is fixed and isn't. They've never tested it
+    because they've never said it out loud.
+  - A RULE visible across several of these at once, which none of them is
+    purely made of yet.
+  - A THING THEY KEEP MENTIONING AND HAVE NEVER STARTED. If the subject is
+    something they've said more than once, this is almost always the one:
+    what do they believe it would have to be before they'd begin?
 
 2. Write a SEARCH QUERY for it. This is the part that matters and it is NOT the
 blind spot reworded. Take out every word that belongs to that subject — its
@@ -412,6 +590,10 @@ interface Drafted {
   pairing: Pairing
   text: string
   quote: string
+  /** What the user would do differently. Validated, not displayed — a
+   *  question that can't name one is an observation with a question mark
+   *  on the end. */
+  stake: string
 }
 
 /**
@@ -432,42 +614,68 @@ ${CONNECTOR_LABEL[p.connector.kind]} — "${p.connector.title}":
 "${p.connector.text.slice(0, 1200)}"`).join('\n\n')
 
   const prompt = `${blocks}
-
+${echo.identity}
 Each note above was NOT picked because it looks like the project it sits with.
 It was found by searching for that pair's unexamined question, in plain words.
 So the link is already there before you write anything.
 
-For each pair, write ONE thing for them to carry around. At most three
-sentences, ending in a question they could answer out loud in thirty seconds.
+For each pair, write ONE thing for them to carry around.
+
+WHAT THIS IS FOR. They read it on the way past and do nothing. It sits for
+three days. On a walk, on the fourth day, they work out the answer — and the
+answer leaves them with something to make. You are not naming that thing.
+Naming it is the one move that guarantees they don't get there themselves,
+and getting there themselves is the entire point. You stop one step short.
+
+The band it has to land in, and this is the hard part:
+- TOO EASY is a quiz. If they can answer it in five seconds it's gone in five
+  seconds and nothing happens for three days.
+- TOO HARD is a riddle. If there's no answer in them at all they read it,
+  feel nothing, and it expires.
+- RIGHT is when they know they have the answer and can't quite reach it. That
+  irritation is the whole mechanism. Aim there.
 
 What makes it good:
 - The note is the LENS. The question should be one they could only ask because
   that note exists.
 - Use the note's own concrete detail. Not "your recent reflections on family" —
-  say the thing it actually said.
+  say the thing it actually said. Their words, not a summary of their words:
+  they can dismiss you, they can't dismiss themselves from eight months ago.
+- Specific enough to be WRONG. A question they could answer "no, it's not that
+  at all" to is doing its job — that's a revelation too. A question that can't
+  be wrong ("what's this really about?") is inert.
 - Do NOT explain the link. Put the two things side by side and ask the
   question. If you write "which mirrors" or "this connects to" or "both are
   about", you have explained it, and explaining it is the tell that there was
   nothing there.
 - Do not resolve it. No advice, no "you could try". They answer, not you.
+- At most three sentences, ending in the question.
 - The pairs get read days apart, so they must not be two versions of the same
   question. If the second one would be, return null for it.
 - If the only honest link in a pair is that the two things are broadly about
   the same topic, there is no link. Return null for that pair.
 
-BAD — a resemblance dressed up, and explained to death:
+Then, for each, say what CHANGES depending on their answer. Not what they'd
+understand — what they'd DO. "They cut chapters nine to twelve" is a stake.
+"They'd have a deeper sense of their themes" is not a stake, it's a way of
+saying there isn't one. If you can't write a real one, the question isn't
+ready: return null for that pair.
+${echo.resonance}
+BAD — a resemblance dressed up, explained to death, and nothing turns on it:
 "You love how Tame Impala treats synths as machines that generate ideas on their
 own. Does the water dancing scene in your book do that same work for the story?"
 
-GOOD — the note does the work, the question is theirs:
+GOOD — the note does the work, the question is theirs, and something happens
+either way:
 "You wrote that you've probably got ten more proper conversations left with your
 dad, and you're spending them on the garden. The book swaps Lena out in chapter
 nine and nobody left in it notices. What are those chapters for?"
+  stake: "If the answer is nothing, chapters nine to twelve come out."
 ${echo.avoid}
 ${PLAIN_ENGLISH_RULES}
 
 Respond with JSON only:
-{ "pairs": [ { "n": 1, "spark": "..." | null, "quote": "the words from that pair's note you used, copied out exactly" }, ... ] }`
+{ "pairs": [ { "n": 1, "spark": "..." | null, "quote": "the words from that pair's note you used, copied out exactly", "stake": "what they would actually DO differently" }, ... ] }`
 
   try {
     const parsed = JSON.parse(await generateText(prompt, { responseFormat: 'json' }))
@@ -477,7 +685,8 @@ Respond with JSON only:
       const pairing = pairings[Number(row?.n) - 1]
       const text = typeof row?.spark === 'string' ? row.spark.trim() : ''
       const quote = typeof row?.quote === 'string' ? row.quote.trim() : ''
-      if (pairing && text && quote) out.push({ pairing, text, quote })
+      const stake = typeof row?.stake === 'string' ? row.stake.trim() : ''
+      if (pairing && text && quote && stake) out.push({ pairing, text, quote, stake })
     }
     return out
   } catch (e) {
@@ -528,6 +737,7 @@ export async function generateMull(
     const reason = rejectionReason({
       text: draft.text,
       quote: draft.quote,
+      stake: draft.stake,
       connectorText: draft.pairing.connector.text,
     })
     if (reason) {

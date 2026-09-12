@@ -6,6 +6,7 @@ import {
   usesQuote,
   rejectionReason,
   rankPairs,
+  stakeIsHollow,
   CONNECTOR_FLOOR,
   CONNECTOR_CEILING,
   type MullCandidate,
@@ -107,6 +108,7 @@ describe('rejectionReason', () => {
   const good = {
     text: 'You wrote that you have ten more proper conversations with dad and you spend them on the greenhouse. The book swaps Lena out in chapter nine and nobody notices. What are those chapters for?',
     quote: 'ten more proper conversations with dad',
+    stake: 'If the answer is nothing, chapters nine to twelve come out.',
     connectorText: 'Ten more proper conversations with dad, and we spend them on the greenhouse.',
   }
 
@@ -131,6 +133,11 @@ describe('rejectionReason', () => {
   it('rejects an essay', () => {
     const text = `${good.quote} ${'padding word '.repeat(70)}?`
     expect(rejectionReason({ ...good, text })).toBe('too long to carry around')
+  })
+
+  it('rejects a question nothing turns on', () => {
+    expect(rejectionReason({ ...good, stake: 'It would give them a deeper sense of their themes.' }))
+      .toMatch(/nothing changes either way/)
   })
 
   it('rejects consultant voice', () => {
@@ -183,5 +190,23 @@ describe('rankPairs', () => {
       pair({ subjectId: 'c', connectorId: 'c3' }),
     ])
     expect(ranked).toHaveLength(2)
+  })
+})
+
+describe('stakeIsHollow', () => {
+  it('accepts a stake that names something they would do', () => {
+    expect(stakeIsHollow('If the answer is nothing, chapters nine to twelve come out.')).toBe(false)
+    expect(stakeIsHollow('They stop buying the third synth and finish the one mix.')).toBe(false)
+  })
+
+  it('rejects the ways of saying there is no stake', () => {
+    expect(stakeIsHollow('It deepens their understanding of the work.')).toBe(true)
+    expect(stakeIsHollow('They might reconsider how the book is structured.')).toBe(true)
+    expect(stakeIsHollow('Changes how they think about the project.')).toBe(true)
+    expect(stakeIsHollow('Nothing concrete.')).toBe(true)
+  })
+
+  it('rejects a stake too short to be one', () => {
+    expect(stakeIsHollow('Clarity.')).toBe(true)
   })
 })
