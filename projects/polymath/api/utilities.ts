@@ -2760,28 +2760,43 @@ async function handleExecutionSparks(req: VercelRequest, res: VercelResponse) {
     const userId = getCronUserId(req)
     if (!userId) return res.status(401).json({ error: 'Unauthorized' })
 
+    // ?explain=1 runs the whole pipeline and returns why it decided what it
+    // decided, without writing a row. Silence is the designed outcome of
+    // four separate steps and they are indistinguishable from outside, so
+    // "the channel is quiet" was an unanswerable bug report until this.
+    //
+    // It runs BEFORE the standing-question check on purpose. That check is
+    // the normal reason a bake does nothing, so putting explain after it
+    // made the trace unreachable in exactly the situation you need it:
+    // something is standing, you want to know why nothing better replaced
+    // it. Explain writes nothing, so there is no reason for it to defer.
+    const explain = req.query.explain === '1' || req.query.explain === 'true'
+
     // A question that's still standing is not replaced by a fresh one. It
     // now lives for days precisely so it can sit unanswered, and baking over
     // it every morning would take it away on exactly the day the answer was
     // due to arrive.
     const { data: standing } = await supabase
       .from('sparks')
-      .select('id')
+      .select('id, type, text, created_at, expires_at')
       .eq('user_id', userId)
       .is('answered_at', null)
       .gt('expires_at', new Date().toISOString())
       .limit(1)
 
-    if (standing && standing.length > 0) {
+    const isStanding = !!standing && standing.length > 0
+    if (isStanding && !explain) {
       return res.status(200).json({ baked: false, reason: 'question still standing' })
     }
 
-    // ?explain=1 runs the whole pipeline and returns why it decided what it
-    // decided, without writing a row. Silence is the designed outcome of
-    // four separate steps and they are indistinguishable from outside, so
-    // "the channel is quiet" was an unanswerable bug report until this.
-    const explain = req.query.explain === '1' || req.query.explain === 'true'
     const trace: string[] = []
+    if (isStanding) {
+      const s: any = standing![0]
+      trace.push(
+        `note: a ${s.type} question is standing (baked ${s.created_at}, expires ${s.expires_at}) — ` +
+        'a real bake would stop here and write nothing; this run continues so you can see why',
+      )
+    }
     const baked = await bakeMull(supabase, userId, undefined, trace)
 
     if (explain) {
