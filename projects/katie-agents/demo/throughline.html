@@ -1,0 +1,434 @@
+<title>Throughline</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,400;1,9..144,500&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+  :root{
+    --paper:#E6E8E1; --surface:#F3F4EF; --surface-raised:#FFFFFF;
+    --ink:#172420; --ink-soft:#57645C; --ink-faint:#7C887F;
+    --line:#CBD0C6; --line-soft:#DADDD5;
+    --accent:#2B5D5A; --accent-soft:#DCE6E3;
+    --flag-audit:#8A5A10; --flag-audit-bg:#F1E3C6;
+    --flag-new:#A6431F; --flag-quiet:#56636E;
+    --shadow:0 1px 2px rgba(23,36,32,.06),0 4px 14px rgba(23,36,32,.07);
+    --font-display:'Fraunces',Georgia,'Times New Roman',serif;
+    --font-body:'IBM Plex Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    --font-mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --paper:#121815; --surface:#1A2320; --surface-raised:#212C28;
+      --ink:#E7EAE3; --ink-soft:#A7B2AA; --ink-faint:#7C887F;
+      --line:#2C3733; --line-soft:#23302B;
+      --accent:#6BAFA8; --accent-soft:#223432;
+      --flag-audit:#D7A94C; --flag-audit-bg:#3A2F16;
+      --flag-new:#E0794E; --flag-quiet:#93A4AF;
+      --shadow:0 1px 2px rgba(0,0,0,.35),0 8px 24px rgba(0,0,0,.4);
+    }
+  }
+  :root[data-theme="dark"]{
+    --paper:#121815; --surface:#1A2320; --surface-raised:#212C28;
+    --ink:#E7EAE3; --ink-soft:#A7B2AA; --ink-faint:#7C887F;
+    --line:#2C3733; --line-soft:#23302B;
+    --accent:#6BAFA8; --accent-soft:#223432;
+    --flag-audit:#D7A94C; --flag-audit-bg:#3A2F16;
+    --flag-new:#E0794E; --flag-quiet:#93A4AF;
+    --shadow:0 1px 2px rgba(0,0,0,.35),0 8px 24px rgba(0,0,0,.4);
+  }
+
+  *{box-sizing:border-box;}
+  body{
+    background:var(--paper); color:var(--ink);
+    font-family:var(--font-body); font-size:16px; line-height:1.55;
+    padding-inline:20px;
+    background-image:repeating-linear-gradient(var(--paper),var(--paper) 27px,var(--line-soft) 28px);
+    background-attachment:local;
+  }
+  @media (prefers-reduced-motion: reduce){ *{transition:none!important; animation:none!important;} }
+
+  a{color:var(--accent);}
+  h1,h2,h3,h4{font-family:var(--font-display); text-wrap:balance; margin:0; color:var(--ink);}
+  p{margin:0;}
+  ::selection{background:var(--accent); color:var(--surface-raised);}
+
+  .wrap{max-width:760px; margin-inline:auto; padding-block:3rem 4rem; display:flex; flex-direction:column; gap:3rem;}
+
+  /* ---------- masthead ---------- */
+  .masthead{display:flex; flex-direction:column; gap:.9rem;}
+  .masthead__kicker{
+    font-family:var(--font-mono); font-size:.72rem; letter-spacing:.11em; text-transform:uppercase;
+    color:var(--ink-faint); display:flex; flex-wrap:wrap; gap:.5em 1em; align-items:baseline;
+  }
+  .masthead__kicker .dot{color:var(--line);}
+  .masthead h1{font-size:clamp(2.1rem,1.6rem + 2vw,3rem); font-weight:600; letter-spacing:-.01em;}
+  .masthead__tag{font-size:1.05rem; color:var(--ink-soft); max-width:52ch;}
+  .masthead__disclosure{
+    font-family:var(--font-mono); font-size:.72rem; letter-spacing:.03em; color:var(--flag-quiet);
+    border:1px dashed var(--line); border-radius:3px; padding:.5em .8em; width:fit-content;
+  }
+
+  /* ---------- section headers ---------- */
+  .section-head{display:flex; flex-direction:column; gap:.35rem; margin-bottom:1.4rem;}
+  .section-head h2{font-size:1.5rem; font-weight:600;}
+  .section-head p{color:var(--ink-soft); font-size:.95rem; max-width:56ch;}
+
+  /* ---------- finding cards ---------- */
+  .findings{display:flex; flex-direction:column; gap:1.1rem;}
+  .finding{
+    background:var(--surface-raised); border:1px solid var(--line); border-radius:10px;
+    padding:1.5rem 1.6rem; box-shadow:var(--shadow); display:flex; flex-direction:column; gap:1rem;
+  }
+  .finding__head{display:flex; gap:1rem; align-items:baseline;}
+  .finding__rank{
+    font-family:var(--font-display); font-weight:300; font-size:1.9rem; color:var(--line);
+    font-variant-numeric:tabular-nums; line-height:1; flex-shrink:0; width:1.6ch;
+  }
+  .finding__title{font-size:1.2rem; font-weight:600; line-height:1.3;}
+  .finding__meta{
+    font-family:var(--font-mono); font-size:.78rem; color:var(--ink-faint);
+    margin-top:.35rem; letter-spacing:.01em;
+  }
+  .finding__body{color:var(--ink-soft); font-size:.98rem; max-width:64ch;}
+
+  .flag-badge{
+    display:inline-flex; align-items:center; gap:.4em; width:fit-content;
+    font-family:var(--font-mono); font-size:.72rem; letter-spacing:.04em; text-transform:uppercase;
+    color:var(--flag-audit); background:var(--flag-audit-bg); border-radius:4px; padding:.35em .7em;
+  }
+  .flag-badge::before{content:"⚑";}
+
+  /* timeline (dot-join finding) */
+  .timeline{display:flex; align-items:center; gap:.75rem; padding-block:.4rem;}
+  .timeline__point{display:flex; flex-direction:column; gap:.15rem; flex-shrink:0;}
+  .timeline__point .who{font-weight:600; font-size:.92rem;}
+  .timeline__point .org{font-size:.82rem; color:var(--ink-soft);}
+  .timeline__point .when{font-family:var(--font-mono); font-size:.75rem; color:var(--ink-faint);}
+  .timeline__point.end{text-align:right; align-items:flex-end;}
+  .timeline__span{flex:1; min-width:2.5rem; position:relative; height:1px; background:var(--line);}
+  .timeline__gap{
+    position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+    background:var(--surface-raised); border:1px solid var(--line); border-radius:999px;
+    padding:.3em .8em; font-family:var(--font-mono); font-size:.75rem; color:var(--flag-new); white-space:nowrap;
+  }
+  .timeline__dot{position:absolute; top:50%; transform:translate(-50%,-50%); width:7px; height:7px; border-radius:50%; background:var(--accent);}
+  .timeline__dot.s{left:0;} .timeline__dot.e{left:100%;}
+
+  /* convergence chips */
+  .chiprow{display:flex; flex-wrap:wrap; gap:.5rem;}
+  .chip{
+    display:flex; flex-direction:column; padding:.4em .75em; border:1px solid var(--line-soft);
+    background:var(--surface); border-radius:7px; font-size:.85rem;
+  }
+  .chip strong{font-weight:600;}
+  .chip small{font-family:var(--font-mono); font-size:.68rem; color:var(--ink-faint); text-transform:uppercase; letter-spacing:.04em;}
+
+  /* first-voice leadline */
+  .leadline{display:flex; flex-wrap:wrap; align-items:flex-start; gap:1rem; padding-block:.3rem;}
+  .leadline__origin{
+    display:flex; flex-direction:column; gap:.15rem; padding-right:1rem; border-right:2px solid var(--accent);
+    min-width:11rem;
+  }
+  .leadline__origin strong{font-size:.95rem;}
+  .leadline__origin span{font-family:var(--font-mono); font-size:.75rem; color:var(--ink-faint);}
+  .leadline__gap{
+    align-self:center; font-family:var(--font-mono); font-size:.75rem; color:var(--flag-new);
+    white-space:nowrap; padding-top:.1rem;
+  }
+  .leadline__echoes{display:flex; flex-direction:column; gap:.4rem; flex:1; min-width:14rem;}
+  .leadline__echoes span{font-size:.85rem; color:var(--ink-soft);}
+  .leadline__echoes span b{color:var(--ink); font-weight:600;}
+  .leadline__echoes .indep{color:var(--accent); font-style:italic;}
+
+  /* evidence disclosure */
+  details.evidence{border-top:1px solid var(--line-soft); padding-top:.85rem;}
+  details.evidence summary{
+    cursor:pointer; font-family:var(--font-mono); font-size:.78rem; letter-spacing:.03em;
+    color:var(--accent); list-style:none; display:flex; align-items:center; gap:.4em; user-select:none;
+  }
+  details.evidence summary::-webkit-details-marker{display:none;}
+  details.evidence summary::before{content:"▸"; display:inline-block; transition:transform .15s ease;}
+  details.evidence[open] summary::before{transform:rotate(90deg);}
+  .evidence__list{list-style:none; margin:.9rem 0 0; padding:0; display:flex; flex-direction:column; gap:.9rem;}
+  .evidence__list li{display:grid; grid-template-columns:5.2rem 1fr; gap:.9rem;}
+  .evidence__list time{font-family:var(--font-mono); font-size:.74rem; color:var(--ink-faint); padding-top:.15rem;}
+  .evidence__who{font-size:.8rem; color:var(--ink-soft); font-weight:600; margin-bottom:.2rem;}
+  .evidence__quote{
+    font-family:var(--font-display); font-style:italic; font-size:.95rem; color:var(--ink);
+    border-left:2px solid var(--line); padding-left:.7rem;
+  }
+
+  /* ---------- suppressed ---------- */
+  .suppressed{
+    display:flex; flex-direction:column; gap:.9rem; border:1px dashed var(--line); border-radius:10px;
+    padding:1.4rem 1.6rem; background:var(--surface);
+  }
+  .suppressed h2{font-size:1.05rem; font-weight:600; color:var(--ink-soft);}
+  .suppressed__item{display:flex; flex-direction:column; gap:.2rem;}
+  .suppressed__item h4{font-size:.95rem; font-weight:600; color:var(--ink-soft); font-family:var(--font-body);}
+  .suppressed__item p{font-size:.88rem; color:var(--ink-faint);}
+  .suppressed__item .why{font-family:var(--font-mono); font-size:.72rem; color:var(--flag-quiet);}
+
+  /* ---------- meeting prep ---------- */
+  .prep__list{list-style:none; margin:0; padding:0; display:flex; flex-direction:column;}
+  .prep__list li{
+    display:grid; grid-template-columns:5.5rem 1fr; gap:1.1rem; padding-block:1rem;
+    border-top:1px solid var(--line-soft);
+  }
+  .prep__list li:first-child{border-top:none;}
+  .prep__when{display:flex; flex-direction:column; font-family:var(--font-mono); font-size:.78rem;}
+  .prep__when .day{font-weight:600; color:var(--ink); font-size:.85rem;}
+  .prep__when .date{color:var(--ink-soft);}
+  .prep__when .time{color:var(--ink-faint); font-variant-numeric:tabular-nums;}
+  .prep__who{display:flex; flex-wrap:wrap; align-items:baseline; gap:.5em; margin-bottom:.3rem;}
+  .prep__who strong{font-size:1rem;}
+  .prep__who span{font-size:.85rem; color:var(--ink-soft);}
+  .prep__carry{font-size:.92rem; color:var(--ink-soft); max-width:56ch;}
+  .prep__carry b{color:var(--ink); font-weight:600; font-style:normal;}
+
+  /* ---------- footer ledger ---------- */
+  .ledger{display:flex; flex-direction:column; gap:1rem; padding-top:1rem; border-top:1px solid var(--line);}
+  .ledger__stats{
+    display:flex; flex-wrap:wrap; gap:1.6rem; font-family:var(--font-mono);
+  }
+  .ledger__stat{display:flex; flex-direction:column; gap:.1rem;}
+  .ledger__stat .n{font-size:1.3rem; font-weight:600; color:var(--accent); font-variant-numeric:tabular-nums;}
+  .ledger__stat .l{font-size:.68rem; text-transform:uppercase; letter-spacing:.06em; color:var(--ink-faint);}
+  .ledger__note{font-size:.8rem; color:var(--ink-faint); max-width:60ch;}
+  .ledger__method{font-size:.85rem; color:var(--ink-soft); max-width:62ch; font-style:italic; font-family:var(--font-display);}
+
+  a:focus-visible, summary:focus-visible{outline:2px solid var(--accent); outline-offset:3px; border-radius:3px;}
+
+  @media (max-width:560px){
+    .finding{padding:1.2rem 1.1rem;}
+    .timeline{flex-direction:column; align-items:stretch;}
+    .timeline__point.end{text-align:left; align-items:flex-start;}
+    .timeline__span{display:none;}
+    .evidence__list li{grid-template-columns:1fr;}
+    .evidence__list time{padding-top:0;}
+    .prep__list li{grid-template-columns:1fr; gap:.3rem;}
+    .leadline__origin{border-right:none; border-left:2px solid var(--accent); padding-left:.8rem; padding-right:0;}
+  }
+</style>
+
+<div class="wrap">
+
+  <header class="masthead">
+    <div class="masthead__kicker">
+      <span>SPECIALTY &amp; LONDON MARKET — BUSINESS DEVELOPMENT</span>
+      <span class="dot">·</span>
+      <span>MON 14 SEP 2026</span>
+    </div>
+    <h1>Throughline</h1>
+    <p class="masthead__tag">Reads the notes you already write and the calendar you already keep. Says nothing most weeks. When two things you were told months apart belong together, it tells you before the meeting, not after.</p>
+    <p class="masthead__disclosure">Demo — built on a fictitious sample corpus (200 notes, six months, 22 invented accounts). No real client data.</p>
+  </header>
+
+  <section class="findings">
+    <div class="section-head">
+      <h2>This week</h2>
+      <p>Three findings, ranked. Most weeks there are fewer. Every quote below is verbatim from a dated note — expand any finding to check it yourself.</p>
+    </div>
+
+    <article class="finding">
+      <div class="finding__head">
+        <span class="finding__rank">01</span>
+        <div>
+          <h3 class="finding__title">Duraflex has been asking since March. Copperfield can answer it.</h3>
+          <p class="finding__meta">148 days apart · never mentioned in the same note · introduced 20 Aug</p>
+        </div>
+      </div>
+      <p class="finding__body">Graham Tull described a £2.8m programme nobody would price properly. Ed Maslin, five months later, described the capability that prices exactly it. Neither used the same word for it — he said <em>battery storage</em>, Ed said <em>BESS</em> — which is most of why nobody had joined it before.</p>
+      <div class="timeline">
+        <div class="timeline__point start">
+          <span class="who">Graham Tull</span>
+          <span class="org">Duraflex Industries</span>
+          <span class="when">24 MAR</span>
+        </div>
+        <div class="timeline__span">
+          <span class="timeline__dot s"></span>
+          <span class="timeline__gap">148 days</span>
+          <span class="timeline__dot e"></span>
+        </div>
+        <div class="timeline__point end">
+          <span class="who">Ed Maslin</span>
+          <span class="org">Copperfield Underwriting</span>
+          <span class="when">19 AUG</span>
+        </div>
+      </div>
+      <details class="evidence">
+        <summary>Show the evidence — 5 notes</summary>
+        <ul class="evidence__list">
+          <li><time>24 Mar</time><div><div class="evidence__who">Graham Tull · Duraflex Industries</div><blockquote class="evidence__quote">I have four sites with battery storage and I cannot get anyone to write it properly at a sane price.</blockquote></div></li>
+          <li><time>24 Mar</time><div><div class="evidence__who">Graham Tull · Duraflex Industries</div><blockquote class="evidence__quote">If anyone will write this properly I'll move the whole programme to them. The whole thing.</blockquote></div></li>
+          <li><time>19 Aug</time><div><div class="evidence__who">Ed Maslin · Copperfield Underwriting</div><blockquote class="evidence__quote">We've hired people who actually know what they're looking at. £25m line secured.</blockquote></div></li>
+          <li><time>19 Aug</time><div><div class="evidence__who">Ed Maslin · Copperfield Underwriting</div><blockquote class="evidence__quote">We have no relationships with the brokers who touch this business and we don't know who the buyers are. We could sit here with a beautiful book and write nothing.</blockquote></div></li>
+          <li><time>21 Aug</time><div><div class="evidence__who">Katie, note to self</div><blockquote class="evidence__quote">Graham told me his problem on 24 March. Ed told me his in a form I could act on five months later… I'd stopped thinking about March.</blockquote></div></li>
+        </ul>
+      </details>
+    </article>
+
+    <article class="finding">
+      <div class="finding__head">
+        <span class="finding__rank">02</span>
+        <div>
+          <h3 class="finding__title">Five kinds of client, one unpriced cost</h3>
+          <p class="finding__meta">7 organisations · 4 months · no shared vocabulary</p>
+        </div>
+      </div>
+      <p class="finding__body">A carrier, an MGA, a mutual, a broker and a capital provider have each separately said that auditing delegated authority costs more than anyone admits — in their own words, months apart. None of them knows the others said it. Managed Services asked for exactly this kind of pattern in May and never got an answer.</p>
+      <div class="chiprow">
+        <span class="chip"><strong>Ravensbourne</strong><small>Carrier</small></span>
+        <span class="chip"><strong>Bellwether</strong><small>MGA</small></span>
+        <span class="chip"><strong>Castleford</strong><small>Mutual</small></span>
+        <span class="chip"><strong>Aldgate &amp; Vane</strong><small>Broker</small></span>
+        <span class="chip"><strong>Lattice Capital</strong><small>Capital</small></span>
+        <span class="chip"><strong>Pallister</strong><small>MGA — building a fix</small></span>
+      </div>
+      <details class="evidence">
+        <summary>Show the evidence — 7 notes</summary>
+        <ul class="evidence__list">
+          <li><time>6 Apr</time><div><div class="evidence__who">Nadia Hoyle · Bellwether MGA</div><blockquote class="evidence__quote">Three sets of homework. Same business, same underwriters.</blockquote></div></li>
+          <li><time>28 Apr</time><div><div class="evidence__who">Ines Delacroix · Pallister Speciality</div><blockquote class="evidence__quote">£180,000 proving we're allowed to do the thing we were already doing.</blockquote></div></li>
+          <li><time>3 Jun</time><div><div class="evidence__who">Marcus Deyn · Ravensbourne Underwriting</div><blockquote class="evidence__quote">A seven figure sum a year to be able to say we looked.</blockquote></div></li>
+          <li><time>16 Jun</time><div><div class="evidence__who">Derek Ainsworth · Castleford Mutual</div><blockquote class="evidence__quote">Forty binders and three people looking after them.</blockquote></div></li>
+          <li><time>8 Jun</time><div><div class="evidence__who">Jonah Pike · Lattice Capital</div><blockquote class="evidence__quote">We can't diligence forty coverholders.</blockquote></div></li>
+          <li><time>6 Jul</time><div><div class="evidence__who">Charlotte Pym · Aldgate &amp; Vane</div><blockquote class="evidence__quote">Same coverholder. Three times over. My team spend more time on that than on placing.</blockquote></div></li>
+          <li><time>7 Sep</time><div><div class="evidence__who">Fern Achebe · Bellwether MGA (new CUO)</div><blockquote class="evidence__quote">Four carriers and four audit regimes and I've been here six weeks and it's already what I complain about most.</blockquote></div></li>
+        </ul>
+      </details>
+    </article>
+
+    <article class="finding">
+      <div class="finding__head">
+        <span class="finding__rank">03</span>
+        <div>
+          <h3 class="finding__title">Klaus called this in April. Four people have said it back to him since.</h3>
+          <p class="finding__meta">Led by 64 days · echoed by 3 clients · reached independently inside the firm</p>
+        </div>
+      </div>
+      <p class="finding__body">Klaus Beringer named a casualty severity problem in April that almost nobody else was naming. Since then, three clients have described the same thing as their own observation — and a New York partner reached the identical conclusion independently, with verdict data, and has never met him.</p>
+      <div class="leadline">
+        <div class="leadline__origin">
+          <strong>Klaus Beringer</strong>
+          <span>Trans-Meridian Re · 21 Apr</span>
+        </div>
+        <div class="leadline__gap">64 days →</div>
+        <div class="leadline__echoes">
+          <span><b>Derek Ainsworth</b> · Castleford · 16 Jun — "the lawyers have got more organised"</span>
+          <span><b>Ivan Kroll</b> · Pemberton · 24 Jun — "the markets aren't explaining it"</span>
+          <span><b>Giles Overton</b> · Thackeray · 2 Jul, 11 Aug — thinks it's his own book</span>
+          <span class="indep"><b>Hal Brennan</b> · internal, New York · 13 Jul — arrived independently, with data</span>
+        </div>
+      </div>
+      <details class="evidence">
+        <summary>Show the evidence — 5 notes</summary>
+        <ul class="evidence__list">
+          <li><time>21 Apr</time><div><div class="evidence__who">Klaus Beringer · Trans-Meridian Re</div><blockquote class="evidence__quote">This will show up at one-one. Not this one-one, the one after. Almost nobody is saying this.</blockquote></div></li>
+          <li><time>16 Jun</time><div><div class="evidence__who">Derek Ainsworth · Castleford Mutual</div><blockquote class="evidence__quote">The lawyers have got more organised.</blockquote></div></li>
+          <li><time>24 Jun</time><div><div class="evidence__who">Ivan Kroll · Pemberton Broking</div><blockquote class="evidence__quote">The markets aren't explaining it, they're just asking for more.</blockquote></div></li>
+          <li><time>11 Aug</time><div><div class="evidence__who">Giles Overton · Thackeray Syndicate 2884</div><blockquote class="evidence__quote">The direction is one way and it's the same direction every quarter.</blockquote></div></li>
+          <li><time>13 Jul</time><div><div class="evidence__who">Hal Brennan · internal, New York</div><blockquote class="evidence__quote">The severity numbers out of the US right now are not something the London market has priced.</blockquote></div></li>
+        </ul>
+      </details>
+    </article>
+
+    <article class="finding">
+      <div class="finding__head">
+        <span class="finding__rank">＋</span>
+        <div>
+          <h3 class="finding__title">Harrow Point wants exactly this. It can't be sold to them.</h3>
+          <p class="finding__meta">Flagged, not dropped — with a compliant alternative</p>
+        </div>
+      </div>
+      <span class="flag-badge">Audit client — advisory restricted</span>
+      <p class="finding__body">Ana Castellane asked directly on 1 Sep whether the firm could test her casualty severity assumption. Actuarial built precisely that diagnostic in March and has been looking for clients ever since. Harrow Point is a statutory audit client — most advisory work needs audit-committee pre-approval that in practice never happens. Two non-audit clients have asked for the same thing: Kestrel Re, who will pay for it, and Castleford Mutual.</p>
+      <details class="evidence">
+        <summary>Show the evidence — 4 notes</summary>
+        <ul class="evidence__list">
+          <li><time>24 Mar</time><div><div class="evidence__who">Saskia Boateng · Actuarial (internal)</div><blockquote class="evidence__quote">Two engagements so far, both via the audit relationship. I don't meet these people. You do.</blockquote></div></li>
+          <li><time>1 Sep</time><div><div class="evidence__who">Ana Castellane · Harrow Point Speciality</div><blockquote class="evidence__quote">We've assumed three points of claims inflation. If it's eight we've got a different plan.</blockquote></div></li>
+          <li><time>27 Aug</time><div><div class="evidence__who">Derek Ainsworth · Castleford Mutual</div><blockquote class="evidence__quote">Asked whether anyone could test his assumptions rather than just worry at him.</blockquote></div></li>
+          <li><time>9 Sep</time><div><div class="evidence__who">Sofia Marchetti · Kestrel Re</div><blockquote class="evidence__quote">Wants her own assumptions tested against external data before she writes a line — and will pay.</blockquote></div></li>
+        </ul>
+      </details>
+    </article>
+  </section>
+
+  <section class="suppressed">
+    <h2>Also true this week. Not shown as a finding.</h2>
+    <div class="suppressed__item">
+      <h4>Aldgate &amp; Vane's system migration</h4>
+      <p>Five mentions since March, loudest topic in the notes by volume.</p>
+      <span class="why">Three people, one firm — not a pattern.</span>
+    </div>
+    <div class="suppressed__item">
+      <h4>"Half of Lloyd's managing agents gone by 2030"</h4>
+      <p>Three clients have said this back this summer, in their own words.</p>
+      <span class="why">It's the firm's own April outlook report, echoing through the room it was presented to.</span>
+    </div>
+  </section>
+
+  <section class="prep">
+    <div class="section-head">
+      <h2>This week's meetings</h2>
+      <p>One line per meeting, drawn only from what's above — nothing generated fresh for the room.</p>
+    </div>
+    <ol class="prep__list">
+      <li>
+        <div class="prep__when"><span class="day">TUE</span><span class="date">15 SEP</span><span class="time">11:00</span></div>
+        <div>
+          <div class="prep__who"><strong>Marcus Deyn</strong><span>Ravensbourne Underwriting</span></div>
+          <p class="prep__carry">Carry: he's one of seven voices on <b>Finding 02</b> — worth knowing Fern, Nadia and Charlotte are saying the same thing about oversight cost.</p>
+        </div>
+      </li>
+      <li>
+        <div class="prep__when"><span class="day">WED</span><span class="date">16 SEP</span><span class="time">10:30</span></div>
+        <div>
+          <div class="prep__who"><strong>Nadia Hoyle</strong><span>Bellwether MGA</span></div>
+          <p class="prep__carry">Carry: Managed Services has been looking for exactly her problem since May — worth telling her it's finally moving.</p>
+        </div>
+      </li>
+      <li>
+        <div class="prep__when"><span class="day">WED</span><span class="date">16 SEP</span><span class="time">14:00</span></div>
+        <div>
+          <div class="prep__who"><strong>Gareth Lowry</strong><span>Managed Services (internal)</span></div>
+          <p class="prep__carry">Carry: show him <b>Finding 02</b> in full — seven organisations against the exact process he asked for in May.</p>
+        </div>
+      </li>
+      <li>
+        <div class="prep__when"><span class="day">THU</span><span class="date">17 SEP</span><span class="time">09:30</span></div>
+        <div>
+          <div class="prep__who"><strong>Klaus Beringer</strong><span>Trans-Meridian Re</span></div>
+          <p class="prep__carry">Carry: Hal Brennan in New York reached your April call independently, with verdict data. Worth putting them in a room.</p>
+        </div>
+      </li>
+      <li>
+        <div class="prep__when"><span class="day">THU</span><span class="date">17 SEP</span><span class="time">15:00</span></div>
+        <div>
+          <div class="prep__who"><strong>Ed Maslin</strong><span>Copperfield Underwriting</span></div>
+          <p class="prep__carry">Carry: he asked on 3 Sep what else he doesn't know he could buy. Worth an actual answer this time.</p>
+        </div>
+      </li>
+      <li>
+        <div class="prep__when"><span class="day">FRI</span><span class="date">18 SEP</span><span class="time">11:00</span></div>
+        <div>
+          <div class="prep__who"><strong>Ines Delacroix</strong><span>Pallister Speciality</span></div>
+          <p class="prep__carry">Carry: her common evidence pack is the working prototype of <b>Finding 02</b>'s fix — Gareth should hear about her by name.</p>
+        </div>
+      </li>
+    </ol>
+  </section>
+
+  <footer class="ledger">
+    <div class="ledger__stats">
+      <div class="ledger__stat"><span class="n">200</span><span class="l">Notes read</span></div>
+      <div class="ledger__stat"><span class="n">6</span><span class="l">Months back</span></div>
+      <div class="ledger__stat"><span class="n">22</span><span class="l">Accounts watched</span></div>
+      <div class="ledger__stat"><span class="n">14/14</span><span class="l">Known patterns found, in testing</span></div>
+      <div class="ledger__stat"><span class="n">0</span><span class="l">False positives raised</span></div>
+    </div>
+    <p class="ledger__method">Every line above cites a note, a date and a name. Nothing is shown that can't be checked against them — and most weeks, nothing is shown at all.</p>
+    <p class="ledger__note">This is a demo, run against a fictitious sample corpus built to test the method before it touches real notes. See <code>eval/results.md</code> for how the scoring works and where it still gets things wrong.</p>
+  </footer>
+
+</div>
