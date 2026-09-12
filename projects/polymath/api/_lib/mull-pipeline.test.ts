@@ -25,6 +25,7 @@ vi.mock('./gemini-embeddings.js', () => ({
 }))
 
 const { bakeMull } = await import('./mull-generator.js')
+const { gatherSubjects } = await import('./mull-subjects.js')
 
 const DAY = 86_400_000
 const ago = (days: number) => new Date(Date.now() - days * DAY).toISOString()
@@ -222,5 +223,50 @@ describe('the mull channel, end to end', () => {
     const baked = await bakeMull(fakeSupabase(corpus() as any).client, 'u1')
     expect(baked.filter(s => s.type === 'mull')).toHaveLength(0)
     expect(baked.map(s => s.type)).toEqual(['forgotten'])
+  })
+})
+
+describe('what the three subjects are allowed to be', () => {
+  /** A corpus whose joints alone could fill every slot: three recurring
+   *  things, each with a different temporal shape. */
+  function jointHeavy() {
+    const c = corpus() as any
+    c.fragments.push(
+      // A conviction: years of mentions, still alive, filed to a project.
+      { user_id: 'u1', id: 'g1', text: 'the room has to be the subject not the setting', created_at: ago(780), project_id: 'p-book', projects: { title: 'The book' } },
+      { user_id: 'u1', id: 'g2', text: 'the room is the subject', created_at: ago(400), project_id: 'p-book', projects: { title: 'The book' } },
+      { user_id: 'u1', id: 'g3', text: 'make the room the subject', created_at: ago(40), project_id: 'p-book', projects: { title: 'The book' } },
+      // A return: dropped for a year, back last month.
+      { user_id: 'u1', id: 'h1', text: 'learn to bind a book by hand', created_at: ago(800), project_id: null, projects: null },
+      { user_id: 'u1', id: 'h2', text: 'binding again, the thread matters', created_at: ago(760), project_id: null, projects: null },
+      { user_id: 'u1', id: 'h3', text: 'bought linen thread for binding', created_at: ago(25), project_id: null, projects: null },
+    )
+    c.joints.push(
+      { user_id: 'u1', id: 'j2', text: 'the room has to be the subject', fragment_ids: ['g1', 'g2', 'g3'], occurrence_count: 3 },
+      { user_id: 'u1', id: 'j3', text: 'learn to bind a book by hand', fragment_ids: ['h1', 'h2', 'h3'], occurrence_count: 3 },
+    )
+    return c
+  }
+
+  it('never spends all three slots on one kind of subject', async () => {
+    const subjects = await gatherSubjects(fakeSupabase(jointHeavy()).client, 'u1')
+    const joints = subjects.filter(s => s.kind === 'joint')
+    expect(subjects.length).toBeGreaterThan(1)
+    expect(joints.length).toBeLessThanOrEqual(2)
+  })
+
+  it('keeps a slot for reading, which on strength alone would never win', async () => {
+    // An article has no temporal shape, so it scores lowest by definition.
+    // A corpus-only channel can only ever recombine the user.
+    const subjects = await gatherSubjects(fakeSupabase(jointHeavy()).client, 'u1')
+    expect(subjects.map(s => s.kind)).toContain('article')
+  })
+
+  it('asks about an old thought nobody ever filed', async () => {
+    const data = corpus() as any
+    data.joints = []
+    data.fragments = []
+    const subjects = await gatherSubjects(fakeSupabase(data).client, 'u1')
+    expect(subjects.some(s => s.shape === 'unfiled')).toBe(true)
   })
 })

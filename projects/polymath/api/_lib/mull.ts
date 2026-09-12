@@ -40,7 +40,7 @@ export type MullSourceKind = 'memory' | 'project' | 'article'
  *  joint-miner.ts, sitting in the corpus unused by this channel until now.
  *  A thing you keep saying and have never made is the shortest path there
  *  is to "oh — I should make that." */
-export type MullSubjectKind = MullSourceKind | 'joint'
+export type MullSubjectKind = MullSourceKind | 'joint' | 'pair'
 
 export interface MullCandidate {
   kind: MullSourceKind
@@ -66,6 +66,34 @@ export const CONNECTOR_FLOOR = 0.45
  * wrote down.
  */
 export const CONNECTOR_CEILING = 0.82
+
+/**
+ * How much subject vocabulary the domain rule needs to be worth anything.
+ *
+ * The two guards are meant to work together: the vector says the connector
+ * answers the blind spot, the vocabulary says it answers from somewhere
+ * else. But the vocabulary half only exists if the subject HAS distinctive
+ * words, and the best subjects don't. "It only works if it's one take" is
+ * three distinctive words and nine stopwords, so sharesDomain blocks
+ * nothing for it — including the note that is that exact idea in different
+ * clothes, which is the one thing it was there to catch.
+ *
+ * So when one guard goes missing the other tightens. A connector at 0.75
+ * against a three-word joint is almost certainly a restatement; against a
+ * ninety-word project block it is a genuine neighbour. Same number,
+ * different meaning, and the ceiling has to reflect that rather than
+ * pretend both are equally protected.
+ */
+export const VOCAB_FULL_GUARD = 12
+/** The ceiling when the subject offers no vocabulary guard at all. */
+export const CONNECTOR_CEILING_TIGHT = 0.62
+
+export function connectorCeiling(subjectText: string): number {
+  const distinctive = motifWords(subjectText).length
+  if (distinctive >= VOCAB_FULL_GUARD) return CONNECTOR_CEILING
+  const share = distinctive / VOCAB_FULL_GUARD
+  return CONNECTOR_CEILING_TIGHT + share * (CONNECTOR_CEILING - CONNECTOR_CEILING_TIGHT)
+}
 
 /**
  * Two distinctive words shared with the subject means the same domain:
@@ -126,11 +154,12 @@ export function selectConnector(
   filter: ConnectorFilter,
 ): MullCandidate | null {
   const excluded = new Set(filter.excludeIds)
+  const ceiling = connectorCeiling(filter.subjectText)
   const eligible = candidates.filter(c =>
     c.text.trim().length > 0 &&
     !excluded.has(c.id) &&
     c.similarity >= CONNECTOR_FLOOR &&
-    c.similarity <= CONNECTOR_CEILING &&
+    c.similarity <= ceiling &&
     !sharesDomain(filter.subjectText, `${c.title} ${c.text}`)
   )
   if (eligible.length === 0) return null

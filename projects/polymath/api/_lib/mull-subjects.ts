@@ -37,12 +37,16 @@ import type { MullSubjectKind } from './mull.js'
  *  only once someone has written more than this; a window loses them on
  *  day 46 forever. */
 const CORPUS_LIMIT = 2000
+/** How many subjects go into the one blind-spot call. */
+const SUBJECT_SLOTS = 3
 /** A list item wanted for longer than this is a standing want, not a mood. */
 const LONG_HELD_DAYS = 365
+/** Old enough that not filing it was a choice, not a backlog. */
+const UNFILED_DAYS = 120
 
 export interface Subject {
   kind: MullSubjectKind
-  shape?: TemporalShape | 'simultaneity' | 'drift' | 'long_held'
+  shape?: TemporalShape | 'simultaneity' | 'drift' | 'long_held' | 'unfiled'
   id: string
   projectId: string | null
   title: string
@@ -254,7 +258,7 @@ function simultaneitySubjects(
   const titleOf = new Map(fragments.filter(f => f.projectId).map(f => [f.projectId!, f.projectTitle]))
 
   return findSimultaneous(captures).slice(0, 2).map(pair => ({
-    kind: 'joint' as const,
+    kind: 'pair' as const,
     shape: 'simultaneity' as const,
     id: `${pair.a.id}:${pair.b.id}`,
     projectId: pair.a.projectId,
@@ -266,6 +270,42 @@ function simultaneitySubjects(
     ownWords: `${pair.a.text} ${pair.b.text}`,
     strength: 0.8,
   }))
+}
+
+/**
+ * A thought old enough to have been filed somewhere, that never was.
+ *
+ * Thoughts fed the timelines and turned up as connectors, but could never
+ * be the thing asked about — so a striking note that belongs to no project
+ * was invisible to the channel that exists to find exactly that. Its shape
+ * is not recurrence; it is that nobody ever did anything with it.
+ */
+async function unfiledThoughtSubject(supabase: SupabaseClient, userId: string): Promise<Subject | null> {
+  const cutoff = new Date(Date.now() - UNFILED_DAYS * 86_400_000).toISOString()
+  const { data } = await supabase
+    .from('memories')
+    .select('id, title, body, created_at, project_id')
+    .eq('user_id', userId)
+    .is('project_id', null)
+    .lt('created_at', cutoff)
+    .order('created_at', { ascending: false })
+    .limit(30)
+
+  const usable = (data ?? []).filter((m: any) => typeof m.body === 'string' && m.body.trim().length > 150)
+  if (usable.length === 0) return null
+  const pick: any = usable[Math.floor(Math.random() * Math.min(usable.length, 8))]
+  const age = humanDuration((Date.now() - new Date(pick.created_at).getTime()) / 86_400_000)
+
+  return {
+    kind: 'memory',
+    shape: 'unfiled',
+    id: pick.id,
+    projectId: null,
+    title: pick.title ?? 'a note',
+    block: `They said this in ${monthYear(new Date(pick.created_at))} — ${age} ago — and it has never been attached to a project or acted on:\n"${pick.body}"`,
+    ownWords: `${pick.title ?? ''} ${pick.body}`,
+    strength: 0.7,
+  }
 }
 
 /** A thing wanted for a year and still not done. A list is a record of
@@ -378,9 +418,10 @@ export async function gatherSubjects(supabase: SupabaseClient, userId: string): 
   // project (corpus-time.ts).
   const baseline = buildActivityBaseline([...thoughts, ...fragments].map(r => r.createdAt))
 
-  const [joints, projects, longHeld, article] = await Promise.all([
+  const [joints, projects, unfiled, longHeld, article] = await Promise.all([
     jointSubjects(supabase, userId, fragments, baseline),
     projectSubjects(supabase, userId, fragments, thoughts, baseline),
+    unfiledThoughtSubject(supabase, userId),
     longHeldSubject(supabase, userId),
     articleSubject(supabase, userId),
   ])
@@ -389,20 +430,37 @@ export async function gatherSubjects(supabase: SupabaseClient, userId: string): 
     ...joints,
     ...projects,
     ...simultaneitySubjects(fragments, thoughts),
+    ...(unfiled ? [unfiled] : []),
     ...(longHeld ? [longHeld] : []),
     ...(article ? [article] : []),
   ].sort((a, b) => b.strength - a.strength)
 
-  // One per kind-and-shape, so a corpus full of long convictions doesn't
-  // spend all three slots saying the same thing in different words.
-  const seen = new Set<string>()
+  // Strongest first, but never more than two of one kind.
+  //
+  // Deduping by kind-and-shape was not enough: joints carry several shapes
+  // and outrank everything, so three joints could take all three slots and
+  // the run would ask three questions about the user's own recurring
+  // thoughts. A cap by kind is what actually keeps the three subjects
+  // different in nature rather than merely differently labelled.
+  const perKind = new Map<string, number>()
+  const seenShape = new Set<string>()
   const picked: Subject[] = []
   for (const subject of all) {
-    const key = `${subject.kind}:${subject.shape ?? 'none'}`
-    if (seen.has(key)) continue
-    seen.add(key)
+    const shapeKey = `${subject.kind}:${subject.shape ?? 'none'}`
+    if (seenShape.has(shapeKey)) continue
+    if ((perKind.get(subject.kind) ?? 0) >= 2) continue
+    seenShape.add(shapeKey)
+    perKind.set(subject.kind, (perKind.get(subject.kind) ?? 0) + 1)
     picked.push(subject)
-    if (picked.length >= 3) break
+    if (picked.length >= SUBJECT_SLOTS) break
+  }
+
+  // Reading keeps its slot whenever there is any. A corpus-only system can
+  // only recombine the user -- SPEC.md calls the outside bridge "not
+  // optional" -- and on strength alone an article (no temporal shape, so
+  // the lowest score there is) would never once be chosen.
+  if (article && !picked.includes(article)) {
+    picked.splice(Math.max(0, SUBJECT_SLOTS - 1), 1, article)
   }
   return picked
 }

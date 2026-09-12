@@ -9,6 +9,7 @@ import {
   stakeIsHollow,
   CONNECTOR_FLOOR,
   CONNECTOR_CEILING,
+  connectorCeiling,
   type MullCandidate,
 } from './mull.js'
 
@@ -216,5 +217,50 @@ describe('stakeIsHollow', () => {
 
   it('rejects a stake too short to be one', () => {
     expect(stakeIsHollow('Clarity.')).toBe(true)
+  })
+})
+
+describe('the ceiling scales with how much vocabulary the subject has', () => {
+  // The two guards are meant to work together. A short, plain, idiomatic
+  // subject supplies no vocabulary for the domain rule, so the vector has
+  // to carry both jobs — which means a tighter ceiling, or the note that
+  // IS the subject restated walks straight in.
+  const shortJoint = "it only works if it is one take. the first pass was always the good one"
+  const longProject = [
+    'A novel where characters get swapped out partway through',
+    'chapter nine needs to feel like arriving somewhere',
+    'rewrote chapter three again, four passes now',
+    'the swap has to happen before the reader trusts her',
+    'cut the flashback, it explains too much',
+  ].join(' ')
+
+  const restatement = 'Kept the first take of the whole side even though the drop is late. Every version I tightened afterwards was worse.'
+
+  it('tightens when the subject has almost no distinctive words', () => {
+    expect(connectorCeiling(shortJoint)).toBeLessThan(CONNECTOR_CEILING)
+    expect(connectorCeiling(shortJoint)).toBeGreaterThan(CONNECTOR_FLOOR)
+  })
+
+  it('stays loose when the vocabulary rule can do its own job', () => {
+    expect(connectorCeiling(longProject)).toBe(CONNECTOR_CEILING)
+  })
+
+  it('blocks the subject-restated-in-other-words that sharesDomain cannot see', () => {
+    // sharesDomain is blind here: every word of the joint is a stopword.
+    expect(sharesDomain(shortJoint, restatement)).toBe(false)
+    // The ceiling catches it anyway.
+    const picked = selectConnector(
+      [candidate({ id: 'restated', text: restatement, similarity: 0.75 })],
+      { subjectText: shortJoint, excludeIds: [] },
+    )
+    expect(picked).toBeNull()
+  })
+
+  it('still lets a genuine connector through for the same subject', () => {
+    const picked = selectConnector(
+      [candidate({ id: 'real', similarity: 0.58 })],
+      { subjectText: shortJoint, excludeIds: [] },
+    )
+    expect(picked?.id).toBe('real')
   })
 })
