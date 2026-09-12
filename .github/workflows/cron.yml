@@ -28,6 +28,23 @@ on:
         description: 'Force-run all jobs regardless of schedule'
         required: false
         default: 'false'
+      # One job, from a phone. `force` fires every block, which for a
+      # single endpoint means paying for two digests, the idea-engine
+      # generator, a morph and a whole-corpus joint mine as well. This
+      # runs exactly one thing and stops; the response body is printed to
+      # the log by hit(), so a diagnosis is readable without a terminal,
+      # a Vercel dashboard or the cron secret.
+      job:
+        description: 'Run ONE job and stop'
+        required: false
+        default: ''
+        type: choice
+        options:
+          - ''
+          - bake-explain
+          - bake
+          - mine-joints
+          - recompute-heat
 
 concurrency:
   group: cron
@@ -48,6 +65,7 @@ jobs:
           TOKEN:    ${{ secrets.IDEA_ENGINE_SECRET }}
           SCHEDULE: ${{ github.event.schedule }}
           FORCE:    ${{ github.event.inputs.force }}
+          JOB:      ${{ github.event.inputs.job }}
         run: |
           set -u
 
@@ -82,6 +100,22 @@ jobs:
           }
 
           echo "Triggered by: ${SCHEDULE:-workflow_dispatch}"
+
+          # ── Single job, then stop ─────────────────────────────────────
+          if [ -n "${JOB:-}" ]; then
+            echo "Single job: $JOB"
+            case "$JOB" in
+              # Writes nothing. Prints which of the mull channel's four
+              # steps declined, and the numbers it decided on.
+              bake-explain)   hit "/api/utilities?resource=bake&explain=1" ;;
+              bake)           hit "/api/utilities?resource=bake" ;;
+              mine-joints)    hit "/api/utilities?resource=mine-joints" ;;
+              recompute-heat) hit "/api/projects?resource=recompute-heat" ;;
+              *) echo "!! unknown job: $JOB" | tee -a "$FAILED_FILE" ;;
+            esac
+            if [ -s "$FAILED_FILE" ]; then exit 1; fi
+            exit 0
+          fi
 
           # ── Every 2h ──────────────────────────────────────────────────
           # Idea Engine generator (was every 30 min, then hourly; cut again

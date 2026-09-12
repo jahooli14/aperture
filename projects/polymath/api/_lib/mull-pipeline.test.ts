@@ -209,6 +209,37 @@ describe('the mull channel, end to end', () => {
     expect(baked.filter(s => s.type === 'mull')).toHaveLength(0)
   })
 
+  it('says which step declined, so silence is diagnosable', async () => {
+    generateText.mockResolvedValue(JSON.stringify({ subjects: [] }))
+    const trace: string[] = []
+    await bakeMull(fakeSupabase(corpus() as any).client, 'u1', undefined, trace)
+
+    // Not "it was quiet" — which of the four steps, with its numbers.
+    expect(trace.join('\n')).toMatch(/subjects: \w+\//)
+    expect(trace.join('\n')).toMatch(/blind spots: none/)
+  })
+
+  it('reports the search numbers, not just a verdict', async () => {
+    generateText.mockResolvedValueOnce(BLIND_SPOTS).mockResolvedValueOnce(DRAFTS)
+    const trace: string[] = []
+    await bakeMull(fakeSupabase(corpus() as any).client, 'u1', undefined, trace)
+
+    // An empty search and a search whose every hit was a restatement look
+    // identical from outside and need opposite fixes.
+    expect(trace.join('\n')).toMatch(/search \[\w+\]: \d+ candidates, best [\d.]+, band/)
+  })
+
+  it('offers a forgotten project at most once a fortnight', async () => {
+    generateText.mockResolvedValue('not json at all')
+    const data = corpus() as any
+    data.sparks = [{ user_id: 'u1', id: 's-old', type: 'forgotten', project_id: 'p-book', created_at: ago(3) }]
+
+    const baked = await bakeMull(fakeSupabase(data).client, 'u1')
+    // Per-project cooldowns alone let this run daily on a different
+    // project forever, which is the nag drift-decay replaced.
+    expect(baked).toEqual([])
+  })
+
   it('declines quietly on an empty corpus instead of throwing', async () => {
     generateText.mockResolvedValue(JSON.stringify({ subjects: [] }))
     const empty = { fragments: [], memories: [], projects: [], joints: [], list_items: [], reading_queue: [], sparks: [] }

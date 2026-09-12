@@ -34,6 +34,8 @@ import { avoidBlock, echoesRecent, fetchRecentSparkTexts } from './spark-echo.js
 import { gatherSubjects, identityBlock, type Subject } from './mull-subjects.js'
 import {
   selectConnector,
+  connectorCeiling,
+  CONNECTOR_FLOOR,
   rankPairs,
   rejectionReason,
   type MullCandidate,
@@ -45,6 +47,7 @@ import {
   forgottenSparkText,
   FORGOTTEN_SILENCE_DAYS,
   FORGOTTEN_COOLDOWN_DAYS,
+  FORGOTTEN_GLOBAL_COOLDOWN_DAYS,
 } from './forgotten.js'
 
 /**
@@ -76,6 +79,18 @@ export interface BakedSpark {
    *  was already paid for days ago. */
   banked?: boolean
 }
+
+/**
+ * Why a run produced nothing.
+ *
+ * Every decline was a console.log, which is only readable in Vercel's log
+ * viewer for an hour. That made "the channel is silent" an unanswerable
+ * report: silence is the designed outcome of four separate steps, and from
+ * outside they are indistinguishable. The trace names which one, with the
+ * numbers it decided on, and `bake?explain=1` returns it without writing
+ * anything or spending a model call it did not already need.
+ */
+export type MullTrace = string[]
 
 export interface EchoContext {
   recentTexts: string[]
@@ -286,6 +301,7 @@ async function findConnectors(
   supabase: SupabaseClient,
   userId: string,
   blindSpots: BlindSpot[],
+  trace: MullTrace = [],
 ): Promise<Pairing[]> {
   let embeddings: number[][]
   try {
@@ -326,6 +342,16 @@ async function findConnectors(
     if (blind.subject.projectId) excludeIds.push(blind.subject.projectId)
 
     const connector = selectConnector(candidates, { subjectText: blind.subject.ownWords, excludeIds })
+    // The numbers, not a verdict: how many the vector returned at all, the
+    // best score it saw, and the band it had to fit. An empty search and a
+    // search whose every hit was a restatement look identical from outside
+    // and need completely different fixes.
+    const best = candidates.reduce((m, c) => Math.max(m, c.similarity), 0)
+    trace.push(
+      `search [${blind.subject.kind}]: ${candidates.length} candidates, best ${best.toFixed(2)}, ` +
+      `band ${CONNECTOR_FLOOR}-${connectorCeiling(blind.subject.ownWords).toFixed(2)} -> ` +
+      (connector ? `${connector.kind} @ ${connector.similarity.toFixed(2)}` : 'nothing in band'),
+    )
     return connector ? { ...blind, connector } : null
   }))
 
@@ -462,19 +488,27 @@ export async function generateMull(
   supabase: SupabaseClient,
   userId: string,
   echo: EchoContext,
+  trace: MullTrace = [],
 ): Promise<BakedSpark[]> {
   const subjects = await gatherSubjects(supabase, userId)
+  trace.push(
+    subjects.length === 0
+      ? 'subjects: none — no joint, project, thought, list item or article qualified'
+      : `subjects: ${subjects.map(s => `${s.kind}/${s.shape ?? 'none'} "${s.title.slice(0, 40)}"`).join(' | ')}`,
+  )
   if (subjects.length === 0) return []
 
   const blindSpots = await nameBlindSpots(subjects, echo)
-  if (blindSpots.length === 0) {
-    console.log('[mull] nothing unexamined in', subjects.length, 'subjects')
-    return []
-  }
+  trace.push(
+    blindSpots.length === 0
+      ? 'blind spots: none — the model found nothing unexamined in any subject'
+      : `blind spots: ${blindSpots.map(b => `[${b.subject.kind}] ${b.searchQuery.slice(0, 60)}`).join(' | ')}`,
+  )
+  if (blindSpots.length === 0) return []
 
-  const pairings = await findConnectors(supabase, userId, blindSpots)
+  const pairings = await findConnectors(supabase, userId, blindSpots, trace)
   if (pairings.length === 0) {
-    console.log('[mull] corpus had no answer to any of:', blindSpots.map(b => b.searchQuery))
+    trace.push('connectors: none in band for any blind spot — see the per-search lines above')
     return []
   }
 
@@ -489,6 +523,7 @@ export async function generateMull(
   )
 
   const drafts = await draftAll(chosen, echo)
+  trace.push(`drafts: ${drafts.length} of ${chosen.length} pairs written`)
   const baked: BakedSpark[] = []
   // Each draft stands on its own: one failing a gate doesn't take the
   // other with it, which is most of why they're written together.
@@ -502,6 +537,7 @@ export async function generateMull(
       connectorText: draft.pairing.connector.text,
     })
     if (reason) {
+      trace.push(`dropped: ${reason}`)
       console.log(`[mull] dropped: ${reason}`)
       continue
     }
@@ -509,6 +545,7 @@ export async function generateMull(
     // draft from this same run — two questions written in one breath are
     // where a repeated image is most likely and least excusable.
     if (echoesRecent(draft.text, seen)) {
+      trace.push('dropped: echoes a recent question')
       console.log('[mull] dropped: echoes a recent question')
       continue
     }
@@ -564,6 +601,19 @@ export async function generateForgotten(
 
   if (!projects || projects.length === 0) return null
 
+  // Not more than one of these a fortnight, whatever project it is about.
+  // Per-project cooldowns alone let it run daily across a dozen dormant
+  // projects, which is a nag wearing a different name each morning.
+  const globalCutoff = new Date(Date.now() - FORGOTTEN_GLOBAL_COOLDOWN_DAYS * 86400000).toISOString()
+  const { data: recentAny } = await supabase
+    .from('sparks')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('type', 'forgotten')
+    .gte('created_at', globalCutoff)
+    .limit(1)
+  if (recentAny && recentAny.length > 0) return null
+
   const silenceCutoff = new Date(Date.now() - FORGOTTEN_SILENCE_DAYS * 86400000).toISOString()
   const { data: recentFragments } = await supabase
     .from('fragments')
@@ -613,10 +663,16 @@ export async function bakeMull(
   supabase: SupabaseClient,
   userId: string,
   echo?: EchoContext,
+  trace: MullTrace = [],
 ): Promise<BakedSpark[]> {
   const context = echo ?? (await loadEchoContext(supabase, userId))
-  const mulls = await generateMull(supabase, userId, context)
+  const mulls = await generateMull(supabase, userId, context, trace)
   if (mulls.length > 0) return mulls
   const forgotten = await generateForgotten(supabase, userId)
+  trace.push(
+    forgotten
+      ? 'fell back to the forgotten-project offer'
+      : 'no forgotten offer either (global cooldown, or nothing silent enough) — empty slot',
+  )
   return forgotten ? [forgotten] : []
 }
