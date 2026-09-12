@@ -395,11 +395,13 @@ What makes it good:
 - Use the note's own concrete detail. Not "your recent reflections on family" —
   say the thing it actually said. Their words, not a summary of their words:
   they can dismiss you, they can't dismiss themselves from eight months ago.
-- USE THE DATE. "Since March 2023", "you stopped in August", "fourteen months
-  later" — a real date is the most load-bearing thing you have, because it is
-  the one part they cannot argue with and the one part they had no way of
-  seeing themselves. Never round it into "a while ago" or "recently", and
-  never state a date the lines above didn't give you.
+- The date is available to you, and when the length of time IS the point —
+  they have believed this since 2023, they stopped in August — say it exactly:
+  a real date is the one part they cannot argue with and the one part they had
+  no way of seeing from inside. When the question works without it, leave it
+  out. A date bolted onto the front of a question that doesn't turn on it is
+  decoration, and it reads as the app showing its working. Never round one
+  into "a while ago", and never state a date the lines above didn't give you.
 - Specific enough to be WRONG. A question they could answer "no, it's not that
   at all" to is doing its job — that's a revelation too. A question that can't
   be wrong ("what's this really about?") is inert.

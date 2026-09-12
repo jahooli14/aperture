@@ -55,7 +55,10 @@ export const CRINGE_PATTERNS: readonly RegExp[] = [
   /\binevitable in retrospect\b/i,
   // Mind-reading: the app telling the user what they're feeling or dodging.
   /\bare you (avoiding|resisting|putting off|scared of|afraid of)\b/i,
-  /\byou'?re (avoiding|resisting|procrastinating|stalling)\b/i,
+  // Both forms. "you're avoiding" was blocked and "you are avoiding" was
+  // not, which is the same accusation with an apostrophe missing.
+  /\byou('| a)?re (avoiding|resisting|procrastinating|stalling)\b/i,
+  /\b(he|she|they|the user) (is|are) (avoiding|resisting|procrastinating|stalling)\b/i,
   /\bwhat'?s really (stopping|holding) you\b/i,
   /\bcouldn't see from inside\b/i,
   /\bthe moment when [a-z\s]+ makes [a-z\s]+ possible\b/i,

@@ -150,6 +150,34 @@ function normalise(text: string): string {
 }
 
 /**
+ * The note says "dad". The question says "your dad", because the prompt
+ * tells it to talk to the user. Both are the same words.
+ *
+ * Without this the grounding check punished the model for doing exactly
+ * what it was asked, and it fired on most real output — the commonest
+ * single reason a good question was thrown away. Person is the only thing
+ * flattened: everything else still has to match, so an invented quote is
+ * still an invented quote.
+ */
+function flattenPerson(text: string): string {
+  // Contractions first. The corpus says "it's one take" and the model
+  // writes "it is one take", which is the same sentence and was failing.
+  // Expanding both sides makes them agree; the possessive collision it
+  // causes ("dad's" becoming "dad is") is harmless, because it happens
+  // identically on both sides of every comparison.
+  //
+  // Person words are then dropped rather than replaced with a placeholder:
+  // the note usually has no word at all where the question says "your", so
+  // a placeholder would just be a different mismatch in the same place.
+  return text
+    .replace(/n't\b/g, ' not')
+    .replace(/'(s|re|ll|ve|m|d)\b/g, ' $1')
+    .replace(/\b(my|your|his|her|their|our|i|you|he|she|they|we|am|are|is|was|were|s|re|ll|ve|m|d)\b/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+/**
  * The grounding gate, and the only thing standing between this and the
  * Context Engine's invented article titles: the model has to hand back
  * the words it used, and they have to actually be in the note.
@@ -157,14 +185,40 @@ function normalise(text: string): string {
 export function quoteIsReal(quote: string, sourceText: string): boolean {
   const q = normalise(quote)
   if (q.length < 8) return false
-  return normalise(sourceText).includes(q)
+  const source = normalise(sourceText)
+  if (source.includes(q)) return true
+  return flattenPerson(source).includes(flattenPerson(q))
 }
 
-/** Did the drafted question actually use the quote, or just append it? */
+/** Three or more words in a row, which no paraphrase manages by accident. */
+function sharesRun(text: string, quote: string, run = 3): boolean {
+  const flatQuote = flattenPerson(normalise(quote))
+  const words = flatQuote.split(' ').filter(w => w.length > 0)
+  const haystack = flattenPerson(normalise(text))
+  // A quote too short to have a three-word run has to appear whole, which
+  // is stronger evidence, not weaker. "one take" is two stopwords and no
+  // distinctive anything — the only honest test is whether they said it.
+  if (words.length < run) return flatQuote.length > 0 && haystack.includes(flatQuote)
+  for (let i = 0; i + run <= words.length; i++) {
+    if (haystack.includes(words.slice(i, i + run).join(' '))) return true
+  }
+  return false
+}
+
+/**
+ * Did the drafted question actually use the quote, or just append it?
+ *
+ * Two ways to pass, and the second is not a loosening — it's the fix for a
+ * hole the first one couldn't see. A distinctive shared word catches most
+ * cases. But the best quotes are short and plain — "it only works if it's
+ * one take" has not a single word in it that isn't filler — so the word
+ * test rejected exactly the material worth quoting. A verbatim run of three
+ * words is the same evidence by a different route.
+ */
 export function usesQuote(text: string, quote: string): boolean {
   const quoteWords = new Set(motifWords(quote))
-  if (quoteWords.size === 0) return false
-  return motifWords(text).some(w => quoteWords.has(w))
+  if (quoteWords.size > 0 && motifWords(text).some(w => quoteWords.has(w))) return true
+  return sharesRun(text, quote)
 }
 
 export interface MullDraft {
