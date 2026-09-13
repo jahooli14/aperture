@@ -617,3 +617,62 @@ describe('a timed-out long-held query gets one retry, not a silent empty result'
     expect(trace.join('\n')).toMatch(/long-held-candidates query FAILED/)
   })
 })
+
+describe('a question with no project on either side is correct silence, end to end', () => {
+  beforeEach(() => {
+    generateText.mockReset()
+    batchGenerateEmbeddings.mockClear()
+  })
+
+  it('an unfiled thought with no project connector in band produces nothing, not a manufactured question', async () => {
+    // The actual production failure: an unfiled note about a football
+    // match, paired with whatever else happened to score in band, wrote
+    // self-contained sports trivia -- no project on either side, nothing
+    // to build. The subject/blind-spot/draft calls all ran fine; the
+    // fix has to be that the pairing itself never survives to draft.
+    generateText.mockResolvedValueOnce(BLIND_SPOTS)
+    const data = corpus() as any
+    data.joints = []
+    data.fragments = []
+    data.memories = [
+      {
+        user_id: 'u1', id: 'm-unfiled', title: 'Old reflection',
+        body: 'Something I keep meaning to come back to and never have, a real thought with no project attached to it at all.',
+        created_at: ago(280), memory_type: 'insight',
+      },
+    ]
+    const trace: string[] = []
+    const baked = await bakeMull(fakeSupabase(data).client, 'u1', undefined, trace)
+    expect(baked).toEqual([])
+    // Never reached the draft call at all -- the pairing was thrown out
+    // before there was anything to draft.
+    expect(generateText).toHaveBeenCalledTimes(1)
+  })
+
+  it('the same unfiled thought DOES produce a question once a project scores in band', async () => {
+    generateText.mockResolvedValueOnce(BLIND_SPOTS).mockResolvedValueOnce(DRAFTS)
+    const data = corpus() as any
+    data.joints = []
+    data.fragments = []
+    data.memories = [
+      {
+        user_id: 'u1', id: 'm-unfiled', title: 'Old reflection',
+        body: 'Something I keep meaning to come back to and never have, a real thought with no project attached to it at all.',
+        created_at: ago(280), memory_type: 'insight',
+      },
+    ]
+    const real = fakeSupabase(data).client
+    const client = {
+      ...real,
+      rpc: async (name: string, args: Row) => {
+        if (name === 'match_projects') {
+          return { data: [{ id: 'p-book', title: 'The book', description: 'A novel', similarity: 0.6 }], error: null }
+        }
+        return real.rpc(name, args)
+      },
+    }
+    const trace: string[] = []
+    const baked = await bakeMull(client as any, 'u1', undefined, trace)
+    expect(trace.join('\n')).toMatch(/search \[memory\].*-> 1 in band/)
+  })
+})

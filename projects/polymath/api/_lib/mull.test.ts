@@ -341,3 +341,34 @@ describe('selectConnectors preferring a project connector', () => {
     expect(picked[0].kind).toBe('memory')
   })
 })
+
+describe('selectConnectors requiring a project connector, no fallback', () => {
+  const SUBJECT = 'Something I keep meaning to come back to and never have, a real reflection about work and family and the years going past'
+  const requireFilter = { subjectText: SUBJECT, excludeIds: [], requireProject: true }
+
+  it('takes a project even when other candidates score higher', () => {
+    const candidates: MullCandidate[] = [
+      candidate({ kind: 'memory', id: 'm1', title: 'A different note', text: 'Nothing to do with any of that.', similarity: 0.75 }),
+      candidate({ kind: 'article', id: 'a1', title: 'An article', text: 'Something read once.', similarity: 0.7 }),
+      candidate({ kind: 'project', id: 'p1', title: 'The deck stand', text: 'Oak offcuts, still not started.', similarity: 0.55 }),
+    ]
+    const picked = selectConnectors(candidates, requireFilter)
+    expect(picked).toHaveLength(1)
+    expect(picked[0].kind).toBe('project')
+  })
+
+  it('returns nothing at all when no project is in band -- correct silence, not a settled-for note', () => {
+    const candidates: MullCandidate[] = [
+      candidate({ kind: 'memory', id: 'm1', title: 'A different note', text: 'Nothing to do with any of that.', similarity: 0.75 }),
+      candidate({ kind: 'article', id: 'a1', title: 'An article', text: 'Something read once.', similarity: 0.7 }),
+    ]
+    expect(selectConnectors(candidates, requireFilter)).toHaveLength(0)
+  })
+
+  it('a project outside the band still yields nothing, even with no other candidates at all', () => {
+    const candidates: MullCandidate[] = [
+      candidate({ kind: 'project', id: 'p1', title: 'Above ceiling', text: 'Scores too high to count as a real connection.', similarity: CONNECTOR_CEILING + 0.05 }),
+    ]
+    expect(selectConnectors(candidates, requireFilter)).toHaveLength(0)
+  })
+})

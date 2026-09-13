@@ -355,10 +355,19 @@ async function findConnectors(
     const excludeIds = [blind.subject.id]
     if (blind.subject.projectId) excludeIds.push(blind.subject.projectId)
 
+    const hasProject = !!blind.subject.projectId
+    // Joints are the one exception: CLAUDE.md frames a project-less joint
+    // as the mechanism for surfacing a NEW project ("a thing you keep
+    // saying and have never made"), so it keeps the soft preference.
+    // Everything else with no project of its own -- an unfiled thought,
+    // an article, a project-less pair -- requires one; there is no
+    // version of this channel's stated purpose where a question with no
+    // project on either side counts as done.
     const connectors = selectConnectors(candidates, {
       subjectText: blind.subject.ownWords,
       excludeIds,
-      preferProject: !blind.subject.projectId,
+      preferProject: hasProject ? false : blind.subject.kind === 'joint',
+      requireProject: hasProject ? false : blind.subject.kind !== 'joint',
     })
     // The numbers, not a verdict: how many the vector returned at all, the
     // best score it saw, and the band it had to fit. An empty search and a

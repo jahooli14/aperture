@@ -159,21 +159,33 @@ export interface ConnectorFilter {
   subjectText: string
   /** Ids that ARE the subject, in any table. */
   excludeIds: string[]
-  /** True when the subject is already anchored to a project (a project
-   *  subject itself, or a joint/pair whose captures trace back to one).
-   *  When false -- an unfiled thought, an article, a joint with no known
-   *  project -- a project connector in the band is preferred outright,
-   *  not just ranked by score. The search already returns project rows
-   *  alongside memories and articles for every subject (findConnectors
-   *  calls match_projects regardless of kind); nothing preferred one kind
-   *  over another, so "watched the match, well organised this season"
-   *  was exactly as likely to connect to a stray note as to an actual
-   *  project, in an app whose whole point is directing the user AT a
-   *  project. A subject with no project of its own has the most to gain
-   *  from landing on one; a project subject does not need another
-   *  project pushed on it -- that manufactured bridge is what the joint
-   *  -> pair composite mechanism exists to do carefully instead. */
+  /** Soft version of `requireProject`: a project connector wins when one
+   *  is in band, otherwise falls back to the best of whatever else is.
+   *  Used for joints -- CLAUDE.md frames a joint with no project as the
+   *  mechanism for surfacing a NEW project ("a thing you keep saying and
+   *  have never made is the shortest path there is to 'oh, I should make
+   *  that'"), so its connector is allowed to point at something that
+   *  isn't a project yet either, as long as the pairing can still name
+   *  one. */
   preferProject?: boolean
+  /** Hard version: only a project-kind candidate is eligible at all --
+   *  everything else in the band is discarded, and an empty result is
+   *  correct silence rather than a fallback. Set for every subject with
+   *  no project of its own EXCEPT joints (see `preferProject`): an
+   *  unfiled thought, an article, a project-less pair. Without this the
+   *  connector search still returns match_projects rows for every
+   *  subject, but ranked purely by similarity, so "watched the Arsenal
+   *  match, well organised this season" paired exactly as readily with
+   *  another stray note as with an actual project -- in an app whose
+   *  entire premise (per its own product spec) is a question that
+   *  unlocks a project or a creative outcome, not a question that merely
+   *  passed the other quality gates. A subject already anchored to a
+   *  project (a project subject itself, or a joint/pair whose captures
+   *  trace back to one) sets neither flag: forcing a SECOND project
+   *  connector onto it would manufacture the kind of project-to-project
+   *  bridge the joint -> pair composite mechanism exists to build
+   *  carefully instead of this channel doing it by accident. */
+  requireProject?: boolean
 }
 
 /**
@@ -225,6 +237,12 @@ export function selectConnectors(
     c.similarity <= ceiling &&
     !sharesDomain(filter.subjectText, `${c.title} ${c.text}`)
   )
+  if (filter.requireProject) {
+    // No fallback. A pairing with no project on either side is exactly
+    // the case this channel was rebuilt to stop producing, so nothing in
+    // band is correct silence, not a reason to settle for a note instead.
+    return eligible.filter(c => c.kind === 'project').sort((a, b) => b.similarity - a.similarity).slice(0, limit)
+  }
   if (filter.preferProject) {
     const projects = eligible.filter(c => c.kind === 'project')
     if (projects.length > 0) return projects.sort((a, b) => b.similarity - a.similarity).slice(0, limit)
