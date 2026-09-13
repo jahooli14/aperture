@@ -3287,8 +3287,12 @@ async function handleExecutionProposals(req: VercelRequest, res: VercelResponse)
     const userId = getCronUserId(req)
     if (!userId) return res.status(401).json({ error: 'Unauthorized' })
 
-    const written = await mineJoints(supabase, userId)
-    return res.status(200).json({ joints_written: written })
+    // The trace goes in the response because cron.yml prints the body:
+    // `job=mine-joints` from a phone is then a full diagnosis, the same way
+    // `bake-explain` is. This returned a bare count, and a count of 0 has
+    // five different causes.
+    const { written, trace } = await mineJoints(supabase, userId)
+    return res.status(200).json({ joints_written: written, trace })
   }
 
   // ─── GENERATE COMPOSITE (cron) ──────────────────────────────────────
