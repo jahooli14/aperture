@@ -39,7 +39,12 @@ Respond with JSON only: { "joint": "..." }`
   }
 }
 
-export async function mineJoints(supabase: SupabaseClient, userId: string): Promise<number> {
+export interface MineResult { written: number; trace: string[] }
+
+export async function mineJoints(supabase: SupabaseClient, userId: string): Promise<MineResult> {
+  // Same reasoning as the mull channel's `bake?explain=1`: this returns 0
+  // for five different reasons and they are indistinguishable from outside.
+  const trace: string[] = []
   // The whole corpus, not the newest 150.
   //
   // This used to read one recency window, which made a "recurrence" mean
@@ -47,16 +52,55 @@ export async function mineJoints(supabase: SupabaseClient, userId: string): Prom
   // counted, and a thing said every autumn since 2023 did not. That is
   // backwards: the years are where someone's convictions are, and they
   // were the part being thrown away.
-  const { data: fragmentRows } = await supabase
+  // Two plain reads joined in JS, not a PostgREST embed.
+  //
+  // This was `select('... memories(embedding)')`, which needs a foreign-key
+  // relationship PostgREST can see. When it can't, the whole query is
+  // REJECTED -- and the result was read as `const { data } = await`, so a
+  // rejection and an empty table were the same value. Joints have been
+  // empty in production for as long as anyone has looked, the mull channel
+  // has never once had its strongest subject available, and nothing
+  // anywhere said why. Exactly the defect that hid `memories.project_id`.
+  const fragmentsRes = await supabase
     .from('fragments')
-    .select('id, text, created_at, memory_id, memories(embedding)')
+    .select('id, text, created_at, memory_id')
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
     .limit(2000)
+  if (fragmentsRes.error) {
+    trace.push(`!! fragments query FAILED: ${fragmentsRes.error.message}`)
+    return { written: 0, trace }
+  }
+  const fragmentRows = fragmentsRes.data ?? []
+  trace.push(`fragments: ${fragmentRows.length} rows`)
 
-  const fragments: FragmentForClustering[] = (fragmentRows ?? [])
-    .map((f: any) => ({ id: f.id, text: f.text, embedding: f.memories?.embedding ?? [] }))
-    .filter((f: FragmentForClustering) => f.embedding.length > 0)
+  const memoryIds = [...new Set(fragmentRows.map((f: any) => f.memory_id).filter(Boolean))]
+  const embeddingById = new Map<string, unknown>()
+  if (memoryIds.length > 0) {
+    const memoriesRes = await supabase
+      .from('memories')
+      .select('id, embedding')
+      .eq('user_id', userId)
+      .in('id', memoryIds)
+    if (memoriesRes.error) {
+      trace.push(`!! memories query FAILED: ${memoriesRes.error.message}`)
+      return { written: 0, trace }
+    }
+    for (const m of memoriesRes.data ?? []) embeddingById.set((m as any).id, (m as any).embedding)
+    trace.push(`embeddings: ${memoryIds.length} memories referenced, ${memoriesRes.data?.length ?? 0} found`)
+  }
+
+  const fragments: FragmentForClustering[] = (fragmentRows as any[])
+    .map(f => ({ id: f.id, text: f.text, embedding: embeddingById.get(f.memory_id) as number[] }))
+    .filter((f): f is FragmentForClustering => {
+      // pgvector arrives as a JSON string; cosineSimilarity parses either.
+      const e: unknown = f.embedding
+      return Array.isArray(e) ? e.length > 0 : typeof e === 'string' && e.length > 2
+    })
+  trace.push(
+    `clusterable: ${fragments.length} of ${fragmentRows.length} fragments have an embedding` +
+    `${fragmentRows.length > 0 && fragments.length === 0 ? ' — nothing can cluster, so no joint can ever be found' : ''}`,
+  )
 
   const datesById = new Map<string, string>(
     (fragmentRows ?? []).map((f: any) => [f.id, f.created_at]),
@@ -71,12 +115,17 @@ export async function mineJoints(supabase: SupabaseClient, userId: string): Prom
     )
     return timeline !== null && timeline.spanDays >= MIN_SPAN_DAYS
   })
-  if (clusters.length === 0) return 0
+  trace.push(
+    `clusters: ${clusters.length} recurring themes spanning at least ${MIN_SPAN_DAYS} days`,
+  )
+  if (clusters.length === 0) return { written: 0, trace }
 
-  const { data: existingJoints } = await supabase
+  const existingRes = await supabase
     .from('joints')
     .select('id, text, fragment_ids, occurrence_count')
     .eq('user_id', userId)
+  if (existingRes.error) trace.push(`!! joints query FAILED: ${existingRes.error.message}`)
+  const existingJoints = existingRes.data
 
   let written = 0
   for (const cluster of clusters) {
@@ -110,15 +159,21 @@ export async function mineJoints(supabase: SupabaseClient, userId: string): Prom
         .eq('id', matched.id)
         .eq('user_id', userId)
     } else {
-      await supabase.from('joints').insert({
+      const ins = await supabase.from('joints').insert({
         user_id: userId,
         text: jointText,
         fragment_ids: cluster.fragmentIds,
         occurrence_count: cluster.fragmentIds.length,
       })
+      // A rejected insert is how `sparks.type` stayed broken for four days.
+      if (ins.error) {
+        trace.push(`!! joint insert FAILED: ${ins.error.message}`)
+        continue
+      }
     }
     written++
   }
 
-  return written
+  trace.push(`written: ${written} joints`)
+  return { written, trace }
 }

@@ -136,7 +136,7 @@ describe('rejectionReason', () => {
       text: 'What would the book be if you stopped rewriting chapter three?',
       quote: 'ten more proper conversations with dad',
       connectorText: 'A completely unrelated note about the bird feeder and the frost.',
-    })).toBe('nothing of the note survives into the question')
+    })).toMatch(/^nothing of the note survives into the question/)
   })
 
   it('rejects a draft that explains its own link', () => {

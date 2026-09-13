@@ -145,12 +145,18 @@ async function loadResonance(supabase: SupabaseClient, userId: string): Promise<
   const memoryIds = (answered ?? []).map((s: any) => s.response_memory_id).filter(Boolean)
   const replies = new Map<string, string>()
   if (memoryIds.length > 0) {
-    const { data: memories } = await supabase
+    const memoriesRes = await supabase
       .from('memories')
       .select('id, body')
       .eq('user_id', userId)
       .in('id', memoryIds)
-    for (const m of memories ?? []) {
+    if (memoriesRes.error) {
+      // The few-shot examples of what landed before. Losing them weakens
+      // the draft rather than breaking it, but losing them silently means
+      // nobody ever finds out the prompt got worse.
+      console.warn('[mull] could not read past answers:', memoriesRes.error.message)
+    }
+    for (const m of memoriesRes.data ?? []) {
       if (typeof (m as any).body === 'string') replies.set((m as any).id, (m as any).body)
     }
   }
@@ -402,6 +408,7 @@ ${p.subject.line}
 The thing it never examines:
 "${p.blindSpot}"
 
+THE NOTE — this is the only text you may quote for pair ${i + 1}.
 ${CONNECTOR_LABEL[p.connector.kind]} — "${p.connector.title}":
 "${p.connector.text.slice(0, 1200)}"`).join('\n\n')
 
@@ -457,6 +464,10 @@ What makes it good:
 - One fact about the project, one thing from the note. Not three things. If
   the question needs a second fact about the project to make sense, it isn't
   a question yet.
+- The note's own words go in the question, not a tidied version of them. "You
+  wrote that you only print when someone's waiting for one" is the note
+  talking; "you tend to work to external deadlines" is you talking, and they
+  can argue with you.
 - Do not resolve it. No advice, no "you could try". They answer, not you.
 - At most three sentences, ending in the question.
 - The pairs get read days apart, so they must not be two versions of the same
@@ -498,7 +509,12 @@ ${echo.avoid}
 ${PLAIN_ENGLISH_RULES}
 
 Respond with JSON only:
-{ "pairs": [ { "n": 1, "spark": "..." | null, "quote": "the words from that pair's note you used, copied out exactly", "stake": "what they would actually DO differently" }, ... ] }`
+{ "pairs": [ { "n": 1, "spark": "..." | null, "quote": "a run of words copied character-for-character out of THE NOTE for that pair — not from the project line, not from the unexamined question, and not reworded", "stake": "what they would actually DO differently" }, ... ] }
+
+The quote is checked against the note. If the words you hand back are not in
+it, the question is thrown away unread however good it is — so copy them, and
+make sure some of them survive into the question itself. A question that does
+not carry any of the note's actual words was not written from the note.`
 
   try {
     const parsed = JSON.parse(await generateText(prompt, { responseFormat: 'json' }))

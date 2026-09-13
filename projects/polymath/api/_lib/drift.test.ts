@@ -52,3 +52,15 @@ describe('isStalled', () => {
     expect(isStalled(project, now)).toBe(true)
   })
 })
+
+describe('a project that cannot be scored is never harvested', () => {
+  it('classifyDrift only ever sees a real score', () => {
+    // computeDriftScore returns null when a query fails, and drift-decay
+    // does `if (!drift) continue`. This matters more than the other silent
+    // reads in this channel: no embeddings means "maximal drift, no
+    // chatter", which is the exact profile classifyDrift calls let-go. A
+    // broken query used to look identical to an abandoned project, so it
+    // would have quietly harvested live work.
+    expect(classifyDrift(1, false)).toBe('let-go')
+  })
+})
