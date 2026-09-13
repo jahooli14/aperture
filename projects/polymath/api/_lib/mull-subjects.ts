@@ -376,8 +376,11 @@ async function unfiledThoughtSubject(
   noteQuery(trace, 'unfiled-candidates', res)
 
   const unattached = (res.data ?? []).filter((m: any) => !filedMemoryIds.has(m.id))
+  // 80, not 150. A tidied voice note is two or three sentences and most
+  // of them land under 150 characters, so the threshold was throwing away
+  // the ordinary case. 80 is still a real thought and not a fragment.
   const usable = unattached.filter(
-    (m: any) => typeof m.body === 'string' && m.body.trim().length > 150,
+    (m: any) => typeof m.body === 'string' && m.body.trim().length > 80,
   )
   trace.push(
     `unfiled: ${res.data?.length ?? 0} old notes -> ${unattached.length} with no fragment ` +
@@ -436,6 +439,17 @@ async function longHeldSubject(
   }
 }
 
+/**
+ * An article's readable text: the stored body if there is one, else the
+ * excerpt. Feed items only ever get a 100-character excerpt, so anything
+ * asking for real material has to look at `content`.
+ */
+function articleBody(row: { excerpt?: string | null; content?: string | null }): string {
+  const full = typeof row.content === 'string' ? row.content.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() : ''
+  if (full.length > 120) return full
+  return typeof row.excerpt === 'string' ? row.excerpt.trim() : ''
+}
+
 /** Reading, no longer windowed: an article that earned its place two years
  *  ago is still something they vouched for. */
 async function articleSubject(
@@ -443,7 +457,12 @@ async function articleSubject(
 ): Promise<Subject | null> {
   const res = await supabase
     .from('reading_queue')
-    .select('id, title, excerpt, resonance, tags, created_at')
+    // `content` as well as `excerpt`. The RSS ingest path caps excerpt at
+    // 100 characters (api/reading.ts), and this gatherer required 120 --
+    // so every feed-sourced article was excluded by a threshold it could
+    // never meet, whatever the user thought of it. 198 rows, none usable.
+    // The full text is right there in the same row.
+    .select('id, title, excerpt, content, resonance, tags, created_at')
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
     .limit(300)
@@ -452,14 +471,14 @@ async function articleSubject(
   // 198 rows in, 0 out told us nothing: an unvouched RSS backlog and a
   // table of articles with no stored excerpt look identical from outside.
   const corpus = selectCorpusArticles(
-    (res.data ?? []) as (CorpusArticle & { id: string; title: string | null; excerpt: string | null })[],
-  )
-  const eligible = corpus.filter(
-    (a: any) => typeof a.excerpt === 'string' && a.excerpt.trim().length > 120,
-  )
+    (res.data ?? []) as (CorpusArticle & {
+      id: string; title: string | null; excerpt: string | null; content: string | null
+    })[],
+  ).map((a: any) => ({ ...a, body: articleBody(a) }))
+  const eligible = corpus.filter((a: any) => a.body.length > 120)
   trace.push(
     `articles: ${res.data?.length ?? 0} rows -> ${corpus.length} in corpus ` +
-    `(good or hand-saved) -> ${eligible.length} with an excerpt over 120 chars`,
+    `(good or hand-saved) -> ${eligible.length} with over 120 chars of text`,
   )
 
   if (eligible.length === 0) return null
@@ -471,9 +490,9 @@ async function articleSubject(
     id: pick.id,
     projectId: null,
     title: pick.title ?? 'an article',
-    block: `Something they ${framing} in ${monthYear(new Date(pick.created_at))} — "${pick.title ?? 'an article'}":\n"${pick.excerpt}"`,
-    line: `Something they ${framing} in ${monthYear(new Date(pick.created_at))}, "${pick.title ?? 'an article'}": "${pick.excerpt.slice(0, 400)}"`,
-    ownWords: `${pick.title ?? ''} ${pick.excerpt}`,
+    block: `Something they ${framing} in ${monthYear(new Date(pick.created_at))} — "${pick.title ?? 'an article'}":\n"${pick.body.slice(0, 1500)}"`,
+    line: `Something they ${framing} in ${monthYear(new Date(pick.created_at))}, "${pick.title ?? 'an article'}": "${pick.body.slice(0, 400)}"`,
+    ownWords: `${pick.title ?? ''} ${pick.body}`,
     strength: 0.4,
   }
 }

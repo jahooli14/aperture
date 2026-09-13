@@ -147,7 +147,13 @@ jobs:
           # gives the "there's something to show you" teaser a real
           # chance to fire most days instead of just after Sunday's run.
           if [ "$SCHEDULE" = "0 8 * * *" ] || [ "$FORCE" = "true" ]; then
-            hit "/api/utilities?resource=generate-project-ideas" &
+            # Joints must exist before the mull channel can use its best subject
+  # type ("something you keep saying and have never made"). Mining them
+  # only on Sundays left the table empty on the other six days, so every
+  # bake fell back to dormant projects. Sequential and first, so bake
+  # sees what this run finds.
+  hit "/api/utilities?resource=mine-joints"
+  hit "/api/utilities?resource=generate-project-ideas" &
             # Execution rebuild (SPEC.md): today's spark, baked once overnight
             # so it's instant and offline-available on first open. One morph
             # proposal max per day, portfolio-wide (rate limit enforced

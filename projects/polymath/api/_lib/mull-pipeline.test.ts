@@ -61,7 +61,12 @@ function corpus() {
       { user_id: 'u1', id: 'l2', content: 'Learn to solder properly', user_rating: null, status: 'active', created_at: ago(600), lists: { title: 'To do', type: 'skill' } },
     ],
     reading_queue: [
-      { user_id: 'u1', id: 'r1', title: 'On first takes', excerpt: 'The recording is not a document of the performance, it is the performance. Once you accept that, editing becomes a different kind of lie, and the whole practice of fixing things afterwards starts to look strange.', resonance: 'good', tags: [], created_at: ago(400) },
+      { user_id: 'u1', id: 'r1', title: 'On first takes', excerpt: 'The recording is not a document of the performance, it is the performance. Once you accept that, editing becomes a different kind of lie, and the whole practice of fixing things afterwards starts to look strange.', content: null, resonance: 'good', tags: [], created_at: ago(400) },
+      // A feed item as the ingest actually stores one: excerpt capped at
+      // 100 characters, the real text in `content`. Every article in
+      // production looked like this, and the gatherer wanted 120 chars of
+      // excerpt -- a threshold the ingest can never produce.
+      { user_id: 'u1', id: 'r2', title: 'The long way round', excerpt: 'A short feed blurb, cut at a hundred characters by the ingest, which is all any RSS row ev', content: '<p>People who take the long way round are not being slow. They are refusing to accept that the shortest path is the same as the best one, and that refusal costs them years and buys them something nobody has named.</p>', resonance: 'good', tags: ['rss'], created_at: ago(300) },
     ],
     sparks: [],
   }
@@ -400,5 +405,21 @@ describe('the draft call cannot collide a project with itself', () => {
     expect(draftPrompt).not.toContain('rewrote chapter three again')
     expect(draftPrompt).not.toContain('four passes on chapter three now')
     expect(draftPrompt).not.toContain('cut the mitres at 5am')
+  })
+})
+
+describe('a feed article can be a subject', () => {
+  it('uses the stored text when the excerpt is the ingest-capped 100 chars', async () => {
+    // 198 reading rows produced 0 article subjects in production. The RSS
+    // ingest caps excerpt at 100 characters and this gatherer required
+    // 120, so no feed item could ever qualify however the user rated it.
+    const data = corpus() as any
+    data.reading_queue = data.reading_queue.filter((r: any) => r.id === 'r2')
+    const subjects = await gatherSubjects(fakeSupabase(data).client, 'u1')
+    const article = subjects.find(s => s.kind === 'article')
+    expect(article).toBeDefined()
+    expect(article!.block).toContain('refusing to accept that the shortest path')
+    // And the HTML is stripped, not handed to the model as markup.
+    expect(article!.block).not.toContain('<p>')
   })
 })
