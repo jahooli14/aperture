@@ -423,3 +423,30 @@ describe('a feed article can be a subject', () => {
     expect(article!.block).not.toContain('<p>')
   })
 })
+
+describe('article text is real text, not markup with entities left in it', () => {
+  it('decodes entities and strips tags instead of leaving them raw', async () => {
+    // A regex tag-strip leaves "isn&#8217;t" in the text handed to the
+    // model. The model then writes the decoded form ("isn't") in its
+    // quote, quoteIsReal does a plain substring compare against the
+    // stored text, and a correctly grounded quote fails to match --
+    // exactly the failure this whole session has been chasing, just
+    // moved one step earlier in the pipeline.
+    const data = corpus() as any
+    data.reading_queue = [
+      {
+        user_id: 'u1', id: 'r3', title: 'On not finishing', excerpt: 'a'.repeat(101),
+        content: '<p>He said it isn&#8217;t about talent &amp; never was, and that the room agreed with him more readily than anyone expected for a claim that direct.</p><script>trackEvent(\'view\')</script><style>.x{color:red}</style>',
+        resonance: 'good', tags: ['rss'], created_at: ago(300),
+      },
+    ]
+    const subjects = await gatherSubjects(fakeSupabase(data).client, 'u1')
+    const article = subjects.find(s => s.kind === 'article')
+    expect(article).toBeDefined()
+    expect(article!.block).toContain('isn’t about talent & never was')
+    expect(article!.block).not.toContain('&#8217;')
+    expect(article!.block).not.toContain('&amp;')
+    expect(article!.block).not.toContain('trackEvent')
+    expect(article!.block).not.toContain('color:red')
+  })
+})

@@ -16,6 +16,7 @@
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { parseHTML } from 'linkedom'
 import { motifWords } from './spark-echo.js'
 import { selectCorpusArticles, type CorpusArticle } from './reading-corpus.js'
 import {
@@ -445,9 +446,32 @@ async function longHeldSubject(
  * asking for real material has to look at `content`.
  */
 function articleBody(row: { excerpt?: string | null; content?: string | null }): string {
-  const full = typeof row.content === 'string' ? row.content.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() : ''
+  const full = typeof row.content === 'string' ? htmlToText(row.content) : ''
   if (full.length > 120) return full
   return typeof row.excerpt === 'string' ? row.excerpt.trim() : ''
+}
+
+/**
+ * Tags stripped AND entities decoded, via the same linkedom parse
+ * api/reading.ts already uses for this (`decodeHTMLEntities`), not a
+ * regex. A regex strip leaves "isn&#8217;t" in the text handed to the
+ * model. The model writes the entity decoded ("isn't"), quoteIsReal does a
+ * plain substring compare against the stored text, and the two never
+ * match -- so a real, correctly-quoted answer fails grounding and gets
+ * thrown away as invented. The exact defect class this session has spent
+ * itself chasing, found here before it ever ran once in production.
+ */
+function htmlToText(html: string): string {
+  const { document } = parseHTML(`<div>${html}</div>`) as any
+  // textContent includes the text INSIDE <script> and <style> -- it just
+  // concatenates every descendant text node, with no idea which tags are
+  // rendered. api/reading.ts's own cleanHtml already strips these at
+  // ingest, but this function has no guarantee it is only ever fed
+  // cleaned content (a hand-saved article, a future ingest path), and the
+  // cost of removing them explicitly here is two lines.
+  document.querySelectorAll?.('script, style')?.forEach((el: any) => el.remove())
+  const text = document.querySelector('div')?.textContent ?? ''
+  return text.replace(/\s+/g, ' ').trim()
 }
 
 /** Reading, no longer windowed: an article that earned its place two years
