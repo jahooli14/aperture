@@ -79,7 +79,7 @@ const EXECUTION_SESSIONS_RESOURCES = new Set([
   'live-reask', 'different-thing-status', 'harvest', 'mirror', 'book',
   'next-cycle',
 ])
-const EXECUTION_SPARKS_RESOURCES = new Set(['bake', 'today', 'respond', 'dismiss-spark', 'reroll-spark', 'catch-up'])
+const EXECUTION_SPARKS_RESOURCES = new Set(['bake', 'today', 'respond', 'dismiss-spark', 'reroll-spark', 'retire-and-rebake', 'catch-up'])
 const EXECUTION_PROPOSALS_RESOURCES = new Set([
   'generate-morph', 'drift-decay', 'mine-joints', 'generate-composite',
   'pending', 'accept', 'reject',
@@ -2750,6 +2750,119 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
  * nothing else to try — the forgotten-project offer inside bakeMull is the
  * one thing left, and after that the honest answer is no question today.
  */
+/**
+ * Retires whatever spark is currently standing and bakes a replacement,
+ * shared between the user-facing "ask me something else" button
+ * (reroll-spark) and the cron-authenticated equivalent (retire-and-rebake).
+ * The two differ only in how userId is obtained -- extracted so a fix that
+ * makes the standing question obsolete has a way to actually clear it,
+ * not just a way to stop writing bad ones going forward.
+ */
+async function retireAndRebake(
+  supabase: ReturnType<typeof getSupabaseClient>, userId: string,
+): Promise<
+  | { rerolled: true; spark: unknown }
+  | { rerolled: false; reason: string }
+> {
+  const nowIso = new Date().toISOString()
+
+  const { data: current } = await supabase
+    .from('sparks')
+    .select('id, expires_at')
+    .eq('user_id', userId)
+    .is('answered_at', null)
+    .gt('expires_at', nowIso)
+    .order('created_at', { ascending: false })
+    .limit(1)
+
+  const retiring = current?.[0] ?? null
+  if (retiring) {
+    await supabase.from('sparks').update({ expires_at: nowIso }).eq('id', retiring.id).eq('user_id', userId)
+  }
+
+  // The bank first, always. A bake writes up to two questions in one run
+  // and holds the second one back, so "ask me something else" usually
+  // costs nothing at all — no model call, and it comes back instantly
+  // instead of after ten seconds of thinking. Its shelf life is stamped
+  // from now, since until this moment it had never been seen.
+  const { data: bankedRows } = await supabase
+    .from('sparks')
+    .select('id')
+    .eq('user_id', userId)
+    .is('answered_at', null)
+    .is('shown_at', null)
+    .gt('expires_at', nowIso)
+    .order('expires_at', { ascending: true })
+    .limit(1)
+
+  const fromBank = bankedRows?.[0] ?? null
+  if (fromBank) {
+    const { data: served } = await supabase
+      .from('sparks')
+      .update({
+        shown_at: nowIso,
+        expires_at: new Date(Date.now() + SHELF_LIFE_HOURS * 3600_000).toISOString(),
+      })
+      .eq('id', fromBank.id)
+      .eq('user_id', userId)
+      .select('id, type, text, project_id, projects(title)')
+      .single()
+
+    if (served) return { rerolled: true, spark: served }
+  }
+
+  let baked = await bakeMull(supabase, userId)
+
+  // Silence often isn't a thin corpus — it's an empty fragments table.
+  // A project's captures are most of what a blind spot is found in, so
+  // with none attached the first step has almost nothing to read.
+  // Attaching a few before giving up turns "ask me something else" into
+  // the thing that repairs the layer it depends on, rather than a button
+  // that reports the same emptiness however many times it's tapped.
+  if (baked.length === 0) {
+    const { backfillFragments } = await import('./_lib/fragments.js')
+    const attached = await backfillFragments(supabase, userId, 8)
+    if (attached > 0) baked = await bakeMull(supabase, userId)
+  }
+
+  if (baked.length === 0) {
+    // The corpus had nothing else worth asking. Put the original back
+    // rather than leaving the slot empty — silence is the right answer
+    // for a NEW question, not a reason to take away the one you had.
+    if (retiring) {
+      await supabase
+        .from('sparks')
+        .update({ expires_at: retiring.expires_at })
+        .eq('id', retiring.id)
+        .eq('user_id', userId)
+    }
+    return { rerolled: false, reason: 'nothing else to ask' }
+  }
+
+  // Same as the bake: anything past the first is banked behind it, with
+  // a longer expiry, so the next reroll is free.
+  const { data: insertedRows, error: insertErr } = await supabase
+    .from('sparks')
+    .insert(baked.map((spark, i) => ({
+      user_id: userId,
+      type: spark.type,
+      project_id: spark.project_id,
+      text: spark.text,
+      expires_at: spark.expires_at,
+      shown_at: i === 0 ? nowIso : null,
+    })))
+    .select('id, type, text, project_id, shown_at, projects(title)')
+
+  if (insertErr) {
+    console.error('[utilities/sparks] reroll insert failed:', insertErr)
+    return { rerolled: false, reason: insertErr.message }
+  }
+
+  const inserted = (insertedRows ?? []).find((r: any) => r.shown_at) ?? insertedRows?.[0] ?? null
+
+  return { rerolled: true, spark: inserted }
+}
+
 async function handleExecutionSparks(req: VercelRequest, res: VercelResponse) {
   const resource = req.query.resource as string
   const supabase = getSupabaseClient()
@@ -2963,104 +3076,23 @@ async function handleExecutionSparks(req: VercelRequest, res: VercelResponse) {
     if (req.method !== 'POST') return res.status(405).json({ error: 'POST required' })
     const userId = await getUserId(req)
     if (!userId) return res.status(401).json({ error: 'Unauthorized' })
+    return res.status(200).json(await retireAndRebake(supabase, userId))
+  }
 
-    const nowIso = new Date().toISOString()
-
-    const { data: current } = await supabase
-      .from('sparks')
-      .select('id, expires_at')
-      .eq('user_id', userId)
-      .is('answered_at', null)
-      .gt('expires_at', nowIso)
-      .order('created_at', { ascending: false })
-      .limit(1)
-
-    const retiring = current?.[0] ?? null
-    if (retiring) {
-      await supabase.from('sparks').update({ expires_at: nowIso }).eq('id', retiring.id).eq('user_id', userId)
-    }
-
-    // The bank first, always. A bake writes up to two questions in one run
-    // and holds the second one back, so "ask me something else" usually
-    // costs nothing at all — no model call, and it comes back instantly
-    // instead of after ten seconds of thinking. Its shelf life is stamped
-    // from now, since until this moment it had never been seen.
-    const { data: bankedRows } = await supabase
-      .from('sparks')
-      .select('id')
-      .eq('user_id', userId)
-      .is('answered_at', null)
-      .is('shown_at', null)
-      .gt('expires_at', nowIso)
-      .order('expires_at', { ascending: true })
-      .limit(1)
-
-    const fromBank = bankedRows?.[0] ?? null
-    if (fromBank) {
-      const { data: served } = await supabase
-        .from('sparks')
-        .update({
-          shown_at: nowIso,
-          expires_at: new Date(Date.now() + SHELF_LIFE_HOURS * 3600_000).toISOString(),
-        })
-        .eq('id', fromBank.id)
-        .eq('user_id', userId)
-        .select('id, type, text, project_id, projects(title)')
-        .single()
-
-      if (served) return res.status(200).json({ rerolled: true, spark: served })
-    }
-
-    let baked = await bakeMull(supabase, userId)
-
-    // Silence often isn't a thin corpus — it's an empty fragments table.
-    // A project's captures are most of what a blind spot is found in, so
-    // with none attached the first step has almost nothing to read.
-    // Attaching a few before giving up turns "ask me something else" into
-    // the thing that repairs the layer it depends on, rather than a button
-    // that reports the same emptiness however many times it's tapped.
-    if (baked.length === 0) {
-      const { backfillFragments } = await import('./_lib/fragments.js')
-      const attached = await backfillFragments(supabase, userId, 8)
-      if (attached > 0) baked = await bakeMull(supabase, userId)
-    }
-
-    if (baked.length === 0) {
-      // The corpus had nothing else worth asking. Put the original back
-      // rather than leaving the slot empty — silence is the right answer
-      // for a NEW question, not a reason to take away the one you had.
-      if (retiring) {
-        await supabase
-          .from('sparks')
-          .update({ expires_at: retiring.expires_at })
-          .eq('id', retiring.id)
-          .eq('user_id', userId)
-      }
-      return res.status(200).json({ rerolled: false, reason: 'nothing else to ask' })
-    }
-
-    // Same as the bake: anything past the first is banked behind it, with
-    // a longer expiry, so the next reroll is free.
-    const { data: insertedRows, error: insertErr } = await supabase
-      .from('sparks')
-      .insert(baked.map((spark, i) => ({
-        user_id: userId,
-        type: spark.type,
-        project_id: spark.project_id,
-        text: spark.text,
-        expires_at: spark.expires_at,
-        shown_at: i === 0 ? nowIso : null,
-      })))
-      .select('id, type, text, project_id, shown_at, projects(title)')
-
-    if (insertErr) {
-      console.error('[utilities/sparks] reroll insert failed:', insertErr)
-      return res.status(500).json({ error: insertErr.message })
-    }
-
-    const inserted = (insertedRows ?? []).find((r: any) => r.shown_at) ?? insertedRows?.[0] ?? null
-
-    return res.status(200).json({ rerolled: true, spark: inserted })
+  // ─── RETIRE-AND-REBAKE (cron) ───────────────────────────────────────
+  // Same operation as reroll-spark, cron-authenticated instead of
+  // user-authenticated. Without this, a standing spark could only ever be
+  // replaced by the person tapping "ask me something else" in the app or
+  // waiting out its four-day shelf life -- there was no way to retire a
+  // spark that a code fix had already made obsolete. A prompt or gate fix
+  // landing mid-week left the OLD, now-known-bad question standing for
+  // days regardless of how correct the fix was, because nothing about
+  // deploying a fix touches a row already written to `sparks`.
+  if (resource === 'retire-and-rebake') {
+    if (req.method !== 'POST') return res.status(405).json({ error: 'POST required' })
+    const userId = getCronUserId(req)
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' })
+    return res.status(200).json(await retireAndRebake(supabase, userId))
   }
 
   // ─── DISMISS ────────────────────────────────────────────────────────
