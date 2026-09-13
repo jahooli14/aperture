@@ -375,9 +375,14 @@ async function unfiledThoughtSubject(
     .limit(120)
   noteQuery(trace, 'unfiled-candidates', res)
 
-  const usable = (res.data ?? [])
-    .filter((m: any) => !filedMemoryIds.has(m.id))
-    .filter((m: any) => typeof m.body === 'string' && m.body.trim().length > 150)
+  const unattached = (res.data ?? []).filter((m: any) => !filedMemoryIds.has(m.id))
+  const usable = unattached.filter(
+    (m: any) => typeof m.body === 'string' && m.body.trim().length > 150,
+  )
+  trace.push(
+    `unfiled: ${res.data?.length ?? 0} old notes -> ${unattached.length} with no fragment ` +
+    `pointing at them -> ${usable.length} long enough to be a subject`,
+  )
   if (usable.length === 0) return null
   const pick: any = usable[Math.floor(Math.random() * Math.min(usable.length, 8))]
   const age = humanDuration((Date.now() - new Date(pick.created_at).getTime()) / 86_400_000)
@@ -444,9 +449,18 @@ async function articleSubject(
     .limit(300)
   noteQuery(trace, 'article-candidates', res)
 
-  const eligible = selectCorpusArticles(
+  // 198 rows in, 0 out told us nothing: an unvouched RSS backlog and a
+  // table of articles with no stored excerpt look identical from outside.
+  const corpus = selectCorpusArticles(
     (res.data ?? []) as (CorpusArticle & { id: string; title: string | null; excerpt: string | null })[],
-  ).filter((a: any) => typeof a.excerpt === 'string' && a.excerpt.trim().length > 120)
+  )
+  const eligible = corpus.filter(
+    (a: any) => typeof a.excerpt === 'string' && a.excerpt.trim().length > 120,
+  )
+  trace.push(
+    `articles: ${res.data?.length ?? 0} rows -> ${corpus.length} in corpus ` +
+    `(good or hand-saved) -> ${eligible.length} with an excerpt over 120 chars`,
+  )
 
   if (eligible.length === 0) return null
   const pick: any = eligible[Math.floor(Math.random() * Math.min(eligible.length, 12))]

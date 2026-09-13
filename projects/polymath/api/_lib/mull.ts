@@ -377,7 +377,15 @@ export function rejectionReason(input: ValidationInput): string | null {
   // throwing it away produces an empty slot for a clerical reason.
   const quoted = quoteIsReal(input.quote, input.connectorText)
   const carried = longestSharedRun(text, input.connectorText)
-  if (!quoted && !carried) return 'nothing of the note survives into the question'
+  if (!quoted && !carried) {
+    // Four drafts in a row died here and the message said only that they
+    // had. Which half failed is the whole diagnosis: a model quoting the
+    // project instead of the note is a prompt problem, and a real quote
+    // the substring check can't find is a matching problem. They need
+    // opposite fixes, so the trace has to tell them apart.
+    return `nothing of the note survives into the question — it said it used ` +
+      `"${input.quote.slice(0, 70)}", the note actually says "${input.connectorText.slice(0, 70)}…"`
+  }
   if (quoted && !usesQuote(text, input.quote) && !carried) {
     return 'the note is decoration, not a lens'
   }
