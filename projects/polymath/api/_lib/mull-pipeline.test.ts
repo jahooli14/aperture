@@ -48,8 +48,8 @@ function corpus() {
   return {
     fragments,
     memories: [
-      { user_id: 'u1', id: 'm1', title: 'Dad', body: 'Ten more proper conversations with dad, probably, and we spend them on the greenhouse. It is the only tidy room in a messy house and I do not know why that matters to me but it does.', created_at: ago(280) },
-      { user_id: 'u1', id: 'm2', title: 'Mixing', body: 'Kept the first take of the whole side even though the drop is late. It breathes. Every version I tightened afterwards was worse and I deleted them all.', created_at: ago(150) },
+      { user_id: 'u1', id: 'm1', title: 'Dad', body: 'Ten more proper conversations with dad, probably, and we spend them on the greenhouse. It is the only tidy room in a messy house and I do not know why that matters to me but it does.', created_at: ago(280), memory_type: 'insight' },
+      { user_id: 'u1', id: 'm2', title: 'Mixing', body: 'Kept the first take of the whole side even though the drop is late. It breathes. Every version I tightened afterwards was worse and I deleted them all.', created_at: ago(150), memory_type: 'insight' },
     ],
     projects: [
       { user_id: 'u1', id: 'p-book', title: 'The book', description: 'A novel where characters get swapped out partway through', metadata: { end_goal: 'a finished manuscript' }, last_closeout_text: 'Got through the chapter nine rewrite', created_at: ago(600), last_active: ago(120), last_session_ended_at: ago(120), state: 'mull', status: 'active' },
@@ -373,6 +373,44 @@ describe('what the three subjects are allowed to be', () => {
     const data = corpus() as any
     data.joints = []
     data.fragments = []
+    const subjects = await gatherSubjects(fakeSupabase(data).client, 'u1')
+    expect(subjects.some(s => s.shape === 'unfiled')).toBe(true)
+  })
+
+  it('does not turn a logged event into a subject', async () => {
+    // A real production question: "You were watching the Arsenal match and
+    // noticed how well organized the team appears this season. Then you
+    // wrote that their winning streak has come to an end. Does
+    // organization keep the streak alive?" -- self-contained sports
+    // trivia, no connector doing any work, no stake, nothing to make.
+    // memory_type is stamped at capture time by the same triage that
+    // writes everything else on the row; 'event' means "something that
+    // happened," not a reflection with a blind spot in it.
+    const data = corpus() as any
+    data.joints = []
+    data.fragments = []
+    data.memories = [
+      {
+        user_id: 'u1', id: 'm-event', title: "BBC Report: Arsenal's Winning Streak Ends",
+        body: 'Watching the Arsenal match, they looked well organised again this season, but the winning streak has come to an end after that result.',
+        created_at: ago(280), memory_type: 'event',
+      },
+    ]
+    const subjects = await gatherSubjects(fakeSupabase(data).client, 'u1')
+    expect(subjects.some(s => s.shape === 'unfiled')).toBe(false)
+  })
+
+  it('still allows an unclassified note through -- most memories predate the field', async () => {
+    const data = corpus() as any
+    data.joints = []
+    data.fragments = []
+    data.memories = [
+      {
+        user_id: 'u1', id: 'm-unclassified', title: 'Old note',
+        body: 'Something I keep meaning to come back to and never have, a real reflection with no memory_type stamped on it at all.',
+        created_at: ago(280), memory_type: null,
+      },
+    ]
     const subjects = await gatherSubjects(fakeSupabase(data).client, 'u1')
     expect(subjects.some(s => s.shape === 'unfiled')).toBe(true)
   })
