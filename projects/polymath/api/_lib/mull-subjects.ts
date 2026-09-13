@@ -369,7 +369,7 @@ async function unfiledThoughtSubject(
   // memories to be null.
   const res = await supabase
     .from('memories')
-    .select('id, title, body, created_at')
+    .select('id, title, body, created_at, memory_type')
     .eq('user_id', userId)
     .lt('created_at', cutoff)
     .order('created_at', { ascending: false })
@@ -380,12 +380,25 @@ async function unfiledThoughtSubject(
   // 80, not 150. A tidied voice note is two or three sentences and most
   // of them land under 150 characters, so the threshold was throwing away
   // the ordinary case. 80 is still a real thought and not a fragment.
-  const usable = unattached.filter(
+  const longEnough = unattached.filter(
     (m: any) => typeof m.body === 'string' && m.body.trim().length > 80,
   )
+  // 'event' means "something that happened," stamped at capture time by
+  // the same triage that writes memory_type (process-memory.ts) -- not a
+  // reflection with a blind spot in it. Nothing filtered this, so a note
+  // like "watched the Arsenal match, well organised this season" became a
+  // subject exactly like a real unfinished thought, and got its own
+  // self-contained question with no connector doing any real work: "does
+  // organisation keep the streak alive?" -- sports trivia, no project, no
+  // stake, nothing to make. Checked in JS, not `.neq()` in the query --
+  // PostgREST's `.neq()` drops NULL rows (documented gotcha, see the
+  // reading-corpus resonance filter), and most older or manually-added
+  // memories have no memory_type at all. Excluding only the ones
+  // positively classified as 'event' keeps everything unclassified.
+  const usable = longEnough.filter((m: any) => m.memory_type !== 'event')
   trace.push(
     `unfiled: ${res.data?.length ?? 0} old notes -> ${unattached.length} with no fragment ` +
-    `pointing at them -> ${usable.length} long enough to be a subject`,
+    `pointing at them -> ${longEnough.length} long enough -> ${usable.length} not a logged event`,
   )
   if (usable.length === 0) return null
   const pick: any = usable[Math.floor(Math.random() * Math.min(usable.length, 8))]
