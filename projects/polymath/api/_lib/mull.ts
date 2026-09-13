@@ -159,6 +159,21 @@ export interface ConnectorFilter {
   subjectText: string
   /** Ids that ARE the subject, in any table. */
   excludeIds: string[]
+  /** True when the subject is already anchored to a project (a project
+   *  subject itself, or a joint/pair whose captures trace back to one).
+   *  When false -- an unfiled thought, an article, a joint with no known
+   *  project -- a project connector in the band is preferred outright,
+   *  not just ranked by score. The search already returns project rows
+   *  alongside memories and articles for every subject (findConnectors
+   *  calls match_projects regardless of kind); nothing preferred one kind
+   *  over another, so "watched the match, well organised this season"
+   *  was exactly as likely to connect to a stray note as to an actual
+   *  project, in an app whose whole point is directing the user AT a
+   *  project. A subject with no project of its own has the most to gain
+   *  from landing on one; a project subject does not need another
+   *  project pushed on it -- that manufactured bridge is what the joint
+   *  -> pair composite mechanism exists to do carefully instead. */
+  preferProject?: boolean
 }
 
 /**
@@ -203,16 +218,18 @@ export function selectConnectors(
 ): MullCandidate[] {
   const excluded = new Set(filter.excludeIds)
   const ceiling = connectorCeiling(filter.subjectText)
-  return candidates
-    .filter(c =>
-      c.text.trim().length > 0 &&
-      !excluded.has(c.id) &&
-      c.similarity >= CONNECTOR_FLOOR &&
-      c.similarity <= ceiling &&
-      !sharesDomain(filter.subjectText, `${c.title} ${c.text}`)
-    )
-    .sort((a, b) => b.similarity - a.similarity)
-    .slice(0, limit)
+  const eligible = candidates.filter(c =>
+    c.text.trim().length > 0 &&
+    !excluded.has(c.id) &&
+    c.similarity >= CONNECTOR_FLOOR &&
+    c.similarity <= ceiling &&
+    !sharesDomain(filter.subjectText, `${c.title} ${c.text}`)
+  )
+  if (filter.preferProject) {
+    const projects = eligible.filter(c => c.kind === 'project')
+    if (projects.length > 0) return projects.sort((a, b) => b.similarity - a.similarity).slice(0, limit)
+  }
+  return eligible.sort((a, b) => b.similarity - a.similarity).slice(0, limit)
 }
 
 /** Quotes get retyped with different punctuation and spacing; matching has

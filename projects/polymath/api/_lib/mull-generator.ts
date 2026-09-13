@@ -355,7 +355,11 @@ async function findConnectors(
     const excludeIds = [blind.subject.id]
     if (blind.subject.projectId) excludeIds.push(blind.subject.projectId)
 
-    const connectors = selectConnectors(candidates, { subjectText: blind.subject.ownWords, excludeIds })
+    const connectors = selectConnectors(candidates, {
+      subjectText: blind.subject.ownWords,
+      excludeIds,
+      preferProject: !blind.subject.projectId,
+    })
     // The numbers, not a verdict: how many the vector returned at all, the
     // best score it saw, and the band it had to fit. An empty search and a
     // search whose every hit was a restatement look identical from outside
