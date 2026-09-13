@@ -18,6 +18,7 @@ import { thinkingFragment } from './_lib/gemini-thinking.js'
 import { generateGist, type ArticleGist } from './_lib/article-gist.js'
 import { mitigationFromHeaders, detectBotWallText } from './_lib/bot-wall.js'
 import { stripLinkFarms } from './_lib/link-density.js'
+import { isCorpusEligible } from './_lib/reading-corpus.js'
 
 // rss-parser is used only for XML parsing now — fetching is done manually
 // in robustParseFeed below so we can present a full browser identity to
@@ -1492,6 +1493,14 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
         update.archived_at = null
       }
 
+      // "Not for me" is a permanent exclusion (reading-corpus.ts), but an
+      // ungated save/extraction path could already have embedded this
+      // article before any verdict existed. Clear it here too, or a
+      // rejected article keeps surfacing as a connector forever.
+      if (verdict === 'not_for_me' && article.embedding) {
+        update.embedding = null
+      }
+
       const { data: updated, error: updateError } = await supabase
         .from('reading_queue')
         .update(update)
@@ -2949,6 +2958,24 @@ async function generateArticleEmbeddingAndConnect(
   const supabase = getSupabaseClient()
 
   try {
+    // The single choke point for "does this article earn an embedding".
+    // Call sites used to answer that themselves and three of four got it
+    // wrong (embedding on save/extraction, before any verdict exists) --
+    // see reading-corpus.ts. Re-read resonance/tags here rather than trust
+    // whatever the caller believed, since this often runs well after the
+    // save that triggered it.
+    const { data: current } = await supabase
+      .from('reading_queue')
+      .select('resonance, tags')
+      .eq('id', articleId)
+      .eq('user_id', userId)
+      .maybeSingle()
+
+    if (!current || !isCorpusEligible(current)) {
+      console.log(`[reading] Skipping embedding for ${articleId} -- not corpus-eligible yet`)
+      return
+    }
+
     console.log(`[reading] Generating embedding for article ${articleId}`)
 
     // Generate embedding from title + excerpt
