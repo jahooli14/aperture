@@ -82,6 +82,25 @@ const STOPWORDS = new Set([
 /** Crude singular. "ripples" and "ripple" are the same motif; "glass" and
  *  "this" must not lose their endings. Applied to both sides, so an
  *  imperfect stem still matches itself. */
+/**
+ * A contraction is its base word, not a word of its own.
+ *
+ * The split keeps apostrophes, so "it's" arrived here as a four-letter
+ * token nothing recognised and became a distinctive word — which is how
+ * "it only works if it's one take", the shortest and best subject the
+ * channel has, came out with exactly one motif word: `it's`. Worse,
+ * "that's" lost its trailing s to the stemmer and became the motif `that'`.
+ * Every gate built on motifWords was reading those as subject vocabulary:
+ * two questions sharing "it's" and one real word counted as an echo, and a
+ * subject whose only guard word is "it's" guards nothing.
+ */
+function uncontract(word: string): string {
+  return word
+    .replace(/n't$/, '')
+    .replace(/'(s|re|ve|ll|d|m)$/, '')
+    .replace(/'/g, '')
+}
+
 function stem(word: string): string {
   if (word.length < 5) return word
   if (/(ss|us|is)$/.test(word)) return word
@@ -95,7 +114,7 @@ function stem(word: string): string {
 export function motifWords(text: string): string[] {
   const found = new Set<string>()
   for (const raw of text.toLowerCase().split(/[^a-z0-9'-]+/)) {
-    const word = raw.replace(/^['-]+|['-]+$/g, '')
+    const word = uncontract(raw.replace(/^['-]+|['-]+$/g, ''))
     if (word.length < 4 || STOPWORDS.has(word)) continue
     const s = stem(word)
     if (STOPWORDS.has(s)) continue

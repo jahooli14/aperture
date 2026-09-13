@@ -116,3 +116,24 @@ describe('the channel\'s own framing is not a motif', () => {
     expect(echoesRecent(second, [first])).toBe(true)
   })
 })
+
+describe('contractions are not motifs', () => {
+  it('strips them to the base word', () => {
+    // "it's" arrived as a four-letter token nothing recognised, and "that's"
+    // lost its s to the stemmer and became the motif `that'`. Both counted
+    // as subject vocabulary in four different gates.
+    const words = motifWords("that's what I don't know, and it's why I couldn't finish the greenhouse")
+    expect(words).toEqual(['finish', 'greenhouse'])
+  })
+
+  it("leaves the channel's best subject with no false guard", () => {
+    // "it only works if it's one take" -- CLAUDE.md's canonical short
+    // subject. It used to report exactly one distinctive word, `it's`,
+    // which guards nothing and made connectorCeiling read as protected.
+    expect(motifWords("it only works if it's one take")).toEqual([])
+  })
+
+  it('keeps a possessive that is a real word', () => {
+    expect(motifWords("the farmer's greenhouse")).toEqual(['farmer', 'greenhouse'])
+  })
+})

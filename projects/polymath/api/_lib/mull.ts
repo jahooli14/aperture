@@ -83,8 +83,18 @@ export const CONNECTOR_CEILING = 0.82
  * ninety-word project block it is a genuine neighbour. Same number,
  * different meaning, and the ceiling has to reflect that rather than
  * pretend both are equally protected.
+ *
+ * The number is 8 rather than 12 because motifWords got stricter — the
+ * channel's own framing ("wrote", month names) and contractions came out of
+ * it — so the same subject now scores lower than when 12 was chosen. A dated
+ * conviction, which CLAUDE.md calls the strongest subject there is, counted
+ * 6 words and now counts 3: at 12 that dropped its ceiling to 0.67 and shut
+ * out the 0.69 connector a real run had found. This is a recalibration after
+ * the vocabulary changed under it, not a new finding. What it means has not
+ * moved: enough distinctive words that a two-word overlap with a
+ * restatement is actually likely.
  */
-export const VOCAB_FULL_GUARD = 12
+export const VOCAB_FULL_GUARD = 8
 /** The ceiling when the subject offers no vocabulary guard at all. */
 export const CONNECTOR_CEILING_TIGHT = 0.62
 
@@ -126,6 +136,12 @@ const EXPLAINER_PATTERNS: readonly RegExp[] = [
   // walk away from both halves into something that would fit any subject. A
   // real tension does not need "but" to announce itself.
   /,\s*(but|yet)\s+you('re| are|r)?\s+(also|still|now|actually)\b/i,
+  // Same move, any connective. "You wanted to map all 198 countries to a
+  // memory palace. Yet you left your painted coasters sitting for eleven
+  // months" -- the pivot decides the user is being inconsistent and sets up
+  // to catch them out. Banning only ", but you're also" just moved the model
+  // onto "Yet you". Two facts side by side need no pivot between them.
+  /(^|[.;,]\s*)(yet|but|though|whereas)\s+you\b/i,
 ]
 
 export function sharesDomain(a: string, b: string, limit = DOMAIN_OVERLAP_LIMIT): boolean {
