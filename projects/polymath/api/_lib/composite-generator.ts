@@ -28,6 +28,7 @@ import { generateText } from './gemini-chat.js'
 import { PLAIN_ENGLISH_RULES } from './plain-english.js'
 import { isStalled, type ProjectForStall } from './drift.js'
 import { filterGrounded, hasAdequateCoverage, type Evidence } from './session-grounding.js'
+import { isGraveyarded } from './project-state.js'
 
 const FRAGMENTS_PER_PROJECT = 4
 
@@ -55,9 +56,8 @@ export interface CompositeCandidate {
 export async function getStalledProjects(supabase: SupabaseClient, userId: string): Promise<StalledProject[]> {
   const { data } = await supabase
     .from('projects')
-    .select('id, title, description, last_session_ended_at, slots')
+    .select('id, title, description, last_session_ended_at, slots, state, status')
     .eq('user_id', userId)
-    .neq('state', 'harvested')
     .limit(200)
 
   const projects = (data ?? []) as Array<{
@@ -66,9 +66,16 @@ export async function getStalledProjects(supabase: SupabaseClient, userId: strin
     description: string | null
     last_session_ended_at: string | null
     slots: unknown
+    state?: string | null
+    status?: string | null
   }>
 
+  // A buried project doesn't belong in a NEW fusion either. Was
+  // `.neq('state', 'harvested')` in the query, which missed a project
+  // sent to the graveyard by hand (status: 'abandoned', state stays
+  // 'mull') -- see project-state.ts.
   return projects
+    .filter(p => !isGraveyarded(p))
     .map(p => ({
       id: p.id,
       title: p.title,

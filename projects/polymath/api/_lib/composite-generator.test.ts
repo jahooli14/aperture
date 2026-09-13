@@ -158,3 +158,53 @@ describe('attachFragments', () => {
     expect(await attachFragments(stubClient([]), 'u1', [])).toEqual([])
   })
 })
+
+describe('getStalledProjects excludes a buried project', () => {
+  function stubClient(rows: Record<string, unknown>[]) {
+    return {
+      from: () => ({
+        select: () => ({
+          eq: () => ({
+            limit: () => Promise.resolve({ data: rows, error: null }),
+          }),
+        }),
+      }),
+    } as any
+  }
+
+  const stalledShape = {
+    description: null,
+    last_session_ended_at: '2020-01-01T00:00:00Z', // long stalled
+    slots: [{ filled: false }],
+  }
+
+  it('leaves out a project sent to the graveyard -- state stays "mull", only status changes', async () => {
+    // Was `.neq('state', 'harvested')` in the query, which never caught
+    // this: burying a project (projects.ts) sets status: 'abandoned' and
+    // leaves state at 'mull'. See project-state.ts.
+    const { getStalledProjects } = await import('./composite-generator.js')
+    const rows = [
+      { id: 'proj-live', title: 'Still going', state: 'mull', status: 'active', ...stalledShape },
+      { id: 'proj-buried', title: 'Sent to the graveyard', state: 'mull', status: 'abandoned', ...stalledShape },
+    ]
+    const result = await getStalledProjects(stubClient(rows), 'u1')
+    expect(result.map(p => p.id)).toEqual(['proj-live'])
+  })
+
+  it('leaves out a harvested project too', async () => {
+    const { getStalledProjects } = await import('./composite-generator.js')
+    const rows = [
+      { id: 'proj-live', title: 'Still going', state: 'mull', status: 'active', ...stalledShape },
+      { id: 'proj-done', title: 'Finished', state: 'harvested', status: 'completed', ...stalledShape },
+    ]
+    const result = await getStalledProjects(stubClient(rows), 'u1')
+    expect(result.map(p => p.id)).toEqual(['proj-live'])
+  })
+
+  it('keeps a dormant project -- dormant is not the same as buried', async () => {
+    const { getStalledProjects } = await import('./composite-generator.js')
+    const rows = [{ id: 'proj-dormant', title: 'Quiet a while', state: 'mull', status: 'dormant', ...stalledShape }]
+    const result = await getStalledProjects(stubClient(rows), 'u1')
+    expect(result.map(p => p.id)).toEqual(['proj-dormant'])
+  })
+})

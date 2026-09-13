@@ -17,6 +17,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { generateText } from './gemini-chat.js'
 import { PLAIN_ENGLISH_RULES } from './plain-english.js'
+import { isGraveyarded } from './project-state.js'
 
 const MAX_SLOTS = 4
 const BACKFILL_BATCH_SIZE = 25
@@ -75,14 +76,18 @@ export async function seedSlotsForProject(
 
 /** Cron-friendly backfill: seeds slots for every project that still has none. */
 export async function backfillProjectSlots(supabase: SupabaseClient, userId: string): Promise<number> {
-  const { data: projects } = await supabase
+  const { data } = await supabase
     .from('projects')
-    .select('id, title, description, slots')
+    .select('id, title, description, slots, state, status')
     .eq('user_id', userId)
-    .neq('state', 'harvested')
     .limit(BACKFILL_BATCH_SIZE)
 
-  const unseeded = (projects ?? []).filter(p => !Array.isArray(p.slots) || p.slots.length === 0)
+  // A buried project doesn't need session-shape slots seeded for it.
+  // Was `.neq('state', 'harvested')` in the query, which missed one
+  // sent to the graveyard by hand -- see project-state.ts.
+  const unseeded = (data ?? [])
+    .filter(p => !isGraveyarded(p))
+    .filter(p => !Array.isArray(p.slots) || p.slots.length === 0)
   let seeded = 0
   for (const project of unseeded) {
     const count = await seedSlotsForProject(supabase, userId, project)

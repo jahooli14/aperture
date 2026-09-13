@@ -16,6 +16,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { cosineSimilarity } from './gemini-embeddings.js'
 import { classifyDrift, isStalled } from './drift.js'
+import { isGraveyarded } from './project-state.js'
 
 const CHATTER_LOOKBACK_DAYS = 90
 const MIN_FRAGMENTS_TO_SCORE = 1
@@ -81,17 +82,21 @@ async function computeDriftScore(
 }
 
 export async function runDriftDecay(supabase: SupabaseClient, userId: string): Promise<{ harvested: string[] }> {
-  const { data: projects } = await supabase
+  const { data } = await supabase
     .from('projects')
-    .select('id, title, embedding, last_session_ended_at, slots')
+    .select('id, title, embedding, last_session_ended_at, slots, state, status')
     .eq('user_id', userId)
-    .neq('state', 'harvested')
     .neq('state', 'live') // never silently harvest the thing the user is actively executing
     .limit(200)
 
   const harvested: string[] = []
 
-  for (const project of projects ?? []) {
+  // Already dead is not this function's job. Was `.neq('state',
+  // 'harvested')` alone, which missed a project sent to the graveyard by
+  // hand (status: 'abandoned', state stays 'mull') -- see
+  // project-state.ts. Re-harvesting it would just be a wasted embedding
+  // comparison for a state change nobody needed.
+  for (const project of (data ?? []).filter(p => !isGraveyarded(p))) {
     const stalled = isStalled({
       last_session_ended_at: project.last_session_ended_at,
       slots: Array.isArray(project.slots) ? project.slots : [],

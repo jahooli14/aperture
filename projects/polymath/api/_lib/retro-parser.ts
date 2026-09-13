@@ -10,6 +10,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { generateText } from './gemini-chat.js'
+import { isGraveyarded } from './project-state.js'
 
 export interface RetroParseResult {
   projectId: string
@@ -21,14 +22,17 @@ export async function parseRetroText(
   userId: string,
   text: string
 ): Promise<RetroParseResult | null> {
-  const { data: projects } = await supabase
+  const { data } = await supabase
     .from('projects')
-    .select('id, title')
+    .select('id, title, state, status')
     .eq('user_id', userId)
-    .neq('state', 'harvested')
     .limit(100)
 
-  if (!projects || projects.length === 0) return null
+  // A retro naming a buried project by title shouldn't file time against
+  // it. Was `.neq('state', 'harvested')` in the query, which missed one
+  // sent to the graveyard by hand -- see project-state.ts.
+  const projects = (data ?? []).filter(p => !isGraveyarded(p))
+  if (projects.length === 0) return null
 
   const prompt = `The user just said this about time they spent working on something:
 "${text}"
