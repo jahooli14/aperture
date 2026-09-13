@@ -19,6 +19,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { cosineSimilarity } from './gemini-embeddings.js'
 import { generateText } from './gemini-chat.js'
 import { PLAIN_ENGLISH_RULES } from './plain-english.js'
+import { isGraveyarded } from './project-state.js'
 
 const ATTACH_SIM_THRESHOLD = 0.5
 const ROLES = ['reference', 'constraint', 'material', 'deadline', 'obstacle', 'collaborator'] as const
@@ -29,6 +30,8 @@ interface ProjectCandidate {
   title: string
   embedding: number[] | null
   slots: Array<{ name: string; filled: boolean }>
+  state?: string | null
+  status?: string | null
 }
 
 interface ClassifyResult {
@@ -82,16 +85,19 @@ export async function attachFragmentFromMemory(
 
   const { data: projects } = await supabase
     .from('projects')
-    .select('id, title, embedding, slots')
+    .select('id, title, embedding, slots, state, status')
     .eq('user_id', userId)
-    .neq('state', 'harvested')
     .limit(200)
 
   if (!projects || projects.length === 0) return 0
 
+  // A new capture doesn't get silently filed under a project the user
+  // buried. Was `.neq('state', 'harvested')` in the query, which missed
+  // one sent to the graveyard by hand -- see project-state.ts.
   let best: ProjectCandidate | null = null
   let bestSim = 0
   for (const p of projects as ProjectCandidate[]) {
+    if (isGraveyarded(p)) continue
     if (!p.embedding) continue
     const sim = cosineSimilarity(memory.embedding, p.embedding)
     if (sim > bestSim) {
