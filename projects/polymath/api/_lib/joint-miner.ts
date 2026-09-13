@@ -149,7 +149,7 @@ export async function mineJoints(supabase: SupabaseClient, userId: string): Prom
 
     if (matched) {
       const mergedIds = Array.from(new Set([...matched.fragment_ids, ...cluster.fragmentIds]))
-      await supabase
+      const upd = await supabase
         .from('joints')
         .update({
           fragment_ids: mergedIds,
@@ -158,6 +158,10 @@ export async function mineJoints(supabase: SupabaseClient, userId: string): Prom
         })
         .eq('id', matched.id)
         .eq('user_id', userId)
+      if (upd.error) {
+        trace.push(`!! joint update FAILED: ${upd.error.message}`)
+        continue
+      }
     } else {
       const ins = await supabase.from('joints').insert({
         user_id: userId,
