@@ -462,16 +462,25 @@ function articleBody(row: { excerpt?: string | null; content?: string | null }):
  * itself chasing, found here before it ever ran once in production.
  */
 function htmlToText(html: string): string {
-  const { document } = parseHTML(`<div>${html}</div>`) as any
-  // textContent includes the text INSIDE <script> and <style> -- it just
-  // concatenates every descendant text node, with no idea which tags are
-  // rendered. api/reading.ts's own cleanHtml already strips these at
-  // ingest, but this function has no guarantee it is only ever fed
-  // cleaned content (a hand-saved article, a future ingest path), and the
-  // cost of removing them explicitly here is two lines.
-  document.querySelectorAll?.('script, style')?.forEach((el: any) => el.remove())
-  const text = document.querySelector('div')?.textContent ?? ''
-  return text.replace(/\s+/g, ' ').trim()
+  // articleSubject runs inside gatherSubjects' Promise.all alongside four
+  // other gatherers -- an uncaught throw here does not just lose this one
+  // article, it fails the whole bake and every subject in it. reading.ts's
+  // own cleanHtml wraps the same linkedom parse for the same reason; this
+  // does too.
+  try {
+    const { document } = parseHTML(`<div>${html}</div>`) as any
+    // textContent includes the text INSIDE <script> and <style> -- it just
+    // concatenates every descendant text node, with no idea which tags are
+    // rendered. cleanHtml already strips these at ingest, but this function
+    // has no guarantee it is only ever fed cleaned content (a hand-saved
+    // article, a future ingest path), and removing them here costs two lines.
+    document.querySelectorAll?.('script, style')?.forEach((el: any) => el.remove())
+    const text = document.querySelector('div')?.textContent ?? ''
+    return text.replace(/\s+/g, ' ').trim()
+  } catch (e) {
+    console.warn('[mull] could not parse article HTML, falling back to excerpt:', e)
+    return ''
+  }
 }
 
 /** Reading, no longer windowed: an article that earned its place two years

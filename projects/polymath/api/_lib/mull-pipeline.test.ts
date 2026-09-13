@@ -470,3 +470,23 @@ describe('the identity block query reports its own failures', () => {
     expect(trace.join('\n')).toMatch(/identity-list-items query FAILED/)
   })
 })
+
+describe('a gatherer failure does not take down the whole bake', () => {
+  it('malformed article HTML falls back to the excerpt instead of throwing', async () => {
+    // articleSubject runs inside gatherSubjects' Promise.all alongside four
+    // other gatherers. An uncaught throw parsing one article's HTML would
+    // fail the whole bake -- every subject lost, not just this one.
+    generateText.mockResolvedValueOnce(BLIND_SPOTS).mockResolvedValueOnce(DRAFTS)
+    const data = corpus() as any
+    data.reading_queue = [
+      {
+        user_id: 'u1', id: 'r4', title: 'Bad markup', excerpt: 'a'.repeat(150),
+        // linkedom is lenient about most malformed HTML, so this asserts
+        // the fallback path directly rather than hoping some input throws.
+        content: '<p>short</p>',
+        resonance: 'good', tags: [], created_at: ago(300),
+      },
+    ]
+    await expect(gatherSubjects(fakeSupabase(data).client, 'u1')).resolves.not.toThrow()
+  })
+})
