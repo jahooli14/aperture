@@ -490,3 +490,92 @@ describe('a gatherer failure does not take down the whole bake', () => {
     await expect(gatherSubjects(fakeSupabase(data).client, 'u1')).resolves.not.toThrow()
   })
 })
+
+describe('isTransientError', () => {
+  it('recognises the failure actually seen in production', async () => {
+    const { isTransientError } = await import('./mull-subjects.js')
+    expect(isTransientError('Gateway Timeout')).toBe(true)
+    expect(isTransientError('upstream connect error or disconnect/reset before headers')).toBe(true)
+    expect(isTransientError('request timed out')).toBe(true)
+    expect(isTransientError('ECONNRESET')).toBe(true)
+  })
+
+  it('does not retry a real rejection -- retrying that would just be slower', async () => {
+    const { isTransientError } = await import('./mull-subjects.js')
+    expect(isTransientError('column list_items.foo does not exist')).toBe(false)
+    expect(isTransientError('new row violates row-level security policy')).toBe(false)
+    expect(isTransientError(undefined)).toBe(false)
+  })
+})
+
+describe('a timed-out long-held query gets one retry, not a silent empty result', () => {
+  it('succeeds on the second attempt after a Gateway Timeout on the first', async () => {
+    generateText.mockResolvedValueOnce(BLIND_SPOTS).mockResolvedValueOnce(DRAFTS)
+    const data = corpus() as any
+
+    let longHeldCalls = 0
+    const real = fakeSupabase(data).client
+    // identityBlock ALSO reads list_items, with a different select (no
+    // 'status' column) -- distinguish on that, rather than intercepting
+    // every list_items call, so this only exercises longHeldSubject's path.
+    const client = {
+      ...real,
+      from: (table: string) => {
+        const chain = real.from(table)
+        if (table !== 'list_items') return chain
+        const realSelect = chain.select
+        chain.select = (cols?: string) => {
+          if (!cols?.includes('status')) return realSelect(cols)
+          longHeldCalls++
+          const isFirstCall = longHeldCalls === 1
+          const wrapped = realSelect(cols)
+          const realThen = wrapped.then
+          wrapped.then = (resolve: (v: any) => unknown) =>
+            isFirstCall
+              ? resolve({ data: null, error: { message: 'Gateway Timeout' } })
+              : realThen(resolve)
+          return wrapped
+        }
+        return chain
+      },
+    }
+
+    const trace: string[] = []
+    await bakeMull(client as any, 'u1', undefined, trace)
+
+    expect(longHeldCalls).toBe(2)
+    expect(trace.join('\n')).toMatch(/retrying after transient error/)
+    expect(trace.join('\n')).not.toMatch(/long-held-candidates query FAILED/)
+  })
+
+  it('does not retry forever -- one retry, then it reports the failure', async () => {
+    generateText.mockResolvedValueOnce(BLIND_SPOTS).mockResolvedValueOnce(DRAFTS)
+    const data = corpus() as any
+
+    let longHeldCalls = 0
+    const real = fakeSupabase(data).client
+    const client = {
+      ...real,
+      from: (table: string) => {
+        const chain = real.from(table)
+        if (table !== 'list_items') return chain
+        const realSelect = chain.select
+        chain.select = (cols?: string) => {
+          if (!cols?.includes('status')) return realSelect(cols)
+          longHeldCalls++
+          const wrapped = realSelect(cols)
+          wrapped.then = (resolve: (v: any) => unknown) =>
+            resolve({ data: null, error: { message: 'Gateway Timeout' } })
+          return wrapped
+        }
+        return chain
+      },
+    }
+
+    const trace: string[] = []
+    await bakeMull(client as any, 'u1', undefined, trace)
+
+    expect(longHeldCalls).toBe(2)
+    expect(trace.join('\n')).toMatch(/long-held-candidates query FAILED/)
+  })
+})

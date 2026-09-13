@@ -45,6 +45,7 @@ on:
           - bake
           - mine-joints
           - recompute-heat
+          - retire-and-rebake
 
 concurrency:
   group: cron
@@ -111,6 +112,12 @@ jobs:
               bake)           hit "/api/utilities?resource=bake" ;;
               mine-joints)    hit "/api/utilities?resource=mine-joints" ;;
               recompute-heat) hit "/api/projects?resource=recompute-heat" ;;
+              # Retires whatever spark is currently standing (however long
+              # it has left) and bakes a fresh one. The only way to clear a
+              # question a code fix has already made obsolete without
+              # waiting out its four-day shelf life or tapping "ask me
+              # something else" in the app.
+              retire-and-rebake) hit "/api/utilities?resource=retire-and-rebake" ;;
               *) echo "!! unknown job: $JOB" | tee -a "$FAILED_FILE" ;;
             esac
             if [ -s "$FAILED_FILE" ]; then exit 1; fi

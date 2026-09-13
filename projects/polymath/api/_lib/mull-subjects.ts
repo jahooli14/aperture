@@ -406,11 +406,23 @@ async function unfiledThoughtSubject(
 
 /** A thing wanted for a year and still not done. A list is a record of
  *  intentions with dates on them, which nothing has ever read as one. */
+/** Timeouts are the one query failure worth retrying: a Gateway Timeout
+ *  means the request never got an answer, not that the answer was "no" --
+ *  unlike a rejected column or an RLS denial, trying again can only help.
+ *  A production trace caught exactly this on the list_items query below
+ *  (an embedded join under concurrent load, most likely), so this is
+ *  narrowly scoped to where it has been observed rather than wrapped
+ *  around every query in this file on the assumption that it might help. */
+export function isTransientError(message: string | undefined): boolean {
+  if (!message) return false
+  return /gateway timeout|timed?\s*out|upstream connect error|econnreset/i.test(message)
+}
+
 async function longHeldSubject(
   supabase: SupabaseClient, userId: string, trace: string[] = [],
 ): Promise<Subject | null> {
   const cutoff = new Date(Date.now() - LONG_HELD_DAYS * 86_400_000).toISOString()
-  const res = await supabase
+  const query = () => supabase
     .from('list_items')
     .select('id, content, created_at, status, lists(title, type)')
     .eq('user_id', userId)
@@ -420,6 +432,12 @@ async function longHeldSubject(
     .lt('created_at', cutoff)
     .order('created_at', { ascending: true })
     .limit(20)
+
+  let res = await query()
+  if (res.error && isTransientError((res.error as { message?: string }).message)) {
+    trace.push(`long-held-candidates: retrying after transient error (${(res.error as any).message})`)
+    res = await query()
+  }
   noteQuery(trace, 'long-held-candidates', res)
 
   const items = (res.data ?? []).filter((i: any) => typeof i.content === 'string' && i.content.trim())
