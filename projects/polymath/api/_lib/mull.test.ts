@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   selectConnector,
+  selectConnectors,
   sharesDomain,
   quoteIsReal,
   usesQuote,
@@ -282,5 +283,61 @@ describe('the ceiling scales with how much vocabulary the subject has', () => {
       { subjectText: shortJoint, excludeIds: [] },
     )
     expect(picked?.id).toBe('real')
+  })
+})
+
+describe('selectConnectors preferring a project connector', () => {
+  // Real vocabulary, deliberately -- BOOK-length subject text keeps
+  // connectorCeiling at its full width (VOCAB_FULL_GUARD distinctive
+  // words or more) so these tests aren't fighting the vocabulary guard
+  // as well as the thing they're actually checking.
+  const SUBJECT = 'Something I keep meaning to come back to and never have, a real reflection about work and family and the years going past'
+  const noProjectFilter = { subjectText: SUBJECT, excludeIds: [], preferProject: true }
+  const hasProjectFilter = { subjectText: SUBJECT, excludeIds: [], preferProject: false }
+
+  it('takes a lower-scoring project over a higher-scoring memory, for a subject with no project of its own', () => {
+    // The real question this answers: an unfiled thought with no project
+    // attached is exactly the case where landing on a project is most
+    // valuable, and the search already returns project rows alongside
+    // memories for every subject -- nothing was choosing between them.
+    const candidates: MullCandidate[] = [
+      candidate({ kind: 'memory', id: 'm1', title: 'A different note', text: 'Nothing to do with any of that.', similarity: 0.7 }),
+      candidate({ kind: 'project', id: 'p1', title: 'The deck stand', text: 'Oak offcuts, still not started.', similarity: 0.6 }),
+      candidate({ kind: 'article', id: 'a1', title: 'An article', text: 'Something read once.', similarity: 0.65 }),
+    ]
+    const picked = selectConnectors(candidates, noProjectFilter)
+    expect(picked[0].kind).toBe('project')
+    expect(picked[0].id).toBe('p1')
+  })
+
+  it('falls back to the best non-project candidate when no project is in band', () => {
+    const candidates: MullCandidate[] = [
+      candidate({ kind: 'memory', id: 'm1', title: 'A different note', text: 'Nothing to do with any of that.', similarity: 0.7 }),
+      candidate({ kind: 'article', id: 'a1', title: 'An article', text: 'Something read once.', similarity: 0.65 }),
+    ]
+    const picked = selectConnectors(candidates, noProjectFilter)
+    expect(picked[0].kind).toBe('memory')
+  })
+
+  it('does not force a project connector onto a subject that already has one', () => {
+    // A project subject's own blind spot should be answered by whatever
+    // best fits the band -- manufacturing a project-to-project bridge here
+    // is exactly what the joint -> pair composite mechanism exists to do
+    // carefully instead of this channel doing it by accident.
+    const candidates: MullCandidate[] = [
+      candidate({ kind: 'memory', id: 'm1', title: 'A different note', text: 'Nothing to do with any of that.', similarity: 0.7 }),
+      candidate({ kind: 'project', id: 'p2', title: 'The deck stand', text: 'Oak offcuts, still not started.', similarity: 0.6 }),
+    ]
+    const picked = selectConnectors(candidates, hasProjectFilter)
+    expect(picked[0].kind).toBe('memory')
+  })
+
+  it('still respects the band and the domain guard for the preferred project', () => {
+    const candidates: MullCandidate[] = [
+      candidate({ kind: 'project', id: 'p1', title: 'Above ceiling', text: 'Scores too high to count as a real connection.', similarity: CONNECTOR_CEILING + 0.05 }),
+      candidate({ kind: 'memory', id: 'm1', title: 'A different note', text: 'Nothing to do with any of that.', similarity: 0.6 }),
+    ]
+    const picked = selectConnectors(candidates, noProjectFilter)
+    expect(picked[0].kind).toBe('memory')
   })
 })
