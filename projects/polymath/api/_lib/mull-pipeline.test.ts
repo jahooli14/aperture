@@ -450,3 +450,23 @@ describe('article text is real text, not markup with entities left in it', () =>
     expect(article!.block).not.toContain('color:red')
   })
 })
+
+describe('the identity block query reports its own failures', () => {
+  beforeEach(() => {
+    generateText.mockReset()
+    batchGenerateEmbeddings.mockClear()
+  })
+
+  it('a rejected list_items query lands in bakeMull\'s trace, not just an empty identity block', async () => {
+    // identityBlock takes a trace parameter (mull-subjects.ts), but nothing
+    // called it with one until this fix -- loadEchoContext and bakeMull
+    // both discarded it, so a rejected query here was silent even after
+    // the same class of bug was fixed everywhere else in this file.
+    generateText.mockResolvedValueOnce(BLIND_SPOTS).mockResolvedValueOnce(DRAFTS)
+    const data = corpus() as any
+    data.list_items = data.list_items.map(({ ...i }: any) => { delete i.created_at; return i })
+    const trace: string[] = []
+    await bakeMull(fakeSupabase(data).client, 'u1', undefined, trace)
+    expect(trace.join('\n')).toMatch(/identity-list-items query FAILED/)
+  })
+})

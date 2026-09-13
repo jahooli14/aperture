@@ -179,11 +179,13 @@ for the reader to do.
 `
 }
 
-export async function loadEchoContext(supabase: SupabaseClient, userId: string): Promise<EchoContext> {
+export async function loadEchoContext(
+  supabase: SupabaseClient, userId: string, trace: MullTrace = [],
+): Promise<EchoContext> {
   const [recentTexts, resonance, identity] = await Promise.all([
     fetchRecentSparkTexts(supabase, userId),
     loadResonance(supabase, userId),
-    identityBlock(supabase, userId),
+    identityBlock(supabase, userId, trace),
   ])
   return { recentTexts, avoid: avoidBlock(recentTexts), resonance, identity }
 }
@@ -663,7 +665,7 @@ export async function bakeMull(
   echo?: EchoContext,
   trace: MullTrace = [],
 ): Promise<BakedSpark[]> {
-  const context = echo ?? (await loadEchoContext(supabase, userId))
+  const context = echo ?? (await loadEchoContext(supabase, userId, trace))
   const mulls = await generateMull(supabase, userId, context, trace)
   if (mulls.length === 0) trace.push('nothing worth asking — empty slot')
   return mulls
