@@ -32,7 +32,7 @@ import {
   type Capture,
   type TemporalShape,
 } from './corpus-time.js'
-import type { MullSubjectKind } from './mull.js'
+import { type MullSubjectKind, isGraveyarded } from './mull.js'
 
 /** Whole-corpus reads are capped, not windowed. A cap loses the oldest
  *  only once someone has written more than this; a window loses them on
@@ -263,12 +263,15 @@ async function projectSubjects(
 ): Promise<Subject[]> {
   const projectsRes = await supabase
     .from('projects')
-    .select('id, title, description, metadata, last_closeout_text, created_at')
+    .select('id, title, description, metadata, last_closeout_text, created_at, state, status')
     .eq('user_id', userId)
-    .neq('state', 'harvested')
     .limit(100)
   noteQuery(trace, 'projects', projectsRes)
-  const projects = projectsRes.data
+  // Checked in JS, not `.neq('state', 'harvested')` in the query: that
+  // alone never caught a project the user explicitly buried ("send to
+  // graveyard" sets status: 'abandoned' and leaves state at 'mull' --
+  // see isGraveyarded), and .neq() drops rows where the column is NULL.
+  const projects = (projectsRes.data ?? []).filter((p: any) => !isGraveyarded(p))
 
   const byProject = new Map<string, CorpusRow[]>()
   for (const row of [...fragments, ...thoughts]) {

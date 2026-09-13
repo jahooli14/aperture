@@ -144,6 +144,27 @@ const EXPLAINER_PATTERNS: readonly RegExp[] = [
   /(^|[.;,]\s*)(yet|but|though|whereas)\s+you\b/i,
 ]
 
+/**
+ * The graveyard leak: `match_projects` filters nothing on state or
+ * status -- only `embedding IS NOT NULL` and the user id -- so a project
+ * the user explicitly buried, or one drift-decay silently let go of, was
+ * exactly as eligible a connector as anything live. And the app's own
+ * usual guard against this, `.neq('state', 'harvested')`, doesn't catch
+ * it either: burying a project ("send to graveyard") sets
+ * `status: 'abandoned'` and leaves `state` at `'mull'` (projects.ts) --
+ * only completion sets `state: 'harvested'`. A question that confidently
+ * pointed the user at a project they had deliberately let die would be
+ * worse than pointing at nothing.
+ *
+ * Checked in JS, not `.neq()` in a query: a project with no status set at
+ * all must not be excluded, and PostgREST's `.neq()` drops NULL rows
+ * (the same gotcha the reading-corpus resonance filter and the
+ * unfiled-thought memory_type filter already work around).
+ */
+export function isGraveyarded(project: { state?: string | null; status?: string | null }): boolean {
+  return project.state === 'harvested' || project.status === 'abandoned'
+}
+
 export function sharesDomain(a: string, b: string, limit = DOMAIN_OVERLAP_LIMIT): boolean {
   const words = new Set(motifWords(a))
   if (words.size === 0) return false

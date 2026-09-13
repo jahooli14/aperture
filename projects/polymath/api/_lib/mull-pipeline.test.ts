@@ -676,3 +676,64 @@ describe('a question with no project on either side is correct silence, end to e
     expect(trace.join('\n')).toMatch(/search \[memory\].*-> 1 in band/)
   })
 })
+
+describe('a buried project is not resurfaced as a subject or a connector', () => {
+  beforeEach(() => {
+    generateText.mockReset()
+    batchGenerateEmbeddings.mockClear()
+  })
+
+  it('never picks a graveyarded project as a subject', async () => {
+    // Sent to the graveyard: status: 'abandoned', state stays 'mull'.
+    // Every existing `.neq('state', 'harvested')` guard in this codebase
+    // misses that -- only the JS-side isGraveyarded check catches it.
+    const data = corpus() as any
+    data.projects = [
+      ...data.projects,
+      { user_id: 'u1', id: 'p-buried', title: 'The buried one', description: 'Sent to the graveyard months ago', metadata: {}, last_closeout_text: null, created_at: ago(700), last_active: ago(700), last_session_ended_at: ago(700), state: 'mull', status: 'abandoned' },
+    ]
+    data.fragments.push(
+      { user_id: 'u1', id: 'f-buried1', text: 'still thinking about the buried project', created_at: ago(650), project_id: 'p-buried', memory_id: null, projects: { title: 'The buried one' } },
+      { user_id: 'u1', id: 'f-buried2', text: 'the buried project again, same as before', created_at: ago(600), project_id: 'p-buried', memory_id: null, projects: { title: 'The buried one' } },
+    )
+    const subjects = await gatherSubjects(fakeSupabase(data).client, 'u1')
+    expect(subjects.some(s => s.id === 'p-buried')).toBe(false)
+  })
+
+  it('does not let a graveyarded project through match_projects as a connector', async () => {
+    // The sharper case: the subject has no project of its own (an
+    // unfiled thought), a project connector is now REQUIRED, and
+    // match_projects itself returns a match -- but that project has
+    // been sent to the graveyard. Without the status lookup this would
+    // confidently point the user at a project they deliberately buried.
+    generateText.mockResolvedValueOnce(BLIND_SPOTS)
+    const data = corpus() as any
+    data.joints = []
+    data.fragments = []
+    data.memories = [
+      {
+        user_id: 'u1', id: 'm-unfiled', title: 'Old reflection',
+        body: 'Something I keep meaning to come back to and never have, a real thought with no project attached to it at all.',
+        created_at: ago(280), memory_type: 'insight',
+      },
+    ]
+    data.projects = [
+      ...data.projects,
+      { user_id: 'u1', id: 'p-buried', title: 'The buried one', description: 'Sent to the graveyard', metadata: {}, last_closeout_text: null, created_at: ago(700), last_active: ago(700), last_session_ended_at: ago(700), state: 'mull', status: 'abandoned' },
+    ]
+    const real = fakeSupabase(data).client
+    const client = {
+      ...real,
+      rpc: async (name: string, args: Row) => {
+        if (name === 'match_projects') {
+          return { data: [{ id: 'p-buried', title: 'The buried one', description: 'Sent to the graveyard', similarity: 0.6 }], error: null }
+        }
+        return real.rpc(name, args)
+      },
+    }
+    const trace: string[] = []
+    const baked = await bakeMull(client as any, 'u1', undefined, trace)
+    expect(baked).toEqual([])
+    expect(trace.join('\n')).toMatch(/nothing in band/)
+  })
+})

@@ -39,6 +39,7 @@ import {
   CONNECTOR_FLOOR,
   rankPairs,
   rejectionReason,
+  isGraveyarded,
   type MullCandidate,
   type MullSourceKind,
   type MullSubjectKind,
@@ -337,13 +338,35 @@ async function findConnectors(
       supabase.rpc('match_reading', { ...args, match_count: 10 }),
     ])
 
+    // match_projects filters nothing on state or status -- only that the
+    // project has an embedding and belongs to this user -- so a project
+    // the user sent to the graveyard, or one drift-decay already let go
+    // of, comes back exactly as eligible as a live one. With a project
+    // connector now often REQUIRED (see requireProject below), leaving
+    // this unfiltered would mean confidently pointing someone at a
+    // project they deliberately buried, which is worse than nothing. One
+    // extra lookup, only for the ids the search actually returned.
+    const projectRows = projects.data ?? []
+    let liveProjectIds = new Set<string>(projectRows.map((p: any) => p.id))
+    if (projectRows.length > 0) {
+      const statusRes = await supabase
+        .from('projects')
+        .select('id, state, status')
+        .in('id', projectRows.map((p: any) => p.id))
+      liveProjectIds = new Set(
+        (statusRes.data ?? []).filter((p: any) => !isGraveyarded(p)).map((p: any) => p.id),
+      )
+    }
+
     const candidates: MullCandidate[] = [
       ...(memories.data ?? []).map((m: any) => ({
         kind: 'memory' as const, id: m.id, title: m.title ?? 'a note', text: m.body ?? '', similarity: m.similarity,
       })),
-      ...(projects.data ?? []).map((p: any) => ({
-        kind: 'project' as const, id: p.id, title: p.title, text: p.description ?? '', similarity: p.similarity,
-      })),
+      ...projectRows
+        .filter((p: any) => liveProjectIds.has(p.id))
+        .map((p: any) => ({
+          kind: 'project' as const, id: p.id, title: p.title, text: p.description ?? '', similarity: p.similarity,
+        })),
       ...(reading.data ?? []).map((a: any) => ({
         kind: 'article' as const, id: a.id, title: a.title ?? 'an article', text: a.excerpt ?? '', similarity: a.similarity,
       })),
