@@ -23,6 +23,8 @@ export interface CorpusArticle {
   resonance?: string | null
   tags?: string[] | null
   status?: string | null
+  /** Set the moment the article is opened in the reader (api/reading.ts). */
+  read_at?: string | null
 }
 
 const RSS_TAG = 'rss'
@@ -32,20 +34,46 @@ function isFromFeed(row: CorpusArticle): boolean {
 }
 
 /**
+ * Did the user actually open this one?
+ *
+ * `read_at` only, and deliberately not `status`. Status looks like it says
+ * this and doesn't: the right-swipe on New reads sets 'reading' to mean "I
+ * want this in my list" (its own comment says it hasn't been read), and
+ * the left-swipe on Saved reads sets 'archived' without opening anything.
+ * Both are filing gestures. `read_at` is stamped in one place only — the
+ * reader actually loading the article.
+ */
+function wasOpened(row: CorpusArticle): boolean {
+  return !!row.read_at
+}
+
+/**
  * True when this article should be read as part of the user's corpus —
  * eligible to shape project ideas, syntheses, sparks and embeddings.
+ *
+ * Opening one counts, and that is the difference between a corpus and an
+ * empty set. The rule used to be the verdict or nothing (plus the legacy
+ * hand-save carve-out), which reads well and in practice meant a live
+ * corpus of 198 articles and zero of them counting, because the buttons
+ * sit at the END of an article and most reads don't get tapped. What the
+ * rule was built to exclude is the twenty headlines that arrive overnight
+ * and are never touched -- and those are still excluded, because they
+ * were never opened. Choosing one out of the feed and reading it is a
+ * real signal; it just isn't as strong as saying so, which is what
+ * corpusWeight is for.
  */
 export function isCorpusEligible(row: CorpusArticle): boolean {
   if (row.resonance === 'not_for_me') return false
   if (row.resonance === 'good') return true
-  // No verdict: only hand-saved articles carry the old implicit signal.
-  return !isFromFeed(row)
+  // No verdict: a hand-save carries the old implicit signal, and opening
+  // a feed item is the user picking it out of the pile themselves.
+  return !isFromFeed(row) || wasOpened(row)
 }
 
 /**
  * How strongly it counts. An explicit "this was good" outranks a legacy
- * hand-save, so prompts can lead with what the user actually vouched for
- * instead of whatever happens to be newest.
+ * hand-save or an article merely opened, so prompts can lead with what
+ * the user actually vouched for instead of whatever happens to be newest.
  */
 export function corpusWeight(row: CorpusArticle): number {
   if (!isCorpusEligible(row)) return 0

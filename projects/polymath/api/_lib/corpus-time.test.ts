@@ -9,6 +9,12 @@ import {
   humanDuration,
   monthKey,
   monthYear,
+  corpusSpan,
+  scaleToCorpus,
+  CONVICTION_SPAN_DAYS,
+  CONVICTION_FLOOR_DAYS,
+  MIN_SPAN_DAYS,
+  MIN_SPAN_FLOOR_DAYS,
   type Capture,
 } from './corpus-time.js'
 import { motifWords } from './spark-echo.js'
@@ -214,5 +220,60 @@ describe('silenceExplainedByLife', () => {
     const steady = Array.from({ length: 200 }, (_, i) => ago(i * 2))
     const baseline = buildActivityBaseline(steady)
     expect(silenceExplainedByLife(new Date(NOW.getTime() - 300 * 86_400_000), NOW, baseline)).toBe(false)
+  })
+})
+
+describe('thresholds sized to the corpus that exists', () => {
+  it('leaves a corpus with years in it at full strictness', () => {
+    // An eighth of three years is past every ideal here, so nothing moves.
+    const threeYears = 365 * 3
+    expect(scaleToCorpus(CONVICTION_SPAN_DAYS, CONVICTION_FLOOR_DAYS, threeYears))
+      .toBe(CONVICTION_SPAN_DAYS)
+    expect(scaleToCorpus(MIN_SPAN_DAYS, MIN_SPAN_FLOOR_DAYS, threeYears)).toBe(MIN_SPAN_DAYS)
+  })
+
+  it('scales down for a young corpus instead of demanding the impossible', () => {
+    // Four months of captures. "Held for 400 days" is unanswerable here --
+    // no arrangement of the data could satisfy it.
+    const scaled = scaleToCorpus(CONVICTION_SPAN_DAYS, CONVICTION_FLOOR_DAYS, 120)
+    expect(scaled).toBe(60)
+    expect(scaled).toBeLessThan(CONVICTION_SPAN_DAYS)
+  })
+
+  it('never goes below the floor, so one sitting still cannot count', () => {
+    expect(scaleToCorpus(MIN_SPAN_DAYS, MIN_SPAN_FLOOR_DAYS, 14)).toBe(MIN_SPAN_FLOOR_DAYS)
+    expect(scaleToCorpus(CONVICTION_SPAN_DAYS, CONVICTION_FLOOR_DAYS, 3)).toBe(CONVICTION_FLOOR_DAYS)
+  })
+
+  it('treats a corpus as mature once it covers twice the bar', () => {
+    // Exactly twice the ideal is the point where the bar becomes a fair
+    // question rather than an impossible one.
+    expect(scaleToCorpus(MIN_SPAN_DAYS, MIN_SPAN_FLOOR_DAYS, MIN_SPAN_DAYS * 2)).toBe(MIN_SPAN_DAYS)
+    expect(scaleToCorpus(MIN_SPAN_DAYS, MIN_SPAN_FLOOR_DAYS, MIN_SPAN_DAYS * 1.5)).toBeCloseTo(33.75)
+  })
+
+  it('stays at full strictness when the span is unknown', () => {
+    expect(scaleToCorpus(MIN_SPAN_DAYS, MIN_SPAN_FLOOR_DAYS, undefined)).toBe(MIN_SPAN_DAYS)
+    expect(scaleToCorpus(MIN_SPAN_DAYS, MIN_SPAN_FLOOR_DAYS, NaN)).toBe(MIN_SPAN_DAYS)
+  })
+
+  it('measures the corpus from oldest capture to newest', () => {
+    expect(Math.round(corpusSpan([ago(200), ago(50), ago(10)])!)).toBe(190)
+    expect(corpusSpan([ago(10)])).toBeUndefined()
+    expect(corpusSpan([])).toBeUndefined()
+  })
+
+  it('lets a real recurrence in a young corpus become a shape at last', () => {
+    // Said four times across five months. Against the unscaled 400-day
+    // conviction bar this was nothing; it is the user's actual thinking.
+    const dates = [ago(150), ago(100), ago(50), ago(5)]
+    const timeline = describeTimeline(dates, NOW)!
+    const strict = classifyTimeline({ timeline, hasProject: false, label: 'x' })
+    const scaled = classifyTimeline({
+      timeline, hasProject: false, label: 'x', corpusSpanDays: 155,
+    })
+
+    expect(strict).toBeNull()
+    expect(scaled?.shape).toBe('long_unfinished')
   })
 })

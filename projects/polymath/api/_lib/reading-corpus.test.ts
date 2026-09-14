@@ -41,6 +41,24 @@ describe('isCorpusEligible', () => {
     expect(isCorpusEligible({ tags: null, resonance: null })).toBe(true)
     expect(isCorpusEligible({})).toBe(true)
   })
+
+  it('keeps a feed item the user actually opened, verdict or not', () => {
+    expect(isCorpusEligible(feedItem({ read_at: '2026-09-01T10:00:00Z' }))).toBe(true)
+  })
+
+  it('still drops an opened article the user rejected', () => {
+    expect(isCorpusEligible(
+      feedItem({ read_at: '2026-09-01T10:00:00Z', resonance: 'not_for_me' }),
+    )).toBe(false)
+  })
+
+  it('does not read a filing gesture as having opened it', () => {
+    // Right-swipe on New reads sets status 'reading' to mean "save this",
+    // and left-swipe on Saved reads sets 'archived'. Neither opened it, so
+    // only read_at may count.
+    expect(isCorpusEligible(feedItem({ status: 'reading' }))).toBe(false)
+    expect(isCorpusEligible(feedItem({ status: 'archived' }))).toBe(false)
+  })
 })
 
 describe('corpusWeight', () => {
@@ -48,6 +66,11 @@ describe('corpusWeight', () => {
     expect(corpusWeight(handSaved({ resonance: 'good' }))).toBe(2)
     expect(corpusWeight(handSaved())).toBe(1)
     expect(corpusWeight(feedItem())).toBe(0)
+  })
+
+  it('ranks a merely-opened article below one they vouched for', () => {
+    expect(corpusWeight(feedItem({ read_at: '2026-09-01T10:00:00Z' }))).toBe(1)
+    expect(corpusWeight(feedItem({ read_at: '2026-09-01T10:00:00Z', resonance: 'good' }))).toBe(2)
   })
 })
 

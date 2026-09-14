@@ -23,6 +23,7 @@ import {
   describeTimeline,
   classifyTimeline,
   buildActivityBaseline,
+  corpusSpan,
   type ActivityBaseline,
   findSimultaneous,
   findDrift,
@@ -188,6 +189,7 @@ async function jointSubjects(
   fragments: (CorpusRow & { projectTitle: string | null })[],
   baseline: ActivityBaseline,
   trace: string[] = [],
+  corpusSpanDays?: number,
 ): Promise<Subject[]> {
   const jointsRes = await supabase
     .from('joints')
@@ -222,7 +224,7 @@ async function jointSubjects(
     const hasProject =
       members.some(m => m.projectId !== null) || projectTitles.has(String(joint.text ?? '').toLowerCase())
 
-    const found = classifyTimeline({ timeline, hasProject, label: joint.text, baseline })
+    const found = classifyTimeline({ timeline, hasProject, label: joint.text, baseline, corpusSpanDays })
     if (!found) continue
 
     const drift = findDrift(members, motifWords)
@@ -260,6 +262,7 @@ async function projectSubjects(
   thoughts: CorpusRow[],
   baseline: ActivityBaseline,
   trace: string[] = [],
+  corpusSpanDays?: number,
 ): Promise<Subject[]> {
   const projectsRes = await supabase
     .from('projects')
@@ -287,7 +290,7 @@ async function projectSubjects(
     const timeline = describeTimeline(rows.map(r => r.createdAt))
     if (!timeline) continue
 
-    const found = classifyTimeline({ timeline, hasProject: true, label: project.title, baseline })
+    const found = classifyTimeline({ timeline, hasProject: true, label: project.title, baseline, corpusSpanDays })
     if (!found) continue
 
     out.push({
@@ -529,7 +532,10 @@ async function articleSubject(
     // so every feed-sourced article was excluded by a threshold it could
     // never meet, whatever the user thought of it. 198 rows, none usable.
     // The full text is right there in the same row.
-    .select('id, title, excerpt, content, resonance, tags, created_at')
+    // read_at decides eligibility for a feed item that was never given a
+    // verdict (reading-corpus.ts). Leave it out of the select and every
+    // such article reads as never-opened and silently drops out.
+    .select('id, title, excerpt, content, resonance, tags, read_at, created_at')
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
     .limit(300)
@@ -545,7 +551,7 @@ async function articleSubject(
   const eligible = corpus.filter((a: any) => a.body.length > 120)
   trace.push(
     `articles: ${res.data?.length ?? 0} rows -> ${corpus.length} in corpus ` +
-    `(good or hand-saved) -> ${eligible.length} with over 120 chars of text`,
+    `(good, opened, or hand-saved) -> ${eligible.length} with over 120 chars of text`,
   )
 
   if (eligible.length === 0) return null
@@ -622,9 +628,15 @@ export async function gatherSubjects(
   // project (corpus-time.ts).
   const baseline = buildActivityBaseline([...thoughts, ...fragments].map(r => r.createdAt))
 
+  // How far back the corpus actually goes. Every span threshold is written
+  // for one with years in it and is capped to a proportion of this instead
+  // (corpus-time.ts), so a young corpus gets bars it can actually clear.
+  const corpusSpanDays = corpusSpan([...thoughts, ...fragments].map(r => r.createdAt))
+  trace.push(`corpus span: ${Math.round(corpusSpanDays ?? 0)} days`)
+
   const [joints, projects, unfiled, longHeld, article] = await Promise.all([
-    jointSubjects(supabase, userId, fragments, baseline, trace),
-    projectSubjects(supabase, userId, fragments, thoughts, baseline, trace),
+    jointSubjects(supabase, userId, fragments, baseline, trace, corpusSpanDays),
+    projectSubjects(supabase, userId, fragments, thoughts, baseline, trace, corpusSpanDays),
     unfiledThoughtSubject(supabase, userId, filedMemoryIds, trace),
     longHeldSubject(supabase, userId, trace),
     articleSubject(supabase, userId, trace),
@@ -662,6 +674,24 @@ export async function gatherSubjects(
     perKind.set(subject.kind, (perKind.get(subject.kind) ?? 0) + 1)
     picked.push(subject)
     if (picked.length >= SUBJECT_SLOTS) break
+  }
+
+  // Then fill any slot the cap left empty, cap ignored.
+  //
+  // The cap is there to stop one kind crowding out the others, and that is
+  // the right job while there ARE others. When four of the five gatherers
+  // return nothing -- the ordinary case on a young corpus -- it stops being
+  // a variety rule and becomes a throttle on the only thing that works: ten
+  // project subjects available, two taken, third slot left empty, so one
+  // gate rejection at the end produced silence. An empty slot protects
+  // nothing. A third subject of a kind already used is still a different
+  // project, a different blind spot and a different draft.
+  if (picked.length < SUBJECT_SLOTS) {
+    for (const subject of all) {
+      if (picked.includes(subject)) continue
+      picked.push(subject)
+      if (picked.length >= SUBJECT_SLOTS) break
+    }
   }
 
   // Reading keeps its slot whenever there is any. A corpus-only system can

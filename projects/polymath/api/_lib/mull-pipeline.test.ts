@@ -61,12 +61,12 @@ function corpus() {
       { user_id: 'u1', id: 'l2', content: 'Learn to solder properly', user_rating: null, status: 'active', created_at: ago(600), lists: { title: 'To do', type: 'skill' } },
     ],
     reading_queue: [
-      { user_id: 'u1', id: 'r1', title: 'On first takes', excerpt: 'The recording is not a document of the performance, it is the performance. Once you accept that, editing becomes a different kind of lie, and the whole practice of fixing things afterwards starts to look strange.', content: null, resonance: 'good', tags: [], created_at: ago(400) },
+      { user_id: 'u1', id: 'r1', title: 'On first takes', excerpt: 'The recording is not a document of the performance, it is the performance. Once you accept that, editing becomes a different kind of lie, and the whole practice of fixing things afterwards starts to look strange.', content: null, resonance: 'good', read_at: null, tags: [], created_at: ago(400) },
       // A feed item as the ingest actually stores one: excerpt capped at
       // 100 characters, the real text in `content`. Every article in
       // production looked like this, and the gatherer wanted 120 chars of
       // excerpt -- a threshold the ingest can never produce.
-      { user_id: 'u1', id: 'r2', title: 'The long way round', excerpt: 'A short feed blurb, cut at a hundred characters by the ingest, which is all any RSS row ev', content: '<p>People who take the long way round are not being slow. They are refusing to accept that the shortest path is the same as the best one, and that refusal costs them years and buys them something nobody has named.</p>', resonance: 'good', tags: ['rss'], created_at: ago(300) },
+      { user_id: 'u1', id: 'r2', title: 'The long way round', excerpt: 'A short feed blurb, cut at a hundred characters by the ingest, which is all any RSS row ev', content: '<p>People who take the long way round are not being slow. They are refusing to accept that the shortest path is the same as the best one, and that refusal costs them years and buys them something nobody has named.</p>', resonance: 'good', read_at: null, tags: ['rss'], created_at: ago(300) },
     ],
     sparks: [],
   }
@@ -460,6 +460,32 @@ describe('a feed article can be a subject', () => {
     // And the HTML is stripped, not handed to the model as markup.
     expect(article!.block).not.toContain('<p>')
   })
+
+  it('counts a feed article the user opened but never gave a verdict', async () => {
+    // The live corpus was 198 articles and 0 of them eligible: the buttons
+    // are at the END of an article, so almost nothing gets tapped, and
+    // "verdict or nothing" meant the whole reading input was dark.
+    // Opening one is the user picking it out of the feed themselves.
+    const data = corpus() as any
+    data.reading_queue = [{
+      ...data.reading_queue.find((r: any) => r.id === 'r2'),
+      resonance: null,
+      read_at: ago(290),
+    }]
+    const subjects = await gatherSubjects(fakeSupabase(data).client, 'u1')
+    expect(subjects.find(s => s.kind === 'article')).toBeDefined()
+  })
+
+  it('still ignores a feed article that was never opened', async () => {
+    const data = corpus() as any
+    data.reading_queue = [{
+      ...data.reading_queue.find((r: any) => r.id === 'r2'),
+      resonance: null,
+      read_at: null,
+    }]
+    const subjects = await gatherSubjects(fakeSupabase(data).client, 'u1')
+    expect(subjects.find(s => s.kind === 'article')).toBeUndefined()
+  })
 })
 
 describe('article text is real text, not markup with entities left in it', () => {
@@ -475,7 +501,7 @@ describe('article text is real text, not markup with entities left in it', () =>
       {
         user_id: 'u1', id: 'r3', title: 'On not finishing', excerpt: 'a'.repeat(101),
         content: '<p>He said it isn&#8217;t about talent &amp; never was, and that the room agreed with him more readily than anyone expected for a claim that direct.</p><script>trackEvent(\'view\')</script><style>.x{color:red}</style>',
-        resonance: 'good', tags: ['rss'], created_at: ago(300),
+        resonance: 'good', read_at: null, tags: ['rss'], created_at: ago(300),
       },
     ]
     const subjects = await gatherSubjects(fakeSupabase(data).client, 'u1')
@@ -522,7 +548,7 @@ describe('a gatherer failure does not take down the whole bake', () => {
         // linkedom is lenient about most malformed HTML, so this asserts
         // the fallback path directly rather than hoping some input throws.
         content: '<p>short</p>',
-        resonance: 'good', tags: [], created_at: ago(300),
+        resonance: 'good', read_at: null, tags: [], created_at: ago(300),
       },
     ]
     await expect(gatherSubjects(fakeSupabase(data).client, 'u1')).resolves.not.toThrow()

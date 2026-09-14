@@ -70,6 +70,68 @@ export const BURST_COLD_DAYS = 240
 /** Two captures this close together were on someone's mind at the same time. */
 export const SIMULTANEITY_DAYS = 4
 
+/**
+ * A corpus is old enough to be judged at full strictness once it covers
+ * twice the threshold being asked of it.
+ */
+const MATURITY_MULTIPLE = 2
+
+/**
+ * The same threshold, sized to the corpus that actually exists.
+ *
+ * Every constant above is written for a corpus with years in it, which is
+ * the corpus this channel was designed against and not the one it usually
+ * runs on. Asking "has this been held for 400 days" of a corpus four
+ * months old isn't strict, it's unanswerable: no arrangement of the data
+ * can satisfy it, so the gatherer returns zero and the channel goes quiet
+ * for a reason that has nothing to do with the user's thinking.
+ *
+ * The rule is proportional, and the multiple matters. A threshold is only
+ * a fair question once the corpus covers twice it — at that point the user
+ * could plausibly have cleared or missed the bar, so the bar means
+ * something. Below that it scales down in step. This deliberately leaves a
+ * mature corpus untouched: three years of captures is well past twice
+ * every ideal here, so it gets exactly the constants above, unchanged. An
+ * earlier version of this scaled against a fixed fraction of the corpus
+ * and quietly loosened conviction to 137 days for a three-year corpus,
+ * which is not a tuning fix, it's a quality regression wearing one.
+ *
+ * The floor stops the other end collapsing into the exact thing this
+ * module exists to prevent: with a fortnight of captures, a proportional
+ * conviction threshold is days, and "said twice on Tuesday" is one thought.
+ */
+export function scaleToCorpus(
+  idealDays: number,
+  floorDays: number,
+  corpusSpanDays?: number,
+): number {
+  if (corpusSpanDays === undefined || !Number.isFinite(corpusSpanDays)) return idealDays
+  const maturity = corpusSpanDays / (idealDays * MATURITY_MULTIPLE)
+  if (maturity >= 1) return idealDays
+  return Math.max(floorDays, Math.min(idealDays, idealDays * maturity))
+}
+
+/** Floors, paired with the ideals above. Below these a shape's own name
+ *  stops being true: a "conviction" held for three weeks isn't one. */
+export const MIN_SPAN_FLOOR_DAYS = 7
+export const CONVICTION_FLOOR_DAYS = 60
+export const RETURN_SILENCE_FLOOR_DAYS = 30
+export const WENT_QUIET_FLOOR_DAYS = 30
+export const BURST_COLD_FLOOR_DAYS = 60
+
+/**
+ * Days from the oldest capture to the newest — the corpus's own age, and
+ * the denominator every span threshold is sized against. Undefined when
+ * there's nothing to measure, which leaves thresholds at full strictness.
+ */
+export function corpusSpan(isoDates: string[]): number | undefined {
+  const times = isoDates
+    .map(d => new Date(d).getTime())
+    .filter(t => Number.isFinite(t))
+  if (times.length < 2) return undefined
+  return (Math.max(...times) - Math.min(...times)) / DAY
+}
+
 export function describeTimeline(isoDates: string[], now: Date = new Date()): Timeline | null {
   const times = isoDates
     .map(d => new Date(d).getTime())
@@ -243,6 +305,10 @@ export interface ClassifyInput {
   /** How much the user was capturing at all. Without it, a life event
    *  reads as a decision about one project. */
   baseline?: ActivityBaseline
+  /** How many days the whole corpus covers, first capture to last. Scales
+   *  every span threshold below (scaleToCorpus). Omitted = full strictness,
+   *  which is right for a corpus with years in it. */
+  corpusSpanDays?: number
 }
 
 /**
@@ -255,10 +321,18 @@ export function classifyTimeline(input: ClassifyInput): ShapeFinding | null {
   const t = input.timeline
   if (t.count < 2) return null
 
+  // Sized to the corpus that exists, capped at the ideal (scaleToCorpus).
+  const span = input.corpusSpanDays
+  const convictionSpan = scaleToCorpus(CONVICTION_SPAN_DAYS, CONVICTION_FLOOR_DAYS, span)
+  const returnSilence = scaleToCorpus(RETURN_SILENCE_DAYS, RETURN_SILENCE_FLOOR_DAYS, span)
+  const wentQuiet = scaleToCorpus(WENT_QUIET_DAYS, WENT_QUIET_FLOOR_DAYS, span)
+  const burstCold = scaleToCorpus(BURST_COLD_DAYS, BURST_COLD_FLOOR_DAYS, span)
+  const minSpan = scaleToCorpus(MIN_SPAN_DAYS, MIN_SPAN_FLOOR_DAYS, span)
+
   // Said across years, never built. The project is already half-named by
   // the user, which is the shortest path there is to "oh — I should make
   // that".
-  if (t.spanDays >= CONVICTION_SPAN_DAYS && input.hasProject === false) {
+  if (t.spanDays >= convictionSpan && input.hasProject === false) {
     return {
       shape: 'long_unfinished',
       fact: `They have been saying this since ${monthYear(t.first)} — ${t.count} times over ${humanDuration(t.spanDays)}, most recently ${humanDuration(t.quietDays)} ago — and have never made it a project.`,
@@ -275,7 +349,7 @@ export function classifyTimeline(input: ClassifyInput): ShapeFinding | null {
   // conviction, and calling each mention a comeback would be a lie with a
   // date on it.
   if (
-    t.longestGapDays >= RETURN_SILENCE_DAYS &&
+    t.longestGapDays >= returnSilence &&
     t.quietDays <= RETURN_FRESH_DAYS &&
     t.longestGapDays >= 2 * typicalGap(t.gaps) &&
     // If the whole corpus was quiet through that gap, they didn't drop
@@ -290,7 +364,7 @@ export function classifyTimeline(input: ClassifyInput): ShapeFinding | null {
   }
 
   // Held across seasons and still alive.
-  if (t.spanDays >= CONVICTION_SPAN_DAYS && t.quietDays <= WENT_QUIET_DAYS) {
+  if (t.spanDays >= convictionSpan && t.quietDays <= wentQuiet) {
     return {
       shape: 'conviction',
       fact: `They have kept coming back to this since ${monthYear(t.first)} — ${t.count} times across ${humanDuration(t.spanDays)}, and again ${humanDuration(t.quietDays)} ago.`,
@@ -305,8 +379,8 @@ export function classifyTimeline(input: ClassifyInput): ShapeFinding | null {
   const stopExplainedByLife =
     !!input.baseline && input.baseline.quietMonths.has(monthKey(t.last))
   if (
-    t.evenness >= 0.4 && t.count >= 3 && t.spanDays >= MIN_SPAN_DAYS &&
-    t.quietDays >= WENT_QUIET_DAYS && !stopExplainedByLife
+    t.evenness >= 0.4 && t.count >= 3 && t.spanDays >= minSpan &&
+    t.quietDays >= wentQuiet && !stopExplainedByLife
   ) {
     return {
       shape: 'went_quiet',
@@ -324,7 +398,7 @@ export function classifyTimeline(input: ClassifyInput): ShapeFinding | null {
     !!input.baseline && input.baseline.busyMonths.has(monthKey(t.first))
   if (
     t.spanDays <= BURST_WINDOW_DAYS && t.count >= 3 &&
-    t.quietDays >= BURST_COLD_DAYS && !burstExplainedByLife
+    t.quietDays >= burstCold && !burstExplainedByLife
   ) {
     return {
       shape: 'burst',

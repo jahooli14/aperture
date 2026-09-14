@@ -1996,6 +1996,19 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
 
           article.status = 'reading'
           article.read_at = new Date().toISOString()
+
+          // Opening it is what makes it corpus (reading-corpus.ts), so this
+          // is where a feed item earns its embedding. Without this the
+          // widened rule would be inert: eligible on paper, invisible to
+          // every search that only looks at rows with an embedding.
+          if (!article.embedding) {
+            generateArticleEmbeddingAndConnect(
+              article.id,
+              article.title || '',
+              article.excerpt || '',
+              userId,
+            ).catch(err => console.error('[reading] Background embedding on open failed:', err))
+          }
         }
 
         return res.status(200).json({
@@ -2966,7 +2979,7 @@ async function generateArticleEmbeddingAndConnect(
     // save that triggered it.
     const { data: current } = await supabase
       .from('reading_queue')
-      .select('resonance, tags')
+      .select('resonance, tags, read_at')
       .eq('id', articleId)
       .eq('user_id', userId)
       .maybeSingle()
