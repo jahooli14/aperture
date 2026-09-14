@@ -924,11 +924,29 @@ describe('an article connector quotes the article, not the feed teaser', () => {
     // ingest. The connector is the only text the model may quote, and the
     // gate then demands the note's own words survive into the question --
     // so a teaser asks it to quote from something that barely exists.
+    generateText.mockReset()
     generateText.mockResolvedValueOnce(BLIND_SPOTS).mockResolvedValueOnce(DRAFTS)
-    await bakeMull(fakeSupabase(corpus() as any).client, 'u1')
 
-    const draftPrompt = generateText.mock.calls[1][0] as string
-    // r2's real content, not its 89-character blurb.
+    const real = fakeSupabase(corpus() as any)
+    const client = {
+      ...real.client,
+      rpc: async (name: string, args: Row) => {
+        // The base stub answers match_reading with nothing, so an article
+        // can never reach the band there. Make one win.
+        if (name === 'match_reading') {
+          const r2 = (corpus() as any).reading_queue.find((r: any) => r.id === 'r2')
+          return { data: [{ id: r2.id, title: r2.title, excerpt: r2.excerpt, similarity: 0.58 }], error: null }
+        }
+        if (name === 'match_memories') return { data: [], error: null }
+        return (real.client as any).rpc(name, args)
+      },
+    } as any
+
+    await bakeMull(client, 'u1')
+
+    const draftPrompt = generateText.mock.calls.at(-1)![0] as string
+    // The article's real text, not the 89-character blurb match_reading
+    // handed back.
     expect(draftPrompt).toContain('refusing to accept that the shortest path')
     expect(draftPrompt).not.toContain('cut at a hundred characters by the ingest')
   })
