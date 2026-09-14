@@ -22,7 +22,10 @@
  */
 
 import { describe, it, expect } from 'vitest'
-import { rejectionReason, usesQuote, quoteIsReal } from './mull.js'
+import {
+  rejectionReason, usesQuote, quoteIsReal,
+  questionSentence, noteReachesQuestion, draftQuality,
+} from './mull.js'
 import { findVoiceViolations } from './plain-english.js'
 
 const NOTE = `Ten more proper conversations with dad, probably, and we spend them on the greenhouse.
@@ -198,5 +201,37 @@ describe('the question the user actually got, and rejected', () => {
       stake: 'Letter eleven opens the folder.',
       connectorText: 'He remembers the boat but not the year he sold it.',
     })).toBeNull()
+  })
+})
+
+describe('ranking the questions that clear the gates', () => {
+  // Two real drafts from the same corpus, minutes apart. Both quote the
+  // user, both clear every gate, and one is plainly better.
+  const NOTE_OIL = 'I keep thinking ideas are worth more than oil now, that the scarce thing is not the material'
+  const GOOD = 'You wrote that ideas are worth more than oil, eight months before picking up A single note on paper again. If the idea is worth more than oil, why does it have to fit on a physical piece of paper?'
+
+  const NOTE_AUDIO = 'Can you hear this latest one? I think the low end is muddy and the vocal sits too far back in the mix'
+  const WEAK = 'You asked "Can you hear this latest one?" while working on audio quality, then left your project "Vivid dreams book idea" sitting quiet for six months. Does the dream sound loud or quiet when you wake up?'
+
+  it('separates the setup from the sentence that actually asks', () => {
+    expect(questionSentence(GOOD)).toBe('If the idea is worth more than oil, why does it have to fit on a physical piece of paper?')
+    expect(questionSentence(WEAK)).toBe('Does the dream sound loud or quiet when you wake up?')
+  })
+
+  it('knows when the note is the lens and when it is only the setup', () => {
+    // "worth more than oil" is what the question turns on.
+    expect(noteReachesQuestion(GOOD, NOTE_OIL)).toBe(true)
+    // The question could have been asked without the note existing.
+    expect(noteReachesQuestion(WEAK, NOTE_AUDIO)).toBe(false)
+  })
+
+  it('ranks the better of the two first', () => {
+    expect(draftQuality(GOOD, NOTE_OIL)).toBeGreaterThan(draftQuality(WEAK, NOTE_AUDIO))
+  })
+
+  it('still ranks a question with no full stop at all', () => {
+    const oneLiner = 'Why does the idea have to fit on a physical piece of paper?'
+    expect(questionSentence(oneLiner)).toBe(oneLiner)
+    expect(draftQuality(oneLiner, NOTE_OIL)).toBeGreaterThanOrEqual(0)
   })
 })

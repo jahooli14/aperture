@@ -388,6 +388,75 @@ export function longestSharedRun(text: string, source: string, minWords = 4): st
   return null
 }
 
+/**
+ * The sentence that actually asks — everything after the last full stop
+ * that still contains the question mark.
+ *
+ * A mull is a setup plus a question: "You wrote X, N months ago. Does
+ * Y...?" The setup is where the user's own words are replayed, so a
+ * question can carry the note perfectly in its first sentence and then ask
+ * something that has nothing to do with it. Telling those apart needs the
+ * two halves separated.
+ */
+export function questionSentence(text: string): string {
+  const trimmed = text.trim()
+  // Split on sentence ends, keep the last piece that asks something.
+  const parts = trimmed.split(/(?<=[.!?])\s+/).filter(Boolean)
+  for (let i = parts.length - 1; i >= 0; i--) {
+    if (parts[i].includes('?')) return parts[i]
+  }
+  return trimmed
+}
+
+/**
+ * Does the note reach the QUESTION, or only the setup?
+ *
+ * This is "the note is the LENS, not evidence you hold against them" made
+ * checkable. Two real drafts, minutes apart, same corpus:
+ *
+ *   "You wrote that ideas are worth more than oil, eight months before
+ *    picking up A single note on paper again. If the idea is worth more
+ *    than oil, why does it have to fit on a physical piece of paper?"
+ *
+ *   "You asked \"Can you hear this latest one?\" while working on audio
+ *    quality, then left your project \"Vivid dreams book idea\" sitting
+ *    quiet for six months. Does the dream sound loud or quiet when you
+ *    wake up?"
+ *
+ * Both quote the user and both clear every gate. In the first the note's
+ * language is load-bearing in the question itself; in the second the
+ * question could have been asked without the note existing. That is the
+ * whole difference between the two, and it is the difference between a
+ * question worth carrying for three days and one that reads as a
+ * non-sequitur.
+ *
+ * Used to RANK survivors, never to reject: a hard gate here would trade a
+ * mediocre question for an empty slot, and this channel has learned that
+ * lesson repeatedly.
+ */
+export function noteReachesQuestion(text: string, connectorText: string): boolean {
+  return longestSharedRun(questionSentence(text), connectorText, 3) !== null
+}
+
+/**
+ * How good a question that already cleared the gates is, relative to the
+ * others from the same run. Higher ships first.
+ *
+ * The gates are pass/fail and the run keeps "the first two that clear
+ * them" — in pair-rank order, which ranks the PAIR (subject strength ×
+ * similarity) and knows nothing about the question that came out of it. So
+ * a weaker question from a stronger pair shipped ahead of a better one.
+ */
+export function draftQuality(text: string, connectorText: string): number {
+  // One signal, deliberately. A tiebreak on how MUCH of the note is
+  // replayed was tried and removed: it rewards a longer transcription in
+  // the setup, which is not the same as a better question, and it
+  // reordered two drafts that were equally good on the part that matters.
+  // Equal scores keep the order they arrived in (sort is stable), so this
+  // only moves a question when there is a real reason to.
+  return noteReachesQuestion(text, connectorText) ? 1 : 0
+}
+
 export interface ValidationInput extends MullDraft {
   connectorText: string
   /** What changes depending on the answer, in the model's own words. */

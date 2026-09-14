@@ -40,6 +40,7 @@ import {
   CONNECTOR_FLOOR,
   rankPairs,
   rejectionReason,
+  draftQuality,
   isGraveyarded,
   type MullCandidate,
   type MullSourceKind,
@@ -678,8 +679,21 @@ export async function generateMull(
   // the second is what the user gets days later when it is most obvious.
   const shippedSubjects = new Set<string>()
 
+  // Gates first, then rank what survived — not "the first two that pass".
+  //
+  // The loop used to do both at once, walking the drafts in pair-rank
+  // order. rankPairs ranks the PAIR (subject strength x similarity) and
+  // knows nothing about the question that came out of it, so a weaker
+  // question from a stronger pair shipped ahead of a better one from a
+  // weaker pair. Two real drafts from the same run, both clearing every
+  // gate: one turned on the note's own words ("if the idea is worth more
+  // than oil, why does it have to fit on a physical piece of paper?") and
+  // the other could have been asked without the note existing ("does the
+  // dream sound loud or quiet when you wake up?"). The second shipped
+  // because its pair scored higher. draftQuality is the difference,
+  // measured rather than judged.
+  const survivors: typeof drafts = []
   for (const draft of drafts) {
-    if (shippedSubjects.has(draft.pairing.subject.id)) continue
     const reason = rejectionReason({
       text: draft.text,
       quote: draft.quote,
@@ -691,6 +705,20 @@ export async function generateMull(
       console.log(`[mull] dropped: ${reason}`)
       continue
     }
+    survivors.push(draft)
+  }
+  survivors.sort((a, b) =>
+    draftQuality(b.text, b.pairing.connector.text) -
+    draftQuality(a.text, a.pairing.connector.text))
+  if (survivors.length > 1) {
+    trace.push(
+      `ranked ${survivors.length} that cleared the gates: ` +
+      survivors.map(d => draftQuality(d.text, d.pairing.connector.text).toFixed(2)).join(', '),
+    )
+  }
+
+  for (const draft of survivors) {
+    if (shippedSubjects.has(draft.pairing.subject.id)) continue
     // Checked against the questions already asked AND against the other
     // draft from this same run — two questions written in one breath are
     // where a repeated image is most likely and least excusable.
