@@ -82,17 +82,27 @@ export async function mineJoints(supabase: SupabaseClient, userId: string): Prom
 
   const memoryIds = [...new Set(fragmentRows.map((f: any) => f.memory_id).filter(Boolean))]
   const embeddingById = new Map<string, unknown>()
+  const memoryDateById = new Map<string, string>()
   if (memoryIds.length > 0) {
     const memoriesRes = await supabase
       .from('memories')
-      .select('id, embedding')
+      // created_at as well: a fragment's own created_at is when the ROW was
+      // written, and backfillFragments wrote every one of them in a single
+      // run. A live corpus of 72 fragments reported a span of 0 days
+      // because of it -- so no cluster could span anything, joints stayed
+      // empty, and the channel's strongest subject never existed. The
+      // thought's date is the real one.
+      .select('id, embedding, created_at')
       .eq('user_id', userId)
       .in('id', memoryIds)
     if (memoriesRes.error) {
       trace.push(`!! memories query FAILED: ${memoriesRes.error.message}`)
       return { written: 0, trace }
     }
-    for (const m of memoriesRes.data ?? []) embeddingById.set((m as any).id, (m as any).embedding)
+    for (const m of memoriesRes.data ?? []) {
+      embeddingById.set((m as any).id, (m as any).embedding)
+      if ((m as any).created_at) memoryDateById.set((m as any).id, (m as any).created_at)
+    }
     trace.push(`embeddings: ${memoryIds.length} memories referenced, ${memoriesRes.data?.length ?? 0} found`)
   }
 
@@ -108,8 +118,12 @@ export async function mineJoints(supabase: SupabaseClient, userId: string): Prom
     `${fragmentRows.length > 0 && fragments.length === 0 ? ' — nothing can cluster, so no joint can ever be found' : ''}`,
   )
 
+  // The thought's date where there is one, the row's only as a fallback.
   const datesById = new Map<string, string>(
-    (fragmentRows ?? []).map((f: any) => [f.id, f.created_at]),
+    (fragmentRows ?? []).map((f: any) => [
+      f.id,
+      (f.memory_id && memoryDateById.get(f.memory_id)) || f.created_at,
+    ]),
   )
 
   // Span, not count. A cluster confined to one sitting is one thought

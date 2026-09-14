@@ -763,3 +763,35 @@ describe('a buried project is not resurfaced as a subject or a connector', () =>
     expect(trace.join('\n')).toMatch(/nothing in band/)
   })
 })
+
+describe('a fragment is dated by the thought, not by the backfill that wrote it', () => {
+  it('reads the linked memory date when every fragment row shares one timestamp', async () => {
+    // backfillFragments writes the years already in the corpus in a single
+    // run, so those rows all carry the same created_at. Production reported
+    // "corpus span: 0 days" across 72 fragments -- every shape in this file
+    // is arithmetic over these dates, so all of them collapsed at once.
+    const data = corpus() as any
+    const flattened = ago(1)
+    data.memories = data.fragments.map((f: any, i: number) => ({
+      user_id: 'u1',
+      id: `m-${f.id}`,
+      title: f.text,
+      body: f.text,
+      created_at: f.created_at, // the real thinking date
+      embedding: [i / 10, 1 - i / 10, 0.5],
+    }))
+    data.fragments = data.fragments.map((f: any) => ({
+      ...f,
+      created_at: flattened, // what the backfill actually stamped
+      memory_id: `m-${f.id}`,
+    }))
+
+    const trace: string[] = []
+    await gatherSubjects(fakeSupabase(data).client, 'u1', trace)
+
+    const spanLine = trace.find(t => t.startsWith('corpus span:'))!
+    expect(spanLine).toBeDefined()
+    // The real span is years. Reading the row dates it would be 0.
+    expect(Number(spanLine.match(/(\d+)/)![1])).toBeGreaterThan(300)
+  })
+})

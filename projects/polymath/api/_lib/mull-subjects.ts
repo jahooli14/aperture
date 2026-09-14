@@ -123,10 +123,25 @@ async function loadCaptures(
   noteQuery(trace, 'memories', memoriesRes)
   noteQuery(trace, 'fragments', fragmentsRes)
 
+  // When the thought was had, not when the fragment row was written.
+  //
+  // Fragments are created at capture, but the years already in the corpus
+  // got theirs from backfillFragments -- one run, so every one of those
+  // rows carries the same created_at. A live corpus of 72 fragments
+  // reported a span of 0 days. Every shape in this file is arithmetic over
+  // these dates, so all of them collapsed at once: no recurrence could
+  // span anything, no conviction could be held across seasons, and five of
+  // six gatherers returned nothing. The linked memory has the real date
+  // and is already loaded here, so this costs no extra query.
+  const memoryDateById = new Map<string, string>()
+  for (const m of (memoriesRes.data ?? []) as any[]) {
+    if (m.created_at) memoryDateById.set(m.id, m.created_at)
+  }
+
   const fragments = (fragmentsRes.data ?? []).map((f: any) => ({
     id: f.id,
     text: f.text ?? '',
-    createdAt: f.created_at,
+    createdAt: (f.memory_id && memoryDateById.get(f.memory_id)) || f.created_at,
     projectId: f.project_id ?? null,
     projectTitle: f.projects?.title ?? null,
     memoryId: f.memory_id ?? null,
