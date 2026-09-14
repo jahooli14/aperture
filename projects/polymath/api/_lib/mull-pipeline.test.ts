@@ -951,3 +951,37 @@ describe('an article connector quotes the article, not the feed teaser', () => {
     expect(draftPrompt).not.toContain('cut at a hundred characters by the ingest')
   })
 })
+
+describe('the best question that clears the gates ships first', () => {
+  it('prefers the one whose question turns on the note over one that merely quotes it', async () => {
+    // Both clear every gate. The first replays the note in its setup and
+    // then asks something the note has nothing to do with; the second
+    // turns on the note's own words. rankPairs ranked the PAIR, so before
+    // this the first shipped purely because its pair scored higher.
+    generateText.mockReset()
+    generateText.mockResolvedValueOnce(BLIND_SPOTS).mockResolvedValueOnce(JSON.stringify({
+      pairs: [
+        {
+          n: 1,
+          spark: 'You wrote that you get maybe ten more proper conversations with dad, and you spend them on the greenhouse. Which room gets tidied next?',
+          quote: 'ten more proper conversations with dad',
+          stake: 'He books the weekend and drives up there.',
+        },
+        {
+          n: 2,
+          spark: 'You kept the first take of the whole side even though the drop is late. Which chapter are you going to keep the first take of?',
+          quote: 'Kept the first take of the whole side even though the drop is late',
+          stake: 'He leaves chapter nine alone and ships it.',
+        },
+      ],
+    }))
+
+    const trace: string[] = []
+    const baked = await bakeMull(fakeSupabase(corpus() as any).client, 'u1', undefined, trace)
+
+    expect(baked.length).toBeGreaterThan(0)
+    // The one whose question sentence carries the note leads.
+    expect(baked[0].text).toContain('keep the first take of')
+    expect(trace.join('\n')).toMatch(/ranked \d+ that cleared the gates/)
+  })
+})
