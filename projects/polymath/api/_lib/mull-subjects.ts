@@ -16,9 +16,9 @@
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { parseHTML } from 'linkedom'
 import { motifWords } from './spark-echo.js'
 import { selectCorpusArticles, type CorpusArticle } from './reading-corpus.js'
+import { articleBody } from './article-text.js'
 import {
   describeTimeline,
   classifyTimeline,
@@ -497,44 +497,6 @@ async function longHeldSubject(
  * excerpt. Feed items only ever get a 100-character excerpt, so anything
  * asking for real material has to look at `content`.
  */
-function articleBody(row: { excerpt?: string | null; content?: string | null }): string {
-  const full = typeof row.content === 'string' ? htmlToText(row.content) : ''
-  if (full.length > 120) return full
-  return typeof row.excerpt === 'string' ? row.excerpt.trim() : ''
-}
-
-/**
- * Tags stripped AND entities decoded, via the same linkedom parse
- * api/reading.ts already uses for this (`decodeHTMLEntities`), not a
- * regex. A regex strip leaves "isn&#8217;t" in the text handed to the
- * model. The model writes the entity decoded ("isn't"), quoteIsReal does a
- * plain substring compare against the stored text, and the two never
- * match -- so a real, correctly-quoted answer fails grounding and gets
- * thrown away as invented. The exact defect class this session has spent
- * itself chasing, found here before it ever ran once in production.
- */
-function htmlToText(html: string): string {
-  // articleSubject runs inside gatherSubjects' Promise.all alongside four
-  // other gatherers -- an uncaught throw here does not just lose this one
-  // article, it fails the whole bake and every subject in it. reading.ts's
-  // own cleanHtml wraps the same linkedom parse for the same reason; this
-  // does too.
-  try {
-    const { document } = parseHTML(`<div>${html}</div>`) as any
-    // textContent includes the text INSIDE <script> and <style> -- it just
-    // concatenates every descendant text node, with no idea which tags are
-    // rendered. cleanHtml already strips these at ingest, but this function
-    // has no guarantee it is only ever fed cleaned content (a hand-saved
-    // article, a future ingest path), and removing them here costs two lines.
-    document.querySelectorAll?.('script, style')?.forEach((el: any) => el.remove())
-    const text = document.querySelector('div')?.textContent ?? ''
-    return text.replace(/\s+/g, ' ').trim()
-  } catch (e) {
-    console.warn('[mull] could not parse article HTML, falling back to excerpt:', e)
-    return ''
-  }
-}
-
 /** Reading, no longer windowed: an article that earned its place two years
  *  ago is still something they vouched for. */
 async function articleSubject(

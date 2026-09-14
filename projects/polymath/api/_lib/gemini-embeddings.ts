@@ -45,6 +45,56 @@ export function resetUsageStats() {
 }
 
 /**
+ * Unit-length the vector, which gemini-embedding-001 does NOT do for you
+ * below its native 3072 dimensions.
+ *
+ * The model uses Matryoshka representation learning, so asking for 768
+ * dimensions returns a truncation of the 3072-dim vector — and truncating
+ * a unit vector leaves something shorter than unit length. Google's docs
+ * are explicit that you must normalize non-3072 output yourself.
+ *
+ * Nothing is broken today, because every comparison in this codebase is
+ * cosine (pgvector's `<=>`, and cosineSimilarity below divides by both
+ * magnitudes) and cosine ignores magnitude entirely. That is also why this
+ * needs no migration: a normalized vector and its un-normalized self score
+ * identically against anything, so new and old rows stay comparable.
+ *
+ * It matters for what comes next. An inner-product index (`<#>`), an L2
+ * index (`<->`), or any raw dot product silently returns wrong neighbours
+ * on un-normalized vectors, and that failure looks like "search got worse"
+ * rather than like a bug.
+ */
+function normalize(values: number[]): number[] {
+  let sumSquares = 0
+  for (const v of values) sumSquares += v * v
+  const magnitude = Math.sqrt(sumSquares)
+  // A zero vector has no direction to preserve; hand it back untouched
+  // rather than turning every component into NaN.
+  if (magnitude === 0 || !Number.isFinite(magnitude)) return values
+  return values.map(v => v / magnitude)
+}
+
+/**
+ * Normalize, and check the API gave us the width we asked for.
+ *
+ * `outputDimensionality` isn't in this SDK's request types (it predates the
+ * parameter), so it rides through as an untyped extra field. That works,
+ * but it means a future SDK or endpoint that drops the field would hand
+ * back 3072 numbers instead of 768 — and the first thing to notice would
+ * be a Postgres error about a vector(768) column, thrown somewhere far
+ * from the cause. Say it here instead.
+ */
+function toVector(values: number[]): number[] {
+  if (values?.length !== MODELS.DEFAULT_EMBEDDING_DIMS) {
+    throw new Error(
+      `[Gemini] expected a ${MODELS.DEFAULT_EMBEDDING_DIMS}-dim embedding, got ${values?.length ?? 0} — ` +
+      'outputDimensionality was not honoured, so this vector cannot be stored',
+    )
+  }
+  return normalize(values)
+}
+
+/**
  * Generate a single embedding using Gemini with retry logic
  * Model: gemini-embedding-001 (768 dimensions via MRL)
  */
@@ -71,7 +121,7 @@ export async function generateEmbedding(text: string, retries = 3): Promise<numb
         console.log(`[Gemini] Success on retry ${attempt}`)
       }
 
-      return result.embedding.values
+      return toVector(result.embedding.values)
     } catch (error: any) {
       lastError = error
       usageStats.errors++
@@ -119,13 +169,18 @@ export async function batchGenerateEmbeddings(texts: string[], retries = 3): Pro
     try {
       const model = genAI.getGenerativeModel({ model: MODELS.DEFAULT_EMBEDDING })
 
-      // Process in parallel (Gemini is fast)
-      const embeddings = await Promise.all(
-        texts.map(text => model.embedContent({
+      // One request, not N. This was `Promise.all(texts.map(embedContent))`,
+      // which is not a batch at all — it fires a separate HTTP call per
+      // text, all at once, so a 40-item backfill was 40 concurrent requests
+      // against the rate limit and any single 429 failed the whole set and
+      // re-fired all 40 on retry. batchEmbedContents is the actual batch
+      // endpoint and takes the same per-request fields.
+      const result = await model.batchEmbedContents({
+        requests: texts.map(text => ({
           content: { role: 'user', parts: [{ text }] },
           outputDimensionality: MODELS.DEFAULT_EMBEDDING_DIMS,
-        } as Parameters<typeof model.embedContent>[0]))
-      )
+        })),
+      } as Parameters<typeof model.batchEmbedContents>[0])
 
       // Track usage
       usageStats.batch_embeddings++
@@ -135,7 +190,7 @@ export async function batchGenerateEmbeddings(texts: string[], retries = 3): Pro
         console.log(`[Gemini] Batch success on retry ${attempt}`)
       }
 
-      return embeddings.map(e => e.embedding.values)
+      return result.embeddings.map(e => toVector(e.values))
     } catch (error: any) {
       lastError = error
       usageStats.errors++

@@ -1,5 +1,7 @@
 import { getSupabaseClient } from './supabase.js'
 import { generateEmbedding, cosineSimilarity } from './gemini-embeddings.js'
+import { isCorpusEligible } from './reading-corpus.js'
+import { articleEmbeddingText } from './article-text.js'
 
 interface MaintenanceStats {
   processed: number
@@ -54,6 +56,30 @@ export async function maintainEmbeddings(userId: string, limit = 50, reEmbed = f
   return stats
 }
 
+/**
+ * Rebuild every eligible article's vector from the article's real text.
+ *
+ * Needed because the ordinary backfill only fills nulls, and these rows are
+ * not null — they are wrong. They were embedded from `excerpt`, which the
+ * ingest caps at 100 characters for the card UI, so a feed article's vector
+ * described a teaser rather than a piece of writing (article-text.ts). The
+ * rows are stale rather than missing, so nothing would ever revisit them.
+ *
+ * Only articles: everything else already embeds its real text, and
+ * re-embedding what is already right just spends calls.
+ */
+export async function reembedArticles(userId: string, limit = 200): Promise<MaintenanceStats> {
+  const supabase = getSupabaseClient()
+  const stats: MaintenanceStats = { processed: 0, embeddings_created: 0, connections_created: 0, errors: 0 }
+
+  const articles = await fetchItems(supabase, 'reading_queue', userId, limit, true)
+  console.log(`[embeddings] Re-embedding ${articles.length} articles from their real text`)
+  for (const item of articles) {
+    await processItem(supabase, 'article', item, userId, stats)
+  }
+  return stats
+}
+
 async function fetchItems(supabase: any, table: string, userId: string, limit: number, reEmbed: boolean) {
   let query = supabase.from(table).select('id, title, embedding, user_id').eq('user_id', userId)
 
@@ -66,8 +92,14 @@ async function fetchItems(supabase: any, table: string, userId: string, limit: n
   if (table === 'projects') query = query.select('id, title, description, embedding, user_id')
   if (table === 'memories') query = query.select('id, title, body, embedding, user_id')
   // Never spend an embedding on an article the user said wasn't for them —
-  // that's the noise the semantic search was full of.
-  if (table === 'reading_queue') query = query.select('id, title, excerpt, embedding, user_id').eq('processed', true).or('resonance.is.null,resonance.neq.not_for_me')
+  // that's the noise the semantic search was full of. The `.or()` is only
+  // the coarse cut PostgREST can express; isCorpusEligible does the real
+  // filtering in processItem, since `.neq()` drops NULL rows and the rule
+  // also turns on `read_at` and `tags`. This path writes the embedding
+  // column directly rather than going through reading.ts's gated writer,
+  // so without that check it re-embeds the never-opened feed backlog the
+  // gate exists to keep out.
+  if (table === 'reading_queue') query = query.select('id, title, excerpt, content, tags, resonance, read_at, embedding, user_id').eq('processed', true).or('resonance.is.null,resonance.neq.not_for_me')
   if (table === 'list_items') query = query.select('id, content, metadata, embedding, user_id').eq('enrichment_status', 'completed')
 
   const { data, error } = await query.limit(limit)
@@ -84,7 +116,13 @@ async function processItem(supabase: any, type: 'project' | 'thought' | 'article
     let content = ''
     if (type === 'project') content = `${item.title}\n\n${item.description || ''}`
     if (type === 'thought') content = `${item.title || ''}\n\n${item.body || ''}`
-    if (type === 'article') content = `${item.title}\n\n${item.excerpt || ''}`
+    if (type === 'article') {
+      // The eligibility rule lives in one place and this writer has to obey
+      // it too — it writes reading_queue.embedding itself instead of going
+      // through reading.ts's gated writer.
+      if (!isCorpusEligible(item)) return
+      content = articleEmbeddingText(item)
+    }
     if (type === 'list_item') {
       // Build rich content from item + enriched metadata
       const meta = item.metadata || {}

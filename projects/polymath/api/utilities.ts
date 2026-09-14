@@ -82,7 +82,7 @@ const EXECUTION_SESSIONS_RESOURCES = new Set([
 const EXECUTION_SPARKS_RESOURCES = new Set(['bake', 'today', 'respond', 'dismiss-spark', 'reroll-spark', 'retire-and-rebake', 'catch-up'])
 const EXECUTION_PROPOSALS_RESOURCES = new Set([
   'generate-morph', 'drift-decay', 'mine-joints', 'generate-composite',
-  'pending', 'accept', 'reject',
+  'pending', 'accept', 'reject', 'reembed-articles',
 ])
 // Fix Queue, folded in from its own serverless function to stay under
 // Vercel's Hobby cap of 12. Routed on `action`, which nothing else in this
@@ -3329,6 +3329,21 @@ async function handleExecutionProposals(req: VercelRequest, res: VercelResponse)
 
     const result = await runDriftDecay(supabase, userId)
     return res.status(200).json({ harvested: result.harvested.length, project_ids: result.harvested })
+  }
+
+  // ─── RE-EMBED ARTICLES (cron) ───────────────────────────────────────
+  // One-off-ish repair, safe to re-run: article vectors written before
+  // article-text.ts described the 100-character card teaser rather than the
+  // article. The ordinary backfill only fills nulls, and these rows are
+  // wrong rather than missing, so nothing else would ever revisit them.
+  if (resource === 'reembed-articles') {
+    if (req.method !== 'POST') return res.status(405).json({ error: 'POST required' })
+    const userId = getCronUserId(req)
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' })
+
+    const { reembedArticles } = await import('./_lib/embeddings-maintenance.js')
+    const stats = await reembedArticles(userId)
+    return res.status(200).json(stats)
   }
 
   // ─── MINE JOINTS (cron) ─────────────────────────────────────────────
