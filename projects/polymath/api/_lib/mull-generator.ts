@@ -30,7 +30,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { generateText } from './gemini-chat.js'
 import { batchGenerateEmbeddings } from './gemini-embeddings.js'
 import { PLAIN_ENGLISH_RULES } from './plain-english.js'
-import { avoidBlock, echoesRecent, fetchRecentSparkTexts, motifWords } from './spark-echo.js'
+import { avoidBlock, echoesRecent, fetchRecentSparkTexts, fetchRecentSparkProjectIds, motifWords } from './spark-echo.js'
 import { examplesBlock } from './mull-examples.js'
 import { gatherSubjects, identityBlock, type Subject } from './mull-subjects.js'
 import {
@@ -95,6 +95,9 @@ export type MullTrace = string[]
 
 export interface EchoContext {
   recentTexts: string[]
+  /** Projects a recent question was already about, by id. Applied when
+   *  subjects are picked rather than when drafts are judged. */
+  recentProjectIds?: Set<string>
   avoid: string
   /** Questions this person actually answered, and what they said back —
    *  plus the ones they read and ignored. See loadResonance. */
@@ -177,12 +180,13 @@ for the reader to do.
 export async function loadEchoContext(
   supabase: SupabaseClient, userId: string, trace: MullTrace = [],
 ): Promise<EchoContext> {
-  const [recentTexts, resonance, identity] = await Promise.all([
+  const [recentTexts, recentProjectIds, resonance, identity] = await Promise.all([
     fetchRecentSparkTexts(supabase, userId),
+    fetchRecentSparkProjectIds(supabase, userId),
     loadResonance(supabase, userId),
     identityBlock(supabase, userId, trace),
   ])
-  return { recentTexts, avoid: avoidBlock(recentTexts), resonance, identity }
+  return { recentTexts, recentProjectIds, avoid: avoidBlock(recentTexts), resonance, identity }
 }
 
 function expiresAt(hours: number): string {
@@ -604,7 +608,7 @@ export async function generateMull(
   echo: EchoContext,
   trace: MullTrace = [],
 ): Promise<BakedSpark[]> {
-  const subjects = await gatherSubjects(supabase, userId, trace)
+  const subjects = await gatherSubjects(supabase, userId, trace, echo.recentProjectIds)
   trace.push(
     subjects.length === 0
       ? 'subjects: none — no joint, project, thought, list item or article qualified'
