@@ -46,6 +46,7 @@ on:
           - mine-joints
           - recompute-heat
           - retire-and-rebake
+          - reembed-articles
 
 concurrency:
   group: cron
@@ -118,6 +119,10 @@ jobs:
               # waiting out its four-day shelf life or tapping "ask me
               # something else" in the app.
               retire-and-rebake) hit "/api/utilities?resource=retire-and-rebake" ;;
+            # Rebuilds article vectors from the article's real text. They
+            # were embedded from the 100-char card teaser; the ordinary
+            # backfill only fills nulls, so nothing else revisits them.
+            reembed-articles) hit "/api/utilities?resource=reembed-articles" ;;
               *) echo "!! unknown job: $JOB" | tee -a "$FAILED_FILE" ;;
             esac
             if [ -s "$FAILED_FILE" ]; then exit 1; fi

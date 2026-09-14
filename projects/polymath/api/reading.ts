@@ -19,6 +19,7 @@ import { generateGist, type ArticleGist } from './_lib/article-gist.js'
 import { mitigationFromHeaders, detectBotWallText } from './_lib/bot-wall.js'
 import { stripLinkFarms } from './_lib/link-density.js'
 import { isCorpusEligible } from './_lib/reading-corpus.js'
+import { articleEmbeddingText } from './_lib/article-text.js'
 
 // rss-parser is used only for XML parsing now — fetching is done manually
 // in robustParseFeed below so we can present a full browser identity to
@@ -2977,9 +2978,13 @@ async function generateArticleEmbeddingAndConnect(
     // see reading-corpus.ts. Re-read resonance/tags here rather than trust
     // whatever the caller believed, since this often runs well after the
     // save that triggered it.
+    // `content` too: the article's real text is what gets embedded, not the
+    // excerpt. The ingest caps excerpt at 100 characters for the card UI,
+    // so every feed article's vector used to be a title plus a teaser --
+    // match_reading was comparing questions against blurbs.
     const { data: current } = await supabase
       .from('reading_queue')
-      .select('resonance, tags, read_at')
+      .select('resonance, tags, read_at, title, excerpt, content')
       .eq('id', articleId)
       .eq('user_id', userId)
       .maybeSingle()
@@ -2991,8 +2996,14 @@ async function generateArticleEmbeddingAndConnect(
 
     console.log(`[reading] Generating embedding for article ${articleId}`)
 
-    // Generate embedding from title + excerpt
-    const content = `${title}\n\n${excerpt || ''}`
+    // The stored row wins over the caller's arguments: this runs in the
+    // background, often well after the save, and extraction may have
+    // replaced a placeholder title since.
+    const content = articleEmbeddingText({
+      title: current.title ?? title,
+      excerpt: current.excerpt ?? excerpt,
+      content: current.content,
+    })
     const embedding = await generateEmbedding(content)
 
     // Store embedding in database (note: table is reading_queue, not articles)
