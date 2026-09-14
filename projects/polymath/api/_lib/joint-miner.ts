@@ -12,7 +12,13 @@ import { generateText } from './gemini-chat.js'
 import { generateEmbedding, cosineSimilarity } from './gemini-embeddings.js'
 import { PLAIN_ENGLISH_RULES } from './plain-english.js'
 import { findRecurringThemes, type FragmentForClustering } from './joints.js'
-import { describeTimeline, MIN_SPAN_DAYS } from './corpus-time.js'
+import {
+  describeTimeline,
+  corpusSpan,
+  scaleToCorpus,
+  MIN_SPAN_DAYS,
+  MIN_SPAN_FLOOR_DAYS,
+} from './corpus-time.js'
 
 const EXISTING_JOINT_SIM_THRESHOLD = 0.85
 
@@ -109,15 +115,25 @@ export async function mineJoints(supabase: SupabaseClient, userId: string): Prom
   // Span, not count. A cluster confined to one sitting is one thought
   // however many fragments it left behind, and summarising it into a
   // "joint" spends a model call to manufacture a recurrence that isn't one.
+  // 45 days is right for a corpus with years in it and impossible for a
+  // young one: a live run had 72 fragments, every one clusterable, and
+  // zero clusters spanning 45 days -- so joints stayed empty and the mull
+  // channel never had its strongest subject. Sized to the corpus instead,
+  // floored so "said twice on Tuesday" still can't count.
+  const spanDays = corpusSpan([...datesById.values()])
+  const minSpan = scaleToCorpus(MIN_SPAN_DAYS, MIN_SPAN_FLOOR_DAYS, spanDays)
+
   const clusters = findRecurringThemes(fragments).filter(cluster => {
     const timeline = describeTimeline(
       cluster.fragmentIds.map(id => datesById.get(id)).filter((d): d is string => !!d),
     )
-    return timeline !== null && timeline.spanDays >= MIN_SPAN_DAYS
+    return timeline !== null && timeline.spanDays >= minSpan
   })
   trace.push(
-    `clusters: ${clusters.length} recurring themes spanning at least ${MIN_SPAN_DAYS} days`,
+    `corpus span: ${Math.round(spanDays ?? 0)} days, so a recurrence must span ` +
+    `${Math.round(minSpan)} days (ideal ${MIN_SPAN_DAYS})`,
   )
+  trace.push(`clusters: ${clusters.length} recurring themes spanning at least ${Math.round(minSpan)} days`)
   if (clusters.length === 0) return { written: 0, trace }
 
   const existingRes = await supabase

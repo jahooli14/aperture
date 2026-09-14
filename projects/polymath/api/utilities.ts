@@ -2754,12 +2754,23 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
  * Retires whatever spark is currently standing and bakes a replacement,
  * shared between the user-facing "ask me something else" button
  * (reroll-spark) and the cron-authenticated equivalent (retire-and-rebake).
- * The two differ only in how userId is obtained -- extracted so a fix that
- * makes the standing question obsolete has a way to actually clear it,
- * not just a way to stop writing bad ones going forward.
+ *
+ * `force` is the one real difference between the two callers, and it isn't
+ * optional. Without it, this restored the old spark's expiry whenever
+ * nothing better could be baked -- the right call for "ask me something
+ * else" (don't take away a spark the user was fine with just because a
+ * reroll came up empty), and exactly the wrong call for the cron path,
+ * whose entire documented purpose is clearing a spark a code fix already
+ * made obsolete. A spark baked from pre-fix logic (the football-note
+ * subject the event-type filter now excludes) sat there for a full day
+ * after the fix shipped, because retire-and-rebake dutifully put it right
+ * back the moment the echo check -- correctly comparing against that same
+ * poisoned recent history -- rejected every fresh draft. Restoring "the
+ * one you had" only makes sense when it was a fine spark you're
+ * gambling away; it's the wrong move for a spark that was the bug.
  */
 async function retireAndRebake(
-  supabase: ReturnType<typeof getSupabaseClient>, userId: string,
+  supabase: ReturnType<typeof getSupabaseClient>, userId: string, force = false,
 ): Promise<
   | { rerolled: true; spark: unknown }
   | { rerolled: false; reason: string }
@@ -2826,10 +2837,13 @@ async function retireAndRebake(
   }
 
   if (baked.length === 0) {
-    // The corpus had nothing else worth asking. Put the original back
-    // rather than leaving the slot empty — silence is the right answer
-    // for a NEW question, not a reason to take away the one you had.
-    if (retiring) {
+    // The corpus had nothing else worth asking. On a voluntary reroll,
+    // put the original back rather than leaving the slot empty — silence
+    // is the right answer for a NEW question, not a reason to take away
+    // the one you had. `force` skips this: it means the caller already
+    // decided the standing spark itself needs to go, and an empty slot
+    // is strictly better than putting back the thing that was retired.
+    if (retiring && !force) {
       await supabase
         .from('sparks')
         .update({ expires_at: retiring.expires_at })
@@ -3088,11 +3102,15 @@ async function handleExecutionSparks(req: VercelRequest, res: VercelResponse) {
   // landing mid-week left the OLD, now-known-bad question standing for
   // days regardless of how correct the fix was, because nothing about
   // deploying a fix touches a row already written to `sparks`.
+  //
+  // force: true -- this path exists specifically to remove a spark that's
+  // already known to be wrong, so if the corpus can't produce a fresh one
+  // the right outcome is an empty slot, not putting the bad one back.
   if (resource === 'retire-and-rebake') {
     if (req.method !== 'POST') return res.status(405).json({ error: 'POST required' })
     const userId = getCronUserId(req)
     if (!userId) return res.status(401).json({ error: 'Unauthorized' })
-    return res.status(200).json(await retireAndRebake(supabase, userId))
+    return res.status(200).json(await retireAndRebake(supabase, userId, true))
   }
 
   // ─── DISMISS ────────────────────────────────────────────────────────

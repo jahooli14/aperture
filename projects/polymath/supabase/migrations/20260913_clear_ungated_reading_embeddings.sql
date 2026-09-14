@@ -13,10 +13,13 @@
 -- behaviour, so match_reading and every semantic-search caller
 -- (connections.ts, brainstorm.ts, the mull channel) stop treating
 -- unread feed noise and rejected articles as real corpus.
+-- read_at is part of the rule: an un-verdicted feed item the user actually
+-- opened IS corpus, so its embedding stays. Only the never-opened backlog
+-- and explicit rejections are cleared.
 UPDATE reading_queue
 SET embedding = NULL
 WHERE embedding IS NOT NULL
   AND (
     resonance = 'not_for_me'
-    OR (resonance IS NULL AND tags @> ARRAY['rss']::text[])
+    OR (resonance IS NULL AND tags @> ARRAY['rss']::text[] AND read_at IS NULL)
   );
