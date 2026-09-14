@@ -103,7 +103,7 @@ async function loadCaptures(
   trace: string[] = [],
 ): Promise<{
   thoughts: CorpusRow[]
-  fragments: (CorpusRow & { projectTitle: string | null })[]
+  fragments: (CorpusRow & { projectTitle: string | null; memoryId?: string | null })[]
   /** memory_id -> project_id, via the fragments link table. */
   filedMemoryIds: Set<string>
 }> {
@@ -208,7 +208,7 @@ function quoteLines(rows: { text: string; createdAt: string }[], limit = 6): str
 async function jointSubjects(
   supabase: SupabaseClient,
   userId: string,
-  fragments: (CorpusRow & { projectTitle: string | null })[],
+  fragments: (CorpusRow & { projectTitle: string | null; memoryId?: string | null })[],
   baseline: ActivityBaseline,
   trace: string[] = [],
   corpusSpanDays?: number,
@@ -327,7 +327,7 @@ function recurringFallback(
 async function projectSubjects(
   supabase: SupabaseClient,
   userId: string,
-  fragments: (CorpusRow & { projectTitle: string | null })[],
+  fragments: (CorpusRow & { projectTitle: string | null; memoryId?: string | null })[],
   thoughts: CorpusRow[],
   baseline: ActivityBaseline,
   trace: string[] = [],
@@ -398,11 +398,32 @@ async function projectSubjects(
  * this. Purely a fact about when someone was typing.
  */
 function simultaneitySubjects(
-  fragments: (CorpusRow & { projectTitle: string | null })[],
+  fragments: (CorpusRow & { projectTitle: string | null; memoryId?: string | null })[],
   thoughts: CorpusRow[],
   trace?: string[],
 ): Subject[] {
-  const captures: Capture[] = [...fragments, ...thoughts].map(r => ({
+  // One capture per underlying thought.
+  //
+  // A filed thought appears twice here: once as the memory and once as the
+  // fragment pointing at it, both now carrying the same date. That turns a
+  // single co-occurrence between two projects into four pairings, and the
+  // habitual-pair guard below asks for a pair that happened exactly once --
+  // which four copies of one event can never be. Live numbers: 144 captures
+  // with a project, 276 pairs within four days, and not one of them unique.
+  // The guard is right (the fact it protects is "never put them together
+  // since"); it was being fed the same event repeatedly.
+  const byThought = new Map<string, CorpusRow & { projectTitle?: string | null }>()
+  for (const f of fragments) {
+    const key = f.memoryId ?? f.id
+    // The fragment wins over the bare thought: it is the one that carries a
+    // project, which is what makes a capture eligible at all.
+    if (f.projectId || !byThought.has(key)) byThought.set(key, f)
+  }
+  for (const t of thoughts) {
+    if (!byThought.has(t.id)) byThought.set(t.id, t)
+  }
+
+  const captures: Capture[] = [...byThought.values()].map(r => ({
     id: r.id, text: r.text, createdAt: r.createdAt, projectId: r.projectId, source: 'thought',
   }))
 
@@ -660,6 +681,8 @@ export async function gatherSubjects(
   supabase: SupabaseClient,
   userId: string,
   trace: string[] = [],
+  /** Projects a recent question already covered. Demoted, never dropped. */
+  recentProjectIds?: Set<string>,
 ): Promise<Subject[]> {
   const { thoughts, fragments, filedMemoryIds } = await loadCaptures(supabase, userId, trace)
 
@@ -694,7 +717,25 @@ export async function gatherSubjects(
     ...(unfiled ? [unfiled] : []),
     ...(longHeld ? [longHeld] : []),
     ...(article ? [article] : []),
-  ].sort((a, b) => b.strength - a.strength)
+  ]
+    // A subject a standing question already covers goes to the back.
+    //
+    // The avoid-list catches this at DRAFT time, on the question's wording,
+    // which is both too late and too blunt: by then the blind-spot call and
+    // every search have been paid for, and the model's only move is to
+    // decline every pair. A live run went "4 pairs came back, 4 declined by
+    // the model" with subjects that were the same two projects the standing
+    // question was about. sparks.project_id says which project each recent
+    // question covered, exactly, and it costs one query before any of that
+    // is spent.
+    //
+    // Demoted rather than dropped: with a handful of candidate projects,
+    // excluding them outright trades a repeat for an empty slot, and a
+    // repeat at least has the gates still in front of it.
+    .map(s => (s.projectId && recentProjectIds?.has(s.projectId))
+      ? { ...s, strength: s.strength * 0.4 }
+      : s)
+    .sort((a, b) => b.strength - a.strength)
 
   // Per-gatherer counts. "subjects: none" was true and useless: five paths
   // decline for five different reasons and only the totals were visible.

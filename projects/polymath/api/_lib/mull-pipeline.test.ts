@@ -865,3 +865,55 @@ describe('a sloppy quote no longer loses the question before the gate sees it', 
     expect(trace.join('\n')).toMatch(/draft call FAILED: .*503/)
   })
 })
+
+describe('one capture per thought, so the habitual-pair guard can work', () => {
+  it('does not count a thought and its own fragment as two co-occurrences', async () => {
+    // A filed thought appears twice -- as the memory and as the fragment
+    // pointing at it, both carrying the same date -- so one co-occurrence
+    // between two projects became four pairings, and "only happened once"
+    // could never be true. Production: 276 pairs, 0 unique.
+    const data = corpus() as any
+    // Two projects, one capture each, two days apart and long ago. Each
+    // thought is filed, so each also exists as a fragment.
+    data.memories = [
+      { user_id: 'u1', id: 'mA', title: 'A', body: 'the kiln finally came up to temperature', created_at: ago(300), memory_type: 'insight' },
+      { user_id: 'u1', id: 'mB', title: 'B', body: 'the bassline should sit under the vocal', created_at: ago(298), memory_type: 'insight' },
+    ]
+    data.fragments = [
+      { user_id: 'u1', id: 'fA', text: 'the kiln finally came up to temperature', created_at: ago(1), project_id: 'p-book', memory_id: 'mA', projects: { title: 'The book' } },
+      { user_id: 'u1', id: 'fB', text: 'the bassline should sit under the vocal', created_at: ago(1), project_id: 'p-deck', memory_id: 'mB', projects: { title: 'Deck stand' } },
+    ]
+    data.joints = []
+
+    const trace: string[] = []
+    const subjects = await gatherSubjects(fakeSupabase(data).client, 'u1', trace)
+
+    const line = trace.find(t => t.startsWith('simultaneity:'))!
+    // Two captures, not four: the fragment and its memory are one thought.
+    expect(line).toContain('2 captures with a project')
+    expect(line).toContain('1 that only happened once')
+    expect(subjects.find(s => s.kind === 'pair')).toBeDefined()
+  })
+})
+
+describe('a subject the standing question already covers goes to the back', () => {
+  it('prefers a project no recent question was about', async () => {
+    const data = corpus() as any
+    const trace: string[] = []
+
+    // With nothing standing, the strongest project leads.
+    const fresh = await gatherSubjects(fakeSupabase(data).client, 'u1', trace)
+    const leader = fresh.find(s => s.kind === 'project')!
+
+    // Now say a recent question already covered that project.
+    const after = await gatherSubjects(
+      fakeSupabase(corpus() as any).client, 'u1', [], new Set([leader.projectId!]),
+    )
+    const stillThere = after.find(s => s.id === leader.id)
+
+    // Not dropped -- a repeat still beats an empty slot, and the gates are
+    // still in front of it -- but it no longer leads.
+    expect(after[0].id).not.toBe(leader.id)
+    if (stillThere) expect(stillThere.strength).toBeLessThan(leader.strength)
+  })
+})

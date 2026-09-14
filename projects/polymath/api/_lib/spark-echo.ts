@@ -185,6 +185,37 @@ you can find is another version of one of those, return { "spark": null }.
  * that can't read the history should let the spark through, not starve the
  * slot.
  */
+/**
+ * Which projects the recent questions were already about.
+ *
+ * The avoid-list works on the question's WORDS, at draft time — after the
+ * blind-spot call and every search have been paid for. So a run whose
+ * subjects are the same projects a standing question already covers spends
+ * both model calls and nine searches to be told, correctly, that it has
+ * nothing new to say. `sparks.project_id` says which project each question
+ * was about, exactly, and it is known before any of that is spent.
+ */
+export async function fetchRecentSparkProjectIds(
+  supabase: SupabaseClient,
+  userId: string,
+  limit: number = ECHO_WINDOW_SPARKS,
+): Promise<Set<string>> {
+  const cutoff = new Date(Date.now() - ECHO_LOOKBACK_DAYS * 86_400_000).toISOString()
+  const { data, error } = await supabase
+    .from('sparks')
+    .select('project_id')
+    .eq('user_id', userId)
+    .eq('type', 'mull')
+    .not('project_id', 'is', null)
+    .gte('created_at', cutoff)
+    .order('created_at', { ascending: false })
+    .limit(limit)
+  // Same posture as the texts above: a check that cannot read the history
+  // lets subjects through rather than starving the slot.
+  if (error || !data) return new Set()
+  return new Set(data.map((s: any) => s.project_id).filter(Boolean))
+}
+
 export async function fetchRecentSparkTexts(
   supabase: SupabaseClient,
   userId: string,
