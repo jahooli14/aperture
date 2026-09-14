@@ -33,6 +33,7 @@ import { PLAIN_ENGLISH_RULES } from './plain-english.js'
 import { avoidBlock, echoesRecent, fetchRecentSparkTexts, fetchRecentSparkProjectIds, motifWords } from './spark-echo.js'
 import { examplesBlock } from './mull-examples.js'
 import { gatherSubjects, identityBlock, type Subject } from './mull-subjects.js'
+import { articleBody } from './article-text.js'
 import {
   selectConnectors,
   connectorCeiling,
@@ -356,6 +357,26 @@ async function findConnectors(
       )
     }
 
+    // match_reading returns `excerpt`, which the RSS ingest caps at 100
+    // characters for the card UI. The connector is the ONLY text the model
+    // is allowed to quote, and the gate then requires the note's own words
+    // to survive into the question -- so handing it a teaser asks it to
+    // quote from something that barely exists. The article's real text is
+    // one lookup away, the same way the project status check above is.
+    const readingRows = reading.data ?? []
+    const bodyById = new Map<string, string>()
+    if (readingRows.length > 0) {
+      const bodies = await supabase
+        .from('reading_queue')
+        .select('id, title, excerpt, content')
+        .in('id', readingRows.map((a: any) => a.id))
+      if (bodies.error) trace.push(`!! article bodies query FAILED: ${bodies.error.message}`)
+      for (const row of bodies.data ?? []) {
+        const body = articleBody(row as any)
+        if (body) bodyById.set((row as any).id, body)
+      }
+    }
+
     const candidates: MullCandidate[] = [
       ...(memories.data ?? []).map((m: any) => ({
         kind: 'memory' as const, id: m.id, title: m.title ?? 'a note', text: m.body ?? '', similarity: m.similarity,
@@ -365,8 +386,12 @@ async function findConnectors(
         .map((p: any) => ({
           kind: 'project' as const, id: p.id, title: p.title, text: p.description ?? '', similarity: p.similarity,
         })),
-      ...(reading.data ?? []).map((a: any) => ({
-        kind: 'article' as const, id: a.id, title: a.title ?? 'an article', text: a.excerpt ?? '', similarity: a.similarity,
+      ...readingRows.map((a: any) => ({
+        kind: 'article' as const,
+        id: a.id,
+        title: a.title ?? 'an article',
+        text: bodyById.get(a.id) ?? a.excerpt ?? '',
+        similarity: a.similarity,
       })),
     ]
 

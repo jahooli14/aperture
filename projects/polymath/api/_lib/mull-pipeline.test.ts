@@ -917,3 +917,19 @@ describe('a subject the standing question already covers goes to the back', () =
     if (stillThere) expect(stillThere.strength).toBeLessThan(leader.strength)
   })
 })
+
+describe('an article connector quotes the article, not the feed teaser', () => {
+  it('hands the model the real text for an article the search returned', async () => {
+    // match_reading returns `excerpt`, capped at 100 characters by the
+    // ingest. The connector is the only text the model may quote, and the
+    // gate then demands the note's own words survive into the question --
+    // so a teaser asks it to quote from something that barely exists.
+    generateText.mockResolvedValueOnce(BLIND_SPOTS).mockResolvedValueOnce(DRAFTS)
+    await bakeMull(fakeSupabase(corpus() as any).client, 'u1')
+
+    const draftPrompt = generateText.mock.calls[1][0] as string
+    // r2's real content, not its 89-character blurb.
+    expect(draftPrompt).toContain('refusing to accept that the shortest path')
+    expect(draftPrompt).not.toContain('cut at a hundred characters by the ingest')
+  })
+})
