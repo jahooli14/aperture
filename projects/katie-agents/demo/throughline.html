@@ -1,260 +1,396 @@
 <title>Throughline</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,400;1,9..144,500&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Archivo:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
   :root{
-    --paper:#E6E8E1; --surface:#F3F4EF; --surface-raised:#FFFFFF;
-    --ink:#172420; --ink-soft:#57645C; --ink-faint:#7C887F;
-    --line:#CBD0C6; --line-soft:#DADDD5;
-    --accent:#2B5D5A; --accent-soft:#DCE6E3;
-    --flag-new:#A6431F; --flag-audit:#8A5A10; --flag-audit-bg:#F1E3C6;
-    --shadow:0 2px 4px rgba(23,36,32,.08),0 10px 24px rgba(23,36,32,.09);
-    --font-display:'Fraunces',Georgia,'Times New Roman',serif;
-    --font-body:'IBM Plex Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
-    --font-mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+    --paper:#ECEDEF; --surface:#F7F8F9;
+    --ink:#14171C; --ink-2:#4A5058; --ink-3:#7B828B;
+    --rule:#D5D8DC; --rule-soft:#E2E4E7;
+    --accent:#8C2733; --accent-tint:#EFE0E2;
+    --serif:'Spectral',Georgia,'Times New Roman',serif;
+    --sans:'Archivo',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    --mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
   }
   @media (prefers-color-scheme: dark){
     :root:not([data-theme="light"]){
-      --paper:#121815; --surface:#1A2320; --surface-raised:#212C28;
-      --ink:#E7EAE3; --ink-soft:#A7B2AA; --ink-faint:#7C887F;
-      --line:#2C3733; --line-soft:#23302B;
-      --accent:#6BAFA8; --accent-soft:#223432;
-      --flag-new:#E0794E; --flag-audit:#D7A94C; --flag-audit-bg:#3A2F16;
-      --shadow:0 2px 4px rgba(0,0,0,.4),0 14px 30px rgba(0,0,0,.45);
+      --paper:#111317; --surface:#181B20;
+      --ink:#E8E9EB; --ink-2:#A8AEB6; --ink-3:#79808A;
+      --rule:#2A2E35; --rule-soft:#20242A;
+      --accent:#D97A80; --accent-tint:#2B1A1D;
     }
   }
   :root[data-theme="dark"]{
-    --paper:#121815; --surface:#1A2320; --surface-raised:#212C28;
-    --ink:#E7EAE3; --ink-soft:#A7B2AA; --ink-faint:#7C887F;
-    --line:#2C3733; --line-soft:#23302B;
-    --accent:#6BAFA8; --accent-soft:#223432;
-    --flag-new:#E0794E; --flag-audit:#D7A94C; --flag-audit-bg:#3A2F16;
-    --shadow:0 2px 4px rgba(0,0,0,.4),0 14px 30px rgba(0,0,0,.45);
+    --paper:#111317; --surface:#181B20;
+    --ink:#E8E9EB; --ink-2:#A8AEB6; --ink-3:#79808A;
+    --rule:#2A2E35; --rule-soft:#20242A;
+    --accent:#D97A80; --accent-tint:#2B1A1D;
   }
 
   *{box-sizing:border-box;}
   body{
     background:var(--paper); color:var(--ink);
-    font-family:var(--font-body); font-size:16px; line-height:1.55;
-    padding-inline:20px;
+    font-family:var(--sans); font-size:16px; line-height:1.6;
+    padding-inline:20px; -webkit-font-smoothing:antialiased;
   }
-  @media (prefers-reduced-motion: reduce){ *{transition:none!important; animation:none!important;} }
-  h1,h2,h3{font-family:var(--font-display); text-wrap:balance; margin:0; color:var(--ink);}
+  @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important;}}
   p{margin:0;}
-  ::selection{background:var(--accent); color:var(--surface-raised);}
+  h1,h2{font-family:var(--serif); font-weight:500; margin:0; text-wrap:balance; color:var(--ink);}
+  blockquote{margin:0;}
+  ::selection{background:var(--accent); color:var(--surface);}
 
-  .wrap{max-width:700px; margin-inline:auto; padding-block:2.6rem 3.5rem; display:flex; flex-direction:column; gap:2.6rem;}
+  .page{max-width:680px; margin-inline:auto; padding-block:3rem 4rem;
+        display:flex; flex-direction:column; gap:3.4rem;}
 
-  /* ---------- identity ---------- */
-  .kicker{
-    font-family:var(--font-mono); font-size:.7rem; letter-spacing:.1em; text-transform:uppercase;
-    color:var(--ink-faint); display:flex; flex-wrap:wrap; gap:.5em 1em; align-items:baseline;
+  /* ---------- head ---------- */
+  .eyebrow{
+    font-family:var(--mono); font-size:.7rem; letter-spacing:.13em; text-transform:uppercase;
+    color:var(--accent); margin-bottom:1rem;
   }
-  .kicker .dot{color:var(--line);}
-  .disclosure{
-    font-family:var(--font-mono); font-size:.7rem; color:var(--ink-faint);
-    margin-top:.5rem;
-  }
-  .greeting{
-    font-size:1rem; color:var(--ink-soft); max-width:52ch; line-height:1.55; margin-top:.9rem;
-  }
-
-  /* ---------- reveal hero ---------- */
-  .setup{font-size:1.15rem; color:var(--ink-soft); max-width:44ch; margin-bottom:1.6rem;}
-  .setup strong{color:var(--ink); font-weight:600;}
-
-  .reveal{display:flex; align-items:center; gap:1.4rem;}
-  .card{
-    flex:1; min-width:0; background:var(--surface-raised); border:1px solid var(--line);
-    border-radius:8px; box-shadow:var(--shadow); padding:1.4rem 1.4rem 1.3rem; position:relative;
-  }
-  .card::before{
-    content:""; position:absolute; top:-6px; left:50%; transform:translateX(-50%);
-    width:10px; height:10px; border-radius:50%; background:var(--accent);
-    box-shadow:0 2px 3px rgba(0,0,0,.25);
-  }
-  .card--a{transform:rotate(-1.4deg);}
-  .card--b{transform:rotate(1.1deg);}
-  .card__when{font-family:var(--font-mono); font-size:.75rem; color:var(--ink-faint); letter-spacing:.02em;}
-  .card__who{margin-top:.3rem; display:flex; flex-wrap:wrap; align-items:baseline; gap:.4em;}
-  .card__who strong{font-size:1rem;}
-  .card__who span{font-size:.82rem; color:var(--ink-soft);}
-  .card__quote{
-    font-family:var(--font-display); font-style:italic; font-size:1.05rem; line-height:1.4;
-    color:var(--ink); margin-top:.7rem;
-  }
-  .card__meta{
-    margin-top:.8rem; font-family:var(--font-mono); font-size:.72rem; text-transform:uppercase;
-    letter-spacing:.04em; color:var(--flag-new);
+  h1{font-size:clamp(2rem,1.5rem + 2.2vw,2.9rem); line-height:1.12; letter-spacing:-.015em;}
+  .lede{font-family:var(--serif); font-size:1.14rem; line-height:1.6; color:var(--ink-2);
+        max-width:56ch; margin-top:1.3rem;}
+  .lede b{color:var(--ink); font-weight:500;}
+  .fineprint{
+    font-family:var(--mono); font-size:.7rem; line-height:1.6; color:var(--ink-3);
+    margin-top:1.4rem; padding-top:1rem; border-top:1px solid var(--rule-soft); max-width:58ch;
   }
 
-  .connector{
-    flex:0 0 auto; display:flex; flex-direction:column; align-items:center; gap:.3rem;
-    font-family:var(--font-mono); color:var(--ink-faint); width:5.5rem; text-align:center;
+  /* ---------- finding ---------- */
+  .finding{display:flex; flex-direction:column;}
+  .kind{
+    font-family:var(--mono); font-size:.69rem; letter-spacing:.13em; text-transform:uppercase;
+    color:var(--accent); margin-bottom:.7rem;
   }
-  .connector__arrow{font-size:1.3rem; color:var(--line);}
-  .connector__gap{font-size:.85rem; font-weight:600; color:var(--flag-new); white-space:nowrap;}
-  .connector__note{font-size:.66rem; line-height:1.3;}
-
-  .punchline{font-size:1.3rem; line-height:1.45; max-width:48ch; margin-top:1.6rem;}
-  .outcome{
-    margin-top:.7rem; font-family:var(--font-mono); font-size:.82rem; color:var(--ink-soft);
+  .finding h2{font-size:clamp(1.28rem,1.1rem + .8vw,1.62rem); line-height:1.3; max-width:30ch;}
+  .spine{list-style:none; margin:1.9rem 0 0; padding:0;}
+  .spine li{display:grid; grid-template-columns:4.1rem 1fr;}
+  .spine__date{
+    font-family:var(--mono); font-size:.7rem; letter-spacing:.04em; color:var(--ink-3);
+    text-align:right; padding-right:1.15rem; padding-top:.18rem; white-space:nowrap;
   }
-  .outcome b{color:var(--ink); font-weight:600; font-family:var(--font-body);}
-
-  /* ---------- proof strip ---------- */
-  .section-label{
-    font-family:var(--font-mono); font-size:.72rem; letter-spacing:.09em; text-transform:uppercase;
-    color:var(--ink-faint); margin-bottom:.9rem;
+  .spine__body{
+    border-left:1px solid var(--rule); padding-left:1.45rem; padding-bottom:1.5rem; position:relative;
   }
-  .proof{display:flex; flex-direction:column; gap:.9rem;}
-  .proof__item{
-    background:var(--surface); border:1px solid var(--line-soft); border-radius:8px;
-    padding:1rem 1.15rem;
+  .spine__body::before{
+    content:""; position:absolute; left:-4.5px; top:.42rem; width:8px; height:8px;
+    border-radius:50%; background:var(--paper); border:1.5px solid var(--ink-3);
   }
-  .proof__text{font-size:.95rem; color:var(--ink); max-width:56ch;}
-  .proof__text b{font-weight:600;}
-  details.proof__evidence{margin-top:.6rem;}
-  details.proof__evidence summary{
-    cursor:pointer; font-family:var(--font-mono); font-size:.72rem; color:var(--accent);
-    list-style:none; user-select:none;
+  .spine li[data-ours] .spine__body::before{background:var(--accent); border-color:var(--accent);}
+  .spine li:last-child .spine__body{border-left-color:transparent; padding-bottom:0;}
+  .who{font-size:.86rem; font-weight:600; color:var(--ink); line-height:1.4;}
+  .who .org{font-weight:400; color:var(--ink-2);}
+  .tag{
+    display:inline-block; font-family:var(--mono); font-size:.63rem; letter-spacing:.05em;
+    text-transform:uppercase; color:var(--accent); background:var(--accent-tint);
+    padding:.16em .45em; border-radius:3px; margin-left:.45em; vertical-align:.08em;
   }
-  details.proof__evidence summary::-webkit-details-marker{display:none;}
-  details.proof__evidence summary::before{content:"▸ "; }
-  details.proof__evidence[open] summary::before{content:"▾ "; }
-  .proof__quotes{list-style:none; margin:.6rem 0 0; padding:0; display:flex; flex-direction:column; gap:.5rem;}
-  .proof__quotes li{font-size:.85rem; color:var(--ink-soft);}
-  .proof__quotes b{color:var(--ink); font-weight:600;}
-  .proof__quotes em{font-family:var(--font-display); font-style:italic;}
-
-  .aside{font-size:.88rem; color:var(--ink-faint); max-width:58ch; padding-left:.9rem; border-left:2px solid var(--line);}
-  .aside b{color:var(--ink-soft); font-weight:600;}
-
-  /* ---------- week example ---------- */
-  .week{
-    display:flex; gap:1rem; align-items:flex-start; background:var(--surface-raised);
-    border:1px solid var(--line); border-radius:8px; padding:1.1rem 1.3rem; box-shadow:var(--shadow);
+  .said{
+    font-family:var(--serif); font-style:italic; font-size:1.04rem; line-height:1.5;
+    color:var(--ink); margin-top:.4rem;
   }
-  .week__when{
-    flex-shrink:0; display:flex; flex-direction:column; font-family:var(--font-mono); font-size:.78rem;
-    min-width:4.2rem;
+  .plain{font-size:.92rem; color:var(--ink-2); margin-top:.3rem;}
+  .plain b{color:var(--ink); font-weight:600;}
+  .gap-marker{
+    font-family:var(--mono); font-size:.72rem; color:var(--accent); letter-spacing:.02em;
   }
-  .week__when .day{font-weight:600; color:var(--ink); font-size:.85rem;}
-  .week__when .date{color:var(--ink-soft);}
-  .week__who{display:flex; flex-wrap:wrap; align-items:baseline; gap:.4em; margin-bottom:.3rem;}
-  .week__who strong{font-size:.98rem;}
-  .week__who span{font-size:.83rem; color:var(--ink-soft);}
-  .week__note{font-size:.92rem; color:var(--ink-soft); max-width:52ch;}
 
-  /* ---------- footer ---------- */
-  .ledger{display:flex; flex-direction:column; gap:.9rem; padding-top:1.4rem; border-top:1px solid var(--line);}
-  .ledger__stats{display:flex; flex-wrap:wrap; gap:1.6rem; font-family:var(--font-mono);}
-  .ledger__stat{display:flex; flex-direction:column; gap:.1rem;}
-  .ledger__stat .n{font-size:1.2rem; font-weight:600; color:var(--accent); font-variant-numeric:tabular-nums;}
-  .ledger__stat .l{font-size:.65rem; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-faint);}
-  .ledger__note{font-size:.82rem; color:var(--ink-faint); max-width:60ch;}
+  /* ---------- why ---------- */
+  .why{
+    margin-top:1.7rem; padding:1.15rem 1.35rem; background:var(--surface);
+    border:1px solid var(--rule-soft); border-left:2px solid var(--accent); border-radius:0 6px 6px 0;
+  }
+  .why__label{
+    font-family:var(--mono); font-size:.66rem; letter-spacing:.11em; text-transform:uppercase;
+    color:var(--ink-3); margin-bottom:.5rem;
+  }
+  .why p{font-size:.94rem; color:var(--ink-2); max-width:60ch;}
+  .why b{color:var(--ink); font-weight:600;}
 
-  a:focus-visible, summary:focus-visible{outline:2px solid var(--accent); outline-offset:3px; border-radius:3px;}
+  /* ---------- quiet ---------- */
+  .quiet__items{display:flex; flex-direction:column; gap:1.1rem; margin-top:1.4rem;}
+  .quiet__item{display:grid; grid-template-columns:1fr; gap:.25rem;}
+  .quiet__item h3{font-family:var(--sans); font-size:.95rem; font-weight:600; margin:0; color:var(--ink);}
+  .quiet__item p{font-size:.9rem; color:var(--ink-2);}
+  .quiet__verdict{font-family:var(--mono); font-size:.72rem; color:var(--accent); margin-top:.15rem;}
 
-  @media (max-width:640px){
-    .reveal{flex-direction:column;}
-    .card--a, .card--b{transform:none;}
-    .connector{flex-direction:row; width:auto; gap:.6rem; padding-block:.2rem;}
-    .connector__arrow{transform:rotate(90deg);}
+  /* ---------- diary ---------- */
+  .diary{
+    background:var(--surface); border:1px solid var(--rule); border-radius:7px;
+    padding:1.3rem 1.45rem; margin-top:1.3rem; display:grid; grid-template-columns:4.1rem 1fr; gap:0 1.15rem;
+  }
+  .diary__when{font-family:var(--mono); font-size:.72rem; color:var(--ink-3); line-height:1.5; text-align:right;}
+  .diary__when b{display:block; color:var(--ink); font-weight:500; font-size:.78rem;}
+  .diary__note{font-size:.94rem; color:var(--ink-2); margin-top:.35rem; max-width:52ch;}
+
+  /* ---------- foot ---------- */
+  .foot{border-top:1px solid var(--rule); padding-top:1.6rem; display:flex; flex-direction:column; gap:1.1rem;}
+  .close{font-family:var(--serif); font-size:1.12rem; line-height:1.55; color:var(--ink); max-width:54ch;}
+  .stats{display:flex; flex-wrap:wrap; gap:1.5rem; font-family:var(--mono);}
+  .stat .n{display:block; font-size:1.05rem; font-weight:500; color:var(--accent); font-variant-numeric:tabular-nums;}
+  .stat .l{display:block; font-size:.63rem; letter-spacing:.07em; text-transform:uppercase; color:var(--ink-3); margin-top:.15rem;}
+
+  @media (max-width:560px){
+    .spine li{grid-template-columns:3.5rem 1fr;}
+    .spine__date{padding-right:.85rem; font-size:.66rem;}
+    .spine__body{padding-left:1.15rem;}
+    .diary{grid-template-columns:3.5rem 1fr; gap:0 .85rem;}
   }
 </style>
 
-<div class="wrap">
+<div class="page">
 
   <header>
-    <div class="kicker">
-      <span>FOR KATIE</span>
-      <span class="dot">·</span>
-      <span>MON 14 SEP 2026</span>
-    </div>
-    <p class="greeting">Hi Katie — this is what one of your agents could actually do. Not by remembering more than you do — you're already good at that. By noticing when two conversations that don't share a single word turn out to be the same one.</p>
-    <p class="disclosure">Illustrative — a fictitious sample corpus, not your real notes or clients.</p>
+    <p class="eyebrow">For Katie · a worked example</p>
+    <h1>What your notes already knew</h1>
+    <p class="lede">Six months of meeting notes — invented, but the kind you'd actually write after an hour with a CUO. Two hundred of them, and the diary alongside. <b>None of this is about remembering.</b> You'd remember every one of these conversations. It's about what can't be seen from inside a conversation: patterns that only exist between people who have never met, in words that never repeat.</p>
+    <p class="fineprint">Fictitious clients and colleagues throughout — not your accounts. Every quotation below is checked word-for-word against the note it cites; a bracketed letter marks the one permitted edit, capitalising a phrase lifted from mid-sentence.</p>
   </header>
 
-  <section>
-    <p class="setup">Here's the shape of it. She'd have remembered both of these — she's good at that. What she couldn't do is notice they were the same conversation: one says <strong>battery storage</strong>, one says <strong>BESS</strong>, and nothing in between ever used the same word twice.</p>
-
-    <div class="reveal">
-      <article class="card card--a">
-        <div class="card__when">24 MAR</div>
-        <div class="card__who"><strong>Graham Tull</strong><span>Duraflex Industries</span></div>
-        <p class="card__quote">&ldquo;[I]f anyone will write this properly I'll move the whole programme to them. The whole thing.&rdquo;</p>
-        <div class="card__meta">£2.8m programme · stuck</div>
-      </article>
-
-      <div class="connector">
-        <span class="connector__arrow">→</span>
-        <span class="connector__gap">148 days</span>
-        <span class="connector__note">never in the same note</span>
-      </div>
-
-      <article class="card card--b">
-        <div class="card__when">19 AUG</div>
-        <div class="card__who"><strong>Ed Maslin</strong><span>Copperfield Underwriting</span></div>
-        <p class="card__quote">&ldquo;We have no relationships with the brokers who touch this business and we don't know who the buyers are.&rdquo;</p>
-        <div class="card__meta">£25m line · no buyers</div>
-      </article>
+  <article class="finding">
+    <p class="kind">An echo</p>
+    <h2>Three clients told you where the market was heading. All three got it from you.</h2>
+    <ol class="spine">
+      <li data-ours>
+        <div class="spine__date">14 APR</div>
+        <div class="spine__body">
+          <p class="who">Your firm publishes its specialty outlook</p>
+          <p class="plain">Headline claim: <b>half of Lloyd's managing agents gone by 2030.</b></p>
+          <blockquote class="said">&ldquo;I have no idea whether that's true. Nobody I've asked internally knows where the number came from.&rdquo;</blockquote>
+          <p class="plain">— your own note, the day it went out.</p>
+        </div>
+      </li>
+      <li data-ours>
+        <div class="spine__date">12 MAY</div>
+        <div class="spine__body">
+          <p class="who">Client breakfast</p>
+          <p class="plain">Forty in the room. The report goes to a list of three hundred.</p>
+        </div>
+      </li>
+      <li>
+        <div class="spine__date">10 JUN</div>
+        <div class="spine__body">
+          <p class="who">Piotr Zawada <span class="org">· Bellwether MGA</span><span class="tag">was in the room</span></p>
+          <blockquote class="said">&ldquo;[Y]our report says half the managing agents disappear by 2030.&rdquo;</blockquote>
+        </div>
+      </li>
+      <li>
+        <div class="spine__date">24 JUN</div>
+        <div class="spine__body">
+          <p class="who">Ivan Kroll <span class="org">· Pemberton Broking</span><span class="tag">was in the room</span></p>
+          <p class="plain">Repeats the number back. Attributes it to <b>&ldquo;everyone&rdquo;</b>.</p>
+        </div>
+      </li>
+      <li>
+        <div class="spine__date">15 JUL</div>
+        <div class="spine__body">
+          <p class="who">Tobias Greer <span class="org">· Orwell Marine</span><span class="tag">on the list</span></p>
+          <blockquote class="said">&ldquo;[Y]ou lot are saying half the managing agents go by 2030.&rdquo;</blockquote>
+        </div>
+      </li>
+    </ol>
+    <div class="why">
+      <p class="why__label">Why it stays hidden</p>
+      <p>Nothing in any of those three conversations marks the number as yours. By the third telling it has stopped being a report and become what everyone thinks — Ivan didn't say he'd read it, he said <b>everyone</b> was saying it. The only trace is the guest list. Left alone, your own unsourced number comes back to the firm as evidence that the market agrees.</p>
     </div>
+  </article>
 
-    <p class="punchline">She didn't miss this because she wasn't sharp enough. She missed it because nothing suggested these two belonged together — until something was actually cross-checking the vocabulary, not just the memory.</p>
-    <p class="outcome">Introduced <b>20 Aug</b>. Terms landed <b>3 Sep</b>. Graham: &ldquo;about bloody time.&rdquo;</p>
+  <article class="finding">
+    <p class="kind">A contradiction</p>
+    <h2>Two CUOs took opposite sides six weeks apart. The answer is also in your notes.</h2>
+    <ol class="spine">
+      <li>
+        <div class="spine__date">19 MAR</div>
+        <div class="spine__body">
+          <p class="who">Marcus Deyn <span class="org">· Ravensbourne, CUO</span></p>
+          <blockquote class="said">&ldquo;The data's finally good enough that we can write parametric on things that aren't windstorm. I've got a team on it.&rdquo;</blockquote>
+        </div>
+      </li>
+      <li>
+        <div class="spine__date">5 MAY</div>
+        <div class="spine__body">
+          <p class="who">Ana Castellane <span class="org">· Harrow Point, Head of Specialty</span></p>
+          <blockquote class="said">&ldquo;Parametric is a solution looking for a problem &hellip; The problem is the buyer thinks they bought insurance and they bought a bet.&rdquo;</blockquote>
+        </div>
+      </li>
+      <li>
+        <div class="spine__date">13 MAY</div>
+        <div class="spine__body">
+          <p class="who">Marcus Deyn <span class="org">· pushed on basis risk</span></p>
+          <blockquote class="said">&ldquo;[T]he reason it's failed before is people sold it as insurance when it's a hedge. We're selling it as a hedge.&rdquo;</blockquote>
+        </div>
+      </li>
+      <li>
+        <div class="spine__date">15 MAY</div>
+        <div class="spine__body">
+          <p class="who">Graham Tull <span class="org">· Duraflex, a buyer</span></p>
+          <blockquote class="said">&ldquo;I've got a real problem, I don't need a clever one.&rdquo;</blockquote>
+        </div>
+      </li>
+      <li>
+        <div class="spine__date">25 AUG</div>
+        <div class="spine__body">
+          <p class="who">Beatrice Ofori <span class="org">· Norton Hale, a buyer</span></p>
+          <p class="plain">Puts port delay at <b>£4m last year, none of it insured.</b></p>
+          <blockquote class="said">&ldquo;If someone can pay me when the port backs up I don't care what they call it.&rdquo;</blockquote>
+        </div>
+      </li>
+    </ol>
+    <div class="why">
+      <p class="why__label">Why it stays hidden</p>
+      <p>Ana is right about Graham. Marcus is right about Beatrice. <b>The line between them is whether the buyer already counts the loss</b> — Beatrice has a figure for it, Graham doesn't. But two of these are underwriting views and two are buying conversations, filed under four accounts across five months. Nothing puts them on one page, and the disagreement isn't the finding — the resolution is, and it only appears with all four side by side.</p>
+    </div>
+  </article>
+
+  <article class="finding">
+    <p class="kind">A first voice</p>
+    <h2>Klaus called it in April. Four people have since told you it was their own idea.</h2>
+    <ol class="spine">
+      <li>
+        <div class="spine__date">21 APR</div>
+        <div class="spine__body">
+          <p class="who">Klaus Beringer <span class="org">· Trans-Meridian Re</span></p>
+          <blockquote class="said">&ldquo;This will show up at one-one. Not this one-one, the one after.&rdquo;</blockquote>
+          <p class="plain">Asked who else was saying it: <span style="font-family:var(--serif);font-style:italic;">&ldquo;Almost nobody, which is what worries me.&rdquo;</span></p>
+        </div>
+      </li>
+      <li>
+        <div class="spine__date">20 MAY</div>
+        <div class="spine__body">
+          <p class="who">Sofia Marchetti <span class="org">· Kestrel Re</span></p>
+          <blockquote class="said">&ldquo;[T]he numbers look too good.&rdquo;</blockquote>
+        </div>
+      </li>
+      <li>
+        <div class="spine__date">16 JUN</div>
+        <div class="spine__body">
+          <p class="who">Derek Ainsworth <span class="org">· Castleford Mutual</span></p>
+          <blockquote class="said">&ldquo;[T]he lawyers have got more organised.&rdquo;</blockquote>
+        </div>
+      </li>
+      <li>
+        <div class="spine__date">24 JUN</div>
+        <div class="spine__body">
+          <p class="who">Ivan Kroll <span class="org">· Pemberton Broking</span></p>
+          <blockquote class="said">&ldquo;The markets aren't explaining it, they're just asking for more.&rdquo;</blockquote>
+        </div>
+      </li>
+      <li data-ours>
+        <div class="spine__date">13 JUL</div>
+        <div class="spine__body">
+          <p class="who">Hal Brennan <span class="org">· your New York office</span><span class="tag">arrived independently</span></p>
+          <blockquote class="said">&ldquo;[T]he severity numbers out of the US right now are not something the London market has priced.&rdquo;</blockquote>
+          <p class="plain">Has verdict data he'll share. Has never met Klaus.</p>
+        </div>
+      </li>
+      <li>
+        <div class="spine__date">11 AUG</div>
+        <div class="spine__body">
+          <p class="who">Giles Overton <span class="org">· Thackeray 2884</span></p>
+          <blockquote class="said">&ldquo;[T]he direction is one way and it's the same direction every quarter.&rdquo;</blockquote>
+          <p class="plain">Thinks it's his own book.</p>
+        </div>
+      </li>
+    </ol>
+    <div class="why">
+      <p class="why__label">Why it stays hidden</p>
+      <p>Not one of the four mentions Klaus. Each describes it as something happening in their own book, in their own vocabulary — Giles thinks it's his reserving. <b>Being first isn't a property of any single conversation.</b> It only exists once six of them are sorted by date, which nothing prompts you to do. The useful part isn't the call; it's knowing whose read to weight next time.</p>
+    </div>
+  </article>
+
+  <article class="finding">
+    <p class="kind">An absence</p>
+    <h2>Nobody has mentioned the June deadline since the first week of July.</h2>
+    <ol class="spine">
+      <li>
+        <div class="spine__date">18 MAR</div>
+        <div class="spine__body">
+          <p class="who">Rob Gilder <span class="org">· Harrow Point, CFO</span></p>
+          <blockquote class="said">&ldquo;We are going to make it but I don't have a spare person in the building between now and July.&rdquo;</blockquote>
+        </div>
+      </li>
+      <li data-ours>
+        <div class="spine__date">25 MAR</div>
+        <div class="spine__body">
+          <p class="who">Nils Ekström <span class="org">· Regulatory, internal</span></p>
+          <p class="plain">Hires three people for the deadline work.</p>
+        </div>
+      </li>
+      <li>
+        <div class="spine__date">15 APR</div>
+        <div class="spine__body">
+          <p class="who">Piotr Zawada <span class="org">· Bellwether MGA</span></p>
+          <blockquote class="said">&ldquo;[I]t's landed on underwriting, not just finance, which nobody expected.&rdquo;</blockquote>
+        </div>
+      </li>
+      <li>
+        <div class="spine__date">28 APR &ndash; 6 MAY</div>
+        <div class="spine__body">
+          <p class="who">Ines Delacroix <span class="org">· Pallister</span> · Peter Ngo <span class="org">· Stanhope</span></p>
+          <p class="plain">Five organisations in seven weeks. Then it stops.</p>
+        </div>
+      </li>
+      <li>
+        <div class="spine__date">JUL &ndash; SEP</div>
+        <div class="spine__body">
+          <p class="gap-marker">Seventy notes. Not one mention.</p>
+        </div>
+      </li>
+      <li data-ours>
+        <div class="spine__date">8 SEP</div>
+        <div class="spine__body">
+          <p class="who">Nils Ekström <span class="org">· Regulatory, internal</span></p>
+          <p class="plain">The three hires have <b>nothing booked past October.</b> In June he'd already said it:</p>
+          <blockquote class="said">&ldquo;I need a second act and I don't have one.&rdquo;</blockquote>
+        </div>
+      </li>
+    </ol>
+    <div class="why">
+      <p class="why__label">Why it stays hidden</p>
+      <p>There is no note saying nobody mentions this anymore. An absence isn't recorded anywhere — it's the shape of the space between April and August, and it can only be found by comparing two months against each other. Nils asked you in June what you were hearing that was regulatory-shaped. <b>The answer was already in your notes. It just wasn't in any one of them.</b></p>
+    </div>
+  </article>
+
+  <section class="quiet">
+    <p class="kind">And what it declined to say</p>
+    <div class="quiet__items">
+      <div class="quiet__item">
+        <h3>A broker's system migration</h3>
+        <p>Five mentions since March — the single loudest topic in six months of notes.</p>
+        <p class="quiet__verdict">Three people, one firm. Not a market. Stayed quiet.</p>
+      </div>
+      <div class="quiet__item">
+        <h3>The AI trend that wasn't one</h3>
+        <p>Three clients in four weeks. One hated a vendor demo, one is building submission triage, one is running claims fraud detection.</p>
+        <p class="quiet__verdict">Same word, three unrelated subjects. Stayed quiet.</p>
+      </div>
+    </div>
+    <div class="why">
+      <p class="why__label">The harder half</p>
+      <p>Anything will find you patterns if you let it. <b>The discipline is in the refusals</b> — and on most weeks, in a corpus this size, the honest output is nothing at all.</p>
+    </div>
   </section>
 
   <section>
-    <p class="section-label">Not the loud kind</p>
-    <p style="font-size:.95rem;color:var(--ink-soft);max-width:56ch;margin-bottom:1rem;">A two-firm match is the kind you'd catch eventually, given a reminder. These aren't that — each one only shows up if you're cross-checking vocabularies that have no reason to be compared.</p>
-    <div class="proof">
-      <div class="proof__item">
-        <p class="proof__text">A carrier, an MGA, a mutual, a broker and a fund each described the same hidden cost — and <b>not one of them used the same words for it.</b> No amount of remembering finds that. You'd have to be quietly holding five specialist vocabularies up against each other on the off-chance they matched.</p>
-        <details class="proof__evidence">
-          <summary>See the quotes</summary>
-          <ul class="proof__quotes">
-            <li><b>Nadia Hoyle, Bellwether MGA</b> — <em>"Same business. Same underwriters. Three sets of homework."</em></li>
-            <li><b>Marcus Deyn, Ravensbourne</b> — <em>"We are spending a seven figure sum a year to be able to say we looked."</em></li>
-            <li><b>Fern Achebe, Bellwether MGA</b> — <em>"I've got four carriers and four audit regimes […] and it's already what I complain about most."</em></li>
-          </ul>
-        </details>
-      </div>
-      <div class="proof__item">
-        <p class="proof__text">A partner called a market shift in April, in language nobody else was using. By August, four clients were describing the identical thing as if they'd noticed it themselves — and a colleague in New York reached it independently, with data, having never read his note. <b>Nobody chose to compare the five.</b> Nothing ever forced the comparison — that's the part that's hard.</p>
-        <details class="proof__evidence">
-          <summary>See the quotes</summary>
-          <ul class="proof__quotes">
-            <li><b>Klaus Beringer, Trans-Meridian Re</b> — <em>"This will show up at one-one. Not this one-one, the one after."</em></li>
-            <li><b>Hal Brennan, internal, New York</b> — <em>"[T]he severity numbers out of the US right now are not something the London market has priced."</em></li>
-          </ul>
-        </details>
-      </div>
-    </div>
-    <p class="aside" style="margin-top:1rem;">It also knows what to leave out. A broker's system upgrade got five mentions and sounded huge — it's <b>one firm's IT project</b>, not a market, so it stays quiet. And when the best match is a client it isn't allowed to sell to, it says so — flagged, with who else could take it instead.</p>
-  </section>
-
-  <section>
-    <p class="section-label">What this becomes on your calendar</p>
-    <p style="font-size:.95rem;color:var(--ink-soft);max-width:54ch;margin-bottom:1rem;">Not a summary of the last meeting — one thing worth carrying in, drawn only from what it's already found, never invented fresh for the room. Here's the shape of it, from the same made-up week:</p>
-    <div class="week">
-      <div class="week__when"><span class="day">THU</span><span class="date">17 SEP</span></div>
+    <p class="kind">Where it surfaces</p>
+    <p style="font-size:.95rem;color:var(--ink-2);max-width:56ch;">Findings attach themselves to the diary. Three days before a meeting, one thing worth carrying in — never a summary of the last one.</p>
+    <div class="diary">
+      <div class="diary__when"><b>THU</b>17 SEP<br>09:30</div>
       <div>
-        <div class="week__who"><strong>Klaus Beringer</strong><span>Trans-Meridian Re</span></div>
-        <p class="week__note">Last time you spoke, he called something in April nobody else was saying. Four people have said it back to him since — including someone in New York he's never met.</p>
+        <p class="who">Klaus Beringer <span class="org">· Trans-Meridian Re</span></p>
+        <p class="diary__note">Four people have said his April call back to you since, each as their own observation. Hal Brennan reached the same place in July, independently, with data. Neither of them knows about the other.</p>
       </div>
     </div>
-    <p style="margin-top:.7rem;font-family:var(--font-mono);font-size:.7rem;color:var(--ink-faint);">Illustrative — Klaus isn't a real client of yours.</p>
   </section>
 
-  <footer class="ledger">
-    <div class="ledger__stats">
-      <div class="ledger__stat"><span class="n">200</span><span class="l">Notes read</span></div>
-      <div class="ledger__stat"><span class="n">6</span><span class="l">Months back</span></div>
-      <div class="ledger__stat"><span class="n">14/14</span><span class="l">Known patterns found, in testing</span></div>
+  <footer class="foot">
+    <p class="close">None of this needed a new system to be true. It only needed something to read all two hundred notes at once — which is the one thing a person never does.</p>
+    <div class="stats">
+      <div class="stat"><span class="n">200</span><span class="l">Notes</span></div>
+      <div class="stat"><span class="n">6</span><span class="l">Months</span></div>
+      <div class="stat"><span class="n">14 / 14</span><span class="l">Planted patterns found</span></div>
+      <div class="stat"><span class="n">0</span><span class="l">False alarms raised</span></div>
     </div>
-    <p class="ledger__note">Every quote above is checked verbatim against the note it cites — the standard your real notes would have to meet too. Most weeks it finds nothing. This is what the weeks it does look like.</p>
   </footer>
 
 </div>
