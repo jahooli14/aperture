@@ -24,6 +24,7 @@ import {
   classifyTimeline,
   buildActivityBaseline,
   corpusSpan,
+  scaleToCorpus,
   type ActivityBaseline,
   findSimultaneous,
   findDrift,
@@ -32,6 +33,8 @@ import {
   humanDuration,
   type Capture,
   type TemporalShape,
+  type Timeline,
+  type ShapeFinding,
 } from './corpus-time.js'
 import { type MullSubjectKind, isGraveyarded } from './mull.js'
 
@@ -43,12 +46,16 @@ const CORPUS_LIMIT = 2000
 const SUBJECT_SLOTS = 3
 /** A list item wanted for longer than this is a standing want, not a mood. */
 const LONG_HELD_DAYS = 365
+/** Below this it IS a mood, however young the corpus. */
+const LONG_HELD_FLOOR_DAYS = 90
 /** Old enough that not filing it was a choice, not a backlog. */
 const UNFILED_DAYS = 120
+/** Below this it is still a backlog, however young the corpus. */
+const UNFILED_FLOOR_DAYS = 30
 
 export interface Subject {
   kind: MullSubjectKind
-  shape?: TemporalShape | 'simultaneity' | 'drift' | 'long_held' | 'unfiled'
+  shape?: TemporalShape | 'simultaneity' | 'drift' | 'long_held' | 'unfiled' | 'recurring'
   id: string
   projectId: string | null
   title: string
@@ -225,22 +232,40 @@ async function jointSubjects(
   const projectTitles = new Set((projectRows ?? []).map((p: any) => (p.title ?? '').toLowerCase()))
 
   const out: Subject[] = []
+  let noMembers = 0
+  let noTimeline = 0
   for (const joint of (joints ?? []) as any[]) {
     const members = ((joint.fragment_ids ?? []) as string[])
       .map(id => byId.get(id))
       .filter((f): f is CorpusRow & { projectTitle: string | null } => !!f)
-    if (members.length < 2) continue
+    if (members.length < 2) { noMembers++; continue }
 
     const timeline = describeTimeline(members.map(m => m.createdAt))
-    if (!timeline) continue
+    if (!timeline) { noTimeline++; continue }
 
     // "Has it ever become a project" decides between the two strongest
     // readings: a conviction you're acting on, and one you never have.
     const hasProject =
       members.some(m => m.projectId !== null) || projectTitles.has(String(joint.text ?? '').toLowerCase())
 
+    // A joint that matches no sharper shape is still a joint.
+    //
+    // This used to `continue`, which threw away the channel's strongest
+    // subject kind on a technicality: classifyTimeline's bars are built for
+    // raw timelines, and a joint has already proved recurrence — the miner
+    // only writes one for a semantic cluster spanning MIN_SPAN_DAYS or more.
+    // Requiring it to independently clear a shape bar counts that evidence
+    // twice, and the arithmetic leaves a dead zone right where a young
+    // corpus lives: against a 321-day corpus, `conviction` wants 160 days
+    // and `went_quiet` wants 120 days of silence, so anything recurring
+    // across two or three months and still warm matched nothing at all.
+    // Three joints in the table, zero joint subjects.
+    //
+    // The shapes add colour (this one is a comeback, this one stopped in
+    // August). Their absence subtracts none of the fact underneath, which
+    // is dated, true, and the whole reason a joint is worth asking about.
     const found = classifyTimeline({ timeline, hasProject, label: joint.text, baseline, corpusSpanDays })
-    if (!found) continue
+      ?? recurringFallback(timeline, hasProject)
 
     const drift = findDrift(members, motifWords)
     const driftLine = drift
@@ -259,7 +284,36 @@ async function jointSubjects(
       strength: found.strength,
     })
   }
+  trace.push(
+    `joint subjects: ${out.length} of ${(joints ?? []).length}` +
+    `${noMembers ? `, ${noMembers} with under 2 of their fragments still in the corpus` : ''}` +
+    `${noTimeline ? `, ${noTimeline} with no usable dates` : ''}`,
+  )
   return out
+}
+
+/**
+ * The fact a joint carries even when it fits no sharper shape: they keep
+ * coming back to this, here are the dates, and (the strongest version)
+ * they have never made it a project.
+ *
+ * Ranks below every real shape — `went_quiet` is the weakest of those at
+ * 0.75 — because a named shape says more than "this recurs". It still
+ * outranks having no subject at all, which is what this replaced.
+ */
+function recurringFallback(
+  timeline: Timeline,
+  hasProject: boolean,
+): Omit<ShapeFinding, 'shape'> & { shape: 'recurring' } {
+  const { first, last, count, quietDays } = timeline
+  const span = `${monthYear(first)} to ${monthYear(last)}`
+  return {
+    shape: 'recurring',
+    fact: hasProject
+      ? `They have come back to this ${count} times between ${span}, most recently ${humanDuration(quietDays)} ago.`
+      : `They have come back to this ${count} times between ${span} — most recently ${humanDuration(quietDays)} ago — and have never made it a project.`,
+    strength: hasProject ? 0.6 : 0.7,
+  }
 }
 
 /**
@@ -346,6 +400,7 @@ async function projectSubjects(
 function simultaneitySubjects(
   fragments: (CorpusRow & { projectTitle: string | null })[],
   thoughts: CorpusRow[],
+  trace?: string[],
 ): Subject[] {
   const captures: Capture[] = [...fragments, ...thoughts].map(r => ({
     id: r.id, text: r.text, createdAt: r.createdAt, projectId: r.projectId, source: 'thought',
@@ -353,7 +408,7 @@ function simultaneitySubjects(
 
   const titleOf = new Map(fragments.filter(f => f.projectId).map(f => [f.projectId!, f.projectTitle]))
 
-  return findSimultaneous(captures).slice(0, 2).map(pair => ({
+  return findSimultaneous(captures, new Date(), undefined, trace).slice(0, 2).map(pair => ({
     kind: 'pair' as const,
     shape: 'simultaneity' as const,
     id: `${pair.a.id}:${pair.b.id}`,
@@ -384,8 +439,10 @@ async function unfiledThoughtSubject(
   userId: string,
   filedMemoryIds: Set<string>,
   trace: string[] = [],
+  corpusSpanDays?: number,
 ): Promise<Subject | null> {
-  const cutoff = new Date(Date.now() - UNFILED_DAYS * 86_400_000).toISOString()
+  const unfiledDays = scaleToCorpus(UNFILED_DAYS, UNFILED_FLOOR_DAYS, corpusSpanDays)
+  const cutoff = new Date(Date.now() - unfiledDays * 86_400_000).toISOString()
   // "Never filed" = no fragment points at it. There is no project_id on
   // memories to be null.
   const res = await supabase
@@ -453,9 +510,15 @@ export function isTransientError(message: string | undefined): boolean {
 }
 
 async function longHeldSubject(
-  supabase: SupabaseClient, userId: string, trace: string[] = [],
+  supabase: SupabaseClient, userId: string, trace: string[] = [], corpusSpanDays?: number,
 ): Promise<Subject | null> {
-  const cutoff = new Date(Date.now() - LONG_HELD_DAYS * 86_400_000).toISOString()
+  // "Wanted for a year" is unanswerable on a corpus younger than a year --
+  // the same defect as the span thresholds in corpus-time.ts, and it showed
+  // up the same way: `long-held-candidates: 0 rows` against a corpus 321
+  // days old, where nothing CAN have been held for 365. Floored, so this
+  // never becomes "you added this last week".
+  const heldDays = scaleToCorpus(LONG_HELD_DAYS, LONG_HELD_FLOOR_DAYS, corpusSpanDays)
+  const cutoff = new Date(Date.now() - heldDays * 86_400_000).toISOString()
   const query = () => supabase
     .from('list_items')
     .select('id, content, created_at, status, lists(title, type)')
@@ -614,15 +677,20 @@ export async function gatherSubjects(
   const [joints, projects, unfiled, longHeld, article] = await Promise.all([
     jointSubjects(supabase, userId, fragments, baseline, trace, corpusSpanDays),
     projectSubjects(supabase, userId, fragments, thoughts, baseline, trace, corpusSpanDays),
-    unfiledThoughtSubject(supabase, userId, filedMemoryIds, trace),
-    longHeldSubject(supabase, userId, trace),
+    unfiledThoughtSubject(supabase, userId, filedMemoryIds, trace, corpusSpanDays),
+    longHeldSubject(supabase, userId, trace, corpusSpanDays),
     articleSubject(supabase, userId, trace),
   ])
+
+  // Computed once. This ran twice -- once for the list and again inside the
+  // trace line below -- which is an O(n^2) scan over every capture, done
+  // twice, with two results that could disagree.
+  const pairs = simultaneitySubjects(fragments, thoughts, trace)
 
   const all = [
     ...joints,
     ...projects,
-    ...simultaneitySubjects(fragments, thoughts),
+    ...pairs,
     ...(unfiled ? [unfiled] : []),
     ...(longHeld ? [longHeld] : []),
     ...(article ? [article] : []),
@@ -632,7 +700,7 @@ export async function gatherSubjects(
   // decline for five different reasons and only the totals were visible.
   trace.push(
     `gatherers: joints ${joints.length}, projects ${projects.length}, ` +
-    `pairs ${simultaneitySubjects(fragments, thoughts).length}, ` +
+    `pairs ${pairs.length}, ` +
     `unfiled ${unfiled ? 1 : 0}, long-held ${longHeld ? 1 : 0}, article ${article ? 1 : 0}`,
   )
 

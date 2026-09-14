@@ -430,6 +430,7 @@ export function findSimultaneous(
   captures: Capture[],
   now: Date = new Date(),
   windowDays = SIMULTANEITY_DAYS,
+  trace?: string[],
 ): SimultaneousPair[] {
   const dated = captures
     .filter(c => c.projectId)
@@ -455,11 +456,22 @@ export function findSimultaneous(
     }
   }
 
-  return found
-    .filter(p => pairCounts.get(key(p.a.projectId!, p.b.projectId!)) === 1)
+  const onceOnly = found.filter(p => pairCounts.get(key(p.a.projectId!, p.b.projectId!)) === 1)
+  const out = onceOnly
     // Old ones first: a coincidence from last week is still just this week.
     .sort((x, y) => new Date(x.a.createdAt).getTime() - new Date(y.a.createdAt).getTime())
     .filter(p => (now.getTime() - new Date(p.a.createdAt).getTime()) / DAY >= WENT_QUIET_DAYS)
+
+  // This shape returns nothing for three different reasons and they need
+  // opposite responses: no capture carries a project, every project pair
+  // co-occurs habitually, or the only coincidences are too recent to mean
+  // anything yet. "pairs 0" said none of that.
+  trace?.push(
+    `simultaneity: ${dated.length} captures with a project -> ${found.length} within ` +
+    `${windowDays} days of each other -> ${onceOnly.length} that only happened once -> ` +
+    `${out.length} older than ${WENT_QUIET_DAYS} days`,
+  )
+  return out
 }
 
 export function simultaneityFact(pair: SimultaneousPair, now: Date = new Date()): string {

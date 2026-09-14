@@ -795,3 +795,73 @@ describe('a fragment is dated by the thought, not by the backfill that wrote it'
     expect(Number(spanLine.match(/(\d+)/)![1])).toBeGreaterThan(300)
   })
 })
+
+describe('a joint that fits no sharper shape is still a joint', () => {
+  it('keeps a theme recurring across months that is too young to be a conviction', async () => {
+    // classifyTimeline's bars are built for raw timelines. Against a corpus
+    // this size `conviction` wants ~250 days and `went_quiet` wants 120 days
+    // of silence, so a theme recurring across three months and still warm
+    // matched nothing and the joint was dropped — the strongest subject kind
+    // the channel has, thrown away on a technicality it had already proved.
+    const data = corpus() as any
+    const recent: Record<string, string> = { f1: ago(100), f2: ago(60), f3: ago(20) }
+    data.fragments = data.fragments.map((f: any) =>
+      recent[f.id] ? { ...f, created_at: recent[f.id] } : f)
+
+    const trace: string[] = []
+    const subjects = await gatherSubjects(fakeSupabase(data).client, 'u1', trace)
+    const joint = subjects.find(s => s.kind === 'joint')
+
+    expect(joint).toBeDefined()
+    expect(joint!.shape).toBe('recurring')
+    // The fact still has to be true and dated — that is the whole reason a
+    // joint is worth asking about.
+    expect(joint!.line).toMatch(/\b3 times\b/)
+    expect(joint!.line).toMatch(/\b20\d\d\b/)
+    expect(joint!.line).toContain('never made it a project')
+  })
+
+  it('says how many joints became subjects, and why the rest did not', async () => {
+    const data = corpus() as any
+    const trace: string[] = []
+    await gatherSubjects(fakeSupabase(data).client, 'u1', trace)
+    expect(trace.join('\n')).toMatch(/joint subjects: \d+ of \d+/)
+  })
+})
+
+describe('a sloppy quote no longer loses the question before the gate sees it', () => {
+  it('keeps a draft whose quote field is empty but whose question carries the note', async () => {
+    // The parser required spark AND quote AND stake, so a missing quote
+    // dropped the draft right there -- pre-empting rejectionReason, which
+    // exists precisely to re-check the question itself when the model
+    // mis-reports what it used. Silent, and indistinguishable in the trace
+    // from a model that had nothing to say.
+    const noQuote = JSON.stringify({
+      pairs: [{
+        n: 1,
+        spark: 'You wrote that you get maybe ten more proper conversations with dad, and you spend them on the greenhouse. You have said since 2023 that it only works if it is one take. What are you doing twice?',
+        quote: '',
+        stake: 'He stops re-recording and keeps the next first pass.',
+      }],
+    })
+    generateText.mockResolvedValueOnce(BLIND_SPOTS).mockResolvedValueOnce(noQuote)
+
+    const trace: string[] = []
+    const baked = await bakeMull(fakeSupabase(corpus()).client, 'u1', undefined, trace)
+
+    expect(baked.length).toBeGreaterThan(0)
+    expect(trace.join('\n')).toContain('with no quote')
+  })
+
+  it('says so in the trace when the draft call itself fails', async () => {
+    generateText.mockResolvedValueOnce(BLIND_SPOTS).mockRejectedValueOnce(new Error('503 Service Unavailable'))
+
+    const trace: string[] = []
+    const baked = await bakeMull(fakeSupabase(corpus()).client, 'u1', undefined, trace)
+
+    expect(baked).toHaveLength(0)
+    // Previously this was a console.warn and the trace just said "0 of 4",
+    // which reads identically to the model declining every pair.
+    expect(trace.join('\n')).toMatch(/draft call FAILED: .*503/)
+  })
+})
