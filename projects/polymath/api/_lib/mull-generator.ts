@@ -61,12 +61,6 @@ export const SHELF_LIFE_HOURS = 96
  *  questions. */
 const QUESTIONS_PER_RUN = 2
 
-/** A little over a week, so a project worked on last Sunday still counts
- *  as warm on Tuesday. */
-const MOMENTUM_WINDOW_DAYS = 10
-/** How far back a note or an article can be and still be worth examining. */
-const SUBJECT_LOOKBACK_DAYS = 45
-
 /** Every `sparks.type` this channel can write. A runtime array rather than
  *  a bare union because `sparks_type_check` has to list the same values, and
  *  the one time it didn't, every insert 500'd for four days while the trace
@@ -434,7 +428,7 @@ interface Drafted {
  * keeps going without another run. Writing them together also means the
  * model can see it's about to say the same thing twice.
  */
-async function draftAll(pairings: Pairing[], echo: EchoContext): Promise<Drafted[]> {
+async function draftAll(pairings: Pairing[], echo: EchoContext, trace: string[] = []): Promise<Drafted[]> {
   // `line`, never `block`. A project's block quotes every fragment it has,
   // and handed ten of the user's own statements the model picks two and
   // collides them -- pair-first invention rebuilt inside one subject, with
@@ -558,16 +552,46 @@ not carry any of the note's actual words was not written from the note.`
     const parsed = JSON.parse(await generateText(prompt, { responseFormat: 'json' }))
     const rows = Array.isArray(parsed?.pairs) ? parsed.pairs : []
     const out: Drafted[] = []
+    let declined = 0
+    let noQuote = 0
+    let noStake = 0
     for (const row of rows) {
       const pairing = pairings[Number(row?.n) - 1]
       const text = typeof row?.spark === 'string' ? row.spark.trim() : ''
       const quote = typeof row?.quote === 'string' ? row.quote.trim() : ''
       const stake = typeof row?.stake === 'string' ? row.stake.trim() : ''
-      if (pairing && text && quote && stake) out.push({ pairing, text, quote, stake })
+      if (!pairing) continue
+      // Declining is a real answer and the prompt asks for it by name, so
+      // it is counted rather than treated as a failure.
+      if (!text) { declined++; continue }
+      // A missing quote or stake used to drop the draft right here, which
+      // pre-empted the gates that exist to judge exactly those two fields
+      // and left no record of it. Both are recoverable: rejectionReason
+      // falls back to longestSharedRun when the quote is missing or
+      // mis-reported (the model gets that field wrong far more often than
+      // it invents a question), and an empty stake is hollow by
+      // definition, so the gate rejects it with a reason you can read.
+      // Silent here, traced there.
+      if (!quote) noQuote++
+      if (!stake) noStake++
+      out.push({ pairing, text, quote, stake })
+    }
+    if (declined || noQuote || noStake) {
+      trace.push(
+        `draft call: ${rows.length} pairs came back` +
+        `${declined ? `, ${declined} declined by the model` : ''}` +
+        `${noQuote ? `, ${noQuote} with no quote (the gate re-checks the question itself)` : ''}` +
+        `${noStake ? `, ${noStake} with no stake` : ''}`,
+      )
     }
     return out
   } catch (e) {
-    console.warn('[mull] draft failed:', e instanceof Error ? e.message : e)
+    // This returned [] and said so only in the Vercel log, so a failed or
+    // unparseable model call was indistinguishable in the trace from a
+    // model that looked at four pairs and had nothing to say.
+    const message = e instanceof Error ? e.message : String(e)
+    trace.push(`!! draft call FAILED: ${message}`)
+    console.warn('[mull] draft failed:', message)
     return []
   }
 }
@@ -613,7 +637,7 @@ export async function generateMull(
   )
 
   trace.push(`pairs: ${pairings.length} found, ${chosen.length} sent to draft`)
-  const drafts = await draftAll(chosen, echo)
+  const drafts = await draftAll(chosen, echo, trace)
   trace.push(`drafts: ${drafts.length} of ${chosen.length} pairs written`)
   const baked: BakedSpark[] = []
   // Each draft stands on its own: one failing a gate doesn't take the

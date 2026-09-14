@@ -277,3 +277,23 @@ describe('thresholds sized to the corpus that exists', () => {
     expect(scaled?.shape).toBe('long_unfinished')
   })
 })
+
+describe('the long-held and simultaneity diagnostics', () => {
+  it('reports which stage lost the simultaneous pairs', () => {
+    const cap = (id: string, projectId: string, days: number): Capture => ({
+      id, projectId, text: id, createdAt: ago(days), source: 'thought',
+    })
+    const trace: string[] = []
+    // A real pair, but from last week — too recent to mean anything yet.
+    findSimultaneous([cap('a', 'p1', 5), cap('b', 'p2', 4)], NOW, undefined, trace)
+    expect(trace[0]).toContain('2 captures with a project')
+    expect(trace[0]).toMatch(/1 that only happened once -> 0 older than/)
+  })
+
+  it('scales the long-held bar, since a year is unanswerable on a young corpus', () => {
+    // 365 days against a 321-day corpus is a bar nothing can clear.
+    expect(scaleToCorpus(365, 90, 321)).toBeCloseTo(160.5, 0)
+    // And a corpus with years in it keeps the full year.
+    expect(scaleToCorpus(365, 90, 365 * 3)).toBe(365)
+  })
+})
