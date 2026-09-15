@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import {
   parseModelJson,
+  stripEchoedTitle,
   CaptureMemoryBody,
   CaptureTitleResponse,
   ExtractMetadataResponse,
@@ -428,5 +429,34 @@ describe('parseModelJson', () => {
   it('throws rather than inventing structure it cannot read', () => {
     expect(() => parseModelJson('not json at all')).toThrow()
     expect(() => parseModelJson('{"a": <<broken>>}')).toThrow()
+  })
+})
+
+describe('stripEchoedTitle', () => {
+  it('removes a title the model quoted back into the body', () => {
+    // Real: this reached a live question as "You wrote four months ago about
+    // Prioritizing Long Term Wardrobe Comfort Investments" — a sentence
+    // nobody has ever said.
+    expect(stripEchoedTitle('"Prioritizing Long Term Wardrobe Comfort Investments" - I\'ve been modeling on style.'))
+      .toBe("I've been modeling on style.")
+  })
+
+  it('handles curly quotes and an em dash', () => {
+    expect(stripEchoedTitle('“Finding Meaning in Delays” — I don\'t know why, but I like the wait.'))
+      .toBe("I don't know why, but I like the wait.")
+  })
+
+  it('leaves a body that genuinely opens on a quotation', () => {
+    const real = '"It only works if it\'s one take," I keep telling myself, and then I rewrite it.'
+    expect(stripEchoedTitle(real)).toBe(real)
+  })
+
+  it('leaves a body that is only a quotation', () => {
+    expect(stripEchoedTitle('"Be excellent to each other."')).toBe('"Be excellent to each other."')
+  })
+
+  it('leaves an ordinary body alone', () => {
+    const plain = 'I have been thinking about style a lot recently.'
+    expect(stripEchoedTitle(plain)).toBe(plain)
   })
 })
