@@ -68,9 +68,24 @@ describe('findRestarts', () => {
     ], NOW)).toHaveLength(0)
   })
 
-  it('keeps its thresholds honest', () => {
-    expect(RESTART_SIM).toBeGreaterThan(0.7)
+  it('sits above the corpus ceiling for coincidence, not just above average', () => {
+    // Live: project-to-project similarity p99 is 0.72, the one true restart
+    // scores 0.84, and the next pair down is 0.81 — two different projects
+    // that merely share a register. A restart claims something about what
+    // the person DID, so it has to be near-impossible to reach by accident.
+    expect(RESTART_SIM).toBeGreaterThan(0.81)
+    expect(RESTART_SIM).toBeLessThan(0.84)
     expect(RESTART_MIN_GAP_DAYS).toBeGreaterThanOrEqual(30)
+  })
+
+  it('does not call two different projects in the same register a restart', () => {
+    // "A single note on paper" and "Paint one wood block", 0.81 apart —
+    // the second-closest pair in the whole corpus, and not a restart.
+    const found = findRestarts([
+      { id: 'a', title: 'A single note on paper', status: 'dormant', createdAt: ago(250), embedding: [1, 0, 0] },
+      { id: 'b', title: 'Paint one wood block', status: 'active', createdAt: ago(74), embedding: [1, 0, 0.7240] },
+    ], NOW)
+    expect(found).toHaveLength(0)
   })
 })
 

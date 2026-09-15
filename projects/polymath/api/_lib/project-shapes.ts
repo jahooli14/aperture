@@ -69,8 +69,22 @@ function monthYear(iso: string): string {
   return d.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })
 }
 
-/** Near-identical in meaning — the same project, opened twice. */
-export const RESTART_SIM = 0.80
+/**
+ * Near-identical in meaning — the same project, opened twice.
+ *
+ * Measured on the live corpus rather than picked. Project-to-project
+ * similarity runs p50 0.52, p90 0.58, p99 0.72, and the only true restart in
+ * 34 projects scores 0.84 ("Custom t-shirts" -> "Create custom t-shirts for
+ * friends"). The next pair down is 0.81 — "A single note on paper" and
+ * "Paint one wood block", two genuinely different projects that happen to
+ * share a register — so a threshold of 0.80 was one notch from announcing a
+ * restart that never happened.
+ *
+ * This is a claim about what someone DID. It has to be nearly impossible to
+ * reach by accident, which means sitting above the corpus's own ceiling for
+ * coincidence, not just above its average.
+ */
+export const RESTART_SIM = 0.82
 /** Long enough that it was forgotten rather than duplicated by accident. */
 export const RESTART_MIN_GAP_DAYS = 60
 
