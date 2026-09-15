@@ -1,140 +1,168 @@
 <title>Throughline</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Archivo:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Libre+Franklin:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
   :root{
-    --paper:#ECEDEF; --surface:#F7F8F9;
-    --ink:#14171C; --ink-2:#4A5058; --ink-3:#7B828B;
-    --rule:#D5D8DC; --rule-soft:#E2E4E7;
-    --accent:#8C2733; --accent-tint:#EFE0E2;
-    --serif:'Spectral',Georgia,'Times New Roman',serif;
-    --sans:'Archivo',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    --paper:#EFEFEC; --card:#FBFBFA; --sunk:#E7E7E3;
+    --ink:#16181A; --ink-2:#51565B; --ink-3:#83888E;
+    --rule:#D6D6D1; --rule-soft:#E4E4DF;
+    --mark:#8C2733; --mark-tint:#F2E3E4;
+    --serif:'Instrument Serif',Georgia,'Times New Roman',serif;
+    --sans:'Libre Franklin',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
     --mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
   }
-  @media (prefers-color-scheme: dark){
+  @media (prefers-color-scheme:dark){
     :root:not([data-theme="light"]){
-      --paper:#111317; --surface:#181B20;
-      --ink:#E8E9EB; --ink-2:#A8AEB6; --ink-3:#79808A;
-      --rule:#2A2E35; --rule-soft:#20242A;
-      --accent:#D97A80; --accent-tint:#2B1A1D;
+      --paper:#131416; --card:#1B1D20; --sunk:#0E0F11;
+      --ink:#ECEDEE; --ink-2:#A6ABB1; --ink-3:#787E85;
+      --rule:#2B2E33; --rule-soft:#212428;
+      --mark:#D97177; --mark-tint:#2E1B1E;
     }
   }
   :root[data-theme="dark"]{
-    --paper:#111317; --surface:#181B20;
-    --ink:#E8E9EB; --ink-2:#A8AEB6; --ink-3:#79808A;
-    --rule:#2A2E35; --rule-soft:#20242A;
-    --accent:#D97A80; --accent-tint:#2B1A1D;
+    --paper:#131416; --card:#1B1D20; --sunk:#0E0F11;
+    --ink:#ECEDEE; --ink-2:#A6ABB1; --ink-3:#787E85;
+    --rule:#2B2E33; --rule-soft:#212428;
+    --mark:#D97177; --mark-tint:#2E1B1E;
   }
 
   *{box-sizing:border-box;}
-  body{
-    background:var(--paper); color:var(--ink);
-    font-family:var(--sans); font-size:16px; line-height:1.6;
-    padding-inline:20px; -webkit-font-smoothing:antialiased;
-  }
-  @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important;}}
+  body{background:var(--paper); color:var(--ink); font-family:var(--sans);
+       font-size:16px; line-height:1.6; padding-inline:20px; -webkit-font-smoothing:antialiased;}
   p{margin:0;}
-  h1,h2{font-family:var(--serif); font-weight:500; margin:0; text-wrap:balance; color:var(--ink);}
-  blockquote{margin:0;}
-  ::selection{background:var(--accent); color:var(--surface);}
+  h1,h2{font-family:var(--serif); font-weight:400; margin:0; text-wrap:balance; letter-spacing:-.005em;}
+  button{font-family:inherit;}
+  ::selection{background:var(--mark); color:var(--card);}
+  @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important;}}
 
-  .page{max-width:680px; margin-inline:auto; padding-block:3rem 4rem;
-        display:flex; flex-direction:column; gap:3.4rem;}
+  .page{max-width:670px; margin-inline:auto; padding-block:3rem 4rem;
+        display:flex; flex-direction:column; gap:3.6rem;}
 
-  /* ---------- head ---------- */
-  .eyebrow{
-    font-family:var(--mono); font-size:.7rem; letter-spacing:.13em; text-transform:uppercase;
-    color:var(--accent); margin-bottom:1rem;
-  }
-  h1{font-size:clamp(2rem,1.5rem + 2.2vw,2.9rem); line-height:1.12; letter-spacing:-.015em;}
-  .lede{font-family:var(--serif); font-size:1.14rem; line-height:1.6; color:var(--ink-2);
-        max-width:56ch; margin-top:1.3rem;}
-  .lede b{color:var(--ink); font-weight:500;}
-  .fineprint{
-    font-family:var(--mono); font-size:.7rem; line-height:1.6; color:var(--ink-3);
-    margin-top:1.4rem; padding-top:1rem; border-top:1px solid var(--rule-soft); max-width:58ch;
-  }
+  .eyebrow{font-family:var(--mono); font-size:.68rem; letter-spacing:.14em;
+           text-transform:uppercase; color:var(--mark);}
+  h1{font-size:clamp(2.3rem,1.7rem + 2.6vw,3.4rem); line-height:1.08; margin-top:1rem;}
+  .lede{font-size:1.04rem; color:var(--ink-2); max-width:54ch; margin-top:1.4rem;}
+  .lede b{color:var(--ink); font-weight:600;}
+  .fineprint{font-family:var(--mono); font-size:.68rem; line-height:1.65; color:var(--ink-3);
+             margin-top:1.5rem; padding-top:1rem; border-top:1px solid var(--rule-soft); max-width:60ch;}
 
-  /* ---------- finding ---------- */
-  .finding{display:flex; flex-direction:column;}
-  .kind{
-    font-family:var(--mono); font-size:.69rem; letter-spacing:.13em; text-transform:uppercase;
-    color:var(--accent); margin-bottom:.7rem;
-  }
-  .finding h2{font-size:clamp(1.28rem,1.1rem + .8vw,1.62rem); line-height:1.3; max-width:30ch;}
-  .spine{list-style:none; margin:1.9rem 0 0; padding:0;}
-  .spine li{display:grid; grid-template-columns:4.1rem 1fr;}
-  .spine__date{
-    font-family:var(--mono); font-size:.7rem; letter-spacing:.04em; color:var(--ink-3);
-    text-align:right; padding-right:1.15rem; padding-top:.18rem; white-space:nowrap;
-  }
-  .spine__body{
-    border-left:1px solid var(--rule); padding-left:1.45rem; padding-bottom:1.5rem; position:relative;
-  }
-  .spine__body::before{
-    content:""; position:absolute; left:-4.5px; top:.42rem; width:8px; height:8px;
-    border-radius:50%; background:var(--paper); border:1.5px solid var(--ink-3);
-  }
-  .spine li[data-ours] .spine__body::before{background:var(--accent); border-color:var(--accent);}
-  .spine li:last-child .spine__body{border-left-color:transparent; padding-bottom:0;}
-  .who{font-size:.86rem; font-weight:600; color:var(--ink); line-height:1.4;}
-  .who .org{font-weight:400; color:var(--ink-2);}
-  .tag{
-    display:inline-block; font-family:var(--mono); font-size:.63rem; letter-spacing:.05em;
-    text-transform:uppercase; color:var(--accent); background:var(--accent-tint);
-    padding:.16em .45em; border-radius:3px; margin-left:.45em; vertical-align:.08em;
-  }
-  .said{
-    font-family:var(--serif); font-style:italic; font-size:1.04rem; line-height:1.5;
-    color:var(--ink); margin-top:.4rem;
-  }
-  .plain{font-size:.92rem; color:var(--ink-2); margin-top:.3rem;}
-  .plain b{color:var(--ink); font-weight:600;}
-  .gap-marker{
-    font-family:var(--mono); font-size:.72rem; color:var(--accent); letter-spacing:.02em;
-  }
+  .sec__label{font-family:var(--mono); font-size:.68rem; letter-spacing:.14em;
+              text-transform:uppercase; color:var(--ink-3); margin-bottom:.8rem;}
+  .sec h2{font-size:clamp(1.45rem,1.2rem + 1.1vw,1.95rem); line-height:1.22; max-width:26ch;}
+  .sec__sub{font-size:.95rem; color:var(--ink-2); margin-top:.7rem; max-width:52ch;}
 
-  /* ---------- why ---------- */
-  .why{
-    margin-top:1.7rem; padding:1.15rem 1.35rem; background:var(--surface);
-    border:1px solid var(--rule-soft); border-left:2px solid var(--accent); border-radius:0 6px 6px 0;
-  }
-  .why__label{
-    font-family:var(--mono); font-size:.66rem; letter-spacing:.11em; text-transform:uppercase;
-    color:var(--ink-3); margin-bottom:.5rem;
-  }
-  .why p{font-size:.94rem; color:var(--ink-2); max-width:60ch;}
-  .why b{color:var(--ink); font-weight:600;}
+  /* note cards */
+  .notes{display:flex; flex-direction:column; gap:.7rem; margin-top:1.5rem;}
+  .note{background:var(--card); border:1px solid var(--rule); border-radius:7px;
+        padding:1rem 1.15rem; position:relative;}
+  .note__head{display:flex; flex-wrap:wrap; align-items:baseline; gap:.5em; margin-bottom:.45rem;}
+  .note__date{font-family:var(--mono); font-size:.68rem; color:var(--ink-3); letter-spacing:.03em;}
+  .note__who{font-size:.85rem; font-weight:600;}
+  .note__org{font-size:.85rem; color:var(--ink-2);}
+  .note__said{font-family:var(--serif); font-size:1.18rem; line-height:1.38; color:var(--ink);}
+  .note__plain{font-size:.92rem; color:var(--ink-2);}
+  .note__plain b{color:var(--ink); font-weight:600;}
 
-  /* ---------- quiet ---------- */
-  .quiet__items{display:flex; flex-direction:column; gap:1.1rem; margin-top:1.4rem;}
-  .quiet__item{display:grid; grid-template-columns:1fr; gap:.25rem;}
-  .quiet__item h3{font-family:var(--sans); font-size:.95rem; font-weight:600; margin:0; color:var(--ink);}
-  .quiet__item p{font-size:.9rem; color:var(--ink-2);}
-  .quiet__verdict{font-family:var(--mono); font-size:.72rem; color:var(--accent); margin-top:.15rem;}
+  .stamp{display:inline-flex; align-items:center; gap:.35em; font-family:var(--mono);
+         font-size:.63rem; letter-spacing:.06em; text-transform:uppercase; color:var(--mark);
+         background:var(--mark-tint); padding:.2em .5em; border-radius:3px;
+         opacity:0; transform:translateY(-2px); transition:opacity .35s ease, transform .35s ease;}
+  .is-revealed .stamp{opacity:1; transform:none;}
+  .stamp::before{content:"◆"; font-size:.7em;}
 
-  /* ---------- diary ---------- */
-  .diary{
-    background:var(--surface); border:1px solid var(--rule); border-radius:7px;
-    padding:1.3rem 1.45rem; margin-top:1.3rem; display:grid; grid-template-columns:4.1rem 1fr; gap:0 1.15rem;
-  }
-  .diary__when{font-family:var(--mono); font-size:.72rem; color:var(--ink-3); line-height:1.5; text-align:right;}
-  .diary__when b{display:block; color:var(--ink); font-weight:500; font-size:.78rem;}
-  .diary__note{font-size:.94rem; color:var(--ink-2); margin-top:.35rem; max-width:52ch;}
+  /* ask + reveal */
+  .ask{margin-top:1.4rem; display:flex; flex-wrap:wrap; align-items:center; gap:1rem;}
+  .ask__q{font-size:.97rem; font-weight:600; color:var(--ink);}
+  .btn{background:var(--ink); color:var(--paper); border:none; border-radius:999px;
+       padding:.62em 1.25em; font-size:.85rem; font-weight:600; cursor:pointer;
+       letter-spacing:.01em; transition:opacity .2s ease;}
+  .btn:hover{opacity:.85;}
+  .btn:focus-visible{outline:2px solid var(--mark); outline-offset:3px;}
+  .is-revealed .ask{display:none;}
 
-  /* ---------- foot ---------- */
-  .foot{border-top:1px solid var(--rule); padding-top:1.6rem; display:flex; flex-direction:column; gap:1.1rem;}
-  .close{font-family:var(--serif); font-size:1.12rem; line-height:1.55; color:var(--ink); max-width:54ch;}
+  .reveal{display:none; margin-top:1.5rem;}
+  .is-revealed .reveal{display:block; animation:rise .4s ease;}
+  @keyframes rise{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;}}
+  .verdict{font-family:var(--serif); font-size:1.5rem; line-height:1.25; color:var(--mark);
+           max-width:30ch;}
+  .reveal__body{font-size:.95rem; color:var(--ink-2); margin-top:.9rem; max-width:58ch;}
+  .reveal__body b{color:var(--ink); font-weight:600;}
+  .reveal__body + .reveal__body{margin-top:.7rem;}
+
+  /* what you get to say */
+  .say{margin-top:1.6rem; border-top:2px solid var(--mark); background:var(--card);
+       border-radius:0 0 7px 7px; padding:1.15rem 1.3rem;}
+  .say__label{font-family:var(--mono); font-size:.64rem; letter-spacing:.13em;
+              text-transform:uppercase; color:var(--mark); margin-bottom:.6rem;}
+  .say__line{font-family:var(--serif); font-size:1.24rem; line-height:1.4; color:var(--ink);}
+  .say__to{font-size:.84rem; color:var(--ink-3); margin-top:.6rem;}
+
+  /* timeline */
+  .tl{margin-top:1.6rem; display:flex; flex-direction:column; gap:0;}
+  .tl__row{display:grid; grid-template-columns:3.9rem 1fr; align-items:start;}
+  .tl__date{font-family:var(--mono); font-size:.68rem; color:var(--ink-3); text-align:right;
+            padding-right:1rem; padding-top:.3rem;}
+  .tl__body{border-left:1px solid var(--rule); padding-left:1.3rem; padding-bottom:1.15rem; position:relative;}
+  .tl__body::before{content:""; position:absolute; left:-4.5px; top:.5rem; width:8px; height:8px;
+                    border-radius:50%; background:var(--paper); border:1.5px solid var(--ink-3);}
+  .tl__row--first .tl__body::before{background:var(--mark); border-color:var(--mark); width:11px; height:11px; left:-6px; top:.4rem;}
+  .tl__row:last-child .tl__body{border-left-color:transparent; padding-bottom:0;}
+  .tl__who{font-size:.88rem; font-weight:600;}
+  .tl__who span{font-weight:400; color:var(--ink-2);}
+  .tl__said{font-family:var(--serif); font-size:1.05rem; color:var(--ink-2); margin-top:.15rem;}
+  .tl__row--first .tl__said{color:var(--ink);}
+
+  /* dot chart */
+  figure.chart{margin:1.6rem 0 0; padding:1.2rem 1.35rem; background:var(--card);
+               border:1px solid var(--rule); border-radius:7px;}
+  .chart__title{font-size:.88rem; font-weight:600; color:var(--ink); margin-bottom:1rem;}
+  .chart__row{display:grid; grid-template-columns:2.7rem 1fr; align-items:center;
+              gap:.9rem; padding-block:.28rem;}
+  .chart__m{font-family:var(--mono); font-size:.7rem; color:var(--ink-3); letter-spacing:.04em;}
+  .chart__dots{display:flex; align-items:center; gap:6px; min-height:12px;
+               border-bottom:1px solid var(--rule-soft); padding-bottom:.28rem;}
+  .dot{width:11px; height:11px; border-radius:50%; background:var(--mark); flex:none;}
+  .dot--faint{background:transparent; border:1.5px solid var(--mark);}
+  .chart__none{font-family:var(--mono); font-size:.66rem; color:var(--ink-3); letter-spacing:.05em;}
+  figcaption{font-size:.8rem; color:var(--ink-3); margin-top:.9rem; line-height:1.55;}
+
+  /* vocab list */
+  .vocab{margin-top:1.3rem; display:flex; flex-direction:column; gap:.55rem;}
+  .vocab li{list-style:none; display:grid; grid-template-columns:auto 1fr; gap:.85rem;
+            align-items:baseline; font-size:.93rem;}
+  .vocab .v-said{font-family:var(--serif); font-size:1.1rem; color:var(--ink);}
+  .vocab .v-who{font-family:var(--mono); font-size:.66rem; color:var(--ink-3);
+                text-transform:uppercase; letter-spacing:.05em; white-space:nowrap;}
+
+  /* refusals */
+  .refusals{display:flex; flex-direction:column; gap:1rem; margin-top:1.4rem;}
+  .refusal{display:flex; flex-direction:column; gap:.2rem; padding-left:1rem;
+           border-left:2px solid var(--rule);}
+  .refusal h3{font-size:.92rem; font-weight:600; margin:0; color:var(--ink);}
+  .refusal p{font-size:.89rem; color:var(--ink-2);}
+  .refusal .v{font-family:var(--mono); font-size:.68rem; color:var(--ink-3); margin-top:.15rem;}
+
+  /* diary */
+  .diary{margin-top:1.3rem; background:var(--card); border:1px solid var(--rule);
+         border-radius:7px; padding:1.2rem 1.35rem; display:grid;
+         grid-template-columns:4rem 1fr; gap:0 1.1rem;}
+  .diary__when{font-family:var(--mono); font-size:.7rem; color:var(--ink-3); text-align:right; line-height:1.55;}
+  .diary__when b{display:block; color:var(--ink); font-weight:500; font-size:.76rem;}
+  .diary__note{font-size:.93rem; color:var(--ink-2); margin-top:.3rem;}
+
+  .foot{border-top:1px solid var(--rule); padding-top:1.7rem; display:flex; flex-direction:column; gap:1.2rem;}
+  .close{font-family:var(--serif); font-size:1.4rem; line-height:1.35; color:var(--ink); max-width:44ch;}
   .stats{display:flex; flex-wrap:wrap; gap:1.5rem; font-family:var(--mono);}
-  .stat .n{display:block; font-size:1.05rem; font-weight:500; color:var(--accent); font-variant-numeric:tabular-nums;}
-  .stat .l{display:block; font-size:.63rem; letter-spacing:.07em; text-transform:uppercase; color:var(--ink-3); margin-top:.15rem;}
+  .stat .n{display:block; font-size:1.02rem; font-weight:500; color:var(--mark); font-variant-numeric:tabular-nums;}
+  .stat .l{display:block; font-size:.62rem; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-3); margin-top:.2rem;}
 
   @media (max-width:560px){
-    .spine li{grid-template-columns:3.5rem 1fr;}
-    .spine__date{padding-right:.85rem; font-size:.66rem;}
-    .spine__body{padding-left:1.15rem;}
-    .diary{grid-template-columns:3.5rem 1fr; gap:0 .85rem;}
+    .tl__row{grid-template-columns:3.3rem 1fr;}
+    .tl__date{padding-right:.8rem; font-size:.64rem;}
+    .tl__body{padding-left:1.1rem;}
+    .diary{grid-template-columns:3.4rem 1fr; gap:0 .85rem;}
+    .vocab li{grid-template-columns:1fr; gap:.15rem;}
   }
 </style>
 
@@ -142,249 +170,260 @@
 
   <header>
     <p class="eyebrow">For Katie · a worked example</p>
-    <h1>What your notes already knew</h1>
-    <p class="lede">Six months of meeting notes — invented, but the kind you'd actually write after an hour with a CUO. Two hundred of them, and the diary alongside. <b>None of this is about remembering.</b> You'd remember every one of these conversations. It's about what can't be seen from inside a conversation: patterns that only exist between people who have never met, in words that never repeat.</p>
-    <p class="fineprint">Fictitious clients and colleagues throughout — not your accounts. Every quotation below is checked word-for-word against the note it cites; a bracketed letter marks the one permitted edit, capitalising a phrase lifted from mid-sentence.</p>
+    <h1>Four things you get to say this month</h1>
+    <p class="lede">Two hundred meeting notes across six months — invented, but the kind you'd actually write after an hour with a CUO. Plus the diary. <b>Everything below came out of reading all two hundred at once</b>, which is the one thing nobody ever does.</p>
+    <p class="lede" style="margin-top:.8rem;">Two of them are tests. Have a go before you scroll past.</p>
+    <p class="fineprint">Fictitious clients and colleagues throughout — none of these are your accounts. Every quotation is checked word-for-word against the note it cites; a bracketed letter marks the one permitted edit, capitalising a phrase lifted from mid-sentence.</p>
   </header>
 
-  <article class="finding">
-    <p class="kind">An echo</p>
-    <h2>Three clients told you where the market was heading. All three got it from you.</h2>
-    <ol class="spine">
-      <li data-ours>
-        <div class="spine__date">14 APR</div>
-        <div class="spine__body">
-          <p class="who">Your firm publishes its specialty outlook</p>
-          <p class="plain">Headline claim: <b>half of Lloyd's managing agents gone by 2030.</b></p>
-          <blockquote class="said">&ldquo;I have no idea whether that's true. Nobody I've asked internally knows where the number came from.&rdquo;</blockquote>
-          <p class="plain">— your own note, the day it went out.</p>
-        </div>
-      </li>
-      <li data-ours>
-        <div class="spine__date">12 MAY</div>
-        <div class="spine__body">
-          <p class="who">Client breakfast</p>
-          <p class="plain">Forty in the room. The report goes to a list of three hundred.</p>
-        </div>
-      </li>
-      <li>
-        <div class="spine__date">10 JUN</div>
-        <div class="spine__body">
-          <p class="who">Piotr Zawada <span class="org">· Bellwether MGA</span><span class="tag">was in the room</span></p>
-          <blockquote class="said">&ldquo;[Y]our report says half the managing agents disappear by 2030.&rdquo;</blockquote>
-        </div>
-      </li>
-      <li>
-        <div class="spine__date">24 JUN</div>
-        <div class="spine__body">
-          <p class="who">Ivan Kroll <span class="org">· Pemberton Broking</span><span class="tag">was in the room</span></p>
-          <p class="plain">Repeats the number back. Attributes it to <b>&ldquo;everyone&rdquo;</b>.</p>
-        </div>
-      </li>
-      <li>
-        <div class="spine__date">15 JUL</div>
-        <div class="spine__body">
-          <p class="who">Tobias Greer <span class="org">· Orwell Marine</span><span class="tag">on the list</span></p>
-          <blockquote class="said">&ldquo;[Y]ou lot are saying half the managing agents go by 2030.&rdquo;</blockquote>
-        </div>
-      </li>
-    </ol>
-    <div class="why">
-      <p class="why__label">Why it stays hidden</p>
-      <p>Nothing in any of those three conversations marks the number as yours. By the third telling it has stopped being a report and become what everyone thinks — Ivan didn't say he'd read it, he said <b>everyone</b> was saying it. The only trace is the guest list. Left alone, your own unsourced number comes back to the firm as evidence that the market agrees.</p>
-    </div>
-  </article>
+  <!-- ============ TEST ONE ============ -->
+  <section class="sec test" id="t1">
+    <p class="sec__label">Test one</p>
+    <h2>Three clients, three firms, one view of where the market's going.</h2>
+    <p class="sec__sub">Five weeks apart. Nobody prompted any of them.</p>
 
-  <article class="finding">
-    <p class="kind">A contradiction</p>
-    <h2>Two CUOs took opposite sides six weeks apart. The answer is also in your notes.</h2>
-    <ol class="spine">
-      <li>
-        <div class="spine__date">19 MAR</div>
-        <div class="spine__body">
-          <p class="who">Marcus Deyn <span class="org">· Ravensbourne, CUO</span></p>
-          <blockquote class="said">&ldquo;The data's finally good enough that we can write parametric on things that aren't windstorm. I've got a team on it.&rdquo;</blockquote>
+    <div class="notes">
+      <div class="note">
+        <div class="note__head">
+          <span class="note__date">10 JUN</span>
+          <span class="note__who">Piotr Zawada</span>
+          <span class="note__org">· Bellwether MGA</span>
+          <span class="stamp">12 May breakfast</span>
         </div>
-      </li>
-      <li>
-        <div class="spine__date">5 MAY</div>
-        <div class="spine__body">
-          <p class="who">Ana Castellane <span class="org">· Harrow Point, Head of Specialty</span></p>
-          <blockquote class="said">&ldquo;Parametric is a solution looking for a problem &hellip; The problem is the buyer thinks they bought insurance and they bought a bet.&rdquo;</blockquote>
-        </div>
-      </li>
-      <li>
-        <div class="spine__date">13 MAY</div>
-        <div class="spine__body">
-          <p class="who">Marcus Deyn <span class="org">· pushed on basis risk</span></p>
-          <blockquote class="said">&ldquo;[T]he reason it's failed before is people sold it as insurance when it's a hedge. We're selling it as a hedge.&rdquo;</blockquote>
-        </div>
-      </li>
-      <li>
-        <div class="spine__date">15 MAY</div>
-        <div class="spine__body">
-          <p class="who">Graham Tull <span class="org">· Duraflex, a buyer</span></p>
-          <blockquote class="said">&ldquo;I've got a real problem, I don't need a clever one.&rdquo;</blockquote>
-        </div>
-      </li>
-      <li>
-        <div class="spine__date">25 AUG</div>
-        <div class="spine__body">
-          <p class="who">Beatrice Ofori <span class="org">· Norton Hale, a buyer</span></p>
-          <p class="plain">Puts port delay at <b>£4m last year, none of it insured.</b></p>
-          <blockquote class="said">&ldquo;If someone can pay me when the port backs up I don't care what they call it.&rdquo;</blockquote>
-        </div>
-      </li>
-    </ol>
-    <div class="why">
-      <p class="why__label">Why it stays hidden</p>
-      <p>Ana is right about Graham. Marcus is right about Beatrice. <b>The line between them is whether the buyer already counts the loss</b> — Beatrice has a figure for it, Graham doesn't. But two of these are underwriting views and two are buying conversations, filed under four accounts across five months. Nothing puts them on one page, and the disagreement isn't the finding — the resolution is, and it only appears with all four side by side.</p>
-    </div>
-  </article>
-
-  <article class="finding">
-    <p class="kind">A first voice</p>
-    <h2>Klaus called it in April. Four people have since told you it was their own idea.</h2>
-    <ol class="spine">
-      <li>
-        <div class="spine__date">21 APR</div>
-        <div class="spine__body">
-          <p class="who">Klaus Beringer <span class="org">· Trans-Meridian Re</span></p>
-          <blockquote class="said">&ldquo;This will show up at one-one. Not this one-one, the one after.&rdquo;</blockquote>
-          <p class="plain">Asked who else was saying it: <span style="font-family:var(--serif);font-style:italic;">&ldquo;Almost nobody, which is what worries me.&rdquo;</span></p>
-        </div>
-      </li>
-      <li>
-        <div class="spine__date">20 MAY</div>
-        <div class="spine__body">
-          <p class="who">Sofia Marchetti <span class="org">· Kestrel Re</span></p>
-          <blockquote class="said">&ldquo;[T]he numbers look too good.&rdquo;</blockquote>
-        </div>
-      </li>
-      <li>
-        <div class="spine__date">16 JUN</div>
-        <div class="spine__body">
-          <p class="who">Derek Ainsworth <span class="org">· Castleford Mutual</span></p>
-          <blockquote class="said">&ldquo;[T]he lawyers have got more organised.&rdquo;</blockquote>
-        </div>
-      </li>
-      <li>
-        <div class="spine__date">24 JUN</div>
-        <div class="spine__body">
-          <p class="who">Ivan Kroll <span class="org">· Pemberton Broking</span></p>
-          <blockquote class="said">&ldquo;The markets aren't explaining it, they're just asking for more.&rdquo;</blockquote>
-        </div>
-      </li>
-      <li data-ours>
-        <div class="spine__date">13 JUL</div>
-        <div class="spine__body">
-          <p class="who">Hal Brennan <span class="org">· your New York office</span><span class="tag">arrived independently</span></p>
-          <blockquote class="said">&ldquo;[T]he severity numbers out of the US right now are not something the London market has priced.&rdquo;</blockquote>
-          <p class="plain">Has verdict data he'll share. Has never met Klaus.</p>
-        </div>
-      </li>
-      <li>
-        <div class="spine__date">11 AUG</div>
-        <div class="spine__body">
-          <p class="who">Giles Overton <span class="org">· Thackeray 2884</span></p>
-          <blockquote class="said">&ldquo;[T]he direction is one way and it's the same direction every quarter.&rdquo;</blockquote>
-          <p class="plain">Thinks it's his own book.</p>
-        </div>
-      </li>
-    </ol>
-    <div class="why">
-      <p class="why__label">Why it stays hidden</p>
-      <p>Not one of the four mentions Klaus. Each describes it as something happening in their own book, in their own vocabulary — Giles thinks it's his reserving. <b>Being first isn't a property of any single conversation.</b> It only exists once six of them are sorted by date, which nothing prompts you to do. The useful part isn't the call; it's knowing whose read to weight next time.</p>
-    </div>
-  </article>
-
-  <article class="finding">
-    <p class="kind">An absence</p>
-    <h2>Nobody has mentioned the June deadline since the first week of July.</h2>
-    <ol class="spine">
-      <li>
-        <div class="spine__date">18 MAR</div>
-        <div class="spine__body">
-          <p class="who">Rob Gilder <span class="org">· Harrow Point, CFO</span></p>
-          <blockquote class="said">&ldquo;We are going to make it but I don't have a spare person in the building between now and July.&rdquo;</blockquote>
-        </div>
-      </li>
-      <li data-ours>
-        <div class="spine__date">25 MAR</div>
-        <div class="spine__body">
-          <p class="who">Nils Ekström <span class="org">· Regulatory, internal</span></p>
-          <p class="plain">Hires three people for the deadline work.</p>
-        </div>
-      </li>
-      <li>
-        <div class="spine__date">15 APR</div>
-        <div class="spine__body">
-          <p class="who">Piotr Zawada <span class="org">· Bellwether MGA</span></p>
-          <blockquote class="said">&ldquo;[I]t's landed on underwriting, not just finance, which nobody expected.&rdquo;</blockquote>
-        </div>
-      </li>
-      <li>
-        <div class="spine__date">28 APR &ndash; 6 MAY</div>
-        <div class="spine__body">
-          <p class="who">Ines Delacroix <span class="org">· Pallister</span> · Peter Ngo <span class="org">· Stanhope</span></p>
-          <p class="plain">Five organisations in seven weeks. Then it stops.</p>
-        </div>
-      </li>
-      <li>
-        <div class="spine__date">JUL &ndash; SEP</div>
-        <div class="spine__body">
-          <p class="gap-marker">Seventy notes. Not one mention.</p>
-        </div>
-      </li>
-      <li data-ours>
-        <div class="spine__date">8 SEP</div>
-        <div class="spine__body">
-          <p class="who">Nils Ekström <span class="org">· Regulatory, internal</span></p>
-          <p class="plain">The three hires have <b>nothing booked past October.</b> In June he'd already said it:</p>
-          <blockquote class="said">&ldquo;I need a second act and I don't have one.&rdquo;</blockquote>
-        </div>
-      </li>
-    </ol>
-    <div class="why">
-      <p class="why__label">Why it stays hidden</p>
-      <p>There is no note saying nobody mentions this anymore. An absence isn't recorded anywhere — it's the shape of the space between April and August, and it can only be found by comparing two months against each other. Nils asked you in June what you were hearing that was regulatory-shaped. <b>The answer was already in your notes. It just wasn't in any one of them.</b></p>
-    </div>
-  </article>
-
-  <section class="quiet">
-    <p class="kind">And what it declined to say</p>
-    <div class="quiet__items">
-      <div class="quiet__item">
-        <h3>A broker's system migration</h3>
-        <p>Five mentions since March — the single loudest topic in six months of notes.</p>
-        <p class="quiet__verdict">Three people, one firm. Not a market. Stayed quiet.</p>
+        <p class="note__said">&ldquo;[Y]our report says half the managing agents disappear by 2030. If that's right our capacity panel looks very different in five years.&rdquo;</p>
       </div>
-      <div class="quiet__item">
-        <h3>The AI trend that wasn't one</h3>
-        <p>Three clients in four weeks. One hated a vendor demo, one is building submission triage, one is running claims fraud detection.</p>
-        <p class="quiet__verdict">Same word, three unrelated subjects. Stayed quiet.</p>
+      <div class="note">
+        <div class="note__head">
+          <span class="note__date">24 JUN</span>
+          <span class="note__who">Ivan Kroll</span>
+          <span class="note__org">· Pemberton Broking</span>
+          <span class="stamp">12 May breakfast</span>
+        </div>
+        <p class="note__plain">Repeats the same consolidation number back. Attributes it to <b>&ldquo;everyone&rdquo;</b>.</p>
+      </div>
+      <div class="note">
+        <div class="note__head">
+          <span class="note__date">15 JUL</span>
+          <span class="note__who">Tobias Greer</span>
+          <span class="note__org">· Orwell Marine</span>
+          <span class="stamp">on the mailing list</span>
+        </div>
+        <p class="note__said">&ldquo;[Y]ou lot are saying half the managing agents go by 2030.&rdquo;</p>
       </div>
     </div>
-    <div class="why">
-      <p class="why__label">The harder half</p>
-      <p>Anything will find you patterns if you let it. <b>The discipline is in the refusals</b> — and on most weeks, in a corpus this size, the honest output is nothing at all.</p>
+
+    <div class="ask">
+      <span class="ask__q">Three independent sources. Is the market converging on this?</span>
+      <button class="btn" data-reveal="t1" aria-expanded="false">Show me</button>
+    </div>
+
+    <div class="reveal">
+      <p class="verdict">No. It's your own number, coming back.</p>
+      <p class="reveal__body">Your firm published it on <b>14 April</b>. All three were sent the report; two were in the room when it was presented on 12 May. What you wrote in your own note that day:</p>
+      <div class="notes">
+        <div class="note" style="border-color:var(--mark);">
+          <div class="note__head">
+            <span class="note__date">14 APR</span>
+            <span class="note__who">Your note, the day it published</span>
+          </div>
+          <p class="note__said">&ldquo;I have no idea whether that's true. Nobody I've asked internally knows where the number came from.&rdquo;</p>
+        </div>
+      </div>
+      <p class="reveal__body">By the third telling it has stopped being a report. Ivan didn't say he'd read it — he said <b>everyone</b> was saying it. An unsourced number of yours is now circulating as market consensus, and the next place it lands is a partner's slide, cited as what clients are telling us.</p>
+      <div class="say">
+        <p class="say__label">What you get to say</p>
+        <p class="say__line">&ldquo;Careful with that number — it's ours, and nobody in my firm can tell me where it came from. Let me tell you what I'm actually hearing instead.&rdquo;</p>
+        <p class="say__to">Nobody else in that room can say it. It costs you nothing and buys you the rest of the meeting.</p>
+      </div>
     </div>
   </section>
 
-  <section>
-    <p class="kind">Where it surfaces</p>
-    <p style="font-size:.95rem;color:var(--ink-2);max-width:56ch;">Findings attach themselves to the diary. Three days before a meeting, one thing worth carrying in — never a summary of the last one.</p>
+  <!-- ============ TEST TWO ============ -->
+  <section class="sec test" id="t2">
+    <p class="sec__label">Test two</p>
+    <h2>Two chief underwriting officers, six weeks apart, flatly contradicting each other.</h2>
+    <p class="sec__sub">Both senior, both have seen three cycles. Neither knows the other said it.</p>
+
+    <div class="notes">
+      <div class="note">
+        <div class="note__head">
+          <span class="note__date">19 MAR</span>
+          <span class="note__who">Marcus Deyn</span>
+          <span class="note__org">· Ravensbourne, CUO</span>
+        </div>
+        <p class="note__said">&ldquo;The data's finally good enough that we can write parametric on things that aren't windstorm. I've got a team on it.&rdquo;</p>
+      </div>
+      <div class="note">
+        <div class="note__head">
+          <span class="note__date">5 MAY</span>
+          <span class="note__who">Ana Castellane</span>
+          <span class="note__org">· Harrow Point, Head of Specialty</span>
+        </div>
+        <p class="note__said">&ldquo;Parametric is a solution looking for a problem &hellip; The problem is the buyer thinks they bought insurance and they bought a bet.&rdquo;</p>
+      </div>
+    </div>
+
+    <div class="ask">
+      <span class="ask__q">Which of them is right?</span>
+      <button class="btn" data-reveal="t2" aria-expanded="false">Show me</button>
+    </div>
+
+    <div class="reveal">
+      <p class="verdict">Both. And you've already met the two people who settle it.</p>
+      <p class="reveal__body">Buried in two buyer conversations, four months apart, filed under different accounts:</p>
+      <div class="notes">
+        <div class="note">
+          <div class="note__head">
+            <span class="note__date">15 MAY</span>
+            <span class="note__who">Graham Tull</span>
+            <span class="note__org">· Duraflex, a buyer</span>
+            <span class="stamp">proves Ana right</span>
+          </div>
+          <p class="note__said">&ldquo;I've got a real problem, I don't need a clever one.&rdquo;</p>
+        </div>
+        <div class="note">
+          <div class="note__head">
+            <span class="note__date">25 AUG</span>
+            <span class="note__who">Beatrice Ofori</span>
+            <span class="note__org">· Norton Hale, a buyer</span>
+            <span class="stamp">proves Marcus right</span>
+          </div>
+          <p class="note__plain" style="margin-bottom:.4rem;">Puts port delay at <b>£4m last year, none of it insured.</b></p>
+          <p class="note__said">&ldquo;If someone can pay me when the port backs up I don't care what they call it.&rdquo;</p>
+        </div>
+      </div>
+      <p class="reveal__body">The variable is whether the buyer <b>already counts the loss.</b> Beatrice has a figure for hers and no cover against it — a payout that arrives on a trigger is strictly better than the nothing she gets now. Graham doesn't have a figure, so a trigger is just a new way to be disappointed. The disagreement was never the finding. The rule underneath it is.</p>
+      <div class="say">
+        <p class="say__label">What you get to say</p>
+        <p class="say__line">&ldquo;Parametric lands where the buyer already counts the loss. I know a Head of Risk carrying £4m a year of port delay with nothing against it. Shall I introduce you?&rdquo;</p>
+        <p class="say__to">To Marcus, who has been asking for buyer introductions since May.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ FIRST VOICE ============ -->
+  <section class="sec">
+    <p class="sec__label">No test — just look at the dates</p>
+    <h2>You're the fifth person to tell me this. Klaus was the first.</h2>
+    <p class="sec__sub">Not one of the four later voices mentions him. Each describes it as something happening in their own book, in their own words.</p>
+
+    <div class="tl">
+      <div class="tl__row tl__row--first">
+        <div class="tl__date">21 APR</div>
+        <div class="tl__body">
+          <p class="tl__who">Klaus Beringer <span>· Trans-Meridian Re</span></p>
+          <p class="tl__said">&ldquo;This will show up at one-one. Not this one-one, the one after.&rdquo; Asked who else was saying it: &ldquo;Almost nobody, which is what worries me.&rdquo;</p>
+        </div>
+      </div>
+      <div class="tl__row">
+        <div class="tl__date">20 MAY</div>
+        <div class="tl__body">
+          <p class="tl__who">Sofia Marchetti <span>· Kestrel Re</span></p>
+          <p class="tl__said">&ldquo;[T]he numbers look too good.&rdquo;</p>
+        </div>
+      </div>
+      <div class="tl__row">
+        <div class="tl__date">16 JUN</div>
+        <div class="tl__body">
+          <p class="tl__who">Derek Ainsworth <span>· Castleford Mutual</span></p>
+          <p class="tl__said">&ldquo;[T]he lawyers have got more organised.&rdquo;</p>
+        </div>
+      </div>
+      <div class="tl__row">
+        <div class="tl__date">24 JUN</div>
+        <div class="tl__body">
+          <p class="tl__who">Ivan Kroll <span>· Pemberton Broking</span></p>
+          <p class="tl__said">&ldquo;The markets aren't explaining it, they're just asking for more.&rdquo;</p>
+        </div>
+      </div>
+      <div class="tl__row">
+        <div class="tl__date">11 AUG</div>
+        <div class="tl__body">
+          <p class="tl__who">Giles Overton <span>· Thackeray 2884 — thinks it's his own book</span></p>
+          <p class="tl__said">&ldquo;[T]he direction is one way and it's the same direction every quarter.&rdquo;</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="say">
+      <p class="say__label">What you get to say</p>
+      <p class="say__line">&ldquo;Klaus Beringer called this in April, when he told me almost nobody was saying it. You're the fifth person to tell me since, and none of you have spoken to each other.&rdquo;</p>
+      <p class="say__to">The useful part isn't the call. It's that you now know whose read to weight next time — and four people have just learned you're the person who keeps score.</p>
+    </div>
+  </section>
+
+  <!-- ============ ABSENCE + CONVERGENCE ============ -->
+  <section class="sec">
+    <p class="sec__label">The one nobody can do</p>
+    <h2>Something stopped. Something else started. Both were silent.</h2>
+    <p class="sec__sub">The June reporting deadline was in every other conversation in the spring. Then it wasn't — and nobody announces that they've stopped caring about something.</p>
+
+    <figure class="chart">
+      <figcaption class="chart__title" style="margin-bottom:1rem;">Clients raising the June reporting deadline, by month</figcaption>
+      <div class="chart__row"><span class="chart__m">MAR</span><span class="chart__dots"><i class="dot"></i><i class="dot"></i></span></div>
+      <div class="chart__row"><span class="chart__m">APR</span><span class="chart__dots"><i class="dot"></i><i class="dot"></i><i class="dot"></i></span></div>
+      <div class="chart__row"><span class="chart__m">MAY</span><span class="chart__dots"><i class="dot"></i></span></div>
+      <div class="chart__row"><span class="chart__m">JUN</span><span class="chart__dots"><span class="chart__none">none</span></span></div>
+      <div class="chart__row"><span class="chart__m">JUL</span><span class="chart__dots"><span class="chart__none">none</span></span></div>
+      <div class="chart__row"><span class="chart__m">AUG</span><span class="chart__dots"><i class="dot dot--faint"></i></span></div>
+      <div class="chart__row"><span class="chart__m">SEP</span><span class="chart__dots"><span class="chart__none">none</span></span></div>
+      <figcaption>Six clients, seven weeks, then nothing. The hollow mark in August is a passing one — &ldquo;Nothing has changed since May except the date&rdquo; — not a live concern. There is no note anywhere saying people have stopped raising this. An absence isn't written down; it's the shape of the space between two months.</figcaption>
+    </figure>
+
+    <p class="sec__sub" style="margin-top:1.8rem;"><b style="color:var(--ink);">Meanwhile, quietly, across the same six months</b> — five clients described the same cost. A carrier, two MGAs, a mutual and a broker. Not one of them used a word any of the others used:</p>
+
+    <ul class="vocab">
+      <li><span class="v-who">MGA · 6 Apr</span><span class="v-said">&ldquo;Three sets of homework.&rdquo;</span></li>
+      <li><span class="v-who">MGA · 28 Apr</span><span class="v-said">&ldquo;[A] hundred and eighty thousand pounds &hellip; proving that we're allowed to do the thing we were already doing.&rdquo;</span></li>
+      <li><span class="v-who">Carrier · 3 Jun</span><span class="v-said">&ldquo;[A] seven figure sum a year to be able to say we looked.&rdquo;</span></li>
+      <li><span class="v-who">Mutual · 16 Jun</span><span class="v-said">&ldquo;[F]orty binders and three people looking after them.&rdquo;</span></li>
+      <li><span class="v-who">Broker · 6 Jul</span><span class="v-said">&ldquo;Same coverholder. Three times over.&rdquo;</span></li>
+    </ul>
+
+    <p class="reveal__body" style="margin-top:1.4rem; color:var(--ink-2);">No keyword joins those five. No search would have found them together. And they matter now because of the first half of this section: <b>Nils in Regulatory hired three people for the June deadline in March.</b> In June he told you &ldquo;I need a second act and I don't have one.&rdquo; As of last week they have nothing booked past October.</p>
+
+    <div class="say">
+      <p class="say__label">What you get to say</p>
+      <p class="say__line">&ldquo;Nobody's mentioned the June deadline since the first week of July. But five clients spent the spring telling me the same thing about the cost of binder oversight, in five different sets of words, and none of them know the others said it. There's your second act.&rdquo;</p>
+      <p class="say__to">To Nils, who asked you in June what you were hearing that was regulatory-shaped. The answer was already in your notes — it just wasn't in any one of them.</p>
+    </div>
+  </section>
+
+  <!-- ============ REFUSALS ============ -->
+  <section class="sec">
+    <p class="sec__label">The harder half</p>
+    <h2>What it saw and refused to tell you.</h2>
+    <div class="refusals">
+      <div class="refusal">
+        <h3>A broker's system migration</h3>
+        <p>Five separate mentions since March — the single loudest topic in six months of notes.</p>
+        <p class="v">Three people, one firm. That's an account, not a market. Stayed quiet.</p>
+      </div>
+      <div class="refusal">
+        <h3>The AI trend that wasn't one</h3>
+        <p>Three clients in four weeks. One hated a vendor demo, one is building submission triage, one is running claims fraud detection.</p>
+        <p class="v">Same word, three unrelated subjects. Stayed quiet.</p>
+      </div>
+    </div>
+    <p class="reveal__body" style="margin-top:1.3rem;">Anything will find you patterns if you let it. The discipline is in the refusals — and on most weeks, honestly, the output is nothing at all.</p>
+  </section>
+
+  <!-- ============ DIARY ============ -->
+  <section class="sec">
+    <p class="sec__label">Where it reaches you</p>
+    <h2>Three days before, not the morning after.</h2>
+    <p class="sec__sub">Findings attach themselves to the diary. One line, carried in — never a summary of the last meeting.</p>
     <div class="diary">
       <div class="diary__when"><b>THU</b>17 SEP<br>09:30</div>
       <div>
-        <p class="who">Klaus Beringer <span class="org">· Trans-Meridian Re</span></p>
-        <p class="diary__note">Four people have said his April call back to you since, each as their own observation. Hal Brennan reached the same place in July, independently, with data. Neither of them knows about the other.</p>
+        <p class="note__who">Klaus Beringer <span class="note__org">· Trans-Meridian Re</span></p>
+        <p class="diary__note">Four people have told you his April call since, each as their own observation. Hal Brennan in New York got to the same place in July, independently, and has verdict data he'll share. Neither of them knows the other exists.</p>
       </div>
     </div>
   </section>
 
   <footer class="foot">
-    <p class="close">None of this needed a new system to be true. It only needed something to read all two hundred notes at once — which is the one thing a person never does.</p>
+    <p class="close">None of this needed a new system to be true. It needed something to read all two hundred notes at once — the one thing a person never does.</p>
     <div class="stats">
       <div class="stat"><span class="n">200</span><span class="l">Notes</span></div>
       <div class="stat"><span class="n">6</span><span class="l">Months</span></div>
@@ -394,3 +433,14 @@
   </footer>
 
 </div>
+
+<script>
+  document.querySelectorAll('[data-reveal]').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var sec = document.getElementById(btn.getAttribute('data-reveal'));
+      if(!sec) return;
+      sec.classList.add('is-revealed');
+      btn.setAttribute('aria-expanded','true');
+    });
+  });
+</script>
