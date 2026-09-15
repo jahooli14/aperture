@@ -82,7 +82,7 @@ const EXECUTION_SESSIONS_RESOURCES = new Set([
 const EXECUTION_SPARKS_RESOURCES = new Set(['bake', 'today', 'respond', 'dismiss-spark', 'reroll-spark', 'retire-and-rebake', 'catch-up'])
 const EXECUTION_PROPOSALS_RESOURCES = new Set([
   'generate-morph', 'drift-decay', 'mine-joints', 'generate-composite',
-  'pending', 'accept', 'reject', 'reembed-articles',
+  'pending', 'accept', 'reject', 'reembed-articles', 'backfill-embeddings',
 ])
 // Fix Queue, folded in from its own serverless function to stay under
 // Vercel's Hobby cap of 12. Routed on `action`, which nothing else in this
@@ -2918,6 +2918,14 @@ async function handleExecutionSparks(req: VercelRequest, res: VercelResponse) {
     }
 
     const trace: string[] = []
+    if (explain) {
+      // Only on explain. Five table reads is nothing next to two model
+      // calls, but the nightly bake has no use for it — and "the corpus is
+      // empty" vs "the corpus is unembedded" is exactly the distinction
+      // this trace exists to make readable.
+      const { coverageReport } = await import('./_lib/embeddings-maintenance.js')
+      trace.push(...(await coverageReport(userId)).lines)
+    }
     if (isStanding) {
       const s: any = standing![0]
       trace.push(
@@ -3344,6 +3352,48 @@ async function handleExecutionProposals(req: VercelRequest, res: VercelResponse)
     const { reembedArticles } = await import('./_lib/embeddings-maintenance.js')
     const stats = await reembedArticles(userId)
     return res.status(200).json(stats)
+  }
+
+  // ─── BACKFILL EMBEDDINGS (cron) ─────────────────────────────────────
+  // Everything in the corpus should have a vector, and the only way to know
+  // whether it does is to count. Returns the coverage report either way, so
+  // `job=backfill-embeddings` answers "is the corpus actually embedded?"
+  // from a phone — the question five of the mull channel's six gatherers
+  // silently depend on.
+  if (resource === 'backfill-embeddings') {
+    if (req.method !== 'POST') return res.status(405).json({ error: 'POST required' })
+    const userId = getCronUserId(req)
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' })
+
+    const { maintainEmbeddings, coverageReport } = await import('./_lib/embeddings-maintenance.js')
+
+    // Same short-slice rule as catch-up: well under the platform's 60s
+    // ceiling, and the caller just asks again. A function killed mid-request
+    // reports as a bare "Failed to fetch" with nothing to diagnose.
+    const BUDGET_MS = 25_000
+    const startedAt = Date.now()
+    let created = 0
+    let errors = 0
+    let lastError: string | null = null
+    while (Date.now() - startedAt < BUDGET_MS) {
+      const stats = await maintainEmbeddings(userId, 25, false)
+      created += stats.embeddings_created
+      errors += stats.errors
+      if (stats.last_error) lastError = stats.last_error
+      // Creating nothing means there was nothing left OR that every call was
+      // rejected. Opposite outcomes; the coverage report below tells them
+      // apart, which is the whole point of returning it.
+      if (stats.embeddings_created === 0) break
+    }
+
+    const coverage = await coverageReport(userId)
+    return res.status(200).json({
+      embeddings_created: created,
+      errors,
+      last_error: lastError,
+      coverage: coverage.tables,
+      trace: coverage.lines,
+    })
   }
 
   // ─── MINE JOINTS (cron) ─────────────────────────────────────────────

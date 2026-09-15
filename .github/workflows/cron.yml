@@ -47,6 +47,7 @@ on:
           - recompute-heat
           - retire-and-rebake
           - reembed-articles
+          - backfill-embeddings
 
 concurrency:
   group: cron
@@ -123,6 +124,12 @@ jobs:
             # were embedded from the 100-char card teaser; the ordinary
             # backfill only fills nulls, so nothing else revisits them.
             reembed-articles) hit "/api/utilities?resource=reembed-articles" ;;
+              # Embeds anything in the corpus that has no vector, then
+              # prints the coverage report per table. "The gatherer found
+              # nothing" and "the rows it wanted were never embedded" look
+              # identical from outside; this is the only thing that tells
+              # them apart.
+              backfill-embeddings) hit "/api/utilities?resource=backfill-embeddings" ;;
               *) echo "!! unknown job: $JOB" | tee -a "$FAILED_FILE" ;;
             esac
             if [ -s "$FAILED_FILE" ]; then exit 1; fi

@@ -189,3 +189,99 @@ export function pickOrbiters(orbiters: Orbiter[], limit: number): Orbiter[] {
   }
   return out
 }
+
+/**
+ * A project's vector, built from what the project actually is rather than
+ * from its description alone.
+ *
+ * `projects.embedding` comes from `title + "\n\n" + description` — often
+ * twenty words, sometimes fewer. Every capture it gets compared against is
+ * a paragraph. That length asymmetry is not a detail: short text sits in a
+ * systematically different part of the space, so project-to-memory scores
+ * are not comparable to the memory-to-memory scores the channel's other
+ * bands were tuned on, and a thin description makes a project a hub that
+ * is everyone's nearest neighbour.
+ *
+ * The project's captures are the project. Averaging their vectors gives a
+ * centroid in the same register and at the same length scale as the things
+ * it is being compared to, and it costs nothing — the vectors are already
+ * loaded. The description still counts, weighted like a single capture, so
+ * a project with no captures yet still has a position.
+ *
+ * TIME IS NOT IN THE VECTOR, and must not be. Embedding "March 2024"
+ * alongside the text makes every note from that month look alike, which is
+ * false. Time weights the AVERAGE instead: recent captures pull the
+ * centroid harder, so a project's position follows where the work actually
+ * went rather than where it started. That is the time dimension a vector
+ * can honestly carry.
+ */
+export function projectCentroid(
+  description: number[] | string | null,
+  captures: { embedding: number[] | string | null; createdAt: string }[],
+  now: Date = new Date(),
+  halfLifeDays = 180,
+): number[] | null {
+  const parts: { vec: number[]; weight: number }[] = []
+
+  const desc = toVec(description)
+  if (desc) parts.push({ vec: desc, weight: 1 })
+
+  for (const c of captures) {
+    const vec = toVec(c.embedding)
+    if (!vec) continue
+    const ageDays = (now.getTime() - new Date(c.createdAt).getTime()) / DAY
+    if (!Number.isFinite(ageDays)) continue
+    // Half-life decay: a capture from six months ago counts half as much
+    // as one from today. Never zero — the old ones are still the project.
+    const weight = Math.pow(0.5, Math.max(0, ageDays) / halfLifeDays)
+    parts.push({ vec, weight })
+  }
+
+  if (parts.length === 0) return null
+
+  const dims = Math.max(...parts.map(p => p.vec.length))
+  const sum = new Array(dims).fill(0)
+  let totalWeight = 0
+  for (const { vec, weight } of parts) {
+    for (let i = 0; i < vec.length; i++) sum[i] += vec[i] * weight
+    totalWeight += weight
+  }
+  if (totalWeight === 0) return null
+
+  // Unit-length, so the centroid is comparable with any other vector here
+  // (every stored vector is normalized on write — gemini-embeddings.ts).
+  const mean = sum.map(v => v / totalWeight)
+  let mag = 0
+  for (const v of mean) mag += v * v
+  mag = Math.sqrt(mag)
+  return mag === 0 ? null : mean.map(v => v / mag)
+}
+
+/**
+ * How far a project's centre has moved: its early captures against its
+ * late ones.
+ *
+ * Purely temporal and impossible to see any other way. A project whose
+ * vocabulary has drifted is a project becoming something else, and the
+ * corpus knows it before the person does. 0 is "exactly where it started",
+ * 1 is "unrecognisable".
+ */
+export function centroidDrift(
+  captures: { embedding: number[] | string | null; createdAt: string }[],
+  minPerHalf = 3,
+): number | null {
+  const dated = captures
+    .map(c => ({ vec: toVec(c.embedding), t: new Date(c.createdAt).getTime() }))
+    .filter((c): c is { vec: number[]; t: number } => c.vec !== null && Number.isFinite(c.t))
+    .sort((a, b) => a.t - b.t)
+  if (dated.length < minPerHalf * 2) return null
+
+  const half = Math.floor(dated.length / 2)
+  const mean = (rows: { vec: number[] }[]) => {
+    const dims = Math.max(...rows.map(r => r.vec.length))
+    const sum = new Array(dims).fill(0)
+    for (const r of rows) for (let i = 0; i < r.vec.length; i++) sum[i] += r.vec[i]
+    return sum.map(v => v / rows.length)
+  }
+  return 1 - cosine(mean(dated.slice(0, half)), mean(dated.slice(half)))
+}
