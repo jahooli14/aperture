@@ -428,6 +428,11 @@ Conventional commits. PR metadata is short.
 
 **Workflow**
 - Develop on the branch from the session brief.
+- **Never push without asking first.** Every push to a branch triggers a Vercel
+  build, and the Hobby tier's account-wide deploy limit is easy to exhaust —
+  once it's hit, nothing deploys for 24 hours and no amount of correct code
+  can be verified. Commit freely, locally, as often as you like. Batch the
+  commits and ask before pushing.
 - Only open a PR when explicitly asked.
 - Run `npm run build` in the project folder before opening a PR.
 - A PreToolUse hook (`.claude/hooks/check-pr-title.sh`) blocks PR titles that are multi-line or > 70 chars.
