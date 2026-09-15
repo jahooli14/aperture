@@ -228,14 +228,27 @@ export async function fetchRecentSparkTexts(
   // project read as an echo of itself, which is how four good drafts were
   // thrown away in one run. The filter exists to stop the same question
   // recurring, and a project name is not a question.
+  //
+  // A DISMISSED question is not history either. The gate exists to stop the
+  // same question being asked twice; a question the user waved away was not
+  // a conversation, and holding its vocabulary against the next fourteen
+  // days punishes good questions for a bad one's words. Live: a run wrote
+  // four questions and three were dropped for echoing earlier sparks --
+  // one of them the football question that was itself the bug being fixed.
+  // Same shape as the `forgotten` mistake above, arriving by another door.
   const { data, error } = await supabase
     .from('sparks')
-    .select('text')
+    .select('text, dismissed_at')
     .eq('user_id', userId)
     .eq('type', 'mull')
     .gte('created_at', cutoff)
     .order('created_at', { ascending: false })
     .limit(limit)
   if (error || !data) return []
-  return data.map((s: any) => s.text).filter((t: unknown): t is string => typeof t === 'string' && t.length > 0)
+  return data
+    // In JS, not `.is('dismissed_at', null)`: the column is nullable and
+    // almost every row predates it, which a query filter would drop.
+    .filter((s: any) => !s.dismissed_at)
+    .map((s: any) => s.text)
+    .filter((t: unknown): t is string => typeof t === 'string' && t.length > 0)
 }

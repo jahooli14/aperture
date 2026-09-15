@@ -300,7 +300,10 @@ const COVERAGE_LIMIT = 2000
 async function selectCoverage(
   supabase: any, table: string, userId: string,
 ): Promise<{ rows: CoverageRow[]; error?: string; dropped: string[] }> {
-  const optional = ['embedded_at', 'updated_at', 'created_at']
+  // No `updated_at`: it moves when heat is recomputed or a task is ticked,
+  // so comparing it against `embedded_at` reported every project stale on a
+  // corpus where none had been reworded (embedding-coverage.ts).
+  const optional = ['embedded_at', 'created_at']
   // reading_queue needs its verdict to know what is deliberately excluded.
   const base = table === 'reading_queue' ? ['id', 'embedding', 'resonance', 'tags'] : ['id', 'embedding']
   let cols = [...base, ...optional]
