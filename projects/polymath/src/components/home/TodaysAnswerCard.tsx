@@ -498,8 +498,23 @@ export function TodaysAnswerCard({
       )}
 
       <div className="cursor-pointer" onClick={() => navigate(`/projects/${focusProject!.id}`)}>
+        {/* The line the mull question sits above is its own, deliberately
+            faint — this is the one that marks the handoff into the
+            project, so it carries more contrast and a touch of the brand
+            glow rather than reading as one more hairline. */}
+        {!engaged && (
+          <div
+            className="h-px mb-4 -mt-0.5"
+            style={{ background: 'linear-gradient(90deg, rgba(var(--brand-primary-rgb),0.35), rgba(255,255,255,0.16) 40%, transparent)' }}
+          />
+        )}
         <div className="flex items-start justify-between gap-2 mb-1 mt-1">
-          <h3 className="card-title-lg line-clamp-2 flex-1">{focusProject.title}</h3>
+          <h3
+            className="card-title-lg line-clamp-2 flex-1"
+            style={{ fontWeight: 700, textShadow: '0 0 20px rgba(var(--brand-primary-rgb),0.28)' }}
+          >
+            {focusProject.title}
+          </h3>
           {dormancyLabel && (
             <span
               className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full flex-shrink-0 mt-0.5"
@@ -515,8 +530,11 @@ export function TodaysAnswerCard({
           )}
         </div>
         <span
-          className="text-[10px] uppercase tracking-[0.28em] font-semibold mb-3 inline-block"
-          style={{ color: dormancyBadgeColor ?? 'rgba(var(--brand-primary-rgb),0.7)' }}
+          className="text-[10px] uppercase tracking-[0.28em] font-bold mb-3 inline-block"
+          style={{
+            color: dormancyBadgeColor ?? 'rgb(var(--brand-primary-rgb))',
+            textShadow: dormancyBadgeColor ? undefined : '0 0 12px rgba(var(--brand-primary-rgb),0.5)',
+          }}
         >
           {formatRelativeTime(focusProject.last_active || focusProject.updated_at)}
         </span>
