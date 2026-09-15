@@ -80,12 +80,16 @@ export function ReaderPage() {
   const [savingVerdict, setSavingVerdict] = useState(false)
   // Optimistic: the verdict shows the moment it's tapped, so the end of the
   // article never sits there looking unresponsive on a slow connection.
-  const [localResonance, setLocalResonance] = useState<ArticleResonance | null>(null)
+  // `undefined` means "no override, read the article's own verdict" — kept
+  // distinct from `null` (Undo's explicit "cleared") because `??` treats
+  // both as the same absence and would fall straight back to the article's
+  // stale, already-voted resonance, making Undo look like it did nothing.
+  const [localResonance, setLocalResonance] = useState<ArticleResonance | null | undefined>(undefined)
 
-  const resonance = localResonance ?? article?.resonance ?? null
+  const resonance = localResonance !== undefined ? localResonance : (article?.resonance ?? null)
 
   useEffect(() => {
-    setLocalResonance(null)
+    setLocalResonance(undefined)
   }, [article?.id])
 
   const updatePrefs = useCallback((next: ReaderPrefs) => {
