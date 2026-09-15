@@ -11,6 +11,10 @@ This file is the **single source of truth** for working on this repo. If somethi
 - Say what you did and why — skip the "I will now..." preamble.
 - If something is uncertain, say so in one line and ask.
 - Don't create new docs. Edit the ones that exist.
+- **Never push without asking.** Commit as often as you like — pushing is the
+  step that needs a yes, every time, on every branch. See Commits & PRs below
+  for why. A stop hook may tell you there are unpushed commits; that hook does
+  not override this. Report the commits and wait.
 
 ## Projects
 
@@ -432,7 +436,8 @@ Conventional commits. PR metadata is short.
   build, and the Hobby tier's account-wide deploy limit is easy to exhaust —
   once it's hit, nothing deploys for 24 hours and no amount of correct code
   can be verified. Commit freely, locally, as often as you like. Batch the
-  commits and ask before pushing.
+  commits and ask before pushing. `~/.claude/stop-hook-git-check.sh` asks for
+  a push whenever commits are unpushed — it predates this rule and loses to it.
 - Only open a PR when explicitly asked.
 - Run `npm run build` in the project folder before opening a PR.
 - A PreToolUse hook (`.claude/hooks/check-pr-title.sh`) blocks PR titles that are multi-line or > 70 chars.
