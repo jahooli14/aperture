@@ -84,6 +84,7 @@ const EXECUTION_SPARKS_RESOURCES = new Set(['bake', 'today', 'respond', 'dismiss
 const EXECUTION_PROPOSALS_RESOURCES = new Set([
   'generate-morph', 'drift-decay', 'mine-joints', 'generate-composite',
   'pending', 'accept', 'reject', 'reembed-articles', 'backfill-embeddings',
+  'reprocess-backlog',
 ])
 // Fix Queue, folded in from its own serverless function to stay under
 // Vercel's Hobby cap of 12. Routed on `action`, which nothing else in this
@@ -3425,6 +3426,70 @@ async function handleExecutionProposals(req: VercelRequest, res: VercelResponse)
       last_error: lastError,
       coverage: coverage.tables,
       trace: coverage.lines,
+    })
+  }
+
+  // ─── REPROCESS BACKLOG (cron) ───────────────────────────────────────
+  // Notes that never finished processing, in time-bounded slices.
+  //
+  // The daily job takes six a night, which is right for a trickle and wrong
+  // for a backlog: 53 notes had been stuck for up to eight months behind a
+  // schema bug (schemas.ts), and nine days of drip-feed means nine days
+  // before anyone can judge whether the corpus is fixed. Call this until
+  // `remaining` is 0.
+  if (resource === 'reprocess-backlog') {
+    if (req.method !== 'POST') return res.status(405).json({ error: 'POST required' })
+    const userId = getCronUserId(req)
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' })
+
+    const { processMemory } = await import('./_lib/process-memory.js')
+
+    const BUDGET_MS = 40_000
+    const startedAt = Date.now()
+    const processed: string[] = []
+    const failed: Array<{ id: string; error: string }> = []
+
+    // Oldest first, so the backlog drains in the order it built up.
+    const { data: stuck, error: fetchErr } = await supabase
+      .from('memories')
+      .select('id, title, process_attempts')
+      .eq('user_id', userId)
+      .eq('processed', false)
+      .or('process_attempts.is.null,process_attempts.lt.5')
+      .order('created_at', { ascending: true })
+      .limit(40)
+    if (fetchErr) return res.status(500).json({ error: fetchErr.message })
+
+    for (const m of stuck ?? []) {
+      // Each note is a Gemini extract plus an embed. Stop before the
+      // platform kills the function mid-write, which would cost an attempt
+      // for no work -- the way the whole backlog was buried in the first
+      // place.
+      if (Date.now() - startedAt > BUDGET_MS) break
+      try {
+        await processMemory(m.id)
+        processed.push(m.id)
+      } catch (e) {
+        failed.push({ id: m.id, error: e instanceof Error ? e.message : String(e) })
+      }
+    }
+
+    // Counted after the run, so "call again" is answerable without guessing.
+    const { count: remaining } = await supabase
+      .from('memories')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('processed', false)
+      .or('process_attempts.is.null,process_attempts.lt.5')
+
+    return res.status(200).json({
+      processed: processed.length,
+      failed: failed.length,
+      // Named, not just counted: a run that fails every note and a run with
+      // nothing left to do both report 0 processed.
+      errors: failed.slice(0, 5),
+      remaining: remaining ?? 0,
+      done: (remaining ?? 0) === 0,
     })
   }
 

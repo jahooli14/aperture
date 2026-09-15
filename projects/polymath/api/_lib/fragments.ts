@@ -22,6 +22,32 @@ import { PLAIN_ENGLISH_RULES } from './plain-english.js'
 import { isGraveyarded } from './project-state.js'
 
 const ATTACH_SIM_THRESHOLD = 0.5
+/**
+ * How far the best project must beat the second-best before we believe it.
+ *
+ * The absolute threshold alone decides almost nothing here. Measured on the
+ * live corpus, every note scores 0.55-0.66 against its nearest project --
+ * p10 0.56, p90 0.66 -- so 0.5 admits 98% of everything, and the pick is
+ * then whichever project won by a hair. Half of them won by less than 0.02:
+ * "cervical spine injection recovery" landed on "Painting where you tip the
+ * canvas" by a margin of 0.000, and "nutritional profile of yellow tropical
+ * fruit" on "Create custom t-shirts for friends".
+ *
+ * That is not a near miss, it is a coin toss, and a fragment is not a
+ * harmless guess: it dates a capture onto a project's timeline, and every
+ * shape in corpus-time.ts is arithmetic over those dates. Wrong evidence is
+ * worse than none.
+ *
+ * 0.06 is where the measured pairs stop being arguable. Above it: the
+ * Aperture note to Aperture, the dream-door note to the vivid dreams book,
+ * the woodwork course to the wood block, the paradox note to the paradox
+ * project, the baby's milestone to Pupils. Just below it, a note about
+ * Arsenal's defensive organisation attaches to "The Geometry of Good Vibes".
+ *
+ * Most captures belong to no project, and that is a real answer -- they stay
+ * unfiled, where `unfiled` in mull-subjects.ts can find them and ask why.
+ */
+const ATTACH_MARGIN = 0.06
 const ROLES = ['reference', 'constraint', 'material', 'deadline', 'obstacle', 'collaborator'] as const
 type FragmentRole = typeof ROLES[number]
 
@@ -34,6 +60,21 @@ interface ProjectCandidate {
   status?: string | null
 }
 
+/**
+ * Which project a capture belongs to, or none.
+ *
+ * Pure so it can be tested against real numbers rather than reasoned about.
+ * Takes similarities sorted high to low; returns the index of the winner, or
+ * null when nothing wins clearly enough to be worth writing down.
+ */
+export function chooseProject(sorted: number[]): number | null {
+  if (sorted.length === 0) return null
+  if (sorted[0] < ATTACH_SIM_THRESHOLD) return null
+  // One candidate has nothing to beat, so the floor is the whole test.
+  if (sorted.length === 1) return 0
+  return sorted[0] - sorted[1] >= ATTACH_MARGIN ? 0 : null
+}
+
 interface ClassifyResult {
   role: FragmentRole
   fillsSlot: string | null
@@ -42,13 +83,22 @@ interface ClassifyResult {
 async function classifyFragment(text: string, project: ProjectCandidate): Promise<ClassifyResult | null> {
   const openSlots = project.slots.filter(s => !s.filled).map(s => s.name)
 
-  const prompt = `Someone just captured a thought that connects to their project "${project.title}".
+  // The premise used to be asserted -- "a thought that CONNECTS to their
+  // project" -- so the model was only ever asked what kind of connection it
+  // was, and an unreadable answer fell back to 'reference'. There was no way
+  // for anything in this chain to say no. The vectors now have to clear a
+  // real margin before we get here (chooseProject), and this is the second
+  // look: the model sees the project and the thought and may say they have
+  // nothing to do with each other.
+  const prompt = `Someone captured a thought. The vectors say it may belong to their project "${project.title}".
 
 Thought: "${text}"
 
 Open questions this project still has: ${openSlots.length > 0 ? openSlots.join(', ') : 'none named yet'}
 
-What KIND of thing is this thought, in relation to the project? Pick exactly one:
+First: does this thought actually have anything to do with that project? If it does not, answer {"role": "none"} and nothing else. Being unrelated is the common case and it is a fine answer — say so rather than reaching for a link.
+
+If it does belong, what KIND of thing is it, in relation to the project? Pick exactly one:
 - reference: an inspiration or example
 - constraint: a rule or limit it should follow
 - material: a physical thing, resource, or asset available to use
@@ -60,11 +110,12 @@ Does it answer one of the open questions above? If yes, name that exact open que
 
 ${PLAIN_ENGLISH_RULES}
 
-Respond with JSON only: { "role": "...", "fills_slot": "exact open question text or null" }`
+Respond with JSON only: { "role": "..." | "none", "fills_slot": "exact open question text or null" }`
 
   try {
     const response = await generateText(prompt, { responseFormat: 'json', thinkingLevel: 'minimal' })
     const parsed = JSON.parse(response)
+    if (parsed?.role === 'none') return null
     const role = ROLES.includes(parsed?.role) ? (parsed.role as FragmentRole) : 'reference'
     const fillsSlot = typeof parsed?.fills_slot === 'string' && openSlots.includes(parsed.fills_slot)
       ? parsed.fills_slot
@@ -94,19 +145,21 @@ export async function attachFragmentFromMemory(
   // A new capture doesn't get silently filed under a project the user
   // buried. Was `.neq('state', 'harvested')` in the query, which missed
   // one sent to the graveyard by hand -- see project-state.ts.
-  let best: ProjectCandidate | null = null
-  let bestSim = 0
+  const scored: Array<{ project: ProjectCandidate; sim: number }> = []
   for (const p of projects as ProjectCandidate[]) {
     if (isGraveyarded(p)) continue
     if (!p.embedding) continue
-    const sim = cosineSimilarity(memory.embedding, p.embedding)
-    if (sim > bestSim) {
-      bestSim = sim
-      best = { ...p, slots: Array.isArray(p.slots) ? p.slots : [] }
-    }
+    scored.push({
+      project: { ...p, slots: Array.isArray(p.slots) ? p.slots : [] },
+      sim: cosineSimilarity(memory.embedding, p.embedding),
+    })
   }
+  scored.sort((a, b) => b.sim - a.sim)
 
-  if (!best || bestSim < ATTACH_SIM_THRESHOLD) return 0
+  const pick = chooseProject(scored.map(s => s.sim))
+  if (pick === null) return 0
+  const best = scored[pick].project
+  const bestSim = scored[pick].sim
 
   const classification = await classifyFragment(memory.content, best)
   if (!classification) return 0

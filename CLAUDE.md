@@ -133,6 +133,19 @@ Active, partly-shaped, dormant, and abandoned are different states. Long-dormant
 
 **The order of `metadata.tasks` is the plan.** The session takes the top open steps in order, so every writer keeps `order` contiguous (`api/_lib/task-order.ts`), generated steps declare what they come `after`, and what a close-out says comes next goes to the *front* of the open list. A step worked on but not finished carries `progress_note` — the user's own words — read back as the re-entry line for that step.
 
+### Attaching a capture to a project (`api/_lib/fragments.ts`)
+
+**An absolute similarity floor decides nothing in this vector space.** Measured on the live corpus, every note scores 0.55–0.66 against its nearest project whatever it is about (p10 0.56, p90 0.66) — so `ATTACH_SIM_THRESHOLD = 0.5` admitted 98% of everything and the winner was whichever project won by a hair. Half won by under 0.02: "cervical spine injection recovery" landed on *Painting where you tip the canvas* by a margin of **0.000**, and "nutritional profile of yellow tropical fruit" on *Create custom t-shirts for friends*.
+
+A fragment is not a harmless guess — it dates a capture onto a project's timeline, and every shape in `corpus-time.ts` is arithmetic over those dates. Wrong evidence is worse than none.
+
+- `chooseProject` (pure, tested against the measured numbers) requires the best project to beat the second-best by `ATTACH_MARGIN` (0.06) as well as clearing the floor. That's where the pairs stop being arguable: above it, the Aperture note → Aperture, the dream-door note → *Vivid dreams book*, the woodwork course → *Paint one wood block*, the baby's milestone → Pupils. Just below, a note on Arsenal's defensive organisation attaches to *The Geometry of Good Vibes*.
+- **Most captures belong to no project, and that is a real answer.** They stay unfiled, where `unfiled` in `mull-subjects.ts` can find them and ask why. ~7 of 52 attach, not 51.
+- The classifier is a second look, not a rubber stamp. Its prompt used to assert the premise — "a thought that **connects to** their project" — so it could only pick *which kind* of connection, and an unreadable answer fell back to `reference`. Nothing in the chain could say no. It can now answer `"role": "none"`, and is told that unrelated is the common case.
+- Only the runner-up can dispute the winner. A long tail of weak candidates is not evidence.
+
+**Draining a processing backlog**: `utilities?resource=reprocess-backlog` (cron-auth, `job=reprocess-backlog`) works in 40-second slices and returns `remaining` — call until it's 0. The daily job's six-a-night is right for a trickle and wrong for a backlog.
+
 ### Reading model output (`api/_lib/schemas.ts`)
 
 **`.optional()` means "may be absent", not "may be null" — and a model says "none" with `null`.** That one word threw away **53 of 75 memories** for eight months. `triage.project_id` was `z.string().optional()`; Gemini correctly returns `null` for a note that belongs to no project; Zod rejected the whole response; the note stayed `processed: false` with no title, no themes, no `memory_type`, no triage and — worst — **no fragment**, so it was attached to no project and invisible to every gatherer in the mull channel. The corpus was never thin because the user doesn't capture enough. Three-quarters of it was thrown away after the Gemini call, silently.
