@@ -1,25 +1,23 @@
--- Migration: clear embeddings written before the resonance verdict existed
--- Created: 2026-09-13
+-- Migration: only a "this was good" verdict keeps an article's embedding
+-- Created: 2026-09-13 (rule tightened 2026-09-15)
 --
--- 20260907_reading_resonance_and_gist.sql documented the rule -- only a
--- "good" verdict earns an embedding, "not for me" is excluded permanently,
--- an un-verdicted RSS item counts for nothing -- but three of the four
--- code paths that write reading_queue.embedding never checked it. They
--- embedded on save and on extraction, before any verdict existed. Fixed
--- in api/reading.ts (generateArticleEmbeddingAndConnect now checks
--- isCorpusEligible before writing), but that only stops new writes.
+-- The rule is the one in reading-corpus.ts: an article influences what the
+-- app says back to you only if you got to the end and voted "This was
+-- good". Three of the four code paths that write reading_queue.embedding
+-- never checked any of that -- they embedded on save and on extraction,
+-- before a verdict could exist -- so the feed backlog sat in the vector
+-- space as if it were corpus.
 --
--- This clears the embeddings that already leaked in under the old
--- behaviour, so match_reading and every semantic-search caller
--- (connections.ts, brainstorm.ts, the mull channel) stop treating
--- unread feed noise and rejected articles as real corpus.
--- read_at is part of the rule: an un-verdicted feed item the user actually
--- opened IS corpus, so its embedding stays. Only the never-opened backlog
--- and explicit rejections are cleared.
+-- A looser version of this cleared only the never-opened rows, on the
+-- theory that opening an article counted. It doesn't: two articles the
+-- owner had archived without reading turned up as sources in a real
+-- question. `read_at` isn't even a record of opening -- any path that sets
+-- status to 'reading' stamps it, including the right-swipe that means
+-- "put this in my list".
+--
+-- So: keep the embedding only where the verdict is 'good'. Everything else
+-- loses it, and earns it back the moment it gets voted on.
 UPDATE reading_queue
 SET embedding = NULL
 WHERE embedding IS NOT NULL
-  AND (
-    resonance = 'not_for_me'
-    OR (resonance IS NULL AND tags @> ARRAY['rss']::text[] AND read_at IS NULL)
-  );
+  AND (resonance IS DISTINCT FROM 'good');

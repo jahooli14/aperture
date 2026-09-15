@@ -138,7 +138,7 @@ async function loadRichArticles(userId: string): Promise<RichArticle[]> {
   // hand-saves (see reading-corpus.ts). Unread feed items say nothing.
   const { data, error } = await supabase
     .from('reading_queue')
-    .select('id, title, excerpt, themes, entities, tags, resonance, read_at, embedding')
+    .select('id, title, excerpt, themes, entities, tags, resonance, embedding')
     .eq('user_id', userId)
     .or('resonance.is.null,resonance.neq.not_for_me')
     .order('created_at', { ascending: false })

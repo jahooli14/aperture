@@ -91,15 +91,11 @@ async function fetchItems(supabase: any, table: string, userId: string, limit: n
   // Handle specific fields based on table
   if (table === 'projects') query = query.select('id, title, description, embedding, user_id')
   if (table === 'memories') query = query.select('id, title, body, embedding, user_id')
-  // Never spend an embedding on an article the user said wasn't for them —
-  // that's the noise the semantic search was full of. The `.or()` is only
-  // the coarse cut PostgREST can express; isCorpusEligible does the real
-  // filtering in processItem, since `.neq()` drops NULL rows and the rule
-  // also turns on `read_at` and `tags`. This path writes the embedding
-  // column directly rather than going through reading.ts's gated writer,
-  // so without that check it re-embeds the never-opened feed backlog the
-  // gate exists to keep out.
-  if (table === 'reading_queue') query = query.select('id, title, excerpt, content, tags, resonance, read_at, embedding, user_id').eq('processed', true).or('resonance.is.null,resonance.neq.not_for_me')
+  // Only what the user voted good earns an embedding (reading-corpus.ts).
+  // Filtered here AND re-checked by isCorpusEligible in processItem: this
+  // path writes reading_queue.embedding directly rather than going through
+  // reading.ts's gated writer, so the rule has to be applied on both.
+  if (table === 'reading_queue') query = query.select('id, title, excerpt, content, tags, resonance, embedding, user_id').eq('processed', true).eq('resonance', 'good')
   if (table === 'list_items') query = query.select('id, content, metadata, embedding, user_id').eq('enrichment_status', 'completed')
 
   const { data, error } = await query.limit(limit)
