@@ -35,7 +35,7 @@ export function isStandingQuestion(spark: { type: string } | null | undefined): 
   return !!spark
 }
 
-const quietActionStyle = { color: 'var(--brand-text-secondary)', opacity: 0.55 }
+const quietActionStyle = { color: 'var(--brand-text-secondary)', opacity: 0.45 }
 
 export function StandingQuestion() {
   const [spark, setSpark] = useState<StandingQuestionSpark | null>(null)
@@ -127,23 +127,23 @@ export function StandingQuestion() {
   if (!spark) {
     if (!loaded) return null
     return (
-      <div className="pb-3.5 mb-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.09)' }}>
+      <div className="pb-3.5 mb-4">
         <p
-          className="text-[10px] font-bold uppercase tracking-[0.28em] mb-1.5"
-          style={{ color: 'var(--brand-text-secondary)', opacity: 0.4 }}
+          className="text-[10px] font-medium uppercase tracking-[0.3em] mb-1.5"
+          style={{ color: 'var(--brand-text-secondary)', opacity: 0.32 }}
         >
           to mull
         </p>
         <button
-          className="text-[13px] transition-opacity hover:opacity-90 disabled:opacity-40"
-          style={{ color: 'var(--brand-text-secondary)', opacity: 0.6 }}
+          className="text-[13px] italic transition-opacity hover:opacity-80 disabled:opacity-35"
+          style={{ color: 'var(--brand-text-secondary)', opacity: 0.5, fontFamily: 'var(--brand-font-serif)' }}
           disabled={rerolling}
           onClick={reroll}
         >
           {rerolling ? 'thinking…' : 'give me something to think about'}
         </button>
         {note && (
-          <p className="text-[11px] mt-1.5" style={{ color: 'var(--brand-text-secondary)', opacity: 0.45 }}>
+          <p className="text-[11px] mt-1.5" style={{ color: 'var(--brand-text-secondary)', opacity: 0.4 }}>
             {note}
           </p>
         )}
@@ -153,8 +153,8 @@ export function StandingQuestion() {
 
   if (receipt) {
     return (
-      <div className="pb-3 mb-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.09)' }}>
-        <p className="text-[12px]" style={{ color: 'var(--brand-text-secondary)', opacity: 0.7 }}>{receipt}</p>
+      <div className="pb-3 mb-4">
+        <p className="text-[12px]" style={{ color: 'var(--brand-text-secondary)', opacity: 0.6 }}>{receipt}</p>
       </div>
     )
   }
@@ -162,17 +162,27 @@ export function StandingQuestion() {
   const projectTitle = spark.projects?.title ?? null
 
   return (
-    <div className="pb-3.5 mb-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.09)' }}>
+    <div className="pb-3.5 mb-4">
       <p
-        className="text-[10px] font-bold uppercase tracking-[0.28em] mb-1.5"
-        style={{ color: 'var(--brand-text-secondary)', opacity: 0.4 }}
+        className="text-[10px] font-medium uppercase tracking-[0.3em] mb-1.5"
+        style={{ color: 'var(--brand-text-secondary)', opacity: 0.32 }}
       >
         {projectTitle ? `to mull · ${projectTitle}` : 'to mull'}
       </p>
 
+      {/* Deliberately the quietest, softest text on the card — this is the
+          thing you read on the way past, not the thing you act on, and it
+          has to recede under the project below it. Italic serif instead of
+          the UI sans, lower contrast, roomier line height: a thought held
+          loosely rather than an instruction. */}
       <p
-        className="text-[14px] leading-[1.45]"
-        style={{ color: 'var(--brand-text-secondary)', textWrap: 'pretty' }}
+        className="text-[14px] leading-[1.6] italic font-light"
+        style={{
+          color: 'var(--brand-text-secondary)',
+          opacity: 0.68,
+          fontFamily: 'var(--brand-font-serif)',
+          textWrap: 'pretty',
+        }}
       >
         {spark.text}
       </p>
