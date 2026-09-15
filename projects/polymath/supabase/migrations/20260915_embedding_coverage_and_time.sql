@@ -9,8 +9,11 @@
 -- changes. Worse, a joint is a corpus object -- "something you keep
 -- saying" -- and nothing could search for one.
 --
--- GAP 2 — list_items were only embedded once enrichment finished, so
--- anything unenriched was invisible to every search forever.
+-- GAP 2 — list_items had no embedding column AT ALL. The migration adding
+-- it (20251227) was written and never run, so every list-item embedding
+-- write has been silently skipped ever since (maintainEmbeddings warns on
+-- 42703 and moves on) and match_list_items has never returned a row. The
+-- app-side enrichment gate on top of that was moot. Both are fixed here.
 --
 -- THE TIME DIMENSION. Deliberately NOT inside the vector: appending a date
 -- to the text before embedding makes every note from the same month look
@@ -23,6 +26,11 @@
 -- wrong -- the worst failure mode this codebase keeps rediscovering.
 
 ALTER TABLE joints ADD COLUMN IF NOT EXISTS embedding vector(768);
+
+-- 20251227_add_list_item_embeddings.sql, which was never applied.
+ALTER TABLE public.list_items ADD COLUMN IF NOT EXISTS embedding vector(768);
+CREATE INDEX IF NOT EXISTS idx_list_items_embedding
+  ON public.list_items USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
 
 -- When the vector was computed, everywhere one is stored. A row whose
 -- content is newer than its embedding is stale and needs rebuilding.
