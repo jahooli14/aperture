@@ -11,7 +11,7 @@
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { findOrbiters, pickOrbiters, type Embedded, type OrbitProject, type Orbiter } from './orbit.js'
+import { findOrbiters, pickOrbiters, cosine, toVec, type Embedded, type OrbitProject, type Orbiter } from './orbit.js'
 import { isGraveyarded } from './project-state.js'
 
 /** Whole-corpus reads are capped, not windowed — the same rule as the
@@ -80,6 +80,22 @@ export async function findOrbitPairs(
     embedding: m.embedding,
   })).filter((c: Embedded) => c.text.trim().length > 0)
 
+  // Measure the geometry before trusting any band drawn on it.
+  //
+  // The bands elsewhere in this channel (CONNECTOR_FLOOR 0.45, ceiling
+  // 0.82) were tuned on QUERY->DOCUMENT similarity: a short blind-spot
+  // question against note bodies. Orbit is DOCUMENT->DOCUMENT -- a
+  // project's title+description against a memory body -- which is a
+  // different distribution, and a band copied across from one to the
+  // other is a guess wearing a number.
+  //
+  // Two things decide whether this mechanism can work at all:
+  //   the SPREAD of each capture's best-project score (if everything
+  //   scores the same, no floor can separate near from far), and
+  //   the MARGIN between best and second-best (if they are equal,
+  //   "closest to THIS project" is noise and the claim is false).
+  trace.push(...describeGeometry(projects, captures))
+
   const all = findOrbiters(projects, captures)
   // Drop anything already filed under the very project it orbits — that
   // one went in, whatever the vectors say.
@@ -98,4 +114,43 @@ export async function findOrbitPairs(
     )
   }
   return picked
+}
+
+/** Percentile of a sorted ascending array. */
+function pct(sorted: number[], p: number): number {
+  if (sorted.length === 0) return 0
+  const i = Math.min(sorted.length - 1, Math.max(0, Math.round((p / 100) * (sorted.length - 1))))
+  return sorted[i]
+}
+
+/**
+ * What the vector space actually looks like here, in numbers, so a band
+ * can be drawn from evidence instead of from memory.
+ */
+export function describeGeometry(projects: OrbitProject[], captures: Embedded[]): string[] {
+  const pv = projects
+    .map(p => toVec(p.embedding))
+    .filter((v): v is number[] => v !== null)
+  if (pv.length < 2 || captures.length === 0) return ['orbit geometry: not enough vectors to measure']
+
+  const bests: number[] = []
+  const margins: number[] = []
+  for (const c of captures) {
+    const v = toVec(c.embedding)
+    if (!v) continue
+    const scores = pv.map(p => cosine(v, p)).sort((a, b) => b - a)
+    bests.push(scores[0])
+    margins.push(scores[0] - scores[1])
+  }
+  if (bests.length === 0) return ['orbit geometry: no captures with vectors']
+
+  const b = [...bests].sort((x, y) => x - y)
+  const m = [...margins].sort((x, y) => x - y)
+  const f = (n: number) => n.toFixed(3)
+  return [
+    `orbit geometry: best-project score p10 ${f(pct(b, 10))} p50 ${f(pct(b, 50))} ` +
+    `p90 ${f(pct(b, 90))} p99 ${f(pct(b, 99))} max ${f(b[b.length - 1])}`,
+    `orbit geometry: margin over 2nd-best p50 ${f(pct(m, 50))} p90 ${f(pct(m, 90))} ` +
+    `p99 ${f(pct(m, 99))} max ${f(m[m.length - 1])}`,
+  ]
 }
