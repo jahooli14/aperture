@@ -61,8 +61,8 @@ export interface Orbiter {
   capture: Embedded
   project: OrbitProject
   similarity: number
-  /** How many other projects this capture is also near. 0 is the prize:
-   *  it belongs to this one and nothing else. */
+  /** How many other projects have a real claim on this capture too. 0 is the
+   *  prize: it belongs to this one and nothing else. */
   alsoNear: number
   /** True, computed, and not something a model could invent. */
   fact: string
@@ -70,17 +70,41 @@ export interface Orbiter {
   strength: number
 }
 
-/** Below this the capture is not about the project at all. */
-export const ORBIT_FLOOR = 0.55
+/**
+ * Below this the capture is not about the project at all.
+ *
+ * Measured, not guessed. On the live corpus with centroid project vectors
+ * (projectCentroid), a capture's best-project score runs p10 0.667, p50
+ * 0.749, p90 0.884, max 0.989. The old 0.55 sat below the tenth percentile,
+ * so it admitted essentially everything and did no work -- which is what
+ * made every pick read "also near 14 others".
+ */
+export const ORBIT_FLOOR = 0.70
 /**
  * Above this it is the project restated rather than something to bring
  * into it — the note that says what the description already says. The old
  * channel's commonest failure was pairing a project with itself in
  * different words, and it read as profound for exactly one second.
+ *
+ * 0.88 was a guess made before the geometry was measured, and it sat on the
+ * 90th percentile — throwing away a tenth of the real matches as if they
+ * were restatements. Restatement lives up at p99 (0.928) and above.
  */
-export const ORBIT_CEILING = 0.88
+export const ORBIT_CEILING = 0.93
 /** Old enough that not filing it was a choice rather than a backlog. */
 export const ORBIT_MIN_AGE_DAYS = 30
+
+/**
+ * How far clear of the runner-up the winner must be for "this project is its
+ * nearest" to be a claim rather than a coin toss.
+ *
+ * Counting rivals by the floor was wrong for the same reason an absolute
+ * floor is wrong for fragment attachment (fragments.ts): in this space
+ * almost everything clears any floor you can honestly set, so every capture
+ * came out "also near" a dozen projects and the one distinction orbit exists
+ * to draw was never drawn. Live margins: p50 0.047, p90 0.202, max 0.333.
+ */
+export const ORBIT_RIVAL_MARGIN = 0.05
 
 const DAY = 86_400_000
 
@@ -151,8 +175,9 @@ export function findOrbiters(
 
     // Near several projects means a general interest, not this project's
     // unused material. Counted, not excluded — it weakens the claim
-    // rather than voiding it.
-    const alsoNear = scored.slice(1).filter(s => s.similarity >= ORBIT_FLOOR).length
+    // rather than voiding it. A rival counts when it is within touching
+    // distance of the winner, not merely when it clears the floor.
+    const alsoNear = scored.slice(1).filter(s => best.similarity - s.similarity < ORBIT_RIVAL_MARGIN).length
 
     out.push({
       capture,

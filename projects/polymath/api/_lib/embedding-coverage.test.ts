@@ -12,7 +12,7 @@ describe('isStale', () => {
   it('is not stale when the row has not changed since the vector was built', () => {
     expect(isStale(row({
       embedded_at: '2026-02-01T00:00:00Z',
-      updated_at: '2026-01-15T00:00:00Z',
+      text_updated_at: '2026-01-15T00:00:00Z',
     }))).toBe(false)
   })
 
@@ -21,33 +21,37 @@ describe('isStale', () => {
     // returns rows, and is quietly answering about text that is gone.
     expect(isStale(row({
       embedded_at: '2026-01-15T00:00:00Z',
-      updated_at: '2026-03-01T00:00:00Z',
+      text_updated_at: '2026-03-01T00:00:00Z',
     }))).toBe(true)
   })
 
   it('does not call a row with no vector stale — it is missing, not wrong', () => {
-    expect(isStale(row({ embedding: null, embedded_at: '2026-01-01T00:00:00Z', updated_at: '2026-03-01T00:00:00Z' }))).toBe(false)
+    expect(isStale(row({ embedding: null, embedded_at: '2026-01-01T00:00:00Z', text_updated_at: '2026-03-01T00:00:00Z' }))).toBe(false)
   })
 
   it('leaves rows that predate the column alone', () => {
     // The migration stamps these. Reading a missing embedded_at as stale
     // would rebuild the whole corpus on the first run for no reason.
-    expect(isStale(row({ updated_at: '2026-03-01T00:00:00Z' }))).toBe(false)
+    expect(isStale(row({ text_updated_at: '2026-03-01T00:00:00Z' }))).toBe(false)
   })
 
-  it('falls back to created_at when a table has no updated_at', () => {
-    expect(isStale(row({ created_at: '2026-03-01T00:00:00Z', embedded_at: '2026-01-01T00:00:00Z' }))).toBe(true)
+  it('does not guess staleness from a timestamp that is not about the text', () => {
+    // A project row is written whenever its heat is recomputed or a task is
+    // ticked. Reading that as "the text changed" reported all 34 projects
+    // stale on a corpus where none had been reworded, which would have sent
+    // the whole table back through the embedder every run.
+    expect(isStale(row({ created_at: '2026-03-01T00:00:00Z', embedded_at: '2026-01-01T00:00:00Z' }))).toBe(false)
   })
 
   it('allows a second of slack, because the two writes race on the capture path', () => {
     expect(isStale(row({
       embedded_at: '2026-01-01T00:00:00.000Z',
-      updated_at: '2026-01-01T00:00:00.400Z',
+      text_updated_at: '2026-01-01T00:00:00.400Z',
     }))).toBe(false)
   })
 
   it('treats an unreadable timestamp as no evidence rather than as staleness', () => {
-    expect(isStale(row({ embedded_at: 'whenever', updated_at: '2026-03-01T00:00:00Z' }))).toBe(false)
+    expect(isStale(row({ embedded_at: 'whenever', text_updated_at: '2026-03-01T00:00:00Z' }))).toBe(false)
   })
 })
 
@@ -56,7 +60,7 @@ describe('summarise', () => {
     const c = summarise('memories', [
       row({ id: 'a', embedded_at: '2026-02-01T00:00:00Z' }),
       row({ id: 'b', embedding: null }),
-      row({ id: 'c', embedded_at: '2026-01-01T00:00:00Z', updated_at: '2026-04-01T00:00:00Z' }),
+      row({ id: 'c', embedded_at: '2026-01-01T00:00:00Z', text_updated_at: '2026-04-01T00:00:00Z' }),
     ])
     expect(c).toMatchObject({ table: 'memories', total: 3, embedded: 2, missing: 1, stale: 1, excluded: 0 })
   })

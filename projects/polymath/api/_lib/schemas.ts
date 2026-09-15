@@ -51,6 +51,40 @@ const severity = z.enum(['critical', 'annoying', 'minor'])
 // This applies to model OUTPUT only. Request bodies from our own client stay
 // strict — there a wrong shape is a bug to surface, not noise to absorb.
 
+/**
+ * Parse JSON a model produced, repairing the two things they actually get
+ * wrong before giving up.
+ *
+ * A note was lost to `Expected double-quoted property name at position 629`.
+ * The thought was fine, the extraction was fine; a comma in the wrong place
+ * threw the whole thing away, and the row then spent retries reproducing a
+ * failure that had nothing to do with its content.
+ *
+ * Repairs are attempted ONLY after an honest parse fails, so valid JSON is
+ * never touched. If the repair does not parse either, the original error is
+ * thrown -- a salvage that invents structure would be worse than the loss.
+ */
+export function parseModelJson(text: string): unknown {
+  const block = text.match(/\{[\s\S]*\}/)
+  if (!block) throw new Error('no JSON object in model response')
+  const raw = block[0]
+
+  try {
+    return JSON.parse(raw)
+  } catch (first) {
+    const repaired = raw
+      // A trailing comma before a closing brace or bracket.
+      .replace(/,(\s*[}\]])/g, '$1')
+      // An unquoted property name: { role: "x" } rather than { "role": "x" }.
+      .replace(/([{,]\s*)([A-Za-z_][A-Za-z0-9_]*)(\s*:)/g, '$1"$2"$3')
+    try {
+      return JSON.parse(repaired)
+    } catch {
+      throw first
+    }
+  }
+}
+
 /** Optional on model output: absent, null, or malformed all read as absent. */
 function said<T>(schema: z.ZodType<T>): z.ZodType<T | undefined> {
   return z

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import {
+  parseModelJson,
   CaptureMemoryBody,
   CaptureTitleResponse,
   ExtractMetadataResponse,
@@ -393,5 +394,39 @@ describe('ExtractMetadataResponse — null is how a model says "none"', () => {
     expect(ExtractMetadataResponse.safeParse({ ...base, summary_title: undefined }).success).toBe(false)
     expect(ExtractMetadataResponse.safeParse({ ...base, insightful_body: null }).success).toBe(false)
     expect(ExtractMetadataResponse.safeParse({ ...base, memory_type: 'vibes' }).success).toBe(false)
+  })
+})
+
+describe('parseModelJson', () => {
+  it('reads clean JSON untouched', () => {
+    expect(parseModelJson('{"role":"reference","n":1}')).toEqual({ role: 'reference', n: 1 })
+  })
+
+  it('finds the object inside a fenced or chatty response', () => {
+    expect(parseModelJson('```json\n{"a":1}\n```')).toEqual({ a: 1 })
+    expect(parseModelJson('Sure! {"a":1} Hope that helps.')).toEqual({ a: 1 })
+  })
+
+  it('survives a trailing comma', () => {
+    expect(parseModelJson('{"a":1,"b":[1,2,],}')).toEqual({ a: 1, b: [1, 2] })
+  })
+
+  it('survives an unquoted property name', () => {
+    // The real loss: "Expected double-quoted property name at position 629"
+    // threw away a note about a wardrobe. The thought was fine.
+    expect(parseModelJson('{role:"reference",fills_slot:null}')).toEqual({
+      role: 'reference', fills_slot: null,
+    })
+  })
+
+  it('does not mangle a colon inside a string value', () => {
+    expect(parseModelJson('{"note":"the time is 10:30, roughly"}')).toEqual({
+      note: 'the time is 10:30, roughly',
+    })
+  })
+
+  it('throws rather than inventing structure it cannot read', () => {
+    expect(() => parseModelJson('not json at all')).toThrow()
+    expect(() => parseModelJson('{"a": <<broken>>}')).toThrow()
   })
 })

@@ -72,9 +72,11 @@ describe('findOrbiters', () => {
     expect(findOrbiters([book, deck], [fresh], NOW)).toHaveLength(0)
   })
 
-  it('counts how many other projects it is also near, and says so', () => {
-    // Sits between the two projects: near both.
-    const between = capture('c1', vec(1, 0.9), 200)
+  it('counts a rival only when it is within touching distance, not merely near', () => {
+    // Dead between the two projects: neither has a real claim over the other.
+    // Counting rivals by the floor instead made every capture "also near" a
+    // dozen projects, because in this space almost everything clears a floor.
+    const between = capture('c1', vec(1, 1), 200)
     const found = findOrbiters([book, deck], [between], NOW)
     expect(found).toHaveLength(1)
     expect(found[0].alsoNear).toBe(1)

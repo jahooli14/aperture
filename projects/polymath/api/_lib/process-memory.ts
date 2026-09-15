@@ -9,7 +9,7 @@ import { MODELS } from './models.js'
 import { generateEmbedding } from './gemini-embeddings.js'
 import { thinkingFragment } from './gemini-thinking.js'
 import { draftFix } from './fix-queue/drafter.js'
-import { ExtractMetadataResponse, validate } from './schemas.js'
+import { ExtractMetadataResponse, validate, parseModelJson } from './schemas.js'
 import { PLAIN_ENGLISH_RULES } from './plain-english.js'
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
@@ -646,14 +646,15 @@ Return only valid JSON.`
     response_preview: response.substring(0, 200)
   }, 'Gemini metadata extraction response')
 
-  // Parse JSON (Gemini usually returns clean JSON)
-  const jsonMatch = response.match(/\{[\s\S]*\}/)
-  if (!jsonMatch) {
+  // Repairs a trailing comma or an unquoted key before giving up; a note is
+  // not worth losing to punctuation (schemas.ts).
+  let raw: unknown
+  try {
+    raw = parseModelJson(response)
+  } catch (e) {
     logger.error({ response }, 'Failed to parse Gemini response as JSON')
-    throw new Error('Failed to parse Gemini response as JSON')
+    throw e instanceof Error ? e : new Error('Failed to parse Gemini response as JSON')
   }
-
-  const raw = JSON.parse(jsonMatch[0])
   const parsed = validate(ExtractMetadataResponse, raw, 'extractMetadata')
   logger.info({
     summary_title: parsed.summary_title?.substring(0, 60),

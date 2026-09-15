@@ -12,10 +12,17 @@
  * So coverage is counted, per table, with the reason a row is out:
  *
  *   MISSING — should have a vector and does not.
- *   STALE   — has one, but the row has been edited since it was computed
- *             (`embedded_at` older than `updated_at`). A stale vector is
- *             worse than a missing one: nothing retries it, and it is
- *             wrong rather than absent.
+ *   STALE   — has one, but the TEXT THAT WAS EMBEDDED has changed since it
+ *             was computed. A stale vector is worse than a missing one:
+ *             nothing retries it, and it is wrong rather than absent.
+ *
+ *             `updated_at` does not mean that. A project's row is written
+ *             every time its heat is recomputed or a task is ticked, none
+ *             of which touches its title or description -- so comparing the
+ *             two reported all 34 projects stale on a corpus where not one
+ *             had been reworded. A check that cries wolf on everything is
+ *             the same as no check, and this one would have sent the whole
+ *             table back through the embedder every run.
  *   N/A     — deliberately excluded. An article without a "good" verdict
  *             is not corpus (reading-corpus.ts), so it is not a gap.
  */
@@ -34,7 +41,9 @@ export interface CoverageRow {
   id: string
   embedding: unknown
   embedded_at?: string | null
-  updated_at?: string | null
+  /** When the text that gets embedded last changed — NOT `updated_at`, which
+   *  moves for reasons that have nothing to do with the text. */
+  text_updated_at?: string | null
   created_at?: string | null
 }
 
@@ -53,7 +62,10 @@ function hasVector(v: unknown): boolean {
 export function isStale(row: CoverageRow): boolean {
   if (!hasVector(row.embedding)) return false
   if (!row.embedded_at) return false
-  const changed = row.updated_at ?? row.created_at
+  // Only a column that actually carries the embedded text can date it.
+  // Nothing does yet, so staleness is honestly unanswerable and reported
+  // as such rather than guessed at from an unrelated timestamp.
+  const changed = row.text_updated_at
   if (!changed) return false
   const changedAt = new Date(changed).getTime()
   const embeddedAt = new Date(row.embedded_at).getTime()

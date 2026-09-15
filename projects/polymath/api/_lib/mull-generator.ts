@@ -539,12 +539,26 @@ What makes it good:
 - It points AT THE PROJECT, forward. The answer should leave them holding a
   decision about what to make next, not a nicer understanding of themselves.
   Name the project. A question that never mentions it is about nothing.
+- THE HARDEST RULE, AND THE ONE MOST OFTEN MISSED: a phrase of THEIR words
+  has to appear in the QUESTION ITSELF — the sentence with the question mark
+  in it — not only in the sentence that sets it up. Lift three or four words
+  straight out of the material and build the question around them.
+  A real failure, from a live run:
+    "You wrote that a man drops off the internet to rediscover himself,
+     becoming a postman. Does the knowledge base keep running in the
+     background, or does the user have to walk away?"
+  The note is in the setup and then abandoned; the question is written in
+  YOUR vocabulary and could have been asked with no note at all. Instead:
+    "...Does Aperture only work if you drop off the internet first?"
+  Same note, but "drop off the internet" is doing the asking. That is the
+  difference between a question they carry and one they scroll past.
 - The material is the lever, not the other half of a comparison. The question
   should be one they could only ask because that material is sitting there
   unused.
-- Use the note's own concrete detail. Not "your recent reflections on family" —
-  say the thing it actually said. Their words, not a summary of their words:
-  they can dismiss you, they can't dismiss themselves from eight months ago.
+- Where something is RUNNING OUT, say so. "You have said this since March
+  2023" is a fact; "you have said this for two years and it still isn't a
+  thing" has a cost in it. A question with a clock or a price attached gets
+  answered; a neutral observation gets admired and forgotten.
 - The date is available to you, and when the length of time IS the point —
   they have believed this since 2023, they stopped in August — say it exactly:
   a real date is the one part they cannot argue with and the one part they had
