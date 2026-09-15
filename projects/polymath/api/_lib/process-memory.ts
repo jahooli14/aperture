@@ -6,6 +6,7 @@ import { updateItemConnections } from './connection-logic.js'
 import { detectProjectGenesis, mergeGenesisInsights } from './project-genesis.js'
 import { generateText } from './gemini-chat.js'
 import { MODELS } from './models.js'
+import { generateEmbedding } from './gemini-embeddings.js'
 import { thinkingFragment } from './gemini-thinking.js'
 import { draftFix } from './fix-queue/drafter.js'
 import { ExtractMetadataResponse, validate } from './schemas.js'
@@ -162,9 +163,7 @@ export async function processMemory(memoryId: string, opts: ProcessOptions = {})
 
     // 4. Update the memory with extracted metadata and processed content
     logger.info({ memory_id: memoryId }, '🔄 Updating memory in database...')
-    const { error: updateError } = await supabase
-      .from('memories')
-      .update({
+    const updates: Record<string, unknown> = {
         title: metadata.summary_title,
         // For voice notes: store lightly-cleaned body (fillers removed). Text notes: body unchanged.
         ...(memory.orig_transcript ? { body: metadata.insightful_body } : {}),
@@ -187,7 +186,7 @@ export async function processMemory(memoryId: string, opts: ProcessOptions = {})
         triage: metadata.triage,
         // Omitted rather than nulled when generation failed, so reprocessing
         // an already-embedded thought can't wipe a good vector.
-        ...(embedding ? { embedding } : {}),
+        ...(embedding ? { embedding, embedded_at: new Date().toISOString() } : {}),
         processed: true,
         processed_at: new Date().toISOString(),
         // The note made it. Clear the counter so a row that failed four times
@@ -195,8 +194,17 @@ export async function processMemory(memoryId: string, opts: ProcessOptions = {})
         // forever at MAX_PROCESS_ATTEMPTS.
         process_attempts: 0,
         error: null,
-      })
-      .eq('id', memoryId)
+    }
+
+    // embedded_at arrives with a migration the deploy does not run, so a write
+    // naming it has to survive the window where the column is not there yet.
+    // Otherwise the day of the deploy loses every note it processes -- the
+    // same shape as the bug this whole pass is about.
+    let { error: updateError } = await supabase.from('memories').update(updates).eq('id', memoryId)
+    if (updateError?.code === '42703') {
+      const { embedded_at: _dropped, ...withoutStamp } = updates
+      ;({ error: updateError } = await supabase.from('memories').update(withoutStamp).eq('id', memoryId))
+    }
 
     if (updateError) {
       logger.error({ memory_id: memoryId, error: updateError }, '🚨 Failed to update memory')
@@ -661,14 +669,16 @@ Return only valid JSON.`
 /**
  * Generate embedding using Gemini
  */
-async function generateEmbedding(text: string): Promise<number[]> {
-  const model = genAI.getGenerativeModel({ model: MODELS.DEFAULT_EMBEDDING })
-  const result = await model.embedContent({
-    content: { role: 'user', parts: [{ text }] },
-    outputDimensionality: MODELS.DEFAULT_EMBEDDING_DIMS,
-  } as Parameters<typeof model.embedContent>[0])
-  return result.embedding.values
-}
+// Embeddings come from gemini-embeddings.ts, never from a local copy.
+//
+// There was one here, and it skipped both of that module's guarantees: unit
+// normalisation (gemini-embedding-001 only returns unit-length output at its
+// native 3072 dims) and the 768-width check. So every memory embedded through
+// the MAIN capture path violated the "vectors are normalized on write"
+// invariant, while everything else in the app honoured it. Nothing was
+// visibly broken -- every comparison here is cosine, which ignores magnitude
+// -- which is exactly why it survived. It would have surfaced as "search got
+// worse" the day anyone added an inner-product or L2 index.
 
 /**
  * Store individual entities in the entities table
