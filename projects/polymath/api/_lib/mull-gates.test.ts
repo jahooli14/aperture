@@ -61,6 +61,15 @@ const SHOULD_SHIP = [
   candidate(
     "Your note about one take sits oddly next to the four rewrites. What would it cost to find out which is true?",
     'one take', 'He runs the next chapter as a single pass.'),
+  // "or" is not itself the problem -- this asks ONE thing, twice over, and
+  // the alternative is not two options the question handed them.
+  candidate(
+    "You keep buying records you don't play. What would it take to play them, or to admit you collect rather than listen?",
+    "I keep buying records I don't play", 'He starts a listening night.'),
+  // Opens with "Does" but offers no alternative, so it is a real question.
+  candidate(
+    "You said it only works if it's one take. Does the fourth rewrite still count as the same chapter?",
+    "it only works if it's one take", 'He ships the next chapter as a first draft.'),
   // Wordier and a bit hedged, the way a small model actually writes.
   candidate(
     "In your notes you said it only works if it is one take. The chapters, though, keep getting rewritten. Which one is the real rule?",
@@ -88,6 +97,16 @@ const SHOULD_REFUSE = [
   ["invents a specific nothing supports", candidate(
     "You kept a school book from the 1950s/60s while working on the book. You wrote that it only works if it is one take. Which page from the French school book goes in chapter nine?",
     'it only works if it is one take', 'He picks the page and drafts the chapter.')],
+  // Both shipped live from a healthy corpus, quote landing correctly, and
+  // both are answerable in five seconds by picking a side. The prompt had
+  // banned this from the start -- as a phrasing, which the model simply
+  // did not use.
+  ["hands them a choice it invented", candidate(
+    "You noted that DJ Elmoe's footwork completely blew us away. Does Tame impala synth sessions run on footwork, or does it stay on the synth?",
+    "DJ Elmoe's footwork completely blew us away", 'He picks a direction for the next track.')],
+  ["a choice in the other common phrasing", candidate(
+    "You said it only works if it's one take. Is the book about the takes, or is it about the rewrites?",
+    "it only works if it's one take", 'He drafts the next chapter once.')],
   ["invents the quote", candidate(
     "You said you had ten more summers with your dad. What are the chapters for?",
     'ten more summers with your dad', 'Chapters nine to twelve come out.')],

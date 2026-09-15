@@ -514,10 +514,25 @@ So do NOT look for a link. There is no link to find and nothing to bridge.
 The relationship is already stated. Your job is the next step: what does the
 project become if that material goes in?
 
-NEVER write "X, and also Y — which is it?". Setting the two side by side and
-hinging them with "or" is the failure this is built to stop. A real one reads
-"You already have X. What is the version of the project that uses it?" — one
-thing, pointing forward, not two things and a choice.
+THE QUESTION MAY NOT OFFER A CHOICE. Not the wording — the SHAPE. Any
+question whose answer is one of two things the question itself supplied is
+the failure this is built to stop, however it is phrased. All of these are
+the same banned move:
+  "X, and also Y — which is it?"
+  "Does <project> do X, or does it stay Y?"
+  "Is this about X or about Y?"
+Two live rejects, both from this exact template:
+  "Does Pupils trace how he grows up, or does it stay in the nursery?"
+  "Does Tame impala synth sessions run on footwork, or does it stay on the synth?"
+They are answerable in five seconds by picking a side, so nothing happens for
+three days — and picking a side was never the point.
+
+Start the question with What, How, or Which ONE, and never with Does, Is,
+Are, Will, Should or Can. A question that starts with "Does" has already
+narrowed to yes/no before it has said anything.
+
+A real one reads "You already have X. What is the version of the project that
+uses it?" — one thing, pointing forward, open at the end.
 
 For each pair, write ONE thing for them to carry around.
 

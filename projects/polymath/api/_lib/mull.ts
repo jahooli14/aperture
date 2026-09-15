@@ -526,6 +526,43 @@ export interface ValidationInput extends MullDraft {
  * Throwing one away is cheap: there is no fixed daily slot to fill, and
  * a question that lands badly is read once and distrusted for a week.
  */
+/**
+ * Does the question hand them a choice between two things it supplied?
+ *
+ * The prompt has banned this from the start, and the model kept doing it
+ * anyway, because the ban was written as a PHRASING ("X, and also Y — which
+ * is it?") and the model was using a different one:
+ *
+ *   "Does Pupils trace how he grows up, or does it stay in the nursery?"
+ *   "Does Tame impala synth sessions run on footwork, or does it stay on
+ *    the synth?"
+ *
+ * Both shipped from a healthy corpus with the quote landing correctly, and
+ * both are answerable in five seconds by picking a side — which the channel's
+ * own "too easy is a quiz" rule says is nothing to carry for three days.
+ *
+ * Narrow on purpose: an opening auxiliary AND an explicit alternative. A
+ * question may still say "or" ("what would it take to finish it, or to
+ * admit it is finished?" is one thing asked twice) and may still start with
+ * "Does" if it offers no alternative. Both halves must be present, because
+ * a gate that fires on either one would throw away good questions, which
+ * this channel has done before and pays for in empty slots.
+ *
+ * Shape alone is not the verdict, though — see `stakeSplits`. Some of the
+ * best questions this channel can ask ARE either/ors.
+ */
+/** Does the stake name a different outcome for each branch of the question? */
+export function stakeSplits(stake: string): boolean {
+  return /\bor\b|\beither way\b/i.test(stake ?? '')
+}
+
+export function offersAChoice(questionText: string): boolean {
+  const q = questionSentence(questionText).trim().toLowerCase()
+  const opensClosed = /^(does|do|did|is|are|was|were|will|would|should|can|could|has|have)\b/.test(q)
+  const alternative = /,\s*or\b|\bor is it\b|\bor does it\b|\bwhich is it\b/.test(q)
+  return opensClosed && alternative
+}
+
 export function rejectionReason(input: ValidationInput): string | null {
   const text = input.text.trim()
   if (text.length === 0) return 'empty'
@@ -552,6 +589,20 @@ export function rejectionReason(input: ValidationInput): string | null {
 
   const explainer = EXPLAINER_PATTERNS.find(re => re.test(text))
   if (explainer) return `explains the link: ${explainer.source}`
+
+  // A binary is only fake when both branches land in the same place. The
+  // prompt already demands the model say what the user would DO differently
+  // depending on the answer, so the stake is the evidence: one that names
+  // two outcomes means the either/or is real and worth carrying --
+  //   "Do you have it now, or did you miss the work?"
+  //   stake: "He writes the last line this week, or admits he wanted the hours."
+  // -- while a single outcome behind a two-sided question means the sides
+  // were decoration:
+  //   "Does Pupils trace how he grows up, or does it stay in the nursery?"
+  //   stake: "He picks a direction."
+  if (offersAChoice(text) && !stakeSplits(input.stake)) {
+    return 'offers a choice between two things it supplied, and nothing different happens either way'
+  }
 
   // Only when the caller supplied the subject. Half the evidence is not
   // enough to call something invented: the dated facts this channel
