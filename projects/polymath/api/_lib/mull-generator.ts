@@ -699,6 +699,10 @@ export async function generateMull(
       quote: draft.quote,
       stake: draft.stake,
       connectorText: draft.pairing.connector.text,
+      // A good question names the project, and the project is not in the
+      // note -- so the subject is evidence too, or every mention of it
+      // reads as invented.
+      subjectText: `${draft.pairing.subject.title} ${draft.pairing.subject.line}`,
     })
     if (reason) {
       trace.push(`dropped: ${reason}`)

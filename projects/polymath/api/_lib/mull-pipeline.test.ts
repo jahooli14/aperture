@@ -164,7 +164,7 @@ const DRAFTS = JSON.stringify({
   pairs: [
     {
       n: 1,
-      spark: 'You wrote that you get maybe ten more proper conversations with dad, and you spend them on the greenhouse. You have said since 2023 that it only works if it is one take. What are you doing twice?',
+      spark: 'You wrote that you get maybe ten more proper conversations with dad, and you spend them on the greenhouse. You have said for years that it only works if it is one take. What are you doing twice?',
       quote: 'ten more proper conversations with dad',
       stake: 'He stops re-recording and keeps the next first pass.',
     },
@@ -840,7 +840,7 @@ describe('a sloppy quote no longer loses the question before the gate sees it', 
     const noQuote = JSON.stringify({
       pairs: [{
         n: 1,
-        spark: 'You wrote that you get maybe ten more proper conversations with dad, and you spend them on the greenhouse. You have said since 2023 that it only works if it is one take. What are you doing twice?',
+        spark: 'You wrote that you get maybe ten more proper conversations with dad, and you spend them on the greenhouse. You have said for years that it only works if it is one take. What are you doing twice?',
         quote: '',
         stake: 'He stops re-recording and keeps the next first pass.',
       }],
