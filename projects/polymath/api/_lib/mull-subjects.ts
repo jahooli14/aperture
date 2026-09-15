@@ -593,10 +593,7 @@ async function articleSubject(
     // so every feed-sourced article was excluded by a threshold it could
     // never meet, whatever the user thought of it. 198 rows, none usable.
     // The full text is right there in the same row.
-    // read_at decides eligibility for a feed item that was never given a
-    // verdict (reading-corpus.ts). Leave it out of the select and every
-    // such article reads as never-opened and silently drops out.
-    .select('id, title, excerpt, content, resonance, tags, read_at, created_at')
+    .select('id, title, excerpt, content, resonance, tags, created_at')
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
     .limit(300)

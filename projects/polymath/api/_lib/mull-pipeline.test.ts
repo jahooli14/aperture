@@ -461,19 +461,20 @@ describe('a feed article can be a subject', () => {
     expect(article!.block).not.toContain('<p>')
   })
 
-  it('counts a feed article the user opened but never gave a verdict', async () => {
-    // The live corpus was 198 articles and 0 of them eligible: the buttons
-    // are at the END of an article, so almost nothing gets tapped, and
-    // "verdict or nothing" meant the whole reading input was dark.
-    // Opening one is the user picking it out of the feed themselves.
+  it('ignores a feed article opened but never voted on', () => {
+    // Two archived articles reached a real question this way. Opening is
+    // not a verdict, and read_at is not even a reliable record of opening:
+    // any path that sets status to 'reading' stamps it, including the
+    // swipe that means "put this in my list".
     const data = corpus() as any
     data.reading_queue = [{
       ...data.reading_queue.find((r: any) => r.id === 'r2'),
       resonance: null,
       read_at: ago(290),
     }]
-    const subjects = await gatherSubjects(fakeSupabase(data).client, 'u1')
-    expect(subjects.find(s => s.kind === 'article')).toBeDefined()
+    return gatherSubjects(fakeSupabase(data).client, 'u1').then(subjects => {
+      expect(subjects.find(s => s.kind === 'article')).toBeUndefined()
+    })
   })
 
   it('still ignores a feed article that was never opened', async () => {

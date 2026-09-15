@@ -149,7 +149,7 @@ export async function gatherForIdeas(supabase: Supabase, userId: string): Promis
     // the unread feed noise afterwards.
     supabase
       .from('reading_queue')
-      .select('id, title, excerpt, source, created_at, status, tags, resonance, read_at, themes, embedding')
+      .select('id, title, excerpt, source, created_at, status, tags, resonance, themes, embedding')
       .eq('user_id', userId)
       .or('resonance.is.null,resonance.neq.not_for_me')
       .order('created_at', { ascending: false })

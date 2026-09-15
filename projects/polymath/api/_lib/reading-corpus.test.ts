@@ -21,7 +21,7 @@ const handSaved = (over: Record<string, unknown> = {}) => ({
 })
 
 describe('isCorpusEligible', () => {
-  it('keeps an article the user marked good', () => {
+  it('keeps only what the user finished and voted good', () => {
     expect(isCorpusEligible(feedItem({ resonance: 'good' }))).toBe(true)
     expect(isCorpusEligible(handSaved({ resonance: 'good' }))).toBe(true)
   })
@@ -31,51 +31,33 @@ describe('isCorpusEligible', () => {
     expect(isCorpusEligible(handSaved({ resonance: 'not_for_me' }))).toBe(false)
   })
 
-  it('drops an undecided RSS item — arriving in a feed is not a signal', () => {
+  it('drops everything with no verdict — reading it is not voting on it', () => {
+    // Two archived articles reached a question this way. read_at was the
+    // signal and it is not one: any path that sets status to 'reading'
+    // stamps it, including the swipe that means "put this in my list".
     expect(isCorpusEligible(feedItem())).toBe(false)
-    expect(isCorpusEligible(feedItem({ status: 'archived' }))).toBe(false)
-  })
-
-  it('keeps an undecided hand-saved article, as it did before the verdict existed', () => {
-    expect(isCorpusEligible(handSaved())).toBe(true)
-    expect(isCorpusEligible({ tags: null, resonance: null })).toBe(true)
-    expect(isCorpusEligible({})).toBe(true)
-  })
-
-  it('keeps a feed item the user actually opened, verdict or not', () => {
-    expect(isCorpusEligible(feedItem({ read_at: '2026-09-01T10:00:00Z' }))).toBe(true)
-  })
-
-  it('still drops an opened article the user rejected', () => {
-    expect(isCorpusEligible(
-      feedItem({ read_at: '2026-09-01T10:00:00Z', resonance: 'not_for_me' }),
-    )).toBe(false)
-  })
-
-  it('does not read a filing gesture as having opened it', () => {
-    // Right-swipe on New reads sets status 'reading' to mean "save this",
-    // and left-swipe on Saved reads sets 'archived'. Neither opened it, so
-    // only read_at may count.
+    expect(isCorpusEligible(feedItem({ read_at: '2026-09-01T10:00:00Z' } as any))).toBe(false)
     expect(isCorpusEligible(feedItem({ status: 'reading' }))).toBe(false)
     expect(isCorpusEligible(feedItem({ status: 'archived' }))).toBe(false)
+  })
+
+  it('drops an undecided hand-save too — saving is intent, not a judgement', () => {
+    expect(isCorpusEligible(handSaved())).toBe(false)
+    expect(isCorpusEligible({ tags: null, resonance: null })).toBe(false)
+    expect(isCorpusEligible({})).toBe(false)
   })
 })
 
 describe('corpusWeight', () => {
-  it('ranks an explicit good above a legacy hand-save', () => {
+  it('is on or off, since only a vouched-for article is eligible at all', () => {
     expect(corpusWeight(handSaved({ resonance: 'good' }))).toBe(2)
-    expect(corpusWeight(handSaved())).toBe(1)
+    expect(corpusWeight(handSaved())).toBe(0)
     expect(corpusWeight(feedItem())).toBe(0)
-  })
-
-  it('ranks a merely-opened article below one they vouched for', () => {
-    expect(corpusWeight(feedItem({ read_at: '2026-09-01T10:00:00Z' }))).toBe(1)
-    expect(corpusWeight(feedItem({ read_at: '2026-09-01T10:00:00Z', resonance: 'good' }))).toBe(2)
   })
 })
 
 describe('selectCorpusArticles', () => {
-  it('filters, then puts vouched-for articles first', () => {
+  it('keeps only the vouched-for, in the order they arrived', () => {
     const rows = [
       { id: 'noise', ...feedItem() },
       { id: 'saved-old', ...handSaved() },
@@ -86,11 +68,10 @@ describe('selectCorpusArticles', () => {
     expect(selectCorpusArticles(rows).map(r => r.id)).toEqual([
       'good-feed',
       'good-saved',
-      'saved-old',
     ])
   })
 
-  it('preserves input order within a tier, so callers keep newest-first', () => {
+  it('preserves input order, so callers keep newest-first', () => {
     const rows = [
       { id: 'a', ...handSaved({ resonance: 'good' }) },
       { id: 'b', ...handSaved({ resonance: 'good' }) },
