@@ -457,10 +457,65 @@ export function draftQuality(text: string, connectorText: string): number {
   return noteReachesQuestion(text, connectorText) ? 1 : 0
 }
 
+/**
+ * The specifics in a question: a number, or a capitalised word that isn't
+ * starting a sentence. Years, places, brands, names of things.
+ *
+ * These are what a model invents when it invents. The rest of a question
+ * is the asker's own framing ("what would it cost to find out which is
+ * true?") and legitimately appears nowhere in the evidence.
+ */
+export function specifics(text: string): string[] {
+  const out: string[] = []
+  for (const sentence of text.split(/(?<=[.!?])\s+/)) {
+    sentence.trim().split(/\s+/).forEach((raw, i) => {
+      // Split inside the token too: "1950s/60s" is two specifics, and
+      // checking it whole would flag a note that says "1950s and 60s".
+      for (const w of raw.split(/[^A-Za-z0-9]+/).filter(Boolean)) {
+        if (/\d/.test(w)) { out.push(w.toLowerCase()); continue }
+        if (i > 0 && /^[A-Z][a-z]{2,}$/.test(w)) out.push(w.toLowerCase())
+      }
+    })
+  }
+  return [...new Set(out)]
+}
+
+/**
+ * Specifics the question asserts that appear nowhere it could have got
+ * them from.
+ *
+ * The grounding gate above asks whether SOME of the note survives into the
+ * question. One matching run clears it — and everything else in the same
+ * sentence is then unchecked. A live question read "You kept a school book
+ * from the 1950s/60s… Which page from the French school book goes on the
+ * first postcard?", where the genuine quote did all the work and "French"
+ * and "1950s/60s" were verified against nothing.
+ *
+ * Coverage over ALL the question's words was tried first — composite-
+ * generator's `hasAdequateCoverage`, ported straight over — and measured
+ * against the gate corpus it cannot work here: good questions score
+ * anywhere from 0.00 to 0.66 because most of a mull is the asker's own
+ * framing, and the invented examples score 0.12 and 0.18, inside that
+ * range. No threshold separates them. Specifics do: every question in the
+ * GOOD corpus has none unsupported, and the invented one has two.
+ *
+ * Substring matching on purpose — "60s" is satisfied by "1960s", which
+ * errs toward letting a question through. Invention is a hard reject, so
+ * the bias belongs on that side.
+ */
+export function unsupportedSpecifics(text: string, evidence: string[]): string[] {
+  const haystack = evidence.join(' ').toLowerCase()
+  return specifics(text).filter(w => !haystack.includes(w))
+}
+
 export interface ValidationInput extends MullDraft {
   connectorText: string
   /** What changes depending on the answer, in the model's own words. */
   stake: string
+  /** The subject line the question was written from. Part of the evidence
+   *  a specific can legitimately come from — a good question names the
+   *  project, and the project is not in the note. */
+  subjectText?: string
 }
 
 /**
@@ -497,6 +552,18 @@ export function rejectionReason(input: ValidationInput): string | null {
 
   const explainer = EXPLAINER_PATTERNS.find(re => re.test(text))
   if (explainer) return `explains the link: ${explainer.source}`
+
+  // Only when the caller supplied the subject. Half the evidence is not
+  // enough to call something invented: the dated facts this channel
+  // computes ("since March 2023", "three times since February") live in
+  // the subject, not the note, and judging without it rejects the app's
+  // own arithmetic.
+  const invented = input.subjectText
+    ? unsupportedSpecifics(text, [input.connectorText, input.subjectText])
+    : []
+  if (invented.length > 0) {
+    return `names something that is in neither the note nor the project: ${invented.join(', ')}`
+  }
 
   if (stakeIsHollow(input.stake)) return `nothing changes either way: "${input.stake}"`
 

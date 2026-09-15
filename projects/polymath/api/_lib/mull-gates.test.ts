@@ -32,8 +32,12 @@ const NOTE = `Ten more proper conversations with dad, probably, and we spend the
 Cut the mitres at 5am before anyone was up. The trial expired on Friday and I never opened it again.
 I keep buying records I don't play. The tidy room in a messy house. It only works if it's one take.`
 
+/** The subject the questions below were written from. A good question
+ *  names the project, and the project is not in the note. */
+const SUBJECT = `Something they keep saying: "it only works if it is one take". Said since March 2023, never made a project. The book — a novel where characters get swapped out partway through; chapter nine; Lena.`
+
 const candidate = (text: string, quote: string, stake: string) =>
-  ({ text, quote, stake, connectorText: NOTE })
+  ({ text, quote, stake, connectorText: NOTE, subjectText: SUBJECT })
 
 const SHOULD_SHIP = [
   candidate(
@@ -81,6 +85,9 @@ const SHOULD_REFUSE = [
   ["an observation, not a question", candidate(
     "The greenhouse is a metaphor for the book.",
     'Ten more proper conversations with dad', 'He sees the metaphor.')],
+  ["invents a specific nothing supports", candidate(
+    "You kept a school book from the 1950s/60s while working on the book. You wrote that it only works if it is one take. Which page from the French school book goes in chapter nine?",
+    'it only works if it is one take', 'He picks the page and drafts the chapter.')],
   ["invents the quote", candidate(
     "You said you had ten more summers with your dad. What are the chapters for?",
     'ten more summers with your dad', 'Chapters nine to twelve come out.')],
