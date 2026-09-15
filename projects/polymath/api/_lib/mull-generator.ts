@@ -34,6 +34,7 @@ import { avoidBlock, echoesRecent, fetchRecentSparkTexts, fetchRecentSparkProjec
 import { examplesBlock } from './mull-examples.js'
 import { gatherSubjects, identityBlock, type Subject } from './mull-subjects.js'
 import { articleBody } from './article-text.js'
+import { findOrbitPairs } from './orbit-pairs.js'
 import {
   selectConnectors,
   connectorCeiling,
@@ -304,6 +305,12 @@ const RPC_THRESHOLD = 0.35
 
 interface Pairing extends BlindSpot {
   connector: MullCandidate
+  /** The computed claim tying this connector to this project, when the
+   *  pair came from the orbit pass (orbit.ts): "of every project they
+   *  have, this sits closest to X, and it never went in". Absent for a
+   *  pair the blind-spot search produced, which has no such claim — that
+   *  is the whole difference between the two. */
+  orbitFact?: string
 }
 
 /**
@@ -464,21 +471,28 @@ async function draftAll(pairings: Pairing[], echo: EchoContext, trace: string[] 
   // collides them -- pair-first invention rebuilt inside one subject, with
   // the connector left doing nothing. See Subject.line.
   const blocks = pairings.map((p, i) => `--- PAIR ${i + 1} ---
-What they've been working on:
+THE PROJECT: ${p.subject.title}
 ${p.subject.line}
 
-The thing it never examines:
-"${p.blindSpot}"
-
-THE NOTE — this is the only text you may quote for pair ${i + 1}.
-${CONNECTOR_LABEL[p.connector.kind]} — "${p.connector.title}":
+THE UNUSED MATERIAL — this is the only text you may quote for pair ${i + 1}.
+${p.orbitFact ?? CONNECTOR_LABEL[p.connector.kind]}
 "${p.connector.text.slice(0, 1200)}"`).join('\n\n')
 
   const prompt = `${blocks}
 ${echo.identity}
-Each note above was NOT picked because it looks like the project it sits with.
-It was found by searching for that pair's unexamined question, in plain words.
-So the link is already there before you write anything.
+Each pair above is ONE claim, and it was computed, not guessed: of every
+project they have, this note sits closest to this one, and it never went in.
+It is material they already own, in their own words, that the project has
+never used.
+
+So do NOT look for a link. There is no link to find and nothing to bridge.
+The relationship is already stated. Your job is the next step: what does the
+project become if that material goes in?
+
+NEVER write "X, and also Y — which is it?". Setting the two side by side and
+hinging them with "or" is the failure this is built to stop. A real one reads
+"You already have X. What is the version of the project that uses it?" — one
+thing, pointing forward, not two things and a choice.
 
 For each pair, write ONE thing for them to carry around.
 
@@ -497,8 +511,12 @@ The band it has to land in, and this is the hard part:
   irritation is the whole mechanism. Aim there.
 
 What makes it good:
-- The note is the LENS. The question should be one they could only ask because
-  that note exists.
+- It points AT THE PROJECT, forward. The answer should leave them holding a
+  decision about what to make next, not a nicer understanding of themselves.
+  Name the project. A question that never mentions it is about nothing.
+- The material is the lever, not the other half of a comparison. The question
+  should be one they could only ask because that material is sitting there
+  unused.
 - Use the note's own concrete detail. Not "your recent reflections on family" —
   say the thing it actually said. Their words, not a summary of their words:
   they can dismiss you, they can't dismiss themselves from eight months ago.
@@ -642,6 +660,8 @@ export async function generateMull(
   )
   if (subjects.length === 0) return []
 
+  const orbiters = await findOrbitPairs(supabase, userId, QUESTIONS_PER_RUN + 1, trace)
+
   const blindSpots = await nameBlindSpots(subjects, echo)
   trace.push(
     blindSpots.length === 0
@@ -650,9 +670,39 @@ export async function generateMull(
   )
   if (blindSpots.length === 0) return []
 
-  const pairings = await findConnectors(supabase, userId, blindSpots, trace)
+  const searched = await findConnectors(supabase, userId, blindSpots, trace)
+
+  // Orbit pairs first. Their relationship is computed rather than
+  // searched, so the draft call gets a claim instead of a coincidence --
+  // see orbit.ts. The blind-spot pairs stay behind them as the fallback
+  // for a corpus with nothing orbiting.
+  const orbitPairs: Pairing[] = orbiters.map(o => ({
+    subject: {
+      kind: 'project' as const,
+      shape: undefined,
+      id: o.project.id,
+      projectId: o.project.id,
+      title: o.project.title,
+      block: o.fact,
+      line: o.fact,
+      ownWords: o.capture.text,
+      strength: o.strength,
+    },
+    blindSpot: o.fact,
+    searchQuery: '',
+    orbitFact: o.fact,
+    connector: {
+      kind: 'memory' as const,
+      id: o.capture.id,
+      title: 'something they wrote',
+      text: o.capture.text,
+      similarity: o.similarity,
+    },
+  }))
+
+  const pairings = [...orbitPairs, ...searched]
   if (pairings.length === 0) {
-    trace.push('connectors: none in band for any blind spot — see the per-search lines above')
+    trace.push('connectors: nothing orbiting and none in band for any blind spot — see the lines above')
     return []
   }
 

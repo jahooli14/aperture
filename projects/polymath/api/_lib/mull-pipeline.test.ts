@@ -48,12 +48,12 @@ function corpus() {
   return {
     fragments,
     memories: [
-      { user_id: 'u1', id: 'm1', title: 'Dad', body: 'Ten more proper conversations with dad, probably, and we spend them on the greenhouse. It is the only tidy room in a messy house and I do not know why that matters to me but it does.', created_at: ago(280), memory_type: 'insight' },
-      { user_id: 'u1', id: 'm2', title: 'Mixing', body: 'Kept the first take of the whole side even though the drop is late. It breathes. Every version I tightened afterwards was worse and I deleted them all.', created_at: ago(150), memory_type: 'insight' },
+      { user_id: 'u1', id: 'm1', title: 'Dad', body: 'Ten more proper conversations with dad, probably, and we spend them on the greenhouse. It is the only tidy room in a messy house and I do not know why that matters to me but it does.', created_at: ago(280), memory_type: 'insight', embedding: [0, 0, 1] },
+      { user_id: 'u1', id: 'm2', title: 'Mixing', body: 'Kept the first take of the whole side even though the drop is late. It breathes. Every version I tightened afterwards was worse and I deleted them all.', created_at: ago(150), memory_type: 'insight', embedding: [0, 0, 1] },
     ],
     projects: [
-      { user_id: 'u1', id: 'p-book', title: 'The book', description: 'A novel where characters get swapped out partway through', metadata: { end_goal: 'a finished manuscript' }, last_closeout_text: 'Got through the chapter nine rewrite', created_at: ago(600), last_active: ago(120), last_session_ended_at: ago(120), state: 'mull', status: 'active' },
-      { user_id: 'u1', id: 'p-deck', title: 'Deck stand', description: 'A stand for the decks, out of oak offcuts', metadata: {}, last_closeout_text: null, created_at: ago(500), last_active: ago(400), last_session_ended_at: null, state: 'mull', status: 'dormant' },
+      { user_id: 'u1', id: 'p-book', title: 'The book', description: 'A novel where characters get swapped out partway through', metadata: { end_goal: 'a finished manuscript' }, last_closeout_text: 'Got through the chapter nine rewrite', created_at: ago(600), last_active: ago(120), last_session_ended_at: ago(120), state: 'mull', status: 'active', embedding: [1, 0, 0] },
+      { user_id: 'u1', id: 'p-deck', title: 'Deck stand', description: 'A stand for the decks, out of oak offcuts', metadata: {}, last_closeout_text: null, created_at: ago(500), last_active: ago(400), last_session_ended_at: null, state: 'mull', status: 'dormant', embedding: [0, 1, 0] },
     ],
     joints: [{ user_id: 'u1', id: 'j1', text: 'it only works if it is one take', fragment_ids: ['f1', 'f2', 'f3'], occurrence_count: 3, last_seen_at: ago(90) }],
     list_items: [
@@ -984,5 +984,55 @@ describe('the best question that clears the gates ships first', () => {
     // The one whose question sentence carries the note leads.
     expect(baked[0].text).toContain('keep the first take of')
     expect(trace.join('\n')).toMatch(/ranked \d+ that cleared the gates/)
+  })
+})
+
+describe('the orbit pass: the relationship is computed, not searched', () => {
+  it('hands the draft a claim about unused material instead of two things to bridge', async () => {
+    generateText.mockReset()
+    generateText.mockResolvedValueOnce(BLIND_SPOTS).mockResolvedValueOnce(DRAFTS)
+
+    // A memory near The book's vector, old, and never filed to it.
+    const data = corpus() as any
+    data.memories = [
+      ...data.memories,
+      {
+        user_id: 'u1', id: 'm-orbit',
+        title: 'Swapping', body: 'The person who comes back is never the person who left, and nobody in the room says so out loud.',
+        created_at: ago(300), memory_type: 'insight', embedding: [1, 0, 0.8],
+      },
+    ]
+
+    const trace: string[] = []
+    await bakeMull(fakeSupabase(data).client, 'u1', undefined, trace)
+
+    const draftPrompt = generateText.mock.calls.at(-1)![0] as string
+    // The project is named, and the claim is the computed one.
+    expect(draftPrompt).toContain('THE PROJECT: The book')
+    expect(draftPrompt).toContain('THE UNUSED MATERIAL')
+    expect(draftPrompt).toMatch(/sits closest to "The book"/)
+    // And the instruction that killed the old shape is in front of it.
+    expect(draftPrompt).toContain('do NOT look for a link')
+    expect(trace.join('\n')).toMatch(/orbit: \d+ projects x \d+ captures/)
+  })
+
+  it('does not orbit a memory that already went into that project', async () => {
+    generateText.mockReset()
+    generateText.mockResolvedValueOnce(BLIND_SPOTS).mockResolvedValueOnce(DRAFTS)
+
+    const data = corpus() as any
+    data.memories = [...data.memories, {
+      user_id: 'u1', id: 'm-orbit', title: 'Swapping', body: 'The person who comes back is never the person who left.',
+      created_at: ago(300), memory_type: 'insight', embedding: [1, 0, 0.8],
+    }]
+    // It went in.
+    data.fragments = [...data.fragments, {
+      user_id: 'u1', id: 'f-orbit', text: 'The person who comes back is never the person who left.',
+      created_at: ago(300), project_id: 'p-book', memory_id: 'm-orbit', projects: { title: 'The book' },
+    }]
+
+    const trace: string[] = []
+    await bakeMull(fakeSupabase(data).client, 'u1', undefined, trace)
+    expect(trace.join('\n')).toMatch(/-> 0 not already filed there/)
   })
 })
