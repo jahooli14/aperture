@@ -108,14 +108,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           .or('process_attempts.is.null,process_attempts.lt.5')
           .lt('created_at', new Date(Date.now() - 5 * 60 * 1000).toISOString())
           .order('created_at', { ascending: true })
-          .limit(10)
+          // Oldest first, and each one is a Gemini extract plus an embed, so
+          // this is most of the job's time budget. Kept small on purpose:
+          // the nine tasks after it never ran when this overran, which is
+          // how a 53-note backlog stayed invisible -- task 6 backfills
+          // embeddings and would have flagged it.
+          .limit(6)
 
         if (fetchError) throw fetchError
 
         const processed = []
         const failed = []
 
+        // Leave time for the eight tasks after this one.
+        const stuckBudgetMs = 35_000
+        const stuckStartedAt = Date.now()
+
         for (const memory of stuckMemories || []) {
+          if (Date.now() - stuckStartedAt > stuckBudgetMs) {
+            console.warn('[cron/jobs/daily] stuck-memory budget spent; the rest wait for tomorrow')
+            break
+          }
           try {
             console.log(`[cron/jobs/daily] Processing stuck memory: ${memory.id} - ${memory.title}`)
             await processMemory(memory.id)

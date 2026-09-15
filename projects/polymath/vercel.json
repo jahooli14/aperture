@@ -35,6 +35,9 @@
     }
   ],
   "functions": {
+    "api/cron/jobs.ts": {
+      "maxDuration": 60
+    },
     "api/brainstorm.ts": {
       "maxDuration": 30
     },

@@ -11,7 +11,10 @@
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { findOrbiters, pickOrbiters, cosine, toVec, type Embedded, type OrbitProject, type Orbiter } from './orbit.js'
+import {
+  findOrbiters, pickOrbiters, cosine, toVec, projectCentroid,
+  type Embedded, type OrbitProject, type Orbiter,
+} from './orbit.js'
 import { isGraveyarded } from './project-state.js'
 
 /** Whole-corpus reads are capped, not windowed — the same rule as the
@@ -56,19 +59,47 @@ export async function findOrbitPairs(
     }
   }
 
-  // A project the user buried is not somewhere to put unused material.
-  const projects: OrbitProject[] = (projectsRes.data ?? [])
-    .filter((p: any) => !isGraveyarded(p))
-    .map((p: any) => ({ id: p.id, title: p.title, embedding: p.embedding }))
-
   // A memory can be filed under several projects; orbit only needs to know
   // whether it went into THE one it is nearest to, so keep them all.
   const filed = new Map<string, Set<string>>()
+  const ownedBy = new Map<string, string[]>()
   for (const f of (fragmentsRes.data ?? []) as any[]) {
     if (!f.memory_id || !f.project_id) continue
     if (!filed.has(f.memory_id)) filed.set(f.memory_id, new Set())
     filed.get(f.memory_id)!.add(f.project_id)
+    if (!ownedBy.has(f.project_id)) ownedBy.set(f.project_id, [])
+    ownedBy.get(f.project_id)!.push(f.memory_id)
   }
+
+  const memoryById = new Map<string, any>()
+  for (const m of (memoriesRes.data ?? []) as any[]) memoryById.set(m.id, m)
+
+  // A project the user buried is not somewhere to put unused material.
+  //
+  // The vector each project is compared WITH is its centroid, not its
+  // description (orbit.ts). `projects.embedding` is title plus description —
+  // often twenty words — and every capture it is scored against is a
+  // paragraph, so the two sit at different length scales and a thin
+  // description makes a project everyone's nearest neighbour. The captures
+  // already filed under a project are the project, they are already loaded,
+  // and weighting them by age gives the vector a time dimension the text
+  // could never honestly carry.
+  let centroidsBuilt = 0
+  const projects: OrbitProject[] = (projectsRes.data ?? [])
+    .filter((p: any) => !isGraveyarded(p))
+    .map((p: any) => {
+      const own = (ownedBy.get(p.id) ?? [])
+        .map(id => memoryById.get(id))
+        .filter(Boolean)
+        .map((m: any) => ({ embedding: m.embedding, createdAt: m.created_at }))
+      const centroid = projectCentroid(p.embedding, own)
+      if (own.length > 0 && centroid) centroidsBuilt++
+      return { id: p.id, title: p.title, embedding: centroid ?? p.embedding }
+    })
+  trace.push(
+    `orbit: ${centroidsBuilt} of ${projects.length} projects positioned by their own captures ` +
+    '(the rest by description alone)',
+  )
 
   const captures: Embedded[] = (memoriesRes.data ?? []).map((m: any) => ({
     id: m.id,

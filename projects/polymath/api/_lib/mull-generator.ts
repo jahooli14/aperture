@@ -27,6 +27,7 @@
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { isAppAuthored } from './corpus-provenance.js'
 import { generateText } from './gemini-chat.js'
 import { batchGenerateEmbeddings } from './gemini-embeddings.js'
 import { PLAIN_ENGLISH_RULES } from './plain-english.js'
@@ -385,8 +386,32 @@ async function findConnectors(
       }
     }
 
+    // match_memories cannot see tags, so ask for them by id -- the same
+    // shape as the graveyard check above and the article bodies below.
+    //
+    // Without this the app quotes the user's own answer back at them. An
+    // answer is by construction the row closest in meaning to the question
+    // that produced it, so it lands high in the pool on any re-ask around
+    // the same ground, and CONNECTOR_LABEL then introduces it to the draft
+    // model as "a note they made, about something else entirely".
+    const memoryRows = memories.data ?? []
+    const appAuthoredMemoryIds = new Set<string>()
+    if (memoryRows.length > 0) {
+      const tagRes = await supabase
+        .from('memories')
+        .select('id, tags')
+        .in('id', memoryRows.map((m: any) => m.id))
+      if (tagRes.error) trace.push(`!! memory tags query FAILED: ${tagRes.error.message}`)
+      for (const row of tagRes.data ?? []) {
+        if (isAppAuthored(row as any)) appAuthoredMemoryIds.add((row as any).id)
+      }
+      if (appAuthoredMemoryIds.size > 0) {
+        trace.push(`connectors: ${appAuthoredMemoryIds.size} app-authored notes dropped from the pool`)
+      }
+    }
+
     const candidates: MullCandidate[] = [
-      ...(memories.data ?? []).map((m: any) => ({
+      ...memoryRows.filter((m: any) => !appAuthoredMemoryIds.has(m.id)).map((m: any) => ({
         kind: 'memory' as const, id: m.id, title: m.title ?? 'a note', text: m.body ?? '', similarity: m.similarity,
       })),
       ...projectRows

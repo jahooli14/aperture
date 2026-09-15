@@ -77,6 +77,12 @@ type Row = Record<string, any>
 /** Minimal PostgREST-shaped stub: real predicates, so a query that filters
  *  wrongly comes back empty here too rather than quietly passing. */
 function fakeSupabase(data: Record<string, Row[]>) {
+  // Every real `memories` row has a `tags` column, and the stub models a
+  // table by the keys of its first row — so a fixture that omits it would
+  // reject a select that production accepts, which is the guard firing at
+  // the wrong target. Provenance filtering reads tags (corpus-provenance.ts);
+  // a fixture that wants an app-authored note sets them explicitly.
+  if (data.memories) data.memories = data.memories.map(m => ({ tags: [], ...m }))
   const rpcCalls: string[] = []
   const inserted: Row[] = []
 
@@ -358,6 +364,43 @@ describe('what the three subjects are allowed to be', () => {
     await gatherSubjects(fakeSupabase(data).client, 'u1', trace)
     expect(trace.join('\n')).not.toMatch(/FAILED/)
     expect(trace.join('\n')).toMatch(/memories: \d+ rows/)
+  })
+
+  it('never counts a note the app elicited as a capture', async () => {
+    // The failure this prevents: the user answers a question about a project
+    // that has been silent for months, the answer is filed under that
+    // project dated today, and the next run announces that they "came back
+    // to it". They did not. The app poked them, then read its own poke as
+    // evidence. corpus-time.ts's whole claim is that a date cannot be faked.
+    const data = corpus() as any
+    data.memories.push({
+      user_id: 'u1', id: 'spark-1', title: 'Spark response',
+      body: 'Yes, the deck stand is the one I keep not finishing, you are right about that.',
+      created_at: ago(0), memory_type: 'insight', tags: ['spark-response'], embedding: [0, 0, 1],
+    })
+    data.fragments.push({
+      user_id: 'u1', id: 'f-spark', text: 'the deck stand is the one I keep not finishing',
+      created_at: ago(0), memory_id: 'spark-1', project_id: 'p1',
+    })
+
+    const trace: string[] = []
+    const subjects = await gatherSubjects(fakeSupabase(data).client, 'u1', trace)
+
+    expect(trace.join('\n')).toMatch(/provenance: 1 app-authored notes excluded/)
+    // It reaches no subject, by its text or by its id.
+    const blob = JSON.stringify(subjects)
+    expect(blob).not.toMatch(/keep not finishing/)
+    expect(blob).not.toMatch(/spark-1/)
+  })
+
+  it('still counts everything the user said unprompted', async () => {
+    // The filter reads a missing tags column as "user said it", because
+    // almost the entire corpus predates the marker. Getting this backwards
+    // empties every timeline at once.
+    const trace: string[] = []
+    const before = await gatherSubjects(fakeSupabase(corpus()).client, 'u1', trace)
+    expect(before.length).toBeGreaterThan(0)
+    expect(trace.join('\n')).not.toMatch(/provenance:/)
   })
 
   it('puts a rejected query in the trace instead of reading it as an empty corpus', async () => {

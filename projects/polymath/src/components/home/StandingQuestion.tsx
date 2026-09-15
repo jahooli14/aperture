@@ -70,9 +70,14 @@ export function StandingQuestion() {
     if (!text.trim() || !spark) return
     setSubmitting(true)
     try {
+      // No inner .catch here. It used to swallow everything -- a 401, a 500
+      // from either insert, a timeout -- and then show "Saved." anyway, which
+      // also made the outer catch unreachable. Answering is the one thing
+      // this card exists for; claiming it worked when it didn't is the worst
+      // thing it can do, because the user has no other copy of what they said.
       const data = await api.post('utilities?resource=respond', {
         spark_id: spark.id, response_text: text,
-      }).catch(() => ({})) as { project_title?: string }
+      }) as { project_title?: string; processed?: boolean }
       haptic.success()
       setReceipt(
         data.project_title
@@ -80,6 +85,9 @@ export function StandingQuestion() {
           : 'Saved.'
       )
     } catch {
+      haptic.error()
+      // The text stays in the box, so it can be sent again.
+      setNote("That didn't send. Your answer is still here — try again.")
       setSubmitting(false)
     }
   }

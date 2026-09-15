@@ -16,6 +16,7 @@
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { userSaid } from './corpus-provenance.js'
 import { motifWords } from './spark-echo.js'
 import { selectCorpusArticles, type CorpusArticle } from './reading-corpus.js'
 import { articleBody } from './article-text.js'
@@ -115,7 +116,7 @@ async function loadCaptures(
   const [memoriesRes, fragmentsRes] = await Promise.all([
     supabase
       .from('memories')
-      .select('id, title, body, created_at')
+      .select('id, title, body, created_at, tags')
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
       .limit(CORPUS_LIMIT),
@@ -130,6 +131,21 @@ async function loadCaptures(
   noteQuery(trace, 'memories', memoriesRes)
   noteQuery(trace, 'fragments', fragmentsRes)
 
+  // Drop what the app caused before any timeline is built from it. One point,
+  // covering projectSubjects, joint members, simultaneity, corpusSpan and
+  // buildActivityBaseline at once -- see corpus-provenance.ts for why a note
+  // the app elicited must never count as a capture.
+  const allMemories = (memoriesRes.data ?? []) as any[]
+  const saidMemories = userSaid(allMemories)
+  const appAuthoredIds = new Set(
+    allMemories.filter(m => !saidMemories.includes(m)).map(m => m.id),
+  )
+  if (appAuthoredIds.size > 0) {
+    // Named in the trace: silence caused by a new filter and silence caused
+    // by an empty corpus are the pair this channel keeps being bitten by.
+    trace.push(`provenance: ${appAuthoredIds.size} app-authored notes excluded from timelines`)
+  }
+
   // When the thought was had, not when the fragment row was written.
   //
   // Fragments are created at capture, but the years already in the corpus
@@ -141,7 +157,7 @@ async function loadCaptures(
   // six gatherers returned nothing. The linked memory has the real date
   // and is already loaded here, so this costs no extra query.
   const memoryDateById = new Map<string, string>()
-  for (const m of (memoriesRes.data ?? []) as any[]) {
+  for (const m of allMemories) {
     if (m.created_at) memoryDateById.set(m.id, m.created_at)
   }
 
@@ -152,7 +168,7 @@ async function loadCaptures(
     projectId: f.project_id ?? null,
     projectTitle: f.projects?.title ?? null,
     memoryId: f.memory_id ?? null,
-  })).filter(r => r.text.trim().length > 0)
+  })).filter(r => r.text.trim().length > 0 && !(r.memoryId && appAuthoredIds.has(r.memoryId)))
 
   const projectOfMemory = new Map<string, string>()
   const filedMemoryIds = new Set<string>()
@@ -163,7 +179,7 @@ async function loadCaptures(
   }
 
   return {
-    thoughts: (memoriesRes.data ?? []).map((m: any) => ({
+    thoughts: saidMemories.map((m: any) => ({
       id: m.id,
       text: typeof m.body === 'string' && m.body.trim() ? m.body : (m.title ?? ''),
       createdAt: m.created_at,
@@ -468,14 +484,17 @@ async function unfiledThoughtSubject(
   // memories to be null.
   const res = await supabase
     .from('memories')
-    .select('id, title, body, created_at, memory_type')
+    .select('id, title, body, created_at, memory_type, tags')
     .eq('user_id', userId)
     .lt('created_at', cutoff)
     .order('created_at', { ascending: false })
     .limit(120)
   noteQuery(trace, 'unfiled-candidates', res)
 
-  const unattached = (res.data ?? []).filter((m: any) => !filedMemoryIds.has(m.id))
+  // An answer the app elicited that failed to attach to a project is not an
+  // unfiled thought -- the app is not entitled to ask "you said this and
+  // never did anything with it" about something it asked for.
+  const unattached = userSaid(res.data as any[]).filter((m: any) => !filedMemoryIds.has(m.id))
   // 80, not 150. A tidied voice note is two or three sentences and most
   // of them land under 150 characters, so the threshold was throwing away
   // the ordinary case. 80 is still a real thought and not a fragment.

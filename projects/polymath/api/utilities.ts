@@ -62,6 +62,7 @@ import { considerMorph } from './_lib/morph-generator.js'
 import { getStalledProjects, attachFragments, proposeComposite } from './_lib/composite-generator.js'
 import { mineJoints } from './_lib/joint-miner.js'
 import { runDriftDecay } from './_lib/drift-runner.js'
+import { SPARK_RESPONSE_TAG } from './_lib/corpus-provenance.js'
 
 /** Bearer-token cron auth, duplicated per-file to match this codebase's
  *  existing convention (projects.ts and idea-engine.ts each keep their own
@@ -82,7 +83,7 @@ const EXECUTION_SESSIONS_RESOURCES = new Set([
 const EXECUTION_SPARKS_RESOURCES = new Set(['bake', 'today', 'respond', 'dismiss-spark', 'reroll-spark', 'retire-and-rebake', 'catch-up'])
 const EXECUTION_PROPOSALS_RESOURCES = new Set([
   'generate-morph', 'drift-decay', 'mine-joints', 'generate-composite',
-  'pending', 'accept', 'reject', 'reembed-articles',
+  'pending', 'accept', 'reject', 'reembed-articles', 'backfill-embeddings',
 ])
 // Fix Queue, folded in from its own serverless function to stay under
 // Vercel's Hobby cap of 12. Routed on `action`, which nothing else in this
@@ -2918,6 +2919,14 @@ async function handleExecutionSparks(req: VercelRequest, res: VercelResponse) {
     }
 
     const trace: string[] = []
+    if (explain) {
+      // Only on explain. Five table reads is nothing next to two model
+      // calls, but the nightly bake has no use for it — and "the corpus is
+      // empty" vs "the corpus is unembedded" is exactly the distinction
+      // this trace exists to make readable.
+      const { coverageReport } = await import('./_lib/embeddings-maintenance.js')
+      trace.push(...(await coverageReport(userId)).lines)
+    }
     if (isStanding) {
       const s: any = standing![0]
       trace.push(
@@ -3128,11 +3137,25 @@ async function handleExecutionSparks(req: VercelRequest, res: VercelResponse) {
     const { spark_id } = req.body || {}
     if (!spark_id) return res.status(400).json({ error: 'spark_id required' })
 
-    const { error } = await supabase
+    // NOT answered_at. Dismissing wrote the same field as answering, so
+    // "not interested" and "here is my answer" were the same row state --
+    // which is why 4 of 36 sparks read as answered when only one of them
+    // ever produced a word. Worse, the draft prompt few-shots on "questions
+    // that got a real voice answer", so every dismissal was being learned
+    // from as a success.
+    const dismiss = (col: 'dismissed_at' | 'answered_at') => supabase
       .from('sparks')
-      .update({ answered_at: new Date().toISOString() })
+      .update({ [col]: new Date().toISOString() })
       .eq('id', spark_id)
       .eq('user_id', userId)
+
+    let { error } = await dismiss('dismissed_at')
+    if (error?.code === '42703') {
+      // Migration not applied yet. Fall back so the card still goes away,
+      // and say so rather than silently poisoning the answer signal again.
+      console.warn('[utilities/sparks] sparks.dismissed_at missing — run 20260915_spark_dismissal.sql')
+      ;({ error } = await dismiss('answered_at'))
+    }
 
     if (error) {
       console.error('[utilities/sparks] dismiss failed:', error)
@@ -3158,7 +3181,13 @@ async function handleExecutionSparks(req: VercelRequest, res: VercelResponse) {
         title: 'Spark response',
         body: response_text,
         orig_transcript: response_text,
-        tags: [],
+        // Marked at insert, and the marker survives processing because
+        // process-memory.ts merges tags rather than replacing them (the same
+        // trick projects.ts uses for morning follow-ups). Everything that
+        // treats the corpus as a record of what the user said UNPROMPTED
+        // filters on this: an answer is a real thought, but it is not
+        // evidence that they returned to a project on their own.
+        tags: [SPARK_RESPONSE_TAG],
         audiopen_created_at: new Date().toISOString(),
         processed: false,
         user_id: userId,
@@ -3182,13 +3211,24 @@ async function handleExecutionSparks(req: VercelRequest, res: VercelResponse) {
       return res.status(500).json({ error: updateErr.message })
     }
 
-    // Kick the normal capture pipeline (embed, triage, fragment-attach) on
-    // the response, same as any other voicing -- fire-and-forget.
+    // Process it BEFORE returning. This was fire-and-forget, and a Vercel
+    // function has no obligation to finish work started after the response is
+    // sent -- so the answer stayed unprocessed: no title, no embedding, no
+    // place in any search. The one answer this app has ever received sat like
+    // that for two days. An answer that changes nothing about future
+    // questions is the entire feature failing silently.
+    //
+    // coreOnly keeps it inside the request budget (one extract + one embed,
+    // ~5s) and deliberately skips fragment attachment -- see ProcessOptions.
+    let processed = false
     try {
       const { processMemory } = await import('./_lib/process-memory.js')
-      processMemory(memory.id).catch(() => {})
-    } catch {
-      // Module not available — ignore
+      await processMemory(memory.id, { coreOnly: true })
+      processed = true
+    } catch (e) {
+      // The answer is saved either way; the daily job will retry it. But the
+      // caller is told, so the UI can stop claiming success it doesn't have.
+      console.error('[utilities/sparks] respond processing failed:', e)
     }
 
     // Which project this lands on, so the app can say what answering just
@@ -3213,7 +3253,7 @@ async function handleExecutionSparks(req: VercelRequest, res: VercelResponse) {
       projectTitle = proj?.title ?? null
     }
 
-    return res.status(200).json({ ok: true, project_title: projectTitle })
+    return res.status(200).json({ ok: true, processed, project_title: projectTitle })
   }
 
   return res.status(404).json({ error: `Unknown resource: ${resource}` })
@@ -3344,6 +3384,48 @@ async function handleExecutionProposals(req: VercelRequest, res: VercelResponse)
     const { reembedArticles } = await import('./_lib/embeddings-maintenance.js')
     const stats = await reembedArticles(userId)
     return res.status(200).json(stats)
+  }
+
+  // ─── BACKFILL EMBEDDINGS (cron) ─────────────────────────────────────
+  // Everything in the corpus should have a vector, and the only way to know
+  // whether it does is to count. Returns the coverage report either way, so
+  // `job=backfill-embeddings` answers "is the corpus actually embedded?"
+  // from a phone — the question five of the mull channel's six gatherers
+  // silently depend on.
+  if (resource === 'backfill-embeddings') {
+    if (req.method !== 'POST') return res.status(405).json({ error: 'POST required' })
+    const userId = getCronUserId(req)
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' })
+
+    const { maintainEmbeddings, coverageReport } = await import('./_lib/embeddings-maintenance.js')
+
+    // Same short-slice rule as catch-up: well under the platform's 60s
+    // ceiling, and the caller just asks again. A function killed mid-request
+    // reports as a bare "Failed to fetch" with nothing to diagnose.
+    const BUDGET_MS = 25_000
+    const startedAt = Date.now()
+    let created = 0
+    let errors = 0
+    let lastError: string | null = null
+    while (Date.now() - startedAt < BUDGET_MS) {
+      const stats = await maintainEmbeddings(userId, 25, false)
+      created += stats.embeddings_created
+      errors += stats.errors
+      if (stats.last_error) lastError = stats.last_error
+      // Creating nothing means there was nothing left OR that every call was
+      // rejected. Opposite outcomes; the coverage report below tells them
+      // apart, which is the whole point of returning it.
+      if (stats.embeddings_created === 0) break
+    }
+
+    const coverage = await coverageReport(userId)
+    return res.status(200).json({
+      embeddings_created: created,
+      errors,
+      last_error: lastError,
+      coverage: coverage.tables,
+      trace: coverage.lines,
+    })
   }
 
   // ─── MINE JOINTS (cron) ─────────────────────────────────────────────
@@ -3533,7 +3615,9 @@ async function handleExecutionProposals(req: VercelRequest, res: VercelResponse)
         title: 'Proposal rejected',
         body: reason.trim(),
         orig_transcript: reason.trim(),
-        tags: [],
+        // App-authored, like a spark answer: the user only wrote this
+        // because the app put a proposal in front of them.
+        tags: ['proposal-rejected'],
         audiopen_created_at: new Date().toISOString(),
         processed: true,
         user_id: userId,

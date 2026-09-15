@@ -146,7 +146,11 @@ describe('ExtractMetadataResponse', () => {
     expect(result.success).toBe(false)
   })
 
-  it('rejects triage.confidence outside 0..1', () => {
+  it('drops a triage whose confidence is outside 0..1, and keeps the note', () => {
+    // This used to reject the whole response. That policy is what buried 53
+    // of 75 memories: a garnish the model got wrong cost the thought itself.
+    // The bad confidence is still refused -- it is not coerced to a number
+    // nobody said -- but the note survives without a triage.
     const result = ExtractMetadataResponse.safeParse({
       memory_type: 'insight',
       entities: {},
@@ -154,7 +158,9 @@ describe('ExtractMetadataResponse', () => {
       insightful_body: 'B',
       triage: { category: 'task_update', confidence: 1.5 },
     })
-    expect(result.success).toBe(false)
+    expect(result.success).toBe(true)
+    expect(result.data!.triage).toBeUndefined()
+    expect(result.data!.summary_title).toBe('A')
   })
 })
 
@@ -307,5 +313,85 @@ describe('tryValidate()', () => {
     const out = tryValidate(CaptureTitleResponse, { bogus: true }, 'label')
     expect(out).toBeNull()
     expect(warnSpy).toHaveBeenCalledOnce()
+  })
+})
+
+/**
+ * These are not hypotheticals. Every payload below is a real shape Gemini
+ * returned into production, and every one of them threw away the note.
+ * 53 of 75 memories sat unprocessed for eight months on the first case alone.
+ */
+const base = {
+  memory_type: 'insight',
+  entities: { people: [], places: [], topics: [], skills: [] },
+  themes: ['memory'],
+  tags: ['memory'],
+  emotional_tone: 'reflective',
+  summary_title: 'Mulling on memory',
+  insightful_body: 'I have been thinking a lot about memory lately.',
+}
+
+describe('ExtractMetadataResponse — null is how a model says "none"', () => {
+  it('accepts a triage with no project, which cost this corpus 44 notes', () => {
+    const r = ExtractMetadataResponse.safeParse({
+      ...base,
+      triage: { category: 'new_thought', project_id: null, confidence: 0.8 },
+    })
+    expect(r.success).toBe(true)
+    expect(r.data!.triage!.project_id).toBeUndefined()
+    expect(r.data!.triage!.category).toBe('new_thought')
+  })
+
+  it('keeps the note when an optional enum comes back wrong', () => {
+    // Real error: 'triage.severity Invalid option'. Severity is a garnish on
+    // an annoyance; it is not worth losing a thought over.
+    const r = ExtractMetadataResponse.safeParse({
+      ...base,
+      triage: { category: 'annoyance', confidence: 0.6, severity: 'medium' },
+    })
+    expect(r.success).toBe(true)
+    expect(r.data!.triage!.severity).toBeUndefined()
+  })
+
+  it('keeps the note when triage itself is unusable', () => {
+    const r = ExtractMetadataResponse.safeParse({ ...base, triage: { category: 'nonsense' } })
+    expect(r.success).toBe(true)
+    expect(r.data!.triage).toBeUndefined()
+    expect(r.data!.summary_title).toBe('Mulling on memory')
+  })
+
+  it('reads null lists as empty rather than as a failure', () => {
+    const r = ExtractMetadataResponse.safeParse({
+      ...base, themes: null, tags: null, emotional_tone: null,
+      entities: { people: null, places: [], topics: ['memory'], skills: null },
+    })
+    expect(r.success).toBe(true)
+    expect(r.data!.themes).toEqual([])
+    expect(r.data!.tags).toEqual([])
+    expect(r.data!.emotional_tone).toBe('')
+    expect(r.data!.entities.people).toEqual([])
+    expect(r.data!.entities.topics).toEqual(['memory'])
+  })
+
+  it('reads a null entities block as empty', () => {
+    const r = ExtractMetadataResponse.safeParse({ ...base, entities: null })
+    expect(r.success).toBe(true)
+    expect(r.data!.entities).toEqual({ people: [], places: [], topics: [], skills: [] })
+  })
+
+  it('keeps a triage whose confidence is in range', () => {
+    const r = ExtractMetadataResponse.safeParse({
+      ...base, triage: { category: 'new_thought', confidence: 0.4 },
+    })
+    expect(r.success).toBe(true)
+    expect(r.data!.triage!.confidence).toBe(0.4)
+  })
+
+  it('still rejects a response with no note in it', () => {
+    // The lenience is for garnish. What the note IS stays required, or a
+    // failed call would quietly overwrite a good thought with nothing.
+    expect(ExtractMetadataResponse.safeParse({ ...base, summary_title: undefined }).success).toBe(false)
+    expect(ExtractMetadataResponse.safeParse({ ...base, insightful_body: null }).success).toBe(false)
+    expect(ExtractMetadataResponse.safeParse({ ...base, memory_type: 'vibes' }).success).toBe(false)
   })
 })

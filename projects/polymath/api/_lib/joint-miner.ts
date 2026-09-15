@@ -8,10 +8,23 @@
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { isAppAuthored } from './corpus-provenance.js'
 import { generateText } from './gemini-chat.js'
 import { generateEmbedding, cosineSimilarity } from './gemini-embeddings.js'
 import { PLAIN_ENGLISH_RULES } from './plain-english.js'
 import { findRecurringThemes, type FragmentForClustering } from './joints.js'
+
+/** pgvector hands a vector back as a JSON string on some paths. */
+function toStoredVector(v: unknown): number[] | null {
+  if (Array.isArray(v)) return v.length > 0 ? v as number[] : null
+  if (typeof v === 'string' && v.length > 2) {
+    try {
+      const parsed = JSON.parse(v)
+      return Array.isArray(parsed) && parsed.length > 0 ? parsed : null
+    } catch { return null }
+  }
+  return null
+}
 import {
   describeTimeline,
   corpusSpan,
@@ -92,18 +105,29 @@ export async function mineJoints(supabase: SupabaseClient, userId: string): Prom
       // because of it -- so no cluster could span anything, joints stayed
       // empty, and the channel's strongest subject never existed. The
       // thought's date is the real one.
-      .select('id, embedding, created_at')
+      .select('id, embedding, created_at, tags')
       .eq('user_id', userId)
       .in('id', memoryIds)
     if (memoriesRes.error) {
       trace.push(`!! memories query FAILED: ${memoriesRes.error.message}`)
       return { written: 0, trace }
     }
+    // A joint is "something you keep saying". A question from the app and
+    // one answer to it is not a recurrence -- and because the channel picks
+    // OLD material to ask about, the answer sits maximally far in time from
+    // what it answers, so the span guard that stops "five fragments from one
+    // Tuesday" waves it straight through. The app would be mining its own
+    // prompts back as the user's convictions.
+    let appAuthored = 0
     for (const m of memoriesRes.data ?? []) {
+      if (isAppAuthored(m as any)) { appAuthored++; continue }
       embeddingById.set((m as any).id, (m as any).embedding)
       if ((m as any).created_at) memoryDateById.set((m as any).id, (m as any).created_at)
     }
-    trace.push(`embeddings: ${memoryIds.length} memories referenced, ${memoriesRes.data?.length ?? 0} found`)
+    trace.push(
+      `embeddings: ${memoryIds.length} memories referenced, ${memoriesRes.data?.length ?? 0} found` +
+      (appAuthored > 0 ? `, ${appAuthored} app-authored excluded` : ''),
+    )
   }
 
   const fragments: FragmentForClustering[] = (fragmentRows as any[])
@@ -150,14 +174,23 @@ export async function mineJoints(supabase: SupabaseClient, userId: string): Prom
   trace.push(`clusters: ${clusters.length} recurring themes spanning at least ${Math.round(minSpan)} days`)
   if (clusters.length === 0) return { written: 0, trace }
 
-  const existingRes = await supabase
-    .from('joints')
-    .select('id, text, fragment_ids, occurrence_count')
-    .eq('user_id', userId)
+  // Ask for the stored vector; fall back if the column isn't there yet.
+  // Dedupe used to re-embed every existing joint from scratch on every run —
+  // a model call per joint per week for a value that never changes.
+  type ExistingJoint = { id: string; text: string; fragment_ids: string[]; occurrence_count: number; embedding?: unknown }
+  const readJoints = (cols: string) =>
+    supabase.from('joints').select(cols).eq('user_id', userId) as unknown as
+      Promise<{ data: ExistingJoint[] | null; error: { code?: string; message: string } | null }>
+
+  let existingRes = await readJoints('id, text, fragment_ids, occurrence_count, embedding')
+  if (existingRes.error?.code === '42703') {
+    existingRes = await readJoints('id, text, fragment_ids, occurrence_count')
+  }
   if (existingRes.error) trace.push(`!! joints query FAILED: ${existingRes.error.message}`)
   const existingJoints = existingRes.data
 
   let written = 0
+  let reEmbedded = 0
   for (const cluster of clusters) {
     const jointText = await summarizeCluster(cluster.texts)
     if (!jointText) continue
@@ -169,7 +202,8 @@ export async function mineJoints(supabase: SupabaseClient, userId: string): Prom
     let matched: { id: string; fragment_ids: string[]; occurrence_count: number } | null = null
     if (jointEmbedding && existingJoints) {
       for (const existing of existingJoints) {
-        const existingEmbedding = await generateEmbedding(existing.text).catch(() => null)
+        const stored = toStoredVector(existing.embedding)
+        const existingEmbedding = stored ?? (reEmbedded++, await generateEmbedding(existing.text).catch(() => null))
         if (existingEmbedding && cosineSimilarity(jointEmbedding, existingEmbedding) >= EXISTING_JOINT_SIM_THRESHOLD) {
           matched = existing
           break
@@ -193,12 +227,19 @@ export async function mineJoints(supabase: SupabaseClient, userId: string): Prom
         continue
       }
     } else {
-      const ins = await supabase.from('joints').insert({
+      const base = {
         user_id: userId,
         text: jointText,
         fragment_ids: cluster.fragmentIds,
         occurrence_count: cluster.fragmentIds.length,
-      })
+      }
+      // Store the vector we already paid for. A joint is a corpus object —
+      // "something you keep saying" — so it needs one for its own sake, not
+      // only to dedupe the next run against.
+      let ins = await supabase.from('joints').insert(
+        jointEmbedding ? { ...base, embedding: jointEmbedding, embedded_at: new Date().toISOString() } : base,
+      )
+      if (ins.error?.code === '42703') ins = await supabase.from('joints').insert(base)
       // A rejected insert is how `sparks.type` stayed broken for four days.
       if (ins.error) {
         trace.push(`!! joint insert FAILED: ${ins.error.message}`)
@@ -208,6 +249,9 @@ export async function mineJoints(supabase: SupabaseClient, userId: string): Prom
     written++
   }
 
+  if (reEmbedded > 0) {
+    trace.push(`note: ${reEmbedded} dedupe comparisons had to re-embed an existing joint (no stored vector yet)`)
+  }
   trace.push(`written: ${written} joints`)
   return { written, trace }
 }

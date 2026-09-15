@@ -1,4 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
+import { userSaid } from './_lib/corpus-provenance.js'
 import { getSupabaseClient } from './_lib/supabase.js'
 import { getUserId } from './_lib/auth.js'
 import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai'
@@ -1202,7 +1203,11 @@ async function handleResurfacing(res: VercelResponse, supabase: any, userId: str
 
     // Calculate which memories should be resurfaced
     const now = new Date()
-    const resurfacingCandidates = memories
+    // "Thought of the day" shows something the user said and asks nothing of
+    // them. An answer they gave the app yesterday is not that -- it would be
+    // the app quoting its own conversation back, and these rows are the
+    // newest in the table so they rank first.
+    const resurfacingCandidates = userSaid(memories as Memory[])
       .map((memory: Memory) => {
         const createdAt = new Date(memory.created_at)
         const lastReviewed = memory.last_reviewed_at
