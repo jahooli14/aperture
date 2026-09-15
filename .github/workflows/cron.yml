@@ -48,6 +48,7 @@ on:
           - retire-and-rebake
           - reembed-articles
           - backfill-embeddings
+          - reprocess-backlog
 
 concurrency:
   group: cron
@@ -130,6 +131,9 @@ jobs:
               # identical from outside; this is the only thing that tells
               # them apart.
               backfill-embeddings) hit "/api/utilities?resource=backfill-embeddings" ;;
+              # Drains the unprocessed-note backlog in 40s slices. Prints
+              # `remaining` -- re-run until it reaches 0.
+              reprocess-backlog) hit "/api/utilities?resource=reprocess-backlog" ;;
               *) echo "!! unknown job: $JOB" | tee -a "$FAILED_FILE" ;;
             esac
             if [ -s "$FAILED_FILE" ]; then exit 1; fi
