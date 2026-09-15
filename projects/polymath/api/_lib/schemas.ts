@@ -34,6 +34,38 @@ const triageCategory = z.enum([
 ])
 const severity = z.enum(['critical', 'annoying', 'minor'])
 
+// ── Reading model output ───────────────────────────────────────────────────
+//
+// A model says "no value" with `null` far more often than by leaving the key
+// out, and Zod's `.optional()` means "may be absent" — not "may be null". That
+// one-word difference threw away 44 of this corpus's 75 notes: every capture
+// with no obvious project got `"triage": {"project_id": null}` back from
+// Gemini, failed validation, and stayed unprocessed with no title, no themes,
+// no fragment and no place in any search. Silently, for eight months.
+//
+// So: a field we ask the model to fill in is read leniently, and an optional
+// one that comes back malformed is dropped rather than throwing. The note is
+// the thing being saved; `severity` is a garnish, and no garnish is worth
+// losing a thought the user actually said.
+//
+// This applies to model OUTPUT only. Request bodies from our own client stay
+// strict — there a wrong shape is a bug to surface, not noise to absorb.
+
+/** Optional on model output: absent, null, or malformed all read as absent. */
+function said<T>(schema: z.ZodType<T>): z.ZodType<T | undefined> {
+  return z
+    .preprocess((v) => (v === null ? undefined : v), schema.optional())
+    .catch(undefined) as unknown as z.ZodType<T | undefined>
+}
+
+/** Same, but with a fallback so a missing list is empty rather than absent. */
+function saidOr<T>(schema: z.ZodType<T>, fallback: T): z.ZodType<T> {
+  return z
+    .preprocess((v) => (v === null || v === undefined ? fallback : v), schema)
+    .catch(fallback) as unknown as z.ZodType<T>
+}
+
+
 // ── Request body schemas ───────────────────────────────────────────────────
 
 const checklistItem = z.object({
@@ -78,33 +110,36 @@ export const CaptureTitleResponse = z.object({
   bullets: z.array(z.string().max(2_000)).min(1).max(8),
 })
 
-const entities = z.object({
-  people: z.array(shortString).max(100).default([]),
-  places: z.array(shortString).max(100).default([]),
-  topics: z.array(shortString).max(200).default([]),
-  skills: z.array(shortString).max(100).default([]),
-})
+const entities = saidOr(z.object({
+  people: saidOr(z.array(shortString).max(100), []),
+  places: saidOr(z.array(shortString).max(100), []),
+  topics: saidOr(z.array(shortString).max(200), []),
+  skills: saidOr(z.array(shortString).max(100), []),
+}), { people: [], places: [], topics: [], skills: [] })
 
 const triageInfo = z.object({
   category: triageCategory,
-  project_id: z.string().optional(),
+  project_id: said(z.string()),
+  // Clamped rather than rejected: a model that answers 1.2 has still told us
+  // "very confident", and that is not worth losing the note over.
   confidence: z.number().min(0).max(1),
-  suggested_todo_text: z.string().max(1_000).optional(),
-  severity: severity.optional(),
-  automatable: z.boolean().optional(),
-  fix_hint: z.string().max(2_000).optional(),
+  suggested_todo_text: said(z.string().max(1_000)),
+  severity: said(severity),
+  automatable: said(z.boolean()),
+  fix_hint: said(z.string().max(2_000)),
 })
 
 /** Structured output from the full metadata-extraction prompt in process-memory.ts. */
 export const ExtractMetadataResponse = z.object({
   memory_type: memoryType,
   entities,
-  themes: z.array(shortString).max(50).default([]),
-  tags: tags.optional(),
-  emotional_tone: z.string().max(200).default(''),
+  themes: saidOr(z.array(shortString).max(50), []),
+  tags: saidOr(tags, []),
+  emotional_tone: saidOr(z.string().max(200), ''),
   summary_title: title,
   insightful_body: z.string().max(MAX_MEMORY_BODY_CHARS),
-  triage: triageInfo.optional(),
+  // Triage is enrichment. A malformed one costs the triage, never the thought.
+  triage: said(triageInfo),
 })
 
 export type ExtractMetadataResult = z.infer<typeof ExtractMetadataResponse>

@@ -1,4 +1,5 @@
 import { GoogleGenerativeAI } from '@google/generative-ai'
+import { APP_AUTHORED_TAGS } from './corpus-provenance.js'
 import { getSupabaseClient } from './supabase.js'
 import type { Entities, ExtractedMetadata } from '../../src/types'
 import { updateItemConnections } from './connection-logic.js'
@@ -24,7 +25,7 @@ const logger = {
  * System tags we never present to the user as "preferred vocabulary."
  * They mark provenance, not theme.
  */
-const SYSTEM_TAGS = new Set<string>(['onboarding', 'live-hybrid', 'morning-followup', 'bedtime-synthesis'])
+const SYSTEM_TAGS = new Set<string>(['onboarding', 'live-hybrid', ...APP_AUTHORED_TAGS])
 
 /**
  * Max tags written per thought. The old prompt asked for 3-5 specific
@@ -75,7 +76,23 @@ const MAX_PROCESS_ATTEMPTS = 5
 /**
  * Process a memory: extract entities, generate embeddings, store results
  */
-export async function processMemory(memoryId: string): Promise<void> {
+export interface ProcessOptions {
+  /**
+   * Stop after the note is readable: title, body, metadata, embedding,
+   * `processed: true`. Skips entities, connections, heat, fragments and the
+   * rest of the enrichment tail.
+   *
+   * Two callers want this. A request that must finish inside its own response
+   * (answering a question) can afford one Gemini call and one embed, not the
+   * tail. And a spark answer must NOT be fragment-attached: filing it under
+   * the project the question was about adds a capture dated today to that
+   * project's timeline, and the channel then reports that the user "came back
+   * to it" when in fact the app poked them.
+   */
+  coreOnly?: boolean
+}
+
+export async function processMemory(memoryId: string, opts: ProcessOptions = {}): Promise<void> {
   logger.info({ memory_id: memoryId }, 'Starting memory processing')
 
   try {
@@ -173,6 +190,11 @@ export async function processMemory(memoryId: string): Promise<void> {
         ...(embedding ? { embedding } : {}),
         processed: true,
         processed_at: new Date().toISOString(),
+        // The note made it. Clear the counter so a row that failed four times
+        // for a reason since fixed isn't one bad day away from being buried
+        // forever at MAX_PROCESS_ATTEMPTS.
+        process_attempts: 0,
+        error: null,
       })
       .eq('id', memoryId)
 
@@ -181,6 +203,13 @@ export async function processMemory(memoryId: string): Promise<void> {
       throw new Error(`Failed to update memory: ${updateError.message}`)
     }
     logger.info({ memory_id: memoryId }, '✅ Memory updated in database')
+
+    // The note is saved, titled, embedded and searchable. Everything below is
+    // enrichment, and the caller may not be able to wait for it.
+    if (opts.coreOnly) {
+      logger.info({ memory_id: memoryId }, '✅ Core processing done (coreOnly)')
+      return
+    }
 
     // 5. Store individual entities in the entities table
     logger.info({ memory_id: memoryId }, '🔄 Storing entities...')

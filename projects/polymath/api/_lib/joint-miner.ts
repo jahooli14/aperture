@@ -8,6 +8,7 @@
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { isAppAuthored } from './corpus-provenance.js'
 import { generateText } from './gemini-chat.js'
 import { generateEmbedding, cosineSimilarity } from './gemini-embeddings.js'
 import { PLAIN_ENGLISH_RULES } from './plain-english.js'
@@ -104,18 +105,29 @@ export async function mineJoints(supabase: SupabaseClient, userId: string): Prom
       // because of it -- so no cluster could span anything, joints stayed
       // empty, and the channel's strongest subject never existed. The
       // thought's date is the real one.
-      .select('id, embedding, created_at')
+      .select('id, embedding, created_at, tags')
       .eq('user_id', userId)
       .in('id', memoryIds)
     if (memoriesRes.error) {
       trace.push(`!! memories query FAILED: ${memoriesRes.error.message}`)
       return { written: 0, trace }
     }
+    // A joint is "something you keep saying". A question from the app and
+    // one answer to it is not a recurrence -- and because the channel picks
+    // OLD material to ask about, the answer sits maximally far in time from
+    // what it answers, so the span guard that stops "five fragments from one
+    // Tuesday" waves it straight through. The app would be mining its own
+    // prompts back as the user's convictions.
+    let appAuthored = 0
     for (const m of memoriesRes.data ?? []) {
+      if (isAppAuthored(m as any)) { appAuthored++; continue }
       embeddingById.set((m as any).id, (m as any).embedding)
       if ((m as any).created_at) memoryDateById.set((m as any).id, (m as any).created_at)
     }
-    trace.push(`embeddings: ${memoryIds.length} memories referenced, ${memoriesRes.data?.length ?? 0} found`)
+    trace.push(
+      `embeddings: ${memoryIds.length} memories referenced, ${memoriesRes.data?.length ?? 0} found` +
+      (appAuthored > 0 ? `, ${appAuthored} app-authored excluded` : ''),
+    )
   }
 
   const fragments: FragmentForClustering[] = (fragmentRows as any[])

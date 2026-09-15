@@ -133,6 +133,31 @@ Active, partly-shaped, dormant, and abandoned are different states. Long-dormant
 
 **The order of `metadata.tasks` is the plan.** The session takes the top open steps in order, so every writer keeps `order` contiguous (`api/_lib/task-order.ts`), generated steps declare what they come `after`, and what a close-out says comes next goes to the *front* of the open list. A step worked on but not finished carries `progress_note` — the user's own words — read back as the re-entry line for that step.
 
+### Reading model output (`api/_lib/schemas.ts`)
+
+**`.optional()` means "may be absent", not "may be null" — and a model says "none" with `null`.** That one word threw away **53 of 75 memories** for eight months. `triage.project_id` was `z.string().optional()`; Gemini correctly returns `null` for a note that belongs to no project; Zod rejected the whole response; the note stayed `processed: false` with no title, no themes, no `memory_type`, no triage and — worst — **no fragment**, so it was attached to no project and invisible to every gatherer in the mull channel. The corpus was never thin because the user doesn't capture enough. Three-quarters of it was thrown away after the Gemini call, silently.
+
+- Model output is read with `said()` / `saidOr()`: absent, `null`, or malformed all read as absent. Request bodies from our own client stay strict — there a wrong shape is a bug to surface, not noise to absorb.
+- **A garnish must never cost the note.** `triage` is enrichment; `summary_title` and `insightful_body` are the thing being saved. A malformed triage drops the triage. A missing body still fails, or a bad call would quietly overwrite a good thought with nothing.
+- Values are refused, never invented. An out-of-range `confidence` drops the triage rather than being clamped to a number nobody said.
+- **A deterministic bug burns five retries as fast as five transient ones.** 42 of those rows had spent `MAX_PROCESS_ATTEMPTS` and would never have been tried again. `processMemory` now clears `process_attempts` on success, so a row that failed for a reason since fixed isn't one bad day from being buried permanently.
+
+### App-authored notes are not captures (`api/_lib/corpus-provenance.ts`)
+
+The mull channel's whole claim is that a date can't be faked — `corpus-time.ts` says "they have kept coming back to this since March 2023" precisely because no model could invent that. **A note the app elicited breaks it.** Answer a question about a project silent fourteen months and the answer is filed under that project, dated today: the next run reports that they *came back to it*. They didn't. The app poked them and read its own poke as evidence. The same write resets the project's silence to zero, so **nothing the channel asks about can ever be `went_quiet` again** — it burns its best material by using it.
+
+So provenance is marked at insert (`tags: [SPARK_RESPONSE_TAG]`, which survives processing because `process-memory.ts` merges tags) and filtered at read. These are still real thoughts — embedded, searchable, readable — they just don't count as *captures* on anyone's timeline. Filtered in JS, never `.neq()`: `tags` is nullable and PostgREST drops NULL rows, which is nearly the whole corpus.
+
+Excluded from: `loadCaptures` (one point, covering project timelines, joint members, simultaneity, `corpusSpan` and `buildActivityBaseline`), joint mining, the connector pool, `unfiled` subjects, and resurfacing. **Not new debt** — morning follow-ups and bedtime syntheses were already flowing in unmarked; a daily answer would only have multiplied an open leak.
+
+- One question and one answer is not a recurrence, but it *looks* like one: the channel picks old material to ask about, so the answer sits maximally far in time from what it answers and sails past the span guard that stops "five fragments from one Tuesday".
+- An answer is by construction the row closest in meaning to the question that produced it, so it ranks high as a connector — where `CONNECTOR_LABEL` introduces it to the draft model as *"a note they made, about something else entirely"*.
+- Spark answers are processed `coreOnly`: embedded and searchable, deliberately **not** fragment-attached.
+
+**A dismissal is not an answer.** `dismiss-spark` wrote `answered_at` — the same field `respond` writes — so "not interested" and "here's my answer" were one row state. Live: 36 sparks, 4 marked answered, 3 of them dismissals. One real answer, recorded as four. The draft prompt few-shots on "questions that got a real voice answer", so every dismissal was being learned from as a success. `sparks.dismissed_at` now separates them.
+
+**Answering happens inside the request.** `respond` fired `processMemory` and returned; a Vercel function has no obligation to finish work started after the response is sent, and the UI's `.catch(() => ({}))` showed "Saved." regardless — including on a 500. An answer that changes nothing about future questions is the whole feature failing silently, twice over.
+
 ### Anti-patterns (kill on sight)
 
 - **Forced surrealist mashups** — "willow memory totem," "dazzle-patterned commuter bike." Inputs as motifs, not as load-bearing structure.
