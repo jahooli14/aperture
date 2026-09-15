@@ -36,6 +36,7 @@ import { examplesBlock } from './mull-examples.js'
 import { gatherSubjects, identityBlock, type Subject } from './mull-subjects.js'
 import { articleBody } from './article-text.js'
 import { findOrbitPairs } from './orbit-pairs.js'
+import { findRestarts, findAbandonedBatches, type ProjectShape } from './project-shapes.js'
 import {
   selectConnectors,
   connectorCeiling,
@@ -505,14 +506,21 @@ ${p.orbitFact ?? CONNECTOR_LABEL[p.connector.kind]}
 
   const prompt = `${blocks}
 ${echo.identity}
-Each pair above is ONE claim, and it was computed, not guessed: of every
-project they have, this note sits closest to this one, and it never went in.
-It is material they already own, in their own words, that the project has
-never used.
+Each pair above is ONE claim, and every one of them was computed from their
+own data rather than guessed. The line under the project title IS the claim
+— read it and believe it. Depending on the pair it will be one of:
+  - this note is nearer to this project than to any other, and never went in;
+  - they gave up on a project and started the same one again months later;
+  - they opened several projects in one sitting and every one of them died.
 
 So do NOT look for a link. There is no link to find and nothing to bridge.
-The relationship is already stated. Your job is the next step: what does the
-project become if that material goes in?
+The relationship is already stated. Your job is the next step: given that is
+true, what is the question worth carrying?
+
+Where the claim is about something they ABANDONED or repeated, do not
+console them and do not scold them. It is not a telling-off and it is not a
+diagnosis. It is a fact they had no way of seeing, and the question should
+be the one a friend asks after noticing it.
 
 THE QUESTION MAY NOT OFFER A CHOICE. Not the wording — the SHAPE. Any
 question whose answer is one of two things the question itself supplied is
@@ -715,6 +723,7 @@ export async function generateMull(
   if (subjects.length === 0) return []
 
   const orbiters = await findOrbitPairs(supabase, userId, QUESTIONS_PER_RUN + 1, trace)
+  const shapes = await findProjectShapes(supabase, userId, trace)
 
   const blindSpots = await nameBlindSpots(subjects, echo)
   trace.push(
@@ -754,7 +763,37 @@ export async function generateMull(
     },
   }))
 
-  const pairings = [...orbitPairs, ...searched]
+  // Facts about the project table and the calendar. Nothing here resembles
+  // anything, so no search can reach it: a thing given up on and quietly
+  // started again six months later, a day when three projects were opened
+  // and none survived. Computed, carried straight to the draft, and put in
+  // front of orbit because a claim about what they DID beats a claim about
+  // what a vector says (project-shapes.ts).
+  const shapePairs: Pairing[] = shapes.map(sh => ({
+    subject: {
+      kind: 'project' as const,
+      shape: undefined,
+      id: sh.projectId,
+      projectId: sh.projectId,
+      title: sh.projectTitle,
+      block: sh.fact,
+      line: sh.fact,
+      ownWords: sh.evidence,
+      strength: sh.strength,
+    },
+    blindSpot: sh.fact,
+    searchQuery: '',
+    orbitFact: sh.fact,
+    connector: {
+      kind: 'memory' as const,
+      id: sh.projectId,
+      title: 'what they wrote at the time',
+      text: sh.evidence,
+      similarity: 1,
+    },
+  }))
+
+  const pairings = [...shapePairs, ...orbitPairs, ...searched]
   if (pairings.length === 0) {
     trace.push('connectors: nothing orbiting and none in band for any blind spot — see the lines above')
     return []
@@ -884,6 +923,47 @@ export async function generateMull(
  * that, with a dated fact and a question attached. An empty slot is the
  * honest alternative, and the home surface already renders nothing there.
  */
+/**
+ * Read the project table and compute the shapes no search can find.
+ *
+ * One query. The arithmetic is free; the whole point is that this costs
+ * nothing next to a model call and finds the material the vector path
+ * structurally cannot (project-shapes.ts).
+ */
+async function findProjectShapes(
+  supabase: SupabaseClient,
+  userId: string,
+  trace: string[],
+): Promise<ProjectShape[]> {
+  const res = await supabase
+    .from('projects')
+    .select('id, title, description, status, state, created_at, embedding')
+    .eq('user_id', userId)
+    .limit(300)
+  if (res.error) {
+    trace.push(`!! project-shapes query FAILED: ${res.error.message}`)
+    return []
+  }
+
+  const rows = (res.data ?? [])
+    // A project the user buried is still evidence of what they did -- being
+    // dead is the whole point of these shapes -- but one they HARVESTED is
+    // finished, not abandoned, and must never be counted as a failure.
+    .filter((p: any) => p.state !== 'harvested')
+    .map((p: any) => ({
+      id: p.id, title: p.title, status: p.status,
+      createdAt: p.created_at, embedding: p.embedding, description: p.description,
+    }))
+
+  const found = [...findRestarts(rows), ...findAbandonedBatches(rows)]
+  trace.push(
+    found.length === 0
+      ? `project shapes: none in ${rows.length} projects`
+      : `project shapes: ${found.map(f => `${f.kind} "${f.projectTitle.slice(0, 26)}"`).join(' | ')}`,
+  )
+  return found
+}
+
 export async function bakeMull(
   supabase: SupabaseClient,
   userId: string,
