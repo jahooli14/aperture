@@ -544,6 +544,18 @@ uses it?" — one thing, pointing forward, open at the end.
 
 For each pair, write ONE thing for them to carry around.
 
+TWO SENTENCES. The first states the fact, plainly, the way you would say it
+out loud to a friend. The second asks. Nothing else.
+
+The first sentence must not collect scraps. Every live draft has ended up
+padded with bits of the project description:
+  "You gave up on custom t-shirts in January and started creating custom
+   t-shirts for friends from scratch in June WITH CREATIVE LOGO T-SHIRTS."
+That tail is lifted wholesale from a field and says nothing. Cut it:
+  "You gave up on custom t-shirts in January. In June you started them
+   again from scratch."
+If a detail is not doing work in the question, it does not go in the setup.
+
 WHAT THIS IS FOR. They read it on the way past and do nothing. It sits for
 three days. On a walk, on the fourth day, they work out the answer — and the
 answer leaves them with something to make. You are not naming that thing.
@@ -864,7 +876,33 @@ export async function generateMull(
     )
   }
 
-  for (const draft of survivors) {
+  // A zero means the note never reached the question: the setup quotes them
+  // and the question is written in the model's own vocabulary, so it could
+  // have been asked with no corpus at all. Live, one run produced
+  //   1.00  "...started custom t-shirts again in June. Who gets the first
+  //          one printed?"
+  //   0.00  "...including world memory palace to map all 198 countries.
+  //          Which country starts continent by continent?"
+  // The second is not a weaker question, it is a broken one. When something
+  // better exists there is no reason to spend a four-day slot on it.
+  //
+  // Only when something better exists. A lone zero still ships — the slot
+  // is otherwise empty, and this channel's repeated lesson is that a
+  // mediocre question beats nothing.
+  const best = survivors.length > 0
+    ? draftQuality(survivors[0].text, survivors[0].pairing.connector.text)
+    : 0
+  const worthShipping = best > 0
+    ? survivors.filter(d => draftQuality(d.text, d.pairing.connector.text) > 0)
+    : survivors
+  if (worthShipping.length < survivors.length) {
+    trace.push(
+      `dropped ${survivors.length - worthShipping.length}: the note never reached the question, ` +
+      'and a better draft did',
+    )
+  }
+
+  for (const draft of worthShipping) {
     if (shippedSubjects.has(draft.pairing.subject.id)) continue
     // Checked against the questions already asked AND against the other
     // draft from this same run — two questions written in one breath are
