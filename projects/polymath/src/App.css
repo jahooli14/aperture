@@ -447,16 +447,18 @@
     transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
-  /* Instant feedback transitions for buttons */
+  /* Instant feedback transitions for buttons.
+     No permanent transform/will-change here: a card grid (notes, projects)
+     can put hundreds of these on screen at once, and promoting every one
+     to its own GPU layer ahead of time is exactly what makes scrolling
+     past them janky. The :active rule below still promotes on press,
+     which is the only moment it's actually animating. */
   button,
   a,
   [role="button"] {
     transition: all 0.1s cubic-bezier(0.4, 0, 0.2, 1);
     -webkit-tap-highlight-color: transparent;
     user-select: none;
-    /* GPU acceleration for button presses */
-    transform: translateZ(0);
-    will-change: transform;
   }
 
   button:active,
