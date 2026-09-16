@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { cosineSimilarity } from './gemini-embeddings.js'
 import { generateText } from './gemini-chat.js'
 import { PLAIN_ENGLISH_RULES } from './plain-english.js'
+import { isGraveyarded } from './project-state.js'
 
 // Drawer-tier project statuses (not active, not priority, not dead).
 export const DRAWER_STATUSES = ['upcoming', 'dormant', 'on-hold', 'maintaining'] as const
@@ -174,14 +175,23 @@ export async function recomputeHeatForUser(
   userId: string
 ): Promise<{ updated: number; skipped: number }> {
   const T = HEAT_TUNING
-  const { data: projects, error: projErr } = await supabase
+  const { data: rawProjects, error: projErr } = await supabase
     .from('projects')
-    .select('id, title, description, embedding, catalysts, status, is_priority')
+    .select('id, title, description, embedding, catalysts, status, is_priority, state')
     .eq('user_id', userId)
     .in('status', DRAWER_STATUSES)
     .eq('is_priority', false)
 
-  if (projErr || !projects || projects.length === 0) {
+  if (projErr || !rawProjects || rawProjects.length === 0) {
+    return { updated: 0, skipped: 0 }
+  }
+
+  // Drift-decay harvests a stalled project by setting state='harvested' and
+  // leaves status untouched (see project-state.ts), so the status filter
+  // above doesn't catch it -- a graveyarded project would stay warmable and
+  // keep surfacing as "for you today" forever.
+  const projects = rawProjects.filter(p => !isGraveyarded(p))
+  if (projects.length === 0) {
     return { updated: 0, skipped: 0 }
   }
 
@@ -250,15 +260,18 @@ export async function bumpHeatFromNewMemory(
 ): Promise<number> {
   if (!memory.embedding || memory.embedding.length === 0) return 0
 
-  const { data: projects } = await supabase
+  const { data: rawProjects } = await supabase
     .from('projects')
-    .select('id, title, embedding, heat_score, catalysts')
+    .select('id, title, embedding, heat_score, catalysts, status, state')
     .eq('user_id', userId)
     .in('status', DRAWER_STATUSES)
     .eq('is_priority', false)
     .limit(HEAT_TUNING.BUMP_DRAWER_SCAN_LIMIT)
 
-  if (!projects || projects.length === 0) return 0
+  if (!rawProjects || rawProjects.length === 0) return 0
+
+  const projects = rawProjects.filter(p => !isGraveyarded(p))
+  if (projects.length === 0) return 0
 
   const now = new Date().toISOString()
   const reason = `you just mentioned something that connects — "${(memory.content || '').slice(0, 60)}"`
@@ -334,9 +347,9 @@ export async function generateDigestForUser(
   supabase: SupabaseClient,
   userId: string
 ): Promise<{ warmed: number; evolutions: number; skipped?: string }> {
-  const { data: warmedProjects } = await supabase
+  const { data: rawWarmed } = await supabase
     .from('projects')
-    .select('id, title, description, heat_score, heat_reason, catalysts, status, metadata')
+    .select('id, title, description, heat_score, heat_reason, catalysts, status, metadata, state')
     .eq('user_id', userId)
     .in('status', DRAWER_STATUSES)
     .eq('is_priority', false)
@@ -345,7 +358,7 @@ export async function generateDigestForUser(
     .order('heat_score', { ascending: false })
     .limit(5)
 
-  const warmed = warmedProjects || []
+  const warmed = (rawWarmed || []).filter(p => !isGraveyarded(p))
   if (warmed.length === 0) return { warmed: 0, evolutions: 0, skipped: 'no-warmed' }
 
   const { data: userSettings } = await supabase
