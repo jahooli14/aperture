@@ -19,6 +19,33 @@ import { generateGist, type ArticleGist } from './_lib/article-gist.js'
 import { mitigationFromHeaders, detectBotWallText } from './_lib/bot-wall.js'
 import { stripLinkFarms } from './_lib/link-density.js'
 import { isCorpusEligible } from './_lib/reading-corpus.js'
+
+/**
+ * Turn Postgres 42703 into "run this migration" instead of a generic 500.
+ *
+ * Named per-column, not per-migration-file. The resonance handler used to
+ * hardcode one filename regardless of which column was actually missing --
+ * so when `reading_queue.dismissed_at` was the real gap (a May 2026
+ * migration that never ran, unrelated to the September one the message
+ * named), the error sent whoever read it to re-run a migration that was
+ * already applied. This repo has no migration runner, so a column can ship
+ * in code before it exists in Postgres, and that gap has to be named
+ * correctly the first time -- a wrong pointer here costs exactly as much
+ * debugging time as no pointer at all.
+ */
+function missingColumnError(error: unknown): { status: number; body: Record<string, unknown> } | null {
+  const e = error as { code?: string; message?: string } | null
+  if (e?.code !== '42703') return null
+  const column = e.message?.match(/column ([\w.]+) does not exist/)?.[1] ?? '(unknown)'
+  return {
+    status: 500,
+    body: {
+      error: `The database is missing a column this endpoint needs: ${column}`,
+      details: 'Check supabase/migrations/ for the file that adds it and run that migration against this Supabase project.',
+      code: '42703',
+    },
+  }
+}
 import { articleEmbeddingText } from './_lib/article-text.js'
 
 // rss-parser is used only for XML parsing now — fetching is done manually
@@ -1530,15 +1557,13 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
       // migration runner, so code can ship before its columns do, and the
       // generic message made that look identical to being offline — which
       // is exactly how a verdict that could never be saved went unnoticed.
-      // Say which migration is missing instead.
-      const code = (error as { code?: string } | null)?.code
-      if (code === '42703') {
-        return res.status(500).json({
-          error: 'The database is missing the resonance columns',
-          details: 'Run supabase/migrations/20260907_reading_resonance_and_gist.sql against this project, then try again.',
-          code,
-        })
-      }
+      // Named the actual missing column rather than one hardcoded migration:
+      // this write touches resonance/resonance_at/status/archived_at AND
+      // dismissed_at, from three different migrations, and the hardcoded
+      // version pointed at the September one even when the real gap was
+      // dismissed_at from a May migration that had never run at all.
+      const missing = missingColumnError(error)
+      if (missing) return res.status(missing.status).json(missing.body)
       return res.status(500).json({ error: 'Failed to save that' })
     }
   }
@@ -1848,6 +1873,14 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
         })
       } catch (error) {
         console.error('[Reading] Consuming error:', error)
+        // Every query on this endpoint filters or selects dismissed_at and
+        // pinned_at. Both ship from May 2026 migrations, and one missing
+        // column fails the WHOLE query -- so this endpoint 500'd on every
+        // call for as long as either was unapplied, with nothing in the
+        // response to say why. Same lesson as the resonance handler above,
+        // for a widget with no button to notice the failure from.
+        const missing = missingColumnError(error)
+        if (missing) return res.status(missing.status).json(missing.body)
         return res.status(500).json({ error: 'Failed to load consuming surface' })
       }
     }
