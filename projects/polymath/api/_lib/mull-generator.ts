@@ -80,6 +80,21 @@ export interface BakedSpark {
   text: string
   project_id: string | null
   expires_at: string
+  /**
+   * The stake the question shipped behind — what the user would DO
+   * differently depending on the answer.
+   *
+   * Stored because it is the gates' own evidence and it was being thrown
+   * away. A binary is only allowed through `offersAChoice` when
+   * `stakeSplits` says the two branches land in different places, so when a
+   * binary leaks the stake IS the diagnosis — and a live one did leak
+   * ("Does Aperture pull the raw thoughts straight from your notes, or wait
+   * until they are finished?") with nothing on the row to explain why it
+   * passed. Same lesson as `unsupportedSpecifics` and the restart fact: a
+   * gate that can only see what it is given has to be given it, and that
+   * holds for reading the gate afterwards too.
+   */
+  stake?: string
   /** Written now, shown later. Held behind the standing question rather
    *  than replacing it — the channel's cheapest question is the one that
    *  was already paid for days ago. */
@@ -944,6 +959,7 @@ export async function generateMull(
       // reach a uuid column as an empty string (project-shapes.ts).
       project_id: draft.pairing.subject.projectId || null,
       expires_at: expiresAt(SHELF_LIFE_HOURS),
+      stake: draft.stake,
       // The second question is not shown yet: it waits behind the first
       // and only becomes the standing question once that one is answered
       // or runs out. Its shelf life is measured from then, not from now,

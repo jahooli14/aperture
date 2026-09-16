@@ -52,7 +52,11 @@ async function main() {
   if (baked.length === 0) {
     console.log('  (none — the trace above says which step declined)')
   } else {
-    for (const s of baked) console.log(`\n  ${s.text}`)
+    // The stake too, because it is the evidence behind the one gate that
+    // can be argued with: a binary ships only when stakeSplits says the two
+    // branches land somewhere different, and reading the question alone
+    // cannot tell you whether that was true.
+    for (const s of baked) console.log(`\n  ${s.text}\n    stake: ${s.stake ?? '(none)'}`)
   }
   console.log('\nNothing was written.')
 }

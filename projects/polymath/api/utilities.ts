@@ -30,6 +30,7 @@
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { GoogleGenAI } from '@google/genai'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { getSupabaseClient } from './_lib/supabase.js'
 import { getUserId } from './_lib/auth.js'
 import { generateText } from './_lib/gemini-chat.js'
@@ -1811,6 +1812,30 @@ function randomUuid(): string {
   })
 }
 
+/**
+ * Insert baked sparks, dropping `stake` if the column isn't there yet.
+ *
+ * `20260916_spark_stake.sql` adds it and the deploy does not run migrations,
+ * so between the two there is a window where naming the column fails the
+ * whole insert — and the whole insert is the run's entire output. Same
+ * shape as `embedded_at` in the embedding writers: the diagnostic field is
+ * never worth losing the thing it describes.
+ */
+async function insertSparks(
+  supabase: SupabaseClient,
+  rows: Record<string, unknown>[],
+  select?: string,
+): Promise<{ data: any[] | null; error: { message: string; code?: string } | null }> {
+  const run = (payload: Record<string, unknown>[]) => {
+    const q = supabase.from('sparks').insert(payload)
+    return select ? q.select(select) : q.select('id')
+  }
+  const first = await run(rows)
+  if (first.error?.code !== '42703') return first as any
+  console.warn('[utilities/sparks] no `stake` column yet — inserting without it')
+  return await run(rows.map(({ stake: _stake, ...rest }) => rest)) as any
+}
+
 // ─── Execution rebuild (SPEC.md) — folded in from sessions.ts/sparks.ts/  ──
 // proposals.ts to stay under Vercel's 12-serverless-function cap. Bodies
 // are unchanged from the original standalone files.
@@ -2857,17 +2882,19 @@ async function retireAndRebake(
 
   // Same as the bake: anything past the first is banked behind it, with
   // a longer expiry, so the next reroll is free.
-  const { data: insertedRows, error: insertErr } = await supabase
-    .from('sparks')
-    .insert(baked.map((spark, i) => ({
+  const { data: insertedRows, error: insertErr } = await insertSparks(
+    supabase,
+    baked.map((spark, i) => ({
       user_id: userId,
       type: spark.type,
       project_id: spark.project_id,
       text: spark.text,
       expires_at: spark.expires_at,
+      stake: spark.stake ?? null,
       shown_at: i === 0 ? nowIso : null,
-    })))
-    .select('id, type, text, project_id, shown_at, projects(title)')
+    })),
+    'id, type, text, project_id, shown_at, projects(title)',
+  )
 
   if (insertErr) {
     console.error('[utilities/sparks] reroll insert failed:', insertErr)
@@ -2968,9 +2995,10 @@ async function handleExecutionSparks(req: VercelRequest, res: VercelResponse) {
       project_id: spark.project_id,
       text: spark.text,
       expires_at: spark.expires_at,
+      stake: spark.stake ?? null,
     }))
 
-    const { error: insertErr } = await supabase.from('sparks').insert(rows)
+    const { error: insertErr } = await insertSparks(supabase, rows)
     if (insertErr) {
       console.error('[utilities/sparks] bake insert failed:', insertErr)
       return res.status(500).json({ error: insertErr.message })

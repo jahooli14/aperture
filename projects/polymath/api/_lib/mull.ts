@@ -580,20 +580,68 @@ export interface ValidationInput extends MullDraft {
  * said "or" and meant nothing by it. An exemption that any sentence
  * containing "or" can satisfy is not an exemption, it is a hole.
  *
- * A real split has two SIDES with weight of their own — the shortest real
- * one on record is "he writes the last line this week, or admits he wanted
- * the hours", where the half after "or" is its own clause with its own
- * verb. So: both sides have to be substantial.
+ * Two earlier versions of this were both wrong, in opposite directions.
+ *
+ * `/\beither way\b/` passed the stake UNCONDITIONALLY, which is the whole
+ * gate handed away on a phrase that means the opposite of splitting: "either
+ * way" is "regardless of which branch", and it is exactly what a model
+ * reaches for when both branches land in the same place ("he learns
+ * something about the app either way"). Nothing in this function's own
+ * reasoning ever argued for it and no teaching example uses it.
+ *
+ * Requiring four words a side was the other. It reads as strictness and is
+ * really just a length check, and the channel's own teaching examples fail
+ * it: "The shed gets racking or gets emptied" and "The plot gets planted
+ * this spring or handed back" are both real splits whose second side is TWO
+ * words. English drops the repeated subject and verb in the second branch —
+ * that ellipsis is a mark of a natural split, not a weak one.
+ *
+ * What actually separates the three real splits on record from a decorative
+ * one is that the second side NAMES SOMETHING THE FIRST DID NOT:
+ * racking/emptied, planted/handed back, writes/admits. A stake whose second
+ * side only restates the first ("he picks a direction, or he picks another
+ * one") adds no outcome, however many words it spends. So: both sides carry
+ * content, and the side after "or" contributes a content word of its own.
  */
+const STAKE_STOPWORDS = new Set([
+  'a', 'an', 'the', 'is', 'are', 'was', 'were', 'be', 'been', 'it', 'its',
+  'he', 'she', 'they', 'them', 'him', 'her', 'his', 'their', 'you', 'your',
+  'to', 'of', 'in', 'on', 'at', 'for', 'with', 'and', 'that', 'this',
+  'gets', 'get', 'goes', 'go', 'does', 'do', 'did', 'has', 'have', 'had',
+  'will', 'would', 'one', 'not', 'up', 'out', 'off', 'by', 'as', 'so',
+])
+
+/**
+ * Crude on purpose. "He decides, or he does not decide" is one outcome said
+ * twice, and an exact-match comparison reads `decide` as new content next to
+ * `decides` — so the restatement this whole function exists to catch walks
+ * through on a suffix. Chopping the common endings collapses the pair
+ * without needing a stemmer: the three real splits still differ afterwards
+ * (rack/empti, plant/hand, writ/admit), which is the only test that matters.
+ */
+function stem(word: string): string {
+  return word.replace(/(ing|ed|es|s)$/, '').replace(/e$/, '')
+}
+
+function stakeContent(side: string): Set<string> {
+  return new Set(
+    side.toLowerCase().replace(/[^a-z\s]/g, ' ').split(/\s+/)
+      .filter(w => w.length > 1 && !STAKE_STOPWORDS.has(w))
+      .map(stem)
+      .filter(Boolean),
+  )
+}
+
 export function stakeSplits(stake: string): boolean {
-  const t = (stake ?? '').trim()
-  if (/\beither way\b/i.test(t)) return true
-  const parts = t.split(/\bor\b/i)
+  const parts = (stake ?? '').trim().split(/\bor\b/i)
   if (parts.length !== 2) return false
-  const words = (x: string) => x.trim().split(/\s+/).filter(Boolean).length
-  // Four words a side. "...this week, or admits he wanted the hours" passes;
-  // "...picks a direction, or not" does not.
-  return words(parts[0]) >= 4 && words(parts[1]) >= 4
+  const before = stakeContent(parts[0])
+  const after = stakeContent(parts[1])
+  if (before.size === 0 || after.size === 0) return false
+  // The branch after "or" has to put something on the table that the branch
+  // before it did not. That is the difference between two outcomes and one
+  // outcome said twice.
+  return [...after].some(w => !before.has(w))
 }
 
 export function offersAChoice(questionText: string): boolean {
