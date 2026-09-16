@@ -20,6 +20,7 @@
  */
 
 import { generateText } from './gemini-chat.js'
+import { offersAChoice } from './mull.js'
 import { PLAIN_ENGLISH_RULES } from './plain-english.js'
 import { thinkingFragment } from './gemini-thinking.js'
 
@@ -51,30 +52,77 @@ They said:
 
 Ask ONE short thing back. Under twenty words.
 
-You are looking for the part of their answer that changes what the app
-thinks it knows. Two things earn a follow-up:
+Pick your reason from what is ALREADY in their answer.
 
-  THE PREMISE WAS OFF. They have said, in passing, that the question got
-  something wrong — the project is not what it was, they did finish it,
-  they stopped caring in March. Ask them to say the true version straight
-  out. This is the most valuable thing you can get and the easiest to miss,
-  because people correct you politely and move on.
+  "correction" — they said, usually in passing, that the question got
+  something wrong. "I never actually gave up on it, I just moved it off the
+  main list." "That finished in March." Ask for the true version straight
+  out: "So where did it move to?" This is the most valuable thing you can
+  get and the easiest to miss, because people correct you politely and
+  carry on. When it is there, take it.
 
-  THEY STOPPED ONE STEP SHORT. They named a feeling but not the thing they
-  would do about it. Ask what the next actual move is.
+  "next_step" — they named something they still want and stopped before the
+  thing they would do about it. "I do still want to do the memory palace
+  one, it keeps coming back." Ask what would start it: "What needs to
+  happen to start it?" When it is there, take it.
 
-If their answer already settles it, reply with exactly: NONE
+  "none" — everything else, and especially when they have already answered
+  concretely. Live failure: they said "Ben's. I'll print his this weekend,
+  the design is done" — settled, nothing missing — and the follow-up was
+  "Wait, you didn't give up on custom t-shirts in January?", disputing a
+  premise they had never disputed. Never argue with the question on their
+  behalf.
+
+NEVER OFFER A CHOICE. Not "is it X, or is it Y?", not "are you going to do
+it, or is it just a thought?" — a question they answer by picking one of two
+things you supplied tells you nothing you did not already write. Both of
+these came out of a live run and both are wrong:
+  "So is it the exact same design, or did restarting change the file?"
+  "Are you actually going to build it, or is it just a thought experiment?"
+Ask it open. "What changed about the design?" "What would make you start it?"
 
 Never summarise what they said back to them. Never say "it sounds like".
 Never ask two things. Never ask how they feel about it.
 
 ${PLAIN_ENGLISH_RULES}
 
-Reply with the question alone, or NONE.`
+Answer with JSON only:
+{ "reason": "correction" | "next_step" | "none", "question": "..." or null }
+
+"reason" is what is ALREADY in their answer, not what you would like to ask
+about. If neither is there, "none" with a null question — and that is the
+common case, not a failure.`
 }
 
-/** The follow-up, or null when there is nothing worth asking. */
+/**
+ * The follow-up, or null when there is nothing worth asking.
+ *
+ * The model has to name its REASON before it gets to ask, and a reason of
+ * "none" ends it there. Asked in prose instead, it invented a reason: on a
+ * fully settled answer — "Ben's, I'll print his this weekend, the design is
+ * done" — it came back with "Wait, you didn't give up on custom t-shirts in
+ * January?", disputing a premise the user had not disputed. Twice, after
+ * the prompt was told in plain words that none is the normal answer.
+ * Declaring the reason as data is the difference between asking and hoping.
+ */
 export function readFollowUp(raw: string): string | null {
+  const t = (raw ?? '').trim().replace(/^["']|["']$/g, '')
+  if (!t || /^none$/i.test(t)) return null
+
+  const block = t.match(/\{[\s\S]*\}/)
+  if (block) {
+    try {
+      const parsed = JSON.parse(block[0]) as { reason?: string; question?: string | null }
+      if (parsed.reason !== 'correction' && parsed.reason !== 'next_step') return null
+      return readQuestion(parsed.question ?? '')
+    } catch {
+      return null
+    }
+  }
+  return readQuestion(t)
+}
+
+function readQuestion(raw: string): string | null {
   const t = (raw ?? '').trim().replace(/^["']|["']$/g, '')
   if (!t || /^none$/i.test(t)) return null
   // A follow-up that isn't a question is the model narrating.
@@ -82,6 +130,10 @@ export function readFollowUp(raw: string): string | null {
   // The prompt asks for under twenty words. A little slack, then it is a
   // speech rather than a question, and a speech on a walk goes unanswered.
   if (t.split(/\s+/).length > 24) return null
+  // The same ban the questions themselves are held to (mull.ts). The prompt
+  // says it and the model does it anyway — two of four live follow-ups were
+  // binaries — so it is checked, not just asked for.
+  if (offersAChoice(t)) return null
   return t
 }
 
@@ -89,6 +141,7 @@ export async function askFollowUp(input: FollowUpInput): Promise<string | null> 
   if (!worthFollowingUp(input.answer)) return null
   try {
     const raw = await generateText(buildFollowUpPrompt(input), {
+      responseFormat: 'json',
       ...thinkingFragment('low'),
     })
     return readFollowUp(raw)
