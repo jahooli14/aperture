@@ -1,429 +1,270 @@
 <title>Throughline</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Libre+Franklin:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
   :root{
-    --paper:#EFEFEC; --card:#FBFBFA; --gloss:#E8E8E3;
-    --ink:#16181A; --ink-2:#51565B; --ink-3:#83888E;
-    --rule:#D6D6D1; --rule-soft:#E4E4DF;
-    --mark:#8C2733; --mark-tint:#F2E3E4;
-    --serif:'Instrument Serif',Georgia,'Times New Roman',serif;
-    --sans:'Libre Franklin',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    --bg:#F4F4F1; --panel:#FCFCFB; --well:#E9E9E4;
+    --ink:#14161A; --ink-2:#565C63; --ink-3:#8B9098;
+    --rule:#DCDCD6; --rule-soft:#E8E8E3;
+    --tile:#C9C9C2; --tile-quiet:#DEDED8;
+    --lit:#B4621A; --lit-soft:#F4E5D6;
+    --sans:'Manrope',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
     --mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
   }
   @media (prefers-color-scheme:dark){
     :root:not([data-theme="light"]){
-      --paper:#131416; --card:#1B1D20; --gloss:#202327;
-      --ink:#ECEDEE; --ink-2:#A6ABB1; --ink-3:#787E85;
-      --rule:#2B2E33; --rule-soft:#212428;
-      --mark:#D97177; --mark-tint:#2E1B1E;
+      --bg:#111316; --panel:#181B1F; --well:#0C0E10;
+      --ink:#EDEEF0; --ink-2:#A2A8B0; --ink-3:#6F757D;
+      --rule:#282C31; --rule-soft:#1E2226;
+      --tile:#333840; --tile-quiet:#23272C;
+      --lit:#C4832A; --lit-soft:#2C2013;
     }
   }
   :root[data-theme="dark"]{
-    --paper:#131416; --card:#1B1D20; --gloss:#202327;
-    --ink:#ECEDEE; --ink-2:#A6ABB1; --ink-3:#787E85;
-    --rule:#2B2E33; --rule-soft:#212428;
-    --mark:#D97177; --mark-tint:#2E1B1E;
+    --bg:#111316; --panel:#181B1F; --well:#0C0E10;
+    --ink:#EDEEF0; --ink-2:#A2A8B0; --ink-3:#6F757D;
+    --rule:#282C31; --rule-soft:#1E2226;
+    --tile:#333840; --tile-quiet:#23272C;
+    --lit:#C4832A; --lit-soft:#2C2013;
   }
 
   *{box-sizing:border-box;}
-  body{background:var(--paper); color:var(--ink); font-family:var(--sans);
-       font-size:16px; line-height:1.6; padding-inline:20px; -webkit-font-smoothing:antialiased;}
+  body{background:var(--bg); color:var(--ink); font-family:var(--sans);
+       font-size:16px; line-height:1.55; padding-inline:18px; -webkit-font-smoothing:antialiased;}
   p{margin:0;}
-  h1,h2{font-family:var(--serif); font-weight:400; margin:0; text-wrap:balance; letter-spacing:-.005em;}
+  h1,h2{margin:0; font-weight:700; letter-spacing:-.022em; text-wrap:balance;}
   button{font-family:inherit;}
-  ::selection{background:var(--mark); color:var(--card);}
   @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important;}}
 
-  .page{max-width:670px; margin-inline:auto; padding-block:3rem 4rem;
-        display:flex; flex-direction:column; gap:3.4rem;}
+  .page{max-width:840px; margin-inline:auto; padding-block:2.4rem 3.5rem;
+        display:flex; flex-direction:column; gap:1.8rem;}
 
-  .eyebrow{font-family:var(--mono); font-size:.68rem; letter-spacing:.14em;
-           text-transform:uppercase; color:var(--mark);}
-  h1{font-size:clamp(2.2rem,1.6rem + 2.6vw,3.2rem); line-height:1.09; margin-top:1rem;}
-  .lede{font-size:1.04rem; color:var(--ink-2); max-width:54ch; margin-top:1.3rem;}
-  .lede b{color:var(--ink); font-weight:600;}
-  .reassure{font-size:.95rem; color:var(--ink); margin-top:1rem; max-width:54ch;
-            background:var(--gloss); border-radius:6px; padding:.85rem 1rem;}
-  .fineprint{font-family:var(--mono); font-size:.67rem; line-height:1.65; color:var(--ink-3);
-             margin-top:1.4rem; padding-top:1rem; border-top:1px solid var(--rule-soft); max-width:60ch;}
+  .kicker{font-family:var(--mono); font-size:.67rem; letter-spacing:.15em;
+          text-transform:uppercase; color:var(--lit);}
+  h1{font-size:clamp(1.9rem,1.4rem + 2.2vw,2.7rem); line-height:1.1; margin-top:.7rem;}
+  .sub{font-size:1rem; color:var(--ink-2); max-width:62ch; margin-top:.8rem;}
+  .sub b{color:var(--ink); font-weight:700;}
 
-  /* the four shapes */
-  .shapes{border-top:1px solid var(--rule); border-bottom:1px solid var(--rule); padding-block:1.6rem;}
-  .shapes__intro{font-size:1rem; color:var(--ink-2); max-width:52ch; margin-bottom:1.4rem;}
-  .shapes__intro b{color:var(--ink); font-weight:600;}
-  .shape{display:grid; grid-template-columns:auto 1fr; gap:.9rem; align-items:baseline;
-         padding-block:.62rem; border-top:1px solid var(--rule-soft);}
-  .shape:first-of-type{border-top:none;}
-  .shape__n{font-family:var(--mono); font-size:.72rem; color:var(--mark); font-weight:500;}
-  .shape__name{font-weight:600; font-size:.95rem;}
-  .shape__desc{font-size:.95rem; color:var(--ink-2);}
+  /* ---------- the wall ---------- */
+  .wall{background:var(--well); border:1px solid var(--rule); border-radius:10px;
+        padding:1.1rem 1.15rem 1rem; position:relative;}
+  .wall__top{display:flex; flex-wrap:wrap; justify-content:space-between;
+             align-items:baseline; gap:.5rem; margin-bottom:.9rem;}
+  .wall__title{font-family:var(--mono); font-size:.68rem; letter-spacing:.09em;
+               text-transform:uppercase; color:var(--ink-3);}
+  .wall__legend{display:flex; gap:1rem; font-family:var(--mono); font-size:.63rem; color:var(--ink-3);}
+  .wall__legend span{display:inline-flex; align-items:center; gap:.4em;}
+  .sw{width:9px;height:9px;border-radius:2px;display:inline-block;}
+  .sw--q{background:var(--tile);} .sw--a{background:var(--tile-quiet);} .sw--l{background:var(--lit);}
 
-  .sec__label{font-family:var(--mono); font-size:.68rem; letter-spacing:.14em;
-              text-transform:uppercase; color:var(--mark); margin-bottom:.75rem;}
-  .sec h2{font-size:clamp(1.4rem,1.15rem + 1.1vw,1.85rem); line-height:1.24; max-width:28ch;}
-  .sec__sub{font-size:.97rem; color:var(--ink-2); margin-top:.8rem; max-width:54ch;}
-  .sec__sub b{color:var(--ink); font-weight:600;}
+  .grid{display:grid; grid-template-columns:repeat(7,auto); gap:.9rem; position:relative;
+        justify-content:center;}
+  .col{display:flex; flex-direction:column; align-items:center;}
+  .col__m{font-family:var(--mono); font-size:.62rem; color:var(--ink-3);
+          letter-spacing:.06em; margin-bottom:.5rem;}
+  .tiles{display:flex; flex-wrap:wrap; gap:4px; justify-content:flex-start;
+         align-content:flex-start; width:76px;}
+  .t{width:13px; height:13px; border-radius:2px; background:var(--tile-quiet);
+     transition:background .3s ease, transform .3s ease, box-shadow .3s ease;}
+  .t.has-q{background:var(--tile);}
+  .dimmed .t{background:var(--tile-quiet); opacity:.45;}
+  .dimmed .t.has-q{background:var(--tile); opacity:.4;}
+  .t.lit{background:var(--lit)!important; opacity:1!important; transform:scale(1.5);
+         box-shadow:0 0 0 2px var(--lit-soft);}
+  svg.links{position:absolute; inset:0; width:100%; height:100%; pointer-events:none; overflow:visible;}
+  svg.links path{fill:none; stroke:var(--lit); stroke-width:1.5; opacity:.55;
+                 stroke-linecap:round;}
 
-  /* plain-terms gloss */
-  .gloss{background:var(--gloss); border-radius:6px; padding:.85rem 1rem; margin-top:1.2rem; max-width:56ch;}
-  .gloss__label{font-family:var(--mono); font-size:.63rem; letter-spacing:.11em;
-                text-transform:uppercase; color:var(--ink-3); margin-bottom:.4rem;}
-  .gloss p{font-size:.92rem; color:var(--ink-2); line-height:1.6;}
-  .gloss b{color:var(--ink); font-weight:600;}
+  .wall__foot{margin-top:.9rem; font-family:var(--mono); font-size:.64rem; color:var(--ink-3);}
 
-  /* note cards */
-  .notes{display:flex; flex-direction:column; gap:.7rem; margin-top:1.3rem;}
-  .note{background:var(--card); border:1px solid var(--rule); border-radius:7px; padding:1rem 1.15rem;}
-  .note__head{display:flex; flex-wrap:wrap; align-items:baseline; gap:.5em; margin-bottom:.45rem;}
-  .note__date{font-family:var(--mono); font-size:.68rem; color:var(--ink-3); letter-spacing:.03em;}
-  .note__who{font-size:.85rem; font-weight:600;}
-  .note__org{font-size:.85rem; color:var(--ink-2); font-weight:400;}
-  .note__said{font-family:var(--serif); font-size:1.16rem; line-height:1.38; color:var(--ink);}
-  .note__plain{font-size:.92rem; color:var(--ink-2);}
-  .note__plain b{color:var(--ink); font-weight:600;}
+  /* ---------- picker ---------- */
+  .picker{display:flex; flex-wrap:wrap; gap:.5rem;}
+  .pick{background:var(--panel); border:1px solid var(--rule); color:var(--ink-2);
+        border-radius:999px; padding:.5em 1em; font-size:.85rem; font-weight:600;
+        cursor:pointer; transition:all .2s ease;}
+  .pick:hover{border-color:var(--ink-3); color:var(--ink);}
+  .pick[aria-pressed="true"]{background:var(--lit); border-color:var(--lit); color:#FCFCFB;}
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]) .pick[aria-pressed="true"]{color:#14161A;}
+  }
+  :root[data-theme="dark"] .pick[aria-pressed="true"]{color:#14161A;}
+  .pick:focus-visible{outline:2px solid var(--lit); outline-offset:2px;}
 
-  .stamp{display:inline-flex; align-items:center; gap:.35em; font-family:var(--mono);
-         font-size:.63rem; letter-spacing:.06em; text-transform:uppercase; color:var(--mark);
-         background:var(--mark-tint); padding:.2em .5em; border-radius:3px;
-         opacity:0; transform:translateY(-2px); transition:opacity .35s ease, transform .35s ease;}
-  .is-revealed .stamp{opacity:1; transform:none;}
-  .stamp::before{content:"◆"; font-size:.7em;}
+  /* ---------- readout ---------- */
+  .readout{background:var(--panel); border:1px solid var(--rule); border-radius:10px;
+           padding:1.5rem 1.6rem; display:flex; flex-direction:column; gap:1.1rem;}
+  .readout h2{font-size:clamp(1.25rem,1.05rem + .9vw,1.6rem); line-height:1.25; max-width:30ch;}
+  .plain{background:var(--well); border-radius:7px; padding:.85rem 1rem; max-width:64ch;}
+  .plain__l{font-family:var(--mono); font-size:.61rem; letter-spacing:.12em;
+            text-transform:uppercase; color:var(--ink-3); margin-bottom:.35rem;}
+  .plain p{font-size:.91rem; color:var(--ink-2); line-height:1.6;}
+  .plain b{color:var(--ink); font-weight:600;}
 
-  .ask{margin-top:1.4rem; display:flex; flex-wrap:wrap; align-items:center; gap:1rem;}
-  .ask__q{font-size:.97rem; font-weight:600;}
-  .btn{background:var(--ink); color:var(--paper); border:none; border-radius:999px;
-       padding:.62em 1.25em; font-size:.85rem; font-weight:600; cursor:pointer; transition:opacity .2s;}
-  .btn:hover{opacity:.85;}
-  .btn:focus-visible{outline:2px solid var(--mark); outline-offset:3px;}
-  .is-revealed .ask{display:none;}
+  .beats{display:flex; flex-direction:column;}
+  .beat{display:grid; grid-template-columns:5.4rem 1fr; gap:0 1rem; align-items:start;}
+  .beat__d{font-family:var(--mono); font-size:.66rem; color:var(--ink-3);
+           text-align:right; padding-top:.35rem; letter-spacing:.03em;}
+  .beat__b{border-left:1px solid var(--rule); padding-left:1.1rem;
+           padding-bottom:.95rem; position:relative;}
+  .beat__b::before{content:""; position:absolute; left:-4px; top:.55rem; width:7px; height:7px;
+                   border-radius:50%; background:var(--panel); border:1.5px solid var(--ink-3);}
+  .beat[data-k="ours"] .beat__b::before,
+  .beat[data-k="first"] .beat__b::before{background:var(--lit); border-color:var(--lit);}
+  .beat[data-k="first"] .beat__b::before{width:10px;height:10px;left:-5.5px;top:.48rem;}
+  .beat[data-k="gap"] .beat__b::before{background:var(--panel); border-style:dashed; border-color:var(--lit);}
+  .beat:last-child .beat__b{border-left-color:transparent; padding-bottom:0;}
+  .beat__w{font-size:.85rem; font-weight:600;}
+  .beat__t{font-size:.93rem; color:var(--ink-2); margin-top:.1rem;}
+  .beat__t b{color:var(--ink); font-weight:600;}
+  .beat[data-k="gap"] .beat__w{color:var(--lit);}
 
-  .reveal{display:none; margin-top:1.5rem;}
-  .is-revealed .reveal{display:block; animation:rise .4s ease;}
-  @keyframes rise{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;}}
-  .verdict{font-family:var(--serif); font-size:1.5rem; line-height:1.25; color:var(--mark); max-width:32ch;}
-  .body-txt{font-size:.95rem; color:var(--ink-2); margin-top:.9rem; max-width:58ch;}
-  .body-txt b{color:var(--ink); font-weight:600;}
+  .punch{font-size:.97rem; color:var(--ink-2); max-width:64ch;}
+  .punch b{color:var(--ink); font-weight:600;}
 
-  .say{margin-top:1.6rem; border-top:2px solid var(--mark); background:var(--card);
-       border-radius:0 0 7px 7px; padding:1.15rem 1.3rem;}
-  .say__label{font-family:var(--mono); font-size:.64rem; letter-spacing:.13em;
-              text-transform:uppercase; color:var(--mark); margin-bottom:.6rem;}
-  .say__line{font-family:var(--serif); font-size:1.22rem; line-height:1.4; color:var(--ink);}
-  .say__to{font-size:.84rem; color:var(--ink-3); margin-top:.6rem;}
+  .say{border-top:2px solid var(--lit); background:var(--well);
+       border-radius:0 0 8px 8px; padding:1.05rem 1.2rem;}
+  .say__l{font-family:var(--mono); font-size:.61rem; letter-spacing:.12em;
+          text-transform:uppercase; color:var(--lit); margin-bottom:.5rem;}
+  .say__t{font-size:1.06rem; font-weight:600; line-height:1.45; max-width:54ch;}
 
-  /* timeline */
-  .tl{margin-top:1.4rem;}
-  .tl__row{display:grid; grid-template-columns:3.9rem 1fr; align-items:start;}
-  .tl__date{font-family:var(--mono); font-size:.68rem; color:var(--ink-3); text-align:right;
-            padding-right:1rem; padding-top:.3rem;}
-  .tl__body{border-left:1px solid var(--rule); padding-left:1.3rem; padding-bottom:1.1rem; position:relative;}
-  .tl__body::before{content:""; position:absolute; left:-4.5px; top:.5rem; width:8px; height:8px;
-                    border-radius:50%; background:var(--paper); border:1.5px solid var(--ink-3);}
-  .tl__row--first .tl__body::before{background:var(--mark); border-color:var(--mark);
-                                    width:11px; height:11px; left:-6px; top:.42rem;}
-  .tl__row:last-child .tl__body{border-left-color:transparent; padding-bottom:0;}
-  .tl__who{font-size:.87rem; font-weight:600;}
-  .tl__who span{font-weight:400; color:var(--ink-2);}
-  .tl__said{font-family:var(--serif); font-size:1.04rem; color:var(--ink-2); margin-top:.12rem;}
-  .tl__row--first .tl__said{color:var(--ink);}
+  .foot{border-top:1px solid var(--rule); padding-top:1.4rem;
+        display:flex; flex-wrap:wrap; gap:1.4rem 2rem; align-items:flex-start;}
+  .foot p{font-size:.8rem; color:var(--ink-3); max-width:46ch; line-height:1.6;}
+  .stats{display:flex; flex-wrap:wrap; gap:1.3rem; font-family:var(--mono);}
+  .stat .n{display:block; font-size:1rem; font-weight:500; color:var(--lit); font-variant-numeric:tabular-nums;}
+  .stat .l{display:block; font-size:.6rem; letter-spacing:.08em; text-transform:uppercase;
+           color:var(--ink-3); margin-top:.2rem;}
 
-  /* dot chart */
-  figure.chart{margin:1.3rem 0 0; padding:1.2rem 1.35rem; background:var(--card);
-               border:1px solid var(--rule); border-radius:7px;}
-  .chart__title{font-size:.88rem; font-weight:600; color:var(--ink); margin-bottom:1rem;}
-  .chart__row{display:grid; grid-template-columns:2.7rem 1fr; align-items:center; gap:.9rem; padding-block:.28rem;}
-  .chart__m{font-family:var(--mono); font-size:.7rem; color:var(--ink-3); letter-spacing:.04em;}
-  .chart__dots{display:flex; align-items:center; gap:6px; min-height:12px;
-               border-bottom:1px solid var(--rule-soft); padding-bottom:.28rem;}
-  .dot{width:11px; height:11px; border-radius:50%; background:var(--mark); flex:none;}
-  .dot--faint{background:transparent; border:1.5px solid var(--mark);}
-  .chart__none{font-family:var(--mono); font-size:.66rem; color:var(--ink-3); letter-spacing:.05em;}
-  figcaption{font-size:.8rem; color:var(--ink-3); margin-top:.9rem; line-height:1.55;}
-
-  .vocab{margin-top:1.2rem; padding:0; display:flex; flex-direction:column; gap:.5rem;}
-  .vocab li{list-style:none; display:grid; grid-template-columns:auto 1fr; gap:.85rem; align-items:baseline;}
-  .vocab .v-said{font-family:var(--serif); font-size:1.08rem; color:var(--ink);}
-  .vocab .v-who{font-family:var(--mono); font-size:.65rem; color:var(--ink-3);
-                text-transform:uppercase; letter-spacing:.05em; white-space:nowrap;}
-
-  .refusals{display:flex; flex-direction:column; gap:.9rem; margin-top:1.2rem;}
-  .refusal{padding-left:1rem; border-left:2px solid var(--rule);}
-  .refusal h3{font-size:.91rem; font-weight:600; margin:0;}
-  .refusal p{font-size:.89rem; color:var(--ink-2);}
-  .refusal .v{font-family:var(--mono); font-size:.68rem; color:var(--ink-3); margin-top:.15rem;}
-
-  .diary{margin-top:1.2rem; background:var(--card); border:1px solid var(--rule); border-radius:7px;
-         padding:1.2rem 1.35rem; display:grid; grid-template-columns:4rem 1fr; gap:0 1.1rem;}
-  .diary__when{font-family:var(--mono); font-size:.7rem; color:var(--ink-3); text-align:right; line-height:1.55;}
-  .diary__when b{display:block; color:var(--ink); font-weight:500; font-size:.76rem;}
-
-  .foot{border-top:1px solid var(--rule); padding-top:1.7rem; display:flex; flex-direction:column; gap:1.2rem;}
-  .close{font-family:var(--serif); font-size:1.38rem; line-height:1.35; max-width:44ch;}
-  .stats{display:flex; flex-wrap:wrap; gap:1.5rem; font-family:var(--mono);}
-  .stat .n{display:block; font-size:1.02rem; font-weight:500; color:var(--mark); font-variant-numeric:tabular-nums;}
-  .stat .l{display:block; font-size:.62rem; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-3); margin-top:.2rem;}
-
-  @media (max-width:560px){
-    .tl__row{grid-template-columns:3.3rem 1fr;}
-    .tl__date{padding-right:.8rem; font-size:.64rem;}
-    .tl__body{padding-left:1.1rem;}
-    .diary{grid-template-columns:3.4rem 1fr; gap:0 .85rem;}
-    .vocab li{grid-template-columns:1fr; gap:.15rem;}
-    .shape{grid-template-columns:1fr; gap:.2rem;}
+  @media (max-width:620px){
+    .grid{gap:.4rem;}
+    .t{width:9px;height:9px;}
+    .tiles{width:52px; gap:3px;}
+    .col__m{font-size:.55rem;}
+    .beat{grid-template-columns:4.4rem 1fr; gap:0 .7rem;}
+    .beat__d{font-size:.6rem;}
+    .readout{padding:1.15rem 1.1rem;}
   }
 </style>
 
 <div class="page">
 
   <header>
-    <p class="eyebrow">A worked example</p>
-    <h1>Four things nobody could have noticed</h1>
-    <p class="lede">Two hundred meeting notes, six months, one business development person in specialty insurance. Invented, but the kind anyone in that job actually writes. <b>Something read all two hundred at once</b> — which is the one thing a person never does — and found four things.</p>
-    <p class="reassure">You don't need to know anything about insurance to follow this. Every industry term is explained in plain English where it comes up. <b>The four findings are all shapes you'd recognise from any job.</b></p>
-    <p class="fineprint">Fictitious clients, colleagues and firms throughout. Every quotation is checked word-for-word against the note it cites; a bracketed letter marks the one permitted edit, capitalising a phrase lifted from mid-sentence.</p>
+    <p class="kicker">A worked example · specialty insurance</p>
+    <h1>Every note from six months. Five of them are secretly the same story.</h1>
+    <p class="sub">Two hundred meeting notes — invented, but the kind anyone in this job actually writes. Each square below is one note. <b>Pick a pattern and watch which ones light up.</b> You don't need to know anything about insurance; everything is explained in plain English as it comes.</p>
   </header>
 
-  <section class="shapes">
-    <p class="shapes__intro">Everything it found is one of <b>four shapes</b>. None of them can be spotted from inside a single conversation — that's what they have in common.</p>
-    <div class="shape"><span class="shape__n">01</span><div><span class="shape__name">The echo.</span> <span class="shape__desc">Something you said, coming back months later as something you heard.</span></div></div>
-    <div class="shape"><span class="shape__n">02</span><div><span class="shape__name">The contradiction.</span> <span class="shape__desc">Two people you trust, flatly disagreeing — and the answer sitting in a third conversation neither was part of.</span></div></div>
-    <div class="shape"><span class="shape__n">03</span><div><span class="shape__name">The first voice.</span> <span class="shape__desc">Who said it before everyone else, and so whose judgement to back next time.</span></div></div>
-    <div class="shape"><span class="shape__n">04</span><div><span class="shape__name">The silence.</span> <span class="shape__desc">Something everyone was talking about that stopped. Nobody ever announces that.</span></div></div>
-  </section>
-
-  <!-- 01 ECHO -->
-  <section class="sec test" id="t1">
-    <p class="sec__label">01 · The echo</p>
-    <h2>Three clients told you where the industry is heading.</h2>
-    <p class="sec__sub">Three different firms. Five weeks apart. Nobody prompted any of them.</p>
-
-    <div class="gloss">
-      <p class="gloss__label">In plain terms</p>
-      <p>All three are repeating the same bold prediction about the industry's future — that <b>half the firms running Lloyd's underwriting syndicates will disappear by 2030.</b> It's the kind of quotable claim that gets into strategy decks. You don't need to care whether it's true; watch where it came from.</p>
+  <div class="wall">
+    <div class="wall__top">
+      <span class="wall__title">200 notes · 16 Mar – 11 Sep 2026</span>
+      <span class="wall__legend">
+        <span><i class="sw sw--q"></i> someone said something</span>
+        <span><i class="sw sw--a"></i> admin</span>
+        <span><i class="sw sw--l"></i> in this pattern</span>
+      </span>
     </div>
+    <div class="grid" id="grid"><svg class="links" id="links" aria-hidden="true"></svg></div>
+    <p class="wall__foot" id="wallfoot"></p>
+  </div>
 
-    <div class="notes">
-      <div class="note">
-        <div class="note__head"><span class="note__date">10 JUN</span><span class="note__who">Piotr Zawada</span><span class="note__org">· an underwriting firm</span><span class="stamp">was at your breakfast</span></div>
-        <p class="note__said">&ldquo;[Y]our report says half the managing agents disappear by 2030. If that's right our capacity panel looks very different in five years.&rdquo;</p>
-      </div>
-      <div class="note">
-        <div class="note__head"><span class="note__date">24 JUN</span><span class="note__who">Ivan Kroll</span><span class="note__org">· a broker</span><span class="stamp">was at your breakfast</span></div>
-        <p class="note__plain">Repeats the same number back to you. Says <b>&ldquo;everyone&rdquo;</b> is saying it.</p>
-      </div>
-      <div class="note">
-        <div class="note__head"><span class="note__date">15 JUL</span><span class="note__who">Tobias Greer</span><span class="note__org">· an insurer</span><span class="stamp">on your mailing list</span></div>
-        <p class="note__said">&ldquo;[Y]ou lot are saying half the managing agents go by 2030.&rdquo;</p>
-      </div>
-    </div>
+  <div class="picker" id="picker" role="group" aria-label="Choose a pattern"></div>
 
-    <div class="ask">
-      <span class="ask__q">Three independent sources. Is the industry converging on this?</span>
-      <button class="btn" data-reveal="t1" aria-expanded="false">Show me</button>
-    </div>
-
-    <div class="reveal">
-      <p class="verdict">No. It's your own number, coming back.</p>
-      <p class="body-txt">Your firm published that prediction on <b>14 April</b>. All three of them were sent the report; two were in the room when you presented it in May. Here is what you wrote in your own notes the day it went out:</p>
-      <div class="notes">
-        <div class="note" style="border-color:var(--mark);">
-          <div class="note__head"><span class="note__date">14 APR</span><span class="note__who">Your own note, the day it published</span></div>
-          <p class="note__said">&ldquo;I have no idea whether that's true. Nobody I've asked internally knows where the number came from.&rdquo;</p>
-        </div>
-      </div>
-      <p class="body-txt">By the third telling it has stopped being a report. Ivan didn't say he'd read it — he said <b>everyone</b> was saying it. A number your own firm can't source is now circulating as what the industry thinks, and the next place it lands is a partner's slide, quoted as what clients are telling us.</p>
-      <div class="say">
-        <p class="say__label">What you get to say</p>
-        <p class="say__line">&ldquo;Careful with that number — it's ours, and nobody in my firm can tell me where it came from. Let me tell you what I'm actually hearing instead.&rdquo;</p>
-        <p class="say__to">Nobody else in that room can say it. It costs nothing and buys you the rest of the meeting.</p>
-      </div>
-    </div>
-  </section>
-
-  <!-- 02 CONTRADICTION -->
-  <section class="sec test" id="t2">
-    <p class="sec__label">02 · The contradiction</p>
-    <h2>Two senior people told you the exact opposite thing.</h2>
-    <p class="sec__sub">Six weeks apart. Both run underwriting at large insurers, both have seen three cycles. Neither knows the other said it.</p>
-
-    <div class="gloss">
-      <p class="gloss__label">In plain terms</p>
-      <p>They're arguing about <b>parametric cover</b> — insurance that pays out automatically when a measurable thing happens (the port backs up, the wind passes 80mph) rather than after an assessor works out what you actually lost. It's faster and cheaper to run. The catch: it can pay you nothing on a day you really did lose money.</p>
-    </div>
-
-    <div class="notes">
-      <div class="note">
-        <div class="note__head"><span class="note__date">19 MAR</span><span class="note__who">Marcus Deyn</span><span class="note__org">· runs underwriting at an insurer</span></div>
-        <p class="note__said">&ldquo;The data's finally good enough that we can write parametric on things that aren't windstorm. I've got a team on it.&rdquo;</p>
-      </div>
-      <div class="note">
-        <div class="note__head"><span class="note__date">5 MAY</span><span class="note__who">Ana Castellane</span><span class="note__org">· runs specialty at another insurer</span></div>
-        <p class="note__said">&ldquo;Parametric is a solution looking for a problem &hellip; The problem is the buyer thinks they bought insurance and they bought a bet.&rdquo;</p>
-      </div>
-    </div>
-
-    <div class="ask">
-      <span class="ask__q">Which of them is right?</span>
-      <button class="btn" data-reveal="t2" aria-expanded="false">Show me</button>
-    </div>
-
-    <div class="reveal">
-      <p class="verdict">Both. And you've already met the two people who settle it.</p>
-      <p class="body-txt">Not other underwriters — <b>two customers</b>, in conversations four months apart, filed under completely different accounts:</p>
-      <div class="notes">
-        <div class="note">
-          <div class="note__head"><span class="note__date">15 MAY</span><span class="note__who">Graham Tull</span><span class="note__org">· buys insurance for a manufacturer</span><span class="stamp">Ana is right about him</span></div>
-          <p class="note__said">&ldquo;I've got a real problem, I don't need a clever one.&rdquo;</p>
-        </div>
-        <div class="note">
-          <div class="note__head"><span class="note__date">25 AUG</span><span class="note__who">Beatrice Ofori</span><span class="note__org">· buys insurance for a logistics firm</span><span class="stamp">Marcus is right about her</span></div>
-          <p class="note__plain" style="margin-bottom:.4rem;">Her ports were delayed so often last year it cost <b>£4m — none of it insured.</b></p>
-          <p class="note__said">&ldquo;If someone can pay me when the port backs up I don't care what they call it.&rdquo;</p>
-        </div>
-      </div>
-      <p class="body-txt">The deciding factor is whether <b>the customer already knows what the problem costs them.</b> Beatrice has a number — £4m a year — and nothing protecting it, so an automatic payout beats the nothing she gets today. Graham has no number, so an automatic payout is just a new way to be let down. The disagreement was never the finding. The rule underneath it is, and it took four conversations across five months to see.</p>
-      <div class="say">
-        <p class="say__label">What you get to say</p>
-        <p class="say__line">&ldquo;This works where the customer already knows what the problem costs them. I know a head of risk losing £4m a year to port delays with nothing against it. Shall I introduce you?&rdquo;</p>
-        <p class="say__to">To Marcus, who has been asking you for customer introductions since May.</p>
-      </div>
-    </div>
-  </section>
-
-  <!-- 03 FIRST VOICE -->
-  <section class="sec">
-    <p class="sec__label">03 · The first voice</p>
-    <h2>You're the fifth person to be told this. Klaus was the first.</h2>
-    <p class="sec__sub">Not one of the later four mentions him. Each describes it as something happening in their own business, in their own words.</p>
-
-    <div class="gloss">
-      <p class="gloss__label">In plain terms</p>
-      <p>They're all describing the same thing: <b>injury and liability claims are getting dramatically more expensive, faster than anyone priced for.</b> Klaus saw it first because he reinsures dozens of companies and sees the total picture. The others each see only their own slice — so to them it looks like a local problem.</p>
-    </div>
-
-    <div class="tl">
-      <div class="tl__row tl__row--first">
-        <div class="tl__date">21 APR</div>
-        <div class="tl__body">
-          <p class="tl__who">Klaus Beringer <span>· reinsurer — sees dozens of firms' numbers</span></p>
-          <p class="tl__said">Asked who else was saying it: &ldquo;Almost nobody, which is what worries me.&rdquo;</p>
-        </div>
-      </div>
-      <div class="tl__row"><div class="tl__date">20 MAY</div><div class="tl__body">
-        <p class="tl__who">Sofia Marchetti <span>· another reinsurer</span></p>
-        <p class="tl__said">&ldquo;[T]he numbers look too good.&rdquo;</p></div></div>
-      <div class="tl__row"><div class="tl__date">16 JUN</div><div class="tl__body">
-        <p class="tl__who">Derek Ainsworth <span>· a mutual insurer</span></p>
-        <p class="tl__said">&ldquo;[T]he lawyers have got more organised.&rdquo;</p></div></div>
-      <div class="tl__row"><div class="tl__date">24 JUN</div><div class="tl__body">
-        <p class="tl__who">Ivan Kroll <span>· a broker</span></p>
-        <p class="tl__said">&ldquo;The markets aren't explaining it, they're just asking for more.&rdquo;</p></div></div>
-      <div class="tl__row"><div class="tl__date">11 AUG</div><div class="tl__body">
-        <p class="tl__who">Giles Overton <span>· an underwriter — thinks it's just his own book</span></p>
-        <p class="tl__said">&ldquo;[T]he direction is one way and it's the same direction every quarter.&rdquo;</p></div></div>
-    </div>
-
-    <div class="say">
-      <p class="say__label">What you get to say</p>
-      <p class="say__line">&ldquo;Klaus Beringer called this in April, when he told me almost nobody was saying it. You're the fifth person to tell me since, and none of you have spoken to each other.&rdquo;</p>
-      <p class="say__to">The useful part isn't the prediction. It's that you now know whose judgement to back — and four people have just learned you're the one keeping score.</p>
-    </div>
-  </section>
-
-  <!-- 04 SILENCE -->
-  <section class="sec">
-    <p class="sec__label">04 · The silence</p>
-    <h2>Something stopped. Something else started. Both were silent.</h2>
-    <p class="sec__sub">A regulatory deadline in June was in nearly every conversation through the spring. Then it wasn't — and nobody ever announces that they've stopped caring about something.</p>
-
-    <figure class="chart">
-      <p class="chart__title">Clients raising the June deadline, by month</p>
-      <div class="chart__row"><span class="chart__m">MAR</span><span class="chart__dots"><i class="dot"></i><i class="dot"></i></span></div>
-      <div class="chart__row"><span class="chart__m">APR</span><span class="chart__dots"><i class="dot"></i><i class="dot"></i><i class="dot"></i></span></div>
-      <div class="chart__row"><span class="chart__m">MAY</span><span class="chart__dots"><i class="dot"></i></span></div>
-      <div class="chart__row"><span class="chart__m">JUN</span><span class="chart__dots"><span class="chart__none">none</span></span></div>
-      <div class="chart__row"><span class="chart__m">JUL</span><span class="chart__dots"><span class="chart__none">none</span></span></div>
-      <div class="chart__row"><span class="chart__m">AUG</span><span class="chart__dots"><i class="dot dot--faint"></i></span></div>
-      <div class="chart__row"><span class="chart__m">SEP</span><span class="chart__dots"><span class="chart__none">none</span></span></div>
-      <figcaption>Six clients, seven weeks, then nothing. The hollow mark is a passing one — &ldquo;Nothing has changed since May except the date&rdquo; — not a live worry. No note anywhere says people have stopped raising this. An absence isn't written down; it's the shape of the gap between two months.</figcaption>
-    </figure>
-
-    <p class="sec__sub" style="margin-top:1.7rem;"><b>Meanwhile, quietly, over the same six months —</b> five clients described the same expensive problem. Not one used a word any of the others used.</p>
-
-    <div class="gloss">
-      <p class="gloss__label">In plain terms</p>
-      <p>Insurers let other firms sell policies on their behalf. Each insurer then <b>audits each of those firms separately, forever</b> — the same firm, the same questions, several times over, in different formats. Everyone involved thinks it costs far more than it ever catches. It's compliance theatre, and it's expensive.</p>
-    </div>
-
-    <ul class="vocab">
-      <li><span class="v-who">6 Apr</span><span class="v-said">&ldquo;Three sets of homework.&rdquo;</span></li>
-      <li><span class="v-who">28 Apr</span><span class="v-said">&ldquo;[A] hundred and eighty thousand pounds &hellip; proving that we're allowed to do the thing we were already doing.&rdquo;</span></li>
-      <li><span class="v-who">3 Jun</span><span class="v-said">&ldquo;[A] seven figure sum a year to be able to say we looked.&rdquo;</span></li>
-      <li><span class="v-who">16 Jun</span><span class="v-said">&ldquo;[F]orty binders and three people looking after them.&rdquo;</span></li>
-      <li><span class="v-who">6 Jul</span><span class="v-said">&ldquo;Same coverholder. Three times over.&rdquo;</span></li>
-    </ul>
-
-    <p class="body-txt" style="margin-top:1.3rem;">Five people, same complaint, <b>no shared words.</b> No search finds those together — you'd have to already know they were the same thing. And it matters now because of the first half: <b>Nils in your regulatory team hired three people for the June deadline.</b> In June he told you &ldquo;I need a second act and I don't have one.&rdquo; As of last week they have nothing booked past October.</p>
-
-    <div class="say">
-      <p class="say__label">What you get to say</p>
-      <p class="say__line">&ldquo;Nobody's mentioned the June deadline since the first week of July. But five clients spent the spring describing the same expensive problem, in five completely different sets of words, and none of them know the others said it. There's your second act.&rdquo;</p>
-      <p class="say__to">To Nils, who asked you in June what you were hearing. The answer was already in your notes — it just wasn't in any one of them.</p>
-    </div>
-  </section>
-
-  <section class="sec">
-    <p class="sec__label">The harder half</p>
-    <h2>What it saw and refused to tell you.</h2>
-    <div class="refusals">
-      <div class="refusal">
-        <h3>A broker's IT project</h3>
-        <p>Five separate mentions since March — the single loudest topic in six months of notes.</p>
-        <p class="v">Three people, all at one firm. That's one account, not an industry trend. Stayed quiet.</p>
-      </div>
-      <div class="refusal">
-        <h3>The AI trend that wasn't one</h3>
-        <p>Three clients in four weeks. One hated a sales demo, one is sorting incoming enquiries, one is catching fraud.</p>
-        <p class="v">Same word, three unrelated subjects. Stayed quiet.</p>
-      </div>
-    </div>
-    <p class="body-txt" style="margin-top:1.2rem;">Anything will find you patterns if you let it. The discipline is in the refusals — and most weeks, honestly, the output is nothing at all.</p>
-  </section>
-
-  <section class="sec">
-    <p class="sec__label">Where it reaches you</p>
-    <h2>Three days before, not the morning after.</h2>
-    <p class="sec__sub">Findings attach themselves to the diary. One line to carry in — never a summary of the last meeting.</p>
-    <div class="diary">
-      <div class="diary__when"><b>THU</b>17 SEP<br>09:30</div>
-      <div>
-        <p class="note__who">Klaus Beringer <span class="note__org">· the reinsurer from 03</span></p>
-        <p class="body-txt" style="margin-top:.3rem;">Four people have told you his April call since, each as their own discovery. A colleague in New York reached the same place in July, independently, and has the data to prove it. Neither of them knows the other exists.</p>
-      </div>
-    </div>
-  </section>
+  <div class="readout" id="readout"></div>
 
   <footer class="foot">
-    <p class="close">None of this needed a new system to be true. It needed something to read all two hundred notes at once — the one thing a person never does.</p>
     <div class="stats">
       <div class="stat"><span class="n">200</span><span class="l">Notes</span></div>
       <div class="stat"><span class="n">6</span><span class="l">Months</span></div>
       <div class="stat"><span class="n">14 / 14</span><span class="l">Planted patterns found</span></div>
-      <div class="stat"><span class="n">0</span><span class="l">False alarms raised</span></div>
+      <div class="stat"><span class="n">0</span><span class="l">False alarms</span></div>
     </div>
+    <p>Fictitious clients, colleagues and firms throughout. Every quotation is checked word-for-word against the note it cites; a bracketed letter marks the one permitted edit, capitalising a phrase lifted from mid-sentence. Built and scored against a corpus with known answers before it ever touches real notes.</p>
   </footer>
 
 </div>
 
+<script src="data.js"></script>
 <script>
-  document.querySelectorAll('[data-reveal]').forEach(function(btn){
-    btn.addEventListener('click', function(){
-      var sec = document.getElementById(btn.getAttribute('data-reveal'));
-      if(!sec) return;
-      sec.classList.add('is-revealed');
-      btn.setAttribute('aria-expanded','true');
+(function(){
+  var D = window.DEMO, MONTHS = ["2026-03","2026-04","2026-05","2026-06","2026-07","2026-08","2026-09"];
+  var LABEL = {"2026-03":"MAR","2026-04":"APR","2026-05":"MAY","2026-06":"JUN","2026-07":"JUL","2026-08":"AUG","2026-09":"SEP"};
+  var grid = document.getElementById('grid'), svg = document.getElementById('links');
+  var picker = document.getElementById('picker'), readout = document.getElementById('readout');
+  var wallfoot = document.getElementById('wallfoot');
+  var tileOf = {};
+
+  MONTHS.forEach(function(m){
+    var col = document.createElement('div'); col.className = 'col';
+    var lab = document.createElement('div'); lab.className = 'col__m'; lab.textContent = LABEL[m];
+    var wrap = document.createElement('div'); wrap.className = 'tiles';
+    D.notes.filter(function(n){ return n.d.slice(0,7) === m; }).forEach(function(n){
+      var t = document.createElement('i');
+      t.className = 't' + (n.q ? ' has-q' : '');
+      t.title = n.d;
+      wrap.appendChild(t); tileOf[n.id] = t;
     });
+    col.appendChild(lab); col.appendChild(wrap); grid.appendChild(col);
   });
+
+  function drawLinks(ids){
+    svg.innerHTML = '';
+    if(!ids || ids.length < 2) return;
+    var gb = grid.getBoundingClientRect();
+    var pts = ids.map(function(id){
+      var t = tileOf[id]; if(!t) return null;
+      var b = t.getBoundingClientRect();
+      return { x: b.left - gb.left + b.width/2, y: b.top - gb.top + b.height/2 };
+    }).filter(Boolean);
+    for(var i=0; i<pts.length-1; i++){
+      var a = pts[i], c = pts[i+1];
+      var midY = Math.min(a.y, c.y) - Math.max(18, Math.abs(c.x-a.x)*0.18);
+      var p = document.createElementNS('http://www.w3.org/2000/svg','path');
+      p.setAttribute('d','M '+a.x+' '+a.y+' Q '+((a.x+c.x)/2)+' '+midY+' '+c.x+' '+c.y);
+      svg.appendChild(p);
+    }
+  }
+
+  var current = null;
+
+  function show(f){
+    current = f;
+    grid.classList.add('dimmed');
+    Object.keys(tileOf).forEach(function(id){ tileOf[id].classList.remove('lit'); });
+    f.notes.forEach(function(id){ if(tileOf[id]) tileOf[id].classList.add('lit'); });
+    requestAnimationFrame(function(){ drawLinks(f.notes); });
+
+    wallfoot.textContent = f.notes.length + ' of 200 notes — spread across ' +
+      (new Set(f.notes.map(function(i){return i.slice(0,7);}))).size + ' months, never mentioned together.';
+
+    Array.prototype.forEach.call(picker.children, function(b){
+      b.setAttribute('aria-pressed', String(b.dataset.k === f.key));
+    });
+
+    var beats = f.beats.map(function(b){
+      return '<div class="beat" data-k="'+b[3]+'">' +
+             '<div class="beat__d">'+b[0]+'</div>' +
+             '<div class="beat__b"><p class="beat__w">'+b[1]+'</p>' +
+             '<p class="beat__t">'+b[2]+'</p></div></div>';
+    }).join('');
+
+    readout.innerHTML =
+      '<h2>'+f.head+'</h2>' +
+      '<div class="plain"><p class="plain__l">In plain terms</p><p>'+f.plain+'</p></div>' +
+      '<div class="beats">'+beats+'</div>' +
+      '<p class="punch">'+f.punch+'</p>' +
+      '<div class="say"><p class="say__l">What you get to say</p><p class="say__t">'+f.say+'</p></div>';
+  }
+
+  D.findings.forEach(function(f){
+    var b = document.createElement('button');
+    b.className = 'pick'; b.type = 'button'; b.dataset.k = f.key;
+    b.textContent = f.n; b.setAttribute('aria-pressed','false');
+    b.addEventListener('click', function(){ show(f); });
+    picker.appendChild(b);
+  });
+
+  show(D.findings[0]);
+  window.addEventListener('resize', function(){ if(current) drawLinks(current.notes); });
+})();
 </script>
