@@ -44,7 +44,32 @@ import { type MullSubjectKind, isGraveyarded } from './mull.js'
  *  day 46 forever. */
 const CORPUS_LIMIT = 2000
 /** How many subjects go into the one blind-spot call. */
-const SUBJECT_SLOTS = 3
+/**
+ * How many of the computed candidates actually get a blind spot named.
+ *
+ * Was 3. A live run typically computes far more than that — joints 12,
+ * projects 9, pairs 2, long-held 1, 24 in total is ordinary on this
+ * corpus — and `rankPairs` downstream already caps what gets DRAFTED at
+ * `PAIRS_TO_DRAFT` (4) regardless of how many subjects feed it, preferring
+ * distinct subjects first. So 3 slots was never a cost control; it was
+ * throwing away 21 of 24 already-computed, already-free candidates before
+ * ranking ever saw them, and it is why a burst of "ask me something else"
+ * taps in one sitting kept landing on the same one or two joints: with
+ * only 3 slots and a 2-per-kind cap, a corpus with 12 joints in it could
+ * only ever put 2 of them up per call, so the strongest 2 (by definition
+ * whichever just got asked and declined) came back nearly every time. 6
+ * draws from twice as much of what's already sitting there, at the cost
+ * of a slightly bigger (still capped-thinking) blind-spot call and three
+ * more Postgres searches -- Postgres and embeddings are the cheap half of
+ * this pipeline (see the file header). The two model calls this run makes
+ * do not change.
+ */
+export const SUBJECT_SLOTS = 6
+
+/** Was 2. Doubled alongside SUBJECT_SLOTS so a corpus rich in one kind (a
+ *  young corpus is usually joint-heavy) can't fill every widened slot with
+ *  just that kind -- the whole point of the cap. */
+export const PER_KIND_CAP = 3
 /** A list item wanted for longer than this is a standing want, not a mood. */
 const LONG_HELD_DAYS = 365
 /** Below this it IS a mood, however young the corpus. */
@@ -699,6 +724,10 @@ export async function gatherSubjects(
   trace: string[] = [],
   /** Projects a recent question already covered. Demoted, never dropped. */
   recentProjectIds?: Set<string>,
+  /** Any subject a recent question already covered, by its own id -- the
+   *  only way a project-less joint can ever be demoted. See
+   *  fetchRecentSparkSubjectIds. */
+  recentSubjectIds?: Set<string>,
 ): Promise<Subject[]> {
   const { thoughts, fragments, filedMemoryIds } = await loadCaptures(supabase, userId, trace)
 
@@ -748,9 +777,17 @@ export async function gatherSubjects(
     // Demoted rather than dropped: with a handful of candidate projects,
     // excluding them outright trades a repeat for an empty slot, and a
     // repeat at least has the gates still in front of it.
-    .map(s => (s.projectId && recentProjectIds?.has(s.projectId))
-      ? { ...s, strength: s.strength * 0.4 }
-      : s)
+    .map(s => {
+      // Two independent ways a subject can be "the one we just asked
+      // about": its project matches a recent question's project_id (the
+      // original check, project-shaped subjects only), or the subject
+      // itself matches a recent question's subject_id (any kind -- the
+      // one that actually reaches a joint, a pair, an unfiled thought).
+      // Either is enough; there is no reason to require both.
+      const recent = (s.projectId && recentProjectIds?.has(s.projectId))
+        || recentSubjectIds?.has(s.id)
+      return recent ? { ...s, strength: s.strength * 0.4 } : s
+    })
     .sort((a, b) => b.strength - a.strength)
 
   // Per-gatherer counts. "subjects: none" was true and useless: five paths
@@ -772,7 +809,7 @@ export async function gatherSubjects(
   const perKind = new Map<string, number>()
   const picked: Subject[] = []
   for (const subject of all) {
-    if ((perKind.get(subject.kind) ?? 0) >= 2) continue
+    if ((perKind.get(subject.kind) ?? 0) >= PER_KIND_CAP) continue
     perKind.set(subject.kind, (perKind.get(subject.kind) ?? 0) + 1)
     picked.push(subject)
     if (picked.length >= SUBJECT_SLOTS) break

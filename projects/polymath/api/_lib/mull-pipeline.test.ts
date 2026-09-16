@@ -25,7 +25,7 @@ vi.mock('./gemini-embeddings.js', () => ({
 }))
 
 const { bakeMull } = await import('./mull-generator.js')
-const { gatherSubjects } = await import('./mull-subjects.js')
+const { gatherSubjects, PER_KIND_CAP } = await import('./mull-subjects.js')
 
 const DAY = 86_400_000
 const ago = (days: number) => new Date(Date.now() - days * DAY).toISOString()
@@ -382,7 +382,7 @@ describe('what the three subjects are allowed to be', () => {
     const subjects = await gatherSubjects(fakeSupabase(jointHeavy()).client, 'u1')
     const joints = subjects.filter(s => s.kind === 'joint')
     expect(subjects.length).toBeGreaterThan(1)
-    expect(joints.length).toBeLessThanOrEqual(2)
+    expect(joints.length).toBeLessThanOrEqual(PER_KIND_CAP)
   })
 
   it('keeps a slot for reading, which on strength alone would never win', async () => {

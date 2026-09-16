@@ -31,7 +31,7 @@ import { isAppAuthored } from './corpus-provenance.js'
 import { generateText } from './gemini-chat.js'
 import { batchGenerateEmbeddings } from './gemini-embeddings.js'
 import { PLAIN_ENGLISH_RULES } from './plain-english.js'
-import { avoidBlock, echoesRecent, fetchRecentSparkTexts, fetchRecentSparkProjectIds, motifWords } from './spark-echo.js'
+import { avoidBlock, echoesRecent, fetchRecentSparkTexts, fetchRecentSparkProjectIds, fetchRecentSparkSubjectIds, motifWords } from './spark-echo.js'
 import { examplesBlock } from './mull-examples.js'
 import { gatherSubjects, identityBlock, type Subject } from './mull-subjects.js'
 import { articleBody } from './article-text.js'
@@ -95,6 +95,10 @@ export interface BakedSpark {
    * holds for reading the gate afterwards too.
    */
   stake?: string
+  /** Which subject this was about, by id and kind -- see
+   *  fetchRecentSparkSubjectIds for why this exists alongside project_id. */
+  subject_id?: string
+  subject_kind?: string
   /** Written now, shown later. Held behind the standing question rather
    *  than replacing it — the channel's cheapest question is the one that
    *  was already paid for days ago. */
@@ -118,6 +122,8 @@ export interface EchoContext {
   /** Projects a recent question was already about, by id. Applied when
    *  subjects are picked rather than when drafts are judged. */
   recentProjectIds?: Set<string>
+  /** Same idea, generalised to any subject kind -- see fetchRecentSparkSubjectIds. */
+  recentSubjectIds?: Set<string>
   avoid: string
   /** Questions this person actually answered, and what they said back —
    *  plus the ones they read and ignored. See loadResonance. */
@@ -200,13 +206,14 @@ for the reader to do.
 export async function loadEchoContext(
   supabase: SupabaseClient, userId: string, trace: MullTrace = [],
 ): Promise<EchoContext> {
-  const [recentTexts, recentProjectIds, resonance, identity] = await Promise.all([
+  const [recentTexts, recentProjectIds, recentSubjectIds, resonance, identity] = await Promise.all([
     fetchRecentSparkTexts(supabase, userId),
     fetchRecentSparkProjectIds(supabase, userId),
+    fetchRecentSparkSubjectIds(supabase, userId),
     loadResonance(supabase, userId),
     identityBlock(supabase, userId, trace),
   ])
-  return { recentTexts, recentProjectIds, avoid: avoidBlock(recentTexts), resonance, identity }
+  return { recentTexts, recentProjectIds, recentSubjectIds, avoid: avoidBlock(recentTexts), resonance, identity }
 }
 
 function expiresAt(hours: number): string {
@@ -752,7 +759,7 @@ export async function generateMull(
   echo: EchoContext,
   trace: MullTrace = [],
 ): Promise<BakedSpark[]> {
-  const subjects = await gatherSubjects(supabase, userId, trace, echo.recentProjectIds)
+  const subjects = await gatherSubjects(supabase, userId, trace, echo.recentProjectIds, echo.recentSubjectIds)
   trace.push(
     subjects.length === 0
       ? 'subjects: none — no joint, project, thought, list item or article qualified'
@@ -960,6 +967,8 @@ export async function generateMull(
       project_id: draft.pairing.subject.projectId || null,
       expires_at: expiresAt(SHELF_LIFE_HOURS),
       stake: draft.stake,
+      subject_id: draft.pairing.subject.id,
+      subject_kind: draft.pairing.subject.kind,
       // The second question is not shown yet: it waits behind the first
       // and only becomes the standing question once that one is answered
       // or runs out. Its shelf life is measured from then, not from now,
