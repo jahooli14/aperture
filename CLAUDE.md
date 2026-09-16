@@ -185,6 +185,13 @@ Excluded from: `loadCaptures` (one point, covering project timelines, joint memb
 - An answer is by construction the row closest in meaning to the question that produced it, so it ranks high as a connector — where `CONNECTOR_LABEL` introduces it to the draft model as *"a note they made, about something else entirely"*.
 - Spark answers are processed `coreOnly`: embedded and searchable, deliberately **not** fragment-attached.
 
+**One question back, so a wrong premise can be corrected** (`api/_lib/spark-followup.ts`, pure + unit-tested; `utilities?resource=spark-followup`). A computed fact is true and still may be out of date — "you gave up on custom t-shirts in January" is arithmetic, but whether that is still how they think about it today is only knowable from them, and there was nowhere to say it. They answer, the app asks one short thing, they reply or skip, and both their turns save as one note.
+
+- **Only the user's turns are ever stored.** The follow-up question is scaffolding: it exists to get a second sentence and is thrown away. Saving it would put model prose into the corpus as "their own words", where the grounding gates would later check the model against itself and `loadResonance` would few-shot on it.
+- **Two turns, never more.** These get answered on a walk or not at all.
+- The follow-up hunts the correction first, because people correct you politely and move on — "actually I never gave up on it, it moved to the other list" is the most valuable thing the channel can hear and the easiest to miss. `NONE` when their answer already settles it; a shrug under `MIN_ANSWER_CHARS` is never followed up, and a reply that isn't a question or runs past 24 words is the model narrating and gets dropped.
+- **Nothing stands between them and a saved answer.** A failed or empty follow-up call just saves, exactly as before, and `skip` sits next to `Done` rather than hidden.
+
 **A dismissal is not an answer.** `dismiss-spark` wrote `answered_at` — the same field `respond` writes — so "not interested" and "here's my answer" were one row state. Live: 36 sparks, 4 marked answered, 3 of them dismissals. One real answer, recorded as four. The draft prompt few-shots on "questions that got a real voice answer", so every dismissal was being learned from as a success. `sparks.dismissed_at` now separates them.
 
 **Answering happens inside the request.** `respond` fired `processMemory` and returned; a Vercel function has no obligation to finish work started after the response is sent, and the UI's `.catch(() => ({}))` showed "Saved." regardless — including on a 500. An answer that changes nothing about future questions is the whole feature failing silently, twice over.

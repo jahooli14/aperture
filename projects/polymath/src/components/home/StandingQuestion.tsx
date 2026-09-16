@@ -45,6 +45,13 @@ export function StandingQuestion() {
   const [rerolling, setRerolling] = useState(false)
   const [receipt, setReceipt] = useState<string | null>(null)
   const [note, setNote] = useState<string | null>(null)
+  // The one question back. A computed fact can be true and still be out of
+  // date — "you gave up on it in January" is arithmetic, whether that is
+  // still how they think about it is only knowable from them. Two turns,
+  // never more: this gets answered on a walk or not at all.
+  const [followUp, setFollowUp] = useState<string | null>(null)
+  const [followUpText, setFollowUpText] = useState('')
+  const [asking, setAsking] = useState(false)
   const [loaded, setLoaded] = useState(false)
 
   useEffect(() => {
@@ -66,8 +73,9 @@ export function StandingQuestion() {
     return () => { cancelled = true }
   }, [])
 
-  const respond = async () => {
-    if (!text.trim() || !spark) return
+  /** Save their turns and close the card. */
+  const save = async (turns: string[]) => {
+    if (!spark) return
     setSubmitting(true)
     try {
       // No inner .catch here. It used to swallow everything -- a 401, a 500
@@ -76,7 +84,7 @@ export function StandingQuestion() {
       // this card exists for; claiming it worked when it didn't is the worst
       // thing it can do, because the user has no other copy of what they said.
       const data = await api.post('utilities?resource=respond', {
-        spark_id: spark.id, response_text: text,
+        spark_id: spark.id, response_text: turns[0], turns,
       }) as { project_title?: string; processed?: boolean }
       haptic.success()
       setReceipt(
@@ -90,6 +98,29 @@ export function StandingQuestion() {
       setNote("That didn't send. Your answer is still here — try again.")
       setSubmitting(false)
     }
+  }
+
+  const respond = async () => {
+    if (!text.trim() || !spark) return
+    // Ask one thing back before saving — but never let that stand between
+    // them and a saved answer. If the follow-up call fails or has nothing
+    // to ask, this just saves, which is exactly what it did before.
+    setAsking(true)
+    try {
+      const data = await api.post('utilities?resource=spark-followup', {
+        spark_id: spark.id, answer: text,
+      }) as { question?: string | null }
+      if (data.question) {
+        haptic.light()
+        setFollowUp(data.question)
+        setAsking(false)
+        return
+      }
+    } catch {
+      // Nothing to ask, or could not ask. Save what they said.
+    }
+    setAsking(false)
+    await save([text])
   }
 
   const reroll = async () => {
@@ -215,7 +246,45 @@ export function StandingQuestion() {
         </p>
       )}
 
-      {answering && (
+      {/* The one question back. Skipping is a first-class option and sits
+          next to Done, not hidden — a follow-up they cannot escape is worse
+          than no follow-up, and their first answer is already safe either
+          way (it saves whichever button they press). */}
+      {followUp && (
+        <div className="mt-3">
+          <p
+            className="text-[13px] leading-[1.45] mb-2"
+            style={{ color: 'var(--brand-text-secondary)', textWrap: 'pretty' }}
+          >
+            {followUp}
+          </p>
+          <VoiceInput onTranscript={setFollowUpText} maxDuration={30} />
+          <div className="flex items-center gap-3 mt-2">
+            <button
+              className="px-3 py-1.5 rounded-lg text-[12px] font-medium disabled:opacity-50"
+              style={{
+                background: 'rgba(var(--brand-primary-rgb), 0.12)',
+                border: '1px solid rgba(var(--brand-primary-rgb), 0.32)',
+                color: 'rgb(var(--brand-primary-rgb))',
+              }}
+              disabled={submitting}
+              onClick={() => save(followUpText.trim() ? [text, followUpText] : [text])}
+            >
+              {submitting ? 'Saving…' : 'Done'}
+            </button>
+            <button
+              className="text-[12px] transition-opacity hover:opacity-90 disabled:opacity-30"
+              style={quietActionStyle}
+              disabled={submitting}
+              onClick={() => save([text])}
+            >
+              skip
+            </button>
+          </div>
+        </div>
+      )}
+
+      {answering && !followUp && (
         <div className="mt-2.5">
           <VoiceInput onTranscript={setText} maxDuration={30} />
           <div className="flex items-center gap-3 mt-2">
@@ -227,10 +296,10 @@ export function StandingQuestion() {
                   border: '1px solid rgba(var(--brand-primary-rgb), 0.32)',
                   color: 'rgb(var(--brand-primary-rgb))',
                 }}
-                disabled={submitting}
+                disabled={submitting || asking}
                 onClick={respond}
               >
-                {submitting ? 'Saving…' : 'Done'}
+                {asking ? 'One sec…' : submitting ? 'Saving…' : 'Done'}
               </button>
             )}
             <button
