@@ -1887,7 +1887,8 @@ async function handleSearch(query: string, supabase: any, userId: string, res: V
       }
     } else if (semantic) {
       try {
-        embedding = await generateEmbedding(query)
+        // A search box is a query, not a document (gemini-embeddings.ts).
+        embedding = await generateEmbedding(query, 3)
       } catch (e) {
         console.error('[handleSearch] Failed to generate embedding for semantic search:', e)
       }

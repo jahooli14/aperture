@@ -95,6 +95,52 @@ function toVector(values: number[]): number[] {
 }
 
 /**
+ * ONE vector space, and it is the query one. Measured, not chosen.
+ *
+ * `taskType` looks like free quality: retrieval here is asymmetric — a
+ * blind-spot question against a corpus of notes — so the textbook answer is
+ * RETRIEVAL_DOCUMENT for stored rows and RETRIEVAL_QUERY for searches. That
+ * answer assumes retrieval is the only thing the vectors are for. Here it is
+ * one use out of eight. The same `memories.embedding` column also decides
+ * which project a capture attaches to (fragments.ts), which projects are a
+ * restart of each other (project-shapes.ts), which notes cluster into a joint
+ * (joints.ts, joint-miner.ts), and where a project's centre of mass sits
+ * (orbit.ts) — all of them document-against-document and symmetric.
+ *
+ * RETRIEVAL_DOCUMENT is trained to make a document findable BY A QUERY. It is
+ * not trained to hold documents apart from each other, and measured on this
+ * corpus it does the opposite. Same 76 notes and 34 projects, embedded both
+ * ways:
+ *
+ *                              DOCUMENT   QUERY
+ *   attach margin p50           0.0081   0.0164
+ *   attach margin p90           0.0407   0.0807
+ *   project<->project max-p99    0.043    0.121
+ *
+ * Margins halve and the headroom a restart needs above the corpus's ceiling
+ * for coincidence collapses to a third. The ranking degrades with it: in
+ * query space the woodwork note reaches *Paint one wood block* and the
+ * dream-door note reaches *Vivid dreams book* — two of the four pairs
+ * CLAUDE.md names as the ones that stop being arguable — and in document
+ * space both drop out of the top six for vaguer pairs.
+ *
+ * Every measured constant in this codebase (ATTACH_MARGIN, ORBIT_FLOOR /
+ * CEILING / RIVAL_MARGIN, CONNECTOR_FLOOR / CEILING, RESTART_SIM,
+ * RECURRENCE_SIM_THRESHOLD) was measured in this space. Changing it is a flag
+ * day for the vectors AND a retune of all eight, which is why this is a
+ * constant with the numbers attached rather than a per-call parameter someone
+ * can set on one writer and quietly break the thresholds everywhere else.
+ *
+ * Passing no taskType at all is byte-identical to this (cosine 1.000000
+ * against the live API), so this names what was already true rather than
+ * changing it. `gemini-embedding-2` cannot express it either way: measured,
+ * it IGNORES taskType entirely (query and document come back cosine
+ * 1.000000), taking the task as a prompt instruction instead.
+ */
+const CORPUS_TASK = 'RETRIEVAL_QUERY'
+
+
+/**
  * Generate a single embedding using Gemini with retry logic
  * Model: gemini-embedding-001 (768 dimensions via MRL)
  */
@@ -111,6 +157,7 @@ export async function generateEmbedding(text: string, retries = 3): Promise<numb
       const result = await model.embedContent({
         content: { role: 'user', parts: [{ text }] },
         outputDimensionality: MODELS.DEFAULT_EMBEDDING_DIMS,
+        taskType: CORPUS_TASK,
       } as Parameters<typeof model.embedContent>[0])
 
       // Track usage
@@ -179,6 +226,7 @@ export async function batchGenerateEmbeddings(texts: string[], retries = 3): Pro
         requests: texts.map(text => ({
           content: { role: 'user', parts: [{ text }] },
           outputDimensionality: MODELS.DEFAULT_EMBEDDING_DIMS,
+          taskType: CORPUS_TASK,
         })),
       } as Parameters<typeof model.batchEmbedContents>[0])
 

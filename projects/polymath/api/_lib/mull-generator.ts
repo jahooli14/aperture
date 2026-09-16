@@ -329,7 +329,10 @@ async function findConnectors(
 ): Promise<Pairing[]> {
   let embeddings: number[][]
   try {
-    embeddings = await batchGenerateEmbeddings(blindSpots.map(b => b.searchQuery))
+    // The blind-spot question goes into the SAME space as the corpus, not a
+    // query-side one. Splitting them is the textbook answer and is measured
+    // wrong here -- see CORPUS_TASK in gemini-embeddings.ts for the numbers.
+    embeddings = await batchGenerateEmbeddings(blindSpots.map(b => b.searchQuery), 3)
   } catch (e) {
     console.warn('[mull] embedding failed:', e instanceof Error ? e.message : e)
     return []
@@ -698,14 +701,22 @@ not carry any of the note's actual words was not written from the note.`
       if (!stake) noStake++
       out.push({ pairing, text, quote, stake })
     }
-    if (declined || noQuote || noStake) {
-      trace.push(
-        `draft call: ${rows.length} pairs came back` +
-        `${declined ? `, ${declined} declined by the model` : ''}` +
-        `${noQuote ? `, ${noQuote} with no quote (the gate re-checks the question itself)` : ''}` +
-        `${noStake ? `, ${noStake} with no stake` : ''}`,
-      )
-    }
+    // Always traced, including the zero case. This line used to be pushed
+    // only when something was declined or missing a field, so a model that
+    // answered `{"pairs": []}` -- or with no `pairs` key at all -- left NO
+    // line, and the trace jumped straight from "4 sent to draft" to
+    // "drafts: 0 of 4 pairs written" with nothing in between. A live run
+    // did exactly that, and the four possible causes (declined, unparseable,
+    // empty array, wrong shape) read identically from outside. Same class as
+    // every other silent decline in this channel: the step has to say it
+    // was the one that stopped.
+    trace.push(
+      `draft call: ${rows.length} pairs came back` +
+      `${Array.isArray(parsed?.pairs) ? '' : ' (no `pairs` array in the response)'}` +
+      `${declined ? `, ${declined} declined by the model` : ''}` +
+      `${noQuote ? `, ${noQuote} with no quote (the gate re-checks the question itself)` : ''}` +
+      `${noStake ? `, ${noStake} with no stake` : ''}`,
+    )
     return out
   } catch (e) {
     // This returned [] and said so only in the Vercel log, so a failed or
