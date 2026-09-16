@@ -216,6 +216,45 @@ export async function fetchRecentSparkProjectIds(
   return new Set(data.map((s: any) => s.project_id).filter(Boolean))
 }
 
+/**
+ * Same idea, but by SUBJECT rather than project.
+ *
+ * `recentProjectIds` above only ever demotes a project-SHAPED subject, and
+ * only once a spark actually shipped for it. A joint routinely has no
+ * project (`projectId: null` -- a project-less joint is how a NEW project
+ * gets surfaced, see mull-generator.ts), so nothing about it was ever
+ * demotable: the strongest joint in the corpus could be drafted, shipped,
+ * read, and dismissed, and the very next run would rank it exactly as high
+ * as if it had never been asked. `sparks.subject_id` names the subject
+ * directly -- whichever kind it was -- so this covers every kind the
+ * project-only version structurally could not.
+ *
+ * Still only catches what SHIPPED, same as the project version: a subject
+ * that got drafted and declined by the model, or drafted and gate-rejected,
+ * writes no row and leaves no trace here either. That gap is real and is
+ * why SUBJECT_SLOTS was widened instead of relying on this alone
+ * (mull-subjects.ts) -- this closes "asked and answered days ago, asked
+ * again today", not "declined ninety seconds ago in the last reroll".
+ */
+export async function fetchRecentSparkSubjectIds(
+  supabase: SupabaseClient,
+  userId: string,
+  limit: number = ECHO_WINDOW_SPARKS,
+): Promise<Set<string>> {
+  const cutoff = new Date(Date.now() - ECHO_LOOKBACK_DAYS * 86_400_000).toISOString()
+  const { data, error } = await supabase
+    .from('sparks')
+    .select('subject_id')
+    .eq('user_id', userId)
+    .eq('type', 'mull')
+    .not('subject_id', 'is', null)
+    .gte('created_at', cutoff)
+    .order('created_at', { ascending: false })
+    .limit(limit)
+  if (error || !data) return new Set()
+  return new Set(data.map((s: any) => s.subject_id).filter(Boolean))
+}
+
 export async function fetchRecentSparkTexts(
   supabase: SupabaseClient,
   userId: string,

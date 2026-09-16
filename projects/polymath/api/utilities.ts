@@ -1813,13 +1813,17 @@ function randomUuid(): string {
 }
 
 /**
- * Insert baked sparks, dropping `stake` if the column isn't there yet.
+ * Insert baked sparks, dropping the diagnostic columns if they aren't
+ * there yet: `stake` (20260916_spark_stake.sql) and `subject_id` /
+ * `subject_kind` (20260916_spark_subject.sql).
  *
- * `20260916_spark_stake.sql` adds it and the deploy does not run migrations,
- * so between the two there is a window where naming the column fails the
- * whole insert — and the whole insert is the run's entire output. Same
- * shape as `embedded_at` in the embedding writers: the diagnostic field is
- * never worth losing the thing it describes.
+ * The deploy does not run migrations, so between deploy and migration
+ * there is a window where naming any of these fails the whole insert —
+ * and the whole insert is the run's entire output. Same shape as
+ * `embedded_at` in the embedding writers: a diagnostic field is never
+ * worth losing the thing it describes. One retry covers all three
+ * regardless of which migration is still pending, since a bake should not
+ * need to know which one that is.
  */
 async function insertSparks(
   supabase: SupabaseClient,
@@ -1833,7 +1837,7 @@ async function insertSparks(
   const first = await run(rows)
   if (first.error?.code !== '42703') return first as any
   console.warn('[utilities/sparks] no `stake` column yet — inserting without it')
-  return await run(rows.map(({ stake: _stake, ...rest }) => rest)) as any
+  return await run(rows.map(({ stake: _stake, subject_id: _sid, subject_kind: _sk, ...rest }) => rest)) as any
 }
 
 // ─── Execution rebuild (SPEC.md) — folded in from sessions.ts/sparks.ts/  ──
@@ -2891,6 +2895,8 @@ async function retireAndRebake(
       text: spark.text,
       expires_at: spark.expires_at,
       stake: spark.stake ?? null,
+      subject_id: spark.subject_id ?? null,
+      subject_kind: spark.subject_kind ?? null,
       shown_at: i === 0 ? nowIso : null,
     })),
     'id, type, text, project_id, shown_at, projects(title)',
@@ -2996,6 +3002,8 @@ async function handleExecutionSparks(req: VercelRequest, res: VercelResponse) {
       text: spark.text,
       expires_at: spark.expires_at,
       stake: spark.stake ?? null,
+      subject_id: spark.subject_id ?? null,
+      subject_kind: spark.subject_kind ?? null,
     }))
 
     const { error: insertErr } = await insertSparks(supabase, rows)
