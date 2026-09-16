@@ -785,7 +785,7 @@ export async function generateMull(
     subject: {
       kind: 'project' as const,
       shape: undefined,
-      id: sh.projectId,
+      id: sh.projectId ?? `shape:${sh.kind}`,
       projectId: sh.projectId,
       title: sh.projectTitle,
       block: sh.fact,
@@ -798,7 +798,9 @@ export async function generateMull(
     orbitFact: sh.fact,
     connector: {
       kind: 'memory' as const,
-      id: sh.projectId,
+      // Not a row id — these facts are computed, not fetched. Stable per
+      // shape so `rankPairs` can tell two of them apart.
+      id: `shape:${sh.kind}:${sh.projectTitle}`,
       title: 'what they wrote at the time',
       text: sh.evidence,
       similarity: 1,
@@ -927,7 +929,9 @@ export async function generateMull(
     baked.push({
       type: 'mull',
       text: draft.text,
-      project_id: draft.pairing.subject.projectId,
+      // `|| null` rather than the value: a subject with no project must not
+      // reach a uuid column as an empty string (project-shapes.ts).
+      project_id: draft.pairing.subject.projectId || null,
       expires_at: expiresAt(SHELF_LIFE_HOURS),
       // The second question is not shown yet: it waits behind the first
       // and only becomes the standing question once that one is answered

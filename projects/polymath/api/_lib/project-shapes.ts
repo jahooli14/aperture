@@ -28,8 +28,15 @@ export interface ShapeProject {
 
 export interface ProjectShape {
   kind: 'restarted' | 'abandoned_batch' | 'untouched_haul'
-  /** The project the question should point at. */
-  projectId: string
+  /**
+   * The project the question should point at, or null when there isn't one.
+   *
+   * Null, never '': this ends up in `sparks.project_id`, a uuid column, and
+   * Postgres rejects an empty string outright. The rows of a run are
+   * inserted together, so one question with no project would have failed
+   * the whole bake.
+   */
+  projectId: string | null
   projectTitle: string
   /** True by construction, dated, and impossible to see from inside. */
   fact: string
@@ -226,7 +233,7 @@ export function findUntouchedHaul(items: HaulItem[], now: Date = new Date()): Pr
     hauls.push({
       kind: 'untouched_haul',
       // No project. These questions are for finding one that isn't there yet.
-      projectId: '',
+      projectId: null,
       projectTitle: sameDay[0].listTitle ?? 'a list',
       fact:
         `On ${new Date(day).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })} ` +

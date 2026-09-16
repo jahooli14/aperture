@@ -176,6 +176,8 @@ describe('findUntouchedHaul', () => {
   })
 
   it('carries no project, because the point is one that is not there yet', () => {
-    expect(findUntouchedHaul(ten(), NOW)[0].projectId).toBe('')
+    // Null, not '': it lands in a uuid column and Postgres refuses an empty
+    // string, which would have failed the whole run's insert.
+    expect(findUntouchedHaul(ten(), NOW)[0].projectId).toBeNull()
   })
 })
