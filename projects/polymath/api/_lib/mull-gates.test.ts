@@ -107,6 +107,12 @@ const SHOULD_REFUSE = [
   ["a choice in the other common phrasing", candidate(
     "You said it only works if it's one take. Is the book about the takes, or is it about the rewrites?",
     "it only works if it's one take", 'He drafts the next chapter once.')],
+  // One run in five shipped this: a binary behind a stake that said "or"
+  // and meant nothing by it. An exemption any sentence with "or" can
+  // satisfy is a hole, not an exemption.
+  ["a choice behind a stake that only pretends to split", candidate(
+    "You said it only works if it's one take. Are you making the record, or just running the same session twice?",
+    "it only works if it's one take", 'He picks a direction, or not.')],
   ["invents the quote", candidate(
     "You said you had ten more summers with your dad. What are the chapters for?",
     'ten more summers with your dad', 'Chapters nine to twelve come out.')],

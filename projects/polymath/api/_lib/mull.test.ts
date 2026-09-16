@@ -9,6 +9,7 @@ import {
   rankPairs,
   PAIRS_TO_DRAFT,
   stakeIsHollow,
+  unsupportedSpecifics,
   CONNECTOR_FLOOR,
   CONNECTOR_CEILING,
   connectorCeiling,
@@ -373,3 +374,25 @@ describe('selectConnectors requiring a project connector, no fallback', () => {
   })
 })
 
+describe('ordinals are not inventions', () => {
+  it('accepts "the 10th" when the fact says "10 January"', () => {
+    // Live: two drafts in one run died on "3rd" and "10th" against a fact
+    // reading "On 10 January 2026...". English writes dates as ordinals;
+    // the computed facts write them as cardinals.
+    expect(unsupportedSpecifics(
+      'You put ten things on a list on the 10th. Which one goes first?',
+      ['On 10 January 2026 they put 10 things on a list in one sitting.'],
+    )).toEqual([])
+  })
+
+  it('still catches a day nothing supports', () => {
+    expect(unsupportedSpecifics(
+      'You put ten things on a list on the 23rd. Which one goes first?',
+      ['On 10 January 2026 they put 10 things on a list in one sitting.'],
+    )).toContain('23rd')
+  })
+
+  it('does not treat any number as an ordinal', () => {
+    expect(unsupportedSpecifics('You wrote 198 of them.', ['They wrote 12 of them.'])).toContain('198')
+  })
+})

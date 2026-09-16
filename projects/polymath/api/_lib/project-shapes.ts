@@ -27,7 +27,7 @@ export interface ShapeProject {
 }
 
 export interface ProjectShape {
-  kind: 'restarted' | 'abandoned_batch'
+  kind: 'restarted' | 'abandoned_batch' | 'untouched_haul'
   /** The project the question should point at. */
   projectId: string
   projectTitle: string
@@ -173,4 +173,71 @@ export function findAbandonedBatches(projects: ShapeProject[]): ProjectShape[] {
     })
   }
   return out.sort((a, b) => b.strength - a.strength)
+}
+
+
+/** A sitting, not a Tuesday. Typical days here add one or two things. */
+export const HAUL_MIN = 5
+/** Old enough that never touching one of them was a choice. */
+export const HAUL_MIN_AGE_DAYS = 120
+
+export interface HaulItem {
+  content: string
+  status: string | null
+  createdAt: string
+  listTitle?: string | null
+}
+
+/**
+ * A day when they saved a pile of things and have not touched one since.
+ *
+ * Live: on 10 January ten lines went onto a list in one sitting — "be
+ * excellent to each other", "dancing on water in life's late hours",
+ * "unannounced like a thief in the night" — and nothing like it before or
+ * after. Every one still untouched.
+ *
+ * What makes it worth asking is invisible to the list itself: their very
+ * first capture, months earlier, was a project to collect beautiful
+ * sentences. They did the project, in one afternoon, in the wrong container,
+ * and never called it that. The app cannot know the second half — but it can
+ * put the first half in front of them, which is the whole trick.
+ *
+ * Only the biggest one. Four days qualify on this corpus, and four questions
+ * about "you saved some things once" is one question and three repeats.
+ */
+export function findUntouchedHaul(items: HaulItem[], now: Date = new Date()): ProjectShape[] {
+  const byDay = new Map<string, HaulItem[]>()
+  for (const i of items) {
+    const day = i.createdAt.slice(0, 10)
+    if (!byDay.has(day)) byDay.set(day, [])
+    byDay.get(day)!.push(i)
+  }
+
+  const hauls: ProjectShape[] = []
+  for (const [day, sameDay] of byDay) {
+    if (sameDay.length < HAUL_MIN) continue
+    const ageDays = (now.getTime() - new Date(day).getTime()) / DAY
+    if (!Number.isFinite(ageDays) || ageDays < HAUL_MIN_AGE_DAYS) continue
+    // One of them getting picked up makes this a list working as intended.
+    const untouched = sameDay.every(i => (i.status ?? 'pending') === 'pending')
+    if (!untouched) continue
+
+    const examples = sameDay.slice(0, 3).map(i => `"${i.content}"`).join(', ')
+    hauls.push({
+      kind: 'untouched_haul',
+      // No project. These questions are for finding one that isn't there yet.
+      projectId: '',
+      projectTitle: sameDay[0].listTitle ?? 'a list',
+      fact:
+        `On ${new Date(day).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })} ` +
+        `they put ${sameDay.length} things on a list in one sitting — ${examples} — ` +
+        `and have not touched any of them since.`,
+      evidence: sameDay.map(i => i.content).join('. '),
+      strength: 1.0 + Math.min(sameDay.length / 40, 0.3),
+    })
+  }
+
+  // The biggest sitting only. Several qualify, and several questions about
+  // "you saved some things once" is one question and the rest repeats.
+  return hauls.sort((a, b) => b.strength - a.strength).slice(0, 1)
 }

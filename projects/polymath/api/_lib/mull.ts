@@ -505,7 +505,27 @@ export function specifics(text: string): string[] {
  */
 export function unsupportedSpecifics(text: string, evidence: string[]): string[] {
   const haystack = evidence.join(' ').toLowerCase()
-  return specifics(text).filter(w => !haystack.includes(w))
+  return specifics(text).filter(w => !haystack.includes(w) && !ordinalSupported(w, haystack))
+}
+
+/**
+ * "the 10th" is not an invention when the fact says "10 January".
+ *
+ * English writes dates as ordinals and the facts this channel computes
+ * write them as cardinals, so every question that mentioned the day was
+ * rejected for making it up. Live: two drafts in one run died on "3rd" and
+ * "10th" against a fact reading "On 10 January 2026...". Same shape as the
+ * missing month earlier — a gate can only see what it is given, and here
+ * it was given the number and shown the ordinal.
+ *
+ * Deliberately narrow: only a number with an ordinal suffix, only matched
+ * against the same bare number. "2026th" is not a thing, and "1950s" is
+ * already handled by the tokeniser above.
+ */
+export function ordinalSupported(word: string, haystack: string): boolean {
+  const m = /^(\d{1,2})(st|nd|rd|th)$/.exec(word)
+  if (!m) return false
+  return new RegExp(`\\b${m[1]}\\b`).test(haystack)
 }
 
 export interface ValidationInput extends MullDraft {
@@ -551,9 +571,29 @@ export interface ValidationInput extends MullDraft {
  * Shape alone is not the verdict, though — see `stakeSplits`. Some of the
  * best questions this channel can ask ARE either/ors.
  */
-/** Does the stake name a different outcome for each branch of the question? */
+/**
+ * Does the stake name a genuinely different outcome for each branch?
+ *
+ * The word "or" alone is not enough, and one run in five proved it: the
+ * channel shipped "Are you making creative logo t-shirts for friends, or
+ * are you just running the same January project twice?" behind a stake that
+ * said "or" and meant nothing by it. An exemption that any sentence
+ * containing "or" can satisfy is not an exemption, it is a hole.
+ *
+ * A real split has two SIDES with weight of their own — the shortest real
+ * one on record is "he writes the last line this week, or admits he wanted
+ * the hours", where the half after "or" is its own clause with its own
+ * verb. So: both sides have to be substantial.
+ */
 export function stakeSplits(stake: string): boolean {
-  return /\bor\b|\beither way\b/i.test(stake ?? '')
+  const t = (stake ?? '').trim()
+  if (/\beither way\b/i.test(t)) return true
+  const parts = t.split(/\bor\b/i)
+  if (parts.length !== 2) return false
+  const words = (x: string) => x.trim().split(/\s+/).filter(Boolean).length
+  // Four words a side. "...this week, or admits he wanted the hours" passes;
+  // "...picks a direction, or not" does not.
+  return words(parts[0]) >= 4 && words(parts[1]) >= 4
 }
 
 export function offersAChoice(questionText: string): boolean {

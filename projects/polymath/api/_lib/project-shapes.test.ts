@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
-  findRestarts, findAbandonedBatches, isDead,
+  findRestarts, findAbandonedBatches, findUntouchedHaul, isDead,
+  HAUL_MIN, HAUL_MIN_AGE_DAYS,
   RESTART_SIM, RESTART_MIN_GAP_DAYS, BATCH_MIN,
   type ShapeProject,
 } from './project-shapes.js'
@@ -130,5 +131,51 @@ describe('findAbandonedBatches', () => {
       p('b', 'Two', 'abandoned', 255),
       p('c', 'Three', 'abandoned', 254),
     ])).toHaveLength(0)
+  })
+})
+
+describe('findUntouchedHaul', () => {
+  const item = (content: string, days: number, status: string | null = 'pending') =>
+    ({ content, status, createdAt: ago(days), listTitle: 'Lines' })
+  const ten = (days = 250, status: string | null = 'pending') =>
+    Array.from({ length: 10 }, (_, i) => item(`line ${i}`, days, status))
+
+  it('finds a sitting nobody ever came back to', () => {
+    // Live: ten lines onto a list on 10 January, every one still untouched.
+    const found = findUntouchedHaul(ten(), NOW)
+    expect(found).toHaveLength(1)
+    expect(found[0].fact).toContain('10 things on a list in one sitting')
+    expect(found[0].fact).toContain('not touched any of them since')
+    // Quotes a few, so the question has their words to work with.
+    expect(found[0].fact).toContain('"line 0"')
+  })
+
+  it('says nothing when one of them got picked up', () => {
+    // That is a list doing its job, not a pile.
+    const mixed = [...ten().slice(0, 9), item('line 9', 250, 'active')]
+    expect(findUntouchedHaul(mixed, NOW)).toHaveLength(0)
+  })
+
+  it('ignores an ordinary day of adding one or two things', () => {
+    expect(findUntouchedHaul([item('a', 250), item('b', 250)], NOW)).toHaveLength(0)
+    expect(HAUL_MIN).toBeGreaterThanOrEqual(4)
+  })
+
+  it('leaves a recent haul alone — not touching it yet is not a fact', () => {
+    expect(findUntouchedHaul(ten(10), NOW)).toHaveLength(0)
+    expect(HAUL_MIN_AGE_DAYS).toBeGreaterThanOrEqual(60)
+  })
+
+  it('returns only the biggest sitting', () => {
+    // Four days qualify on the live corpus, and four questions about
+    // "you saved some things once" is one question and three repeats.
+    const twoDays = [...ten(250), ...Array.from({ length: 6 }, (_, i) => item(`other ${i}`, 180))]
+    const found = findUntouchedHaul(twoDays, NOW)
+    expect(found).toHaveLength(1)
+    expect(found[0].fact).toContain('10 things')
+  })
+
+  it('carries no project, because the point is one that is not there yet', () => {
+    expect(findUntouchedHaul(ten(), NOW)[0].projectId).toBe('')
   })
 })

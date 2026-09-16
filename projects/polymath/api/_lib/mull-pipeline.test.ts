@@ -660,9 +660,10 @@ describe('a timed-out long-held query gets one retry, not a silent empty result'
 
     let longHeldCalls = 0
     const real = fakeSupabase(data).client
-    // identityBlock ALSO reads list_items, with a different select (no
-    // 'status' column) -- distinguish on that, rather than intercepting
-    // every list_items call, so this only exercises longHeldSubject's path.
+    // Two other callers read list_items: identityBlock, and the untouched-
+    // haul shape (project-shapes.ts). Only longHeldSubject selects `id`
+    // alongside `status`, so match on both -- 'status' alone used to be
+    // enough and stopped being so the moment a third caller arrived.
     const client = {
       ...real,
       from: (table: string) => {
@@ -670,7 +671,7 @@ describe('a timed-out long-held query gets one retry, not a silent empty result'
         if (table !== 'list_items') return chain
         const realSelect = chain.select
         chain.select = (cols?: string) => {
-          if (!cols?.includes('status')) return realSelect(cols)
+          if (!cols?.includes('status') || !cols.includes('id')) return realSelect(cols)
           longHeldCalls++
           const isFirstCall = longHeldCalls === 1
           const wrapped = realSelect(cols)
@@ -706,7 +707,7 @@ describe('a timed-out long-held query gets one retry, not a silent empty result'
         if (table !== 'list_items') return chain
         const realSelect = chain.select
         chain.select = (cols?: string) => {
-          if (!cols?.includes('status')) return realSelect(cols)
+          if (!cols?.includes('status') || !cols.includes('id')) return realSelect(cols)
           longHeldCalls++
           const wrapped = realSelect(cols)
           wrapped.then = (resolve: (v: any) => unknown) =>

@@ -22,7 +22,8 @@
     "backfill:embeddings": "tsx scripts/backfill-embeddings.ts",
     "backfill:tags": "tsx scripts/backfill-thought-tags.ts",
     "deploy": "vercel --prod",
-    "deploy:preview": "vercel"
+    "deploy:preview": "vercel",
+    "mull:try": "tsx scripts/try-mull.ts"
   },
   "dependencies": {
     "@capacitor/android": "^7.4.4",

@@ -36,7 +36,7 @@ import { examplesBlock } from './mull-examples.js'
 import { gatherSubjects, identityBlock, type Subject } from './mull-subjects.js'
 import { articleBody } from './article-text.js'
 import { findOrbitPairs } from './orbit-pairs.js'
-import { findRestarts, findAbandonedBatches, type ProjectShape } from './project-shapes.js'
+import { findRestarts, findAbandonedBatches, findUntouchedHaul, type ProjectShape } from './project-shapes.js'
 import {
   selectConnectors,
   connectorCeiling,
@@ -993,7 +993,22 @@ async function findProjectShapes(
       createdAt: p.created_at, embedding: p.embedding, description: p.description,
     }))
 
-  const found = [...findRestarts(rows), ...findAbandonedBatches(rows)]
+  // List items too: a sitting where a pile went on a list and none of it
+  // was ever touched. Same kind of fact, different table.
+  const listRes = await supabase
+    .from('list_items')
+    .select('content, status, created_at, lists(title)')
+    .eq('user_id', userId)
+    .limit(1000)
+  if (listRes.error) trace.push(`!! haul query FAILED: ${listRes.error.message}`)
+  const hauls = findUntouchedHaul((listRes.data ?? []).map((i: any) => ({
+    content: i.content ?? '',
+    status: i.status ?? null,
+    createdAt: i.created_at,
+    listTitle: i.lists?.title ?? null,
+  })).filter((i: any) => i.content && i.createdAt))
+
+  const found = [...findRestarts(rows), ...findAbandonedBatches(rows), ...hauls]
   trace.push(
     found.length === 0
       ? `project shapes: none in ${rows.length} projects`
