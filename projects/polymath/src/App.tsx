@@ -15,6 +15,7 @@ import { StatusBar, Style } from '@capacitor/status-bar'
 import { isNative } from './lib/platform'
 import { supabase } from './lib/supabase'
 import { useTheme } from './hooks/useTheme'
+import { useScrollPerformance } from './hooks/useScrollPerformance'
 import { setupAutoSync } from './lib/syncManager'
 import { dataSynchronizer } from './lib/sync/DataSynchronizer'
 import { useOfflineStore } from './stores/useOfflineStore'
@@ -170,6 +171,11 @@ function useIdleRoutePrefetch() {
 export default function App() {
   // Apply theme on mount and when preferences change
   useTheme()
+
+  // Drop backdrop-filter blur on glass cards while the page is actively
+  // scrolling — see the hook for why. This is what makes scroll smooth on
+  // card-heavy pages (notes, projects); see theme.css for the CSS side.
+  useScrollPerformance()
 
   // Schedule bedtime/morning notifications on native platforms
   useBedtimeNotifications()

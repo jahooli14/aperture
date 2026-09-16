@@ -1,13 +1,11 @@
 import React, { useState, memo, useCallback, useMemo, useRef } from 'react'
-import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { Edit, Trash2, Copy, Share2, Sprout, Film, Book, Music, MapPin, Gamepad2, Monitor, FileText, Box, CheckSquare, Square } from 'lucide-react'
-import type { Memory, BridgeWithMemories, ChecklistItem } from '../types'
+import type { Memory } from '../types'
 import { useMemoryStore } from '../stores/useMemoryStore'
 import { useToast } from './ui/toast'
 import { haptic } from '../utils/haptics'
 import { ContextMenu, type ContextMenuItem } from './ui/context-menu'
-import { MemoryDetailModal } from './memories/MemoryDetailModal'
 import { useConfirmDialog } from './ui/confirm-dialog'
 import { motion } from 'framer-motion'
 
@@ -99,9 +97,6 @@ const MEMORY_TYPE_CONFIG: Record<string, { label: string; bg: string; border: st
   },
 }
 
-// Unused but keep for bridgesCache compat with MemoryDetailModal
-const bridgesCache = new Map<string, { bridges: BridgeWithMemories[]; timestamp: number }>()
-
 import { OptimizedImage } from './ui/optimized-image'
 import { CreateProjectDialog } from './projects/CreateProjectDialog'
 
@@ -109,14 +104,13 @@ const LONG_PRESS_MS = 450
 
 interface MemoryCardProps {
   memory: Memory
-  onEdit?: (memory: Memory) => void
+  onEdit: (memory: Memory) => void
   onDelete?: (memory: Memory) => void
 }
 
 export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }: MemoryCardProps) {
   const navigate = useNavigate()
   const [showContextMenu, setShowContextMenu] = useState(false)
-  const [showDetailModal, setShowDetailModal] = useState(false)
   const [seedProjectOpen, setSeedProjectOpen] = useState(false)
   const [pressing, setPressing] = useState(false)
 
@@ -178,8 +172,8 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
       return
     }
     haptic.light()
-    setShowDetailModal(true)
-  }, [])
+    onEdit(memory)
+  }, [memory, onEdit])
 
   const handleToggleChecklistItem = useCallback((itemId: string) => {
     if (!memory.checklist_items) return
@@ -236,7 +230,7 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
     {
       label: 'Open',
       icon: <Edit className="h-5 w-5" />,
-      onClick: () => setShowDetailModal(true),
+      onClick: () => onEdit(memory),
     },
     {
       label: 'Grow into project',
@@ -259,7 +253,7 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
       onClick: handleDelete,
       variant: 'destructive' as const,
     },
-  ], [memory, handleCopyText, handleShare, handleDelete])
+  ], [memory, onEdit, handleCopyText, handleShare, handleDelete])
 
   const isOfflinePending = memory.id.startsWith('offline_') || memory.tags?.includes('offline-pending')
   const typeConfig = memory.memory_type ? MEMORY_TYPE_CONFIG[memory.memory_type] : null
@@ -278,7 +272,13 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
       />
 
       <motion.div
-        layout
+        // No `layout` here — the MasonryGrid wrapper around every card
+        // already tracks layout for the grid reflow; a second FLIP-tracked
+        // element nested inside it doubles the position measurement work
+        // framer-motion does on every list change, which on a page with
+        // dozens of cards on screen is exactly what was making the thoughts
+        // page's scroll (triggered reflows from infinite-load) stutter.
+        // This element only ever needs a plain scale/opacity press effect.
         animate={{ scale: pressing ? 0.97 : 1, opacity: pressing ? 0.85 : isOfflinePending ? 0.55 : 1 }}
         transition={{ duration: 0.12 }}
         onPointerDown={handlePointerDown}
@@ -398,44 +398,45 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
         </div>
       </motion.div>
 
-      {createPortal(
-        <MemoryDetailModal
-          memory={memory}
-          isOpen={showDetailModal}
-          onClose={() => setShowDetailModal(false)}
-        />,
-        document.body
-      )}
-
-      <CreateProjectDialog
-        isOpen={seedProjectOpen}
-        onOpenChange={setSeedProjectOpen}
-        hideTrigger
-        initialTitle={memory.title}
-        initialDescription={memory.body?.slice(0, 500)}
-        onCreated={async (projectId) => {
-          addToast({
-            title: 'Project created',
-            description: 'Your thought has been grown into a project.',
-            variant: 'success',
-            action: { label: 'View project →', onClick: () => navigate(`/projects/${projectId}`) },
-          })
-          try {
-            await fetch('/api/connections', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                source_type: 'memory', source_id: memory.id,
-                target_type: 'project', target_id: projectId,
-                connection_type: 'inspired_by', created_by: 'user',
-                reasoning: 'Project seeded from this thought',
-              }),
+      {/* The detail view is the page-level shared MemoryDetailModal, opened
+          via onEdit — not a per-card instance. This page can have dozens of
+          cards on screen; a portaled modal (plus its own bridge-fetching
+          effects and store subscriptions) mounted on every single one, open
+          or not, was pure overhead riding along on every scroll-triggered
+          re-render. Same reasoning for CreateProjectDialog below: it's a
+          genuinely heavy component (chat history, voice prefs, shaping
+          state), so it's only mounted once the user actually asks for it. */}
+      {seedProjectOpen && (
+        <CreateProjectDialog
+          isOpen={seedProjectOpen}
+          onOpenChange={setSeedProjectOpen}
+          hideTrigger
+          initialTitle={memory.title}
+          initialDescription={memory.body?.slice(0, 500)}
+          onCreated={async (projectId) => {
+            addToast({
+              title: 'Project created',
+              description: 'Your thought has been grown into a project.',
+              variant: 'success',
+              action: { label: 'View project →', onClick: () => navigate(`/projects/${projectId}`) },
             })
-          } catch {
-            // silent fail
-          }
-        }}
-      />
+            try {
+              await fetch('/api/connections', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  source_type: 'memory', source_id: memory.id,
+                  target_type: 'project', target_id: projectId,
+                  connection_type: 'inspired_by', created_by: 'user',
+                  reasoning: 'Project seeded from this thought',
+                }),
+              })
+            } catch {
+              // silent fail
+            }
+          }}
+        />
+      )}
 
       {confirmDialog}
     </>

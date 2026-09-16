@@ -246,6 +246,20 @@
     transition: background 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease, transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* Scroll-in-motion perf — see useScrollPerformance. backdrop-filter is
+   the single most expensive thing to repaint on scroll: every glass card
+   on screen gets reblurred as the content behind it moves, and a notes
+   or projects grid can have dozens on screen at once. Dropped for the
+   brief window the page is actually moving, restored the instant it
+   settles — the blur is only ever seen at rest. */
+body[data-scrolling] .glass-card,
+body[data-scrolling] .glass-card-strong,
+body[data-scrolling] .glass-card-subtle,
+body[data-scrolling] .glass-sheet {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
+
 .glass-card-hover:hover {
     background: var(--glass-highlight), rgba(var(--brand-bg-rgb), 0.7);
     border-color: var(--glass-border-bold);

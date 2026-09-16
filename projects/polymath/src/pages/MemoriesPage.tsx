@@ -387,6 +387,13 @@ function MemoriesPageInner() {
   visibleCountRef.current = visibleCount
   const totalCountRef = useRef(0)
   useEffect(() => {
+    // The bottom-of-page check reads layout (document.body.offsetHeight),
+    // which forces the browser to flush any pending layout work first —
+    // doing that on every raw scroll event (they can fire dozens of times
+    // a second) is the layout-thrashing kind of jank. rAF-gating it caps
+    // the read to once per rendered frame, which is all it can ever act on
+    // anyway.
+    let ticking = false
     const checkAndLoad = () => {
       if (visibleCountRef.current >= totalCountRef.current) return
       const nearBottom =
@@ -395,14 +402,22 @@ function MemoriesPageInner() {
         setVisibleCount(c => c + PAGE_SIZE)
       }
     }
-    window.addEventListener('scroll', checkAndLoad, { passive: true })
-    window.addEventListener('resize', checkAndLoad)
+    const onScrollOrResize = () => {
+      if (ticking) return
+      ticking = true
+      requestAnimationFrame(() => {
+        checkAndLoad()
+        ticking = false
+      })
+    }
+    window.addEventListener('scroll', onScrollOrResize, { passive: true })
+    window.addEventListener('resize', onScrollOrResize)
     // Initial check — if the page is short enough that the bottom is
     // already in view, load more immediately.
     checkAndLoad()
     return () => {
-      window.removeEventListener('scroll', checkAndLoad)
-      window.removeEventListener('resize', checkAndLoad)
+      window.removeEventListener('scroll', onScrollOrResize)
+      window.removeEventListener('resize', onScrollOrResize)
     }
   }, [])
 

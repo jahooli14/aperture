@@ -101,16 +101,27 @@ export function useReadingProgress(articleId: string): UseReadingProgressResult 
    * Auto-save progress on scroll
    */
   useEffect(() => {
+    // rAF-gated: a raw scroll listener fires many times per second, and
+    // each call here forces a layout read (scrollHeight) plus a React
+    // state update — doing that on every event, mid-flick, on the reading
+    // page is exactly the kind of per-frame work that turns a swipe into
+    // a stutter. Once per rendered frame is all this can ever act on.
+    let ticking = false
     const handleScroll = () => {
-      // Don't update progress while restoring
-      if (isRestoringRef.current) return
+      if (ticking) return
+      ticking = true
+      requestAnimationFrame(() => {
+        ticking = false
+        // Don't update progress while restoring
+        if (isRestoringRef.current) return
 
-      const scrollHeight = document.documentElement.scrollHeight - window.innerHeight
-      const scrollPosition = window.scrollY
-      const percentage = scrollHeight > 0 ? (scrollPosition / scrollHeight) * 100 : 0
+        const scrollHeight = document.documentElement.scrollHeight - window.innerHeight
+        const scrollPosition = window.scrollY
+        const percentage = scrollHeight > 0 ? (scrollPosition / scrollHeight) * 100 : 0
 
-      setProgress(Math.min(100, Math.round(percentage)))
-      saveProgress()
+        setProgress(Math.min(100, Math.round(percentage)))
+        saveProgress()
+      })
     }
 
     window.addEventListener('scroll', handleScroll, { passive: true })
