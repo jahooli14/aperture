@@ -505,7 +505,27 @@ export function specifics(text: string): string[] {
  */
 export function unsupportedSpecifics(text: string, evidence: string[]): string[] {
   const haystack = evidence.join(' ').toLowerCase()
-  return specifics(text).filter(w => !haystack.includes(w))
+  return specifics(text).filter(w => !haystack.includes(w) && !ordinalSupported(w, haystack))
+}
+
+/**
+ * "the 10th" is not an invention when the fact says "10 January".
+ *
+ * English writes dates as ordinals and the facts this channel computes
+ * write them as cardinals, so every question that mentioned the day was
+ * rejected for making it up. Live: two drafts in one run died on "3rd" and
+ * "10th" against a fact reading "On 10 January 2026...". Same shape as the
+ * missing month earlier — a gate can only see what it is given, and here
+ * it was given the number and shown the ordinal.
+ *
+ * Deliberately narrow: only a number with an ordinal suffix, only matched
+ * against the same bare number. "2026th" is not a thing, and "1950s" is
+ * already handled by the tokeniser above.
+ */
+export function ordinalSupported(word: string, haystack: string): boolean {
+  const m = /^(\d{1,2})(st|nd|rd|th)$/.exec(word)
+  if (!m) return false
+  return new RegExp(`\\b${m[1]}\\b`).test(haystack)
 }
 
 export interface ValidationInput extends MullDraft {
@@ -526,6 +546,111 @@ export interface ValidationInput extends MullDraft {
  * Throwing one away is cheap: there is no fixed daily slot to fill, and
  * a question that lands badly is read once and distrusted for a week.
  */
+/**
+ * Does the question hand them a choice between two things it supplied?
+ *
+ * The prompt has banned this from the start, and the model kept doing it
+ * anyway, because the ban was written as a PHRASING ("X, and also Y — which
+ * is it?") and the model was using a different one:
+ *
+ *   "Does Pupils trace how he grows up, or does it stay in the nursery?"
+ *   "Does Tame impala synth sessions run on footwork, or does it stay on
+ *    the synth?"
+ *
+ * Both shipped from a healthy corpus with the quote landing correctly, and
+ * both are answerable in five seconds by picking a side — which the channel's
+ * own "too easy is a quiz" rule says is nothing to carry for three days.
+ *
+ * Narrow on purpose: an opening auxiliary AND an explicit alternative. A
+ * question may still say "or" ("what would it take to finish it, or to
+ * admit it is finished?" is one thing asked twice) and may still start with
+ * "Does" if it offers no alternative. Both halves must be present, because
+ * a gate that fires on either one would throw away good questions, which
+ * this channel has done before and pays for in empty slots.
+ *
+ * Shape alone is not the verdict, though — see `stakeSplits`. Some of the
+ * best questions this channel can ask ARE either/ors.
+ */
+/**
+ * Does the stake name a genuinely different outcome for each branch?
+ *
+ * The word "or" alone is not enough, and one run in five proved it: the
+ * channel shipped "Are you making creative logo t-shirts for friends, or
+ * are you just running the same January project twice?" behind a stake that
+ * said "or" and meant nothing by it. An exemption that any sentence
+ * containing "or" can satisfy is not an exemption, it is a hole.
+ *
+ * Two earlier versions of this were both wrong, in opposite directions.
+ *
+ * `/\beither way\b/` passed the stake UNCONDITIONALLY, which is the whole
+ * gate handed away on a phrase that means the opposite of splitting: "either
+ * way" is "regardless of which branch", and it is exactly what a model
+ * reaches for when both branches land in the same place ("he learns
+ * something about the app either way"). Nothing in this function's own
+ * reasoning ever argued for it and no teaching example uses it.
+ *
+ * Requiring four words a side was the other. It reads as strictness and is
+ * really just a length check, and the channel's own teaching examples fail
+ * it: "The shed gets racking or gets emptied" and "The plot gets planted
+ * this spring or handed back" are both real splits whose second side is TWO
+ * words. English drops the repeated subject and verb in the second branch —
+ * that ellipsis is a mark of a natural split, not a weak one.
+ *
+ * What actually separates the three real splits on record from a decorative
+ * one is that the second side NAMES SOMETHING THE FIRST DID NOT:
+ * racking/emptied, planted/handed back, writes/admits. A stake whose second
+ * side only restates the first ("he picks a direction, or he picks another
+ * one") adds no outcome, however many words it spends. So: both sides carry
+ * content, and the side after "or" contributes a content word of its own.
+ */
+const STAKE_STOPWORDS = new Set([
+  'a', 'an', 'the', 'is', 'are', 'was', 'were', 'be', 'been', 'it', 'its',
+  'he', 'she', 'they', 'them', 'him', 'her', 'his', 'their', 'you', 'your',
+  'to', 'of', 'in', 'on', 'at', 'for', 'with', 'and', 'that', 'this',
+  'gets', 'get', 'goes', 'go', 'does', 'do', 'did', 'has', 'have', 'had',
+  'will', 'would', 'one', 'not', 'up', 'out', 'off', 'by', 'as', 'so',
+])
+
+/**
+ * Crude on purpose. "He decides, or he does not decide" is one outcome said
+ * twice, and an exact-match comparison reads `decide` as new content next to
+ * `decides` — so the restatement this whole function exists to catch walks
+ * through on a suffix. Chopping the common endings collapses the pair
+ * without needing a stemmer: the three real splits still differ afterwards
+ * (rack/empti, plant/hand, writ/admit), which is the only test that matters.
+ */
+function stem(word: string): string {
+  return word.replace(/(ing|ed|es|s)$/, '').replace(/e$/, '')
+}
+
+function stakeContent(side: string): Set<string> {
+  return new Set(
+    side.toLowerCase().replace(/[^a-z\s]/g, ' ').split(/\s+/)
+      .filter(w => w.length > 1 && !STAKE_STOPWORDS.has(w))
+      .map(stem)
+      .filter(Boolean),
+  )
+}
+
+export function stakeSplits(stake: string): boolean {
+  const parts = (stake ?? '').trim().split(/\bor\b/i)
+  if (parts.length !== 2) return false
+  const before = stakeContent(parts[0])
+  const after = stakeContent(parts[1])
+  if (before.size === 0 || after.size === 0) return false
+  // The branch after "or" has to put something on the table that the branch
+  // before it did not. That is the difference between two outcomes and one
+  // outcome said twice.
+  return [...after].some(w => !before.has(w))
+}
+
+export function offersAChoice(questionText: string): boolean {
+  const q = questionSentence(questionText).trim().toLowerCase()
+  const opensClosed = /^(does|do|did|is|are|was|were|will|would|should|can|could|has|have)\b/.test(q)
+  const alternative = /,\s*or\b|\bor is it\b|\bor does it\b|\bwhich is it\b/.test(q)
+  return opensClosed && alternative
+}
+
 export function rejectionReason(input: ValidationInput): string | null {
   const text = input.text.trim()
   if (text.length === 0) return 'empty'
@@ -552,6 +677,20 @@ export function rejectionReason(input: ValidationInput): string | null {
 
   const explainer = EXPLAINER_PATTERNS.find(re => re.test(text))
   if (explainer) return `explains the link: ${explainer.source}`
+
+  // A binary is only fake when both branches land in the same place. The
+  // prompt already demands the model say what the user would DO differently
+  // depending on the answer, so the stake is the evidence: one that names
+  // two outcomes means the either/or is real and worth carrying --
+  //   "Do you have it now, or did you miss the work?"
+  //   stake: "He writes the last line this week, or admits he wanted the hours."
+  // -- while a single outcome behind a two-sided question means the sides
+  // were decoration:
+  //   "Does Pupils trace how he grows up, or does it stay in the nursery?"
+  //   stake: "He picks a direction."
+  if (offersAChoice(text) && !stakeSplits(input.stake)) {
+    return 'offers a choice between two things it supplied, and nothing different happens either way'
+  }
 
   // Only when the caller supplied the subject. Half the evidence is not
   // enough to call something invented: the dated facts this channel

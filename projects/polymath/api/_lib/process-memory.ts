@@ -9,7 +9,7 @@ import { MODELS } from './models.js'
 import { generateEmbedding } from './gemini-embeddings.js'
 import { thinkingFragment } from './gemini-thinking.js'
 import { draftFix } from './fix-queue/drafter.js'
-import { ExtractMetadataResponse, validate, parseModelJson } from './schemas.js'
+import { ExtractMetadataResponse, validate, parseModelJson, stripEchoedTitle } from './schemas.js'
 import { PLAIN_ENGLISH_RULES } from './plain-english.js'
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
@@ -166,7 +166,10 @@ export async function processMemory(memoryId: string, opts: ProcessOptions = {})
     const updates: Record<string, unknown> = {
         title: metadata.summary_title,
         // For voice notes: store lightly-cleaned body (fillers removed). Text notes: body unchanged.
-        ...(memory.orig_transcript ? { body: metadata.insightful_body } : {}),
+        // stripEchoedTitle: the model is shown the old title and sometimes
+        // opens the rewritten body by quoting it back, which then gets
+        // embedded and quoted to the user as their own words.
+        ...(memory.orig_transcript ? { body: stripEchoedTitle(metadata.insightful_body) } : {}),
         memory_type: metadata.memory_type,
         entities: metadata.entities,
         themes: metadata.themes,

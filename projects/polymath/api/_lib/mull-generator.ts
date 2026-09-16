@@ -36,6 +36,7 @@ import { examplesBlock } from './mull-examples.js'
 import { gatherSubjects, identityBlock, type Subject } from './mull-subjects.js'
 import { articleBody } from './article-text.js'
 import { findOrbitPairs } from './orbit-pairs.js'
+import { findRestarts, findAbandonedBatches, findUntouchedHaul, type ProjectShape } from './project-shapes.js'
 import {
   selectConnectors,
   connectorCeiling,
@@ -79,6 +80,21 @@ export interface BakedSpark {
   text: string
   project_id: string | null
   expires_at: string
+  /**
+   * The stake the question shipped behind — what the user would DO
+   * differently depending on the answer.
+   *
+   * Stored because it is the gates' own evidence and it was being thrown
+   * away. A binary is only allowed through `offersAChoice` when
+   * `stakeSplits` says the two branches land in different places, so when a
+   * binary leaks the stake IS the diagnosis — and a live one did leak
+   * ("Does Aperture pull the raw thoughts straight from your notes, or wait
+   * until they are finished?") with nothing on the row to explain why it
+   * passed. Same lesson as `unsupportedSpecifics` and the restart fact: a
+   * gate that can only see what it is given has to be given it, and that
+   * holds for reading the gate afterwards too.
+   */
+  stake?: string
   /** Written now, shown later. Held behind the standing question rather
    *  than replacing it — the channel's cheapest question is the one that
    *  was already paid for days ago. */
@@ -328,7 +344,10 @@ async function findConnectors(
 ): Promise<Pairing[]> {
   let embeddings: number[][]
   try {
-    embeddings = await batchGenerateEmbeddings(blindSpots.map(b => b.searchQuery))
+    // The blind-spot question goes into the SAME space as the corpus, not a
+    // query-side one. Splitting them is the textbook answer and is measured
+    // wrong here -- see CORPUS_TASK in gemini-embeddings.ts for the numbers.
+    embeddings = await batchGenerateEmbeddings(blindSpots.map(b => b.searchQuery), 3)
   } catch (e) {
     console.warn('[mull] embedding failed:', e instanceof Error ? e.message : e)
     return []
@@ -505,21 +524,55 @@ ${p.orbitFact ?? CONNECTOR_LABEL[p.connector.kind]}
 
   const prompt = `${blocks}
 ${echo.identity}
-Each pair above is ONE claim, and it was computed, not guessed: of every
-project they have, this note sits closest to this one, and it never went in.
-It is material they already own, in their own words, that the project has
-never used.
+Each pair above is ONE claim, and every one of them was computed from their
+own data rather than guessed. The line under the project title IS the claim
+— read it and believe it. Depending on the pair it will be one of:
+  - this note is nearer to this project than to any other, and never went in;
+  - they gave up on a project and started the same one again months later;
+  - they opened several projects in one sitting and every one of them died.
 
 So do NOT look for a link. There is no link to find and nothing to bridge.
-The relationship is already stated. Your job is the next step: what does the
-project become if that material goes in?
+The relationship is already stated. Your job is the next step: given that is
+true, what is the question worth carrying?
 
-NEVER write "X, and also Y — which is it?". Setting the two side by side and
-hinging them with "or" is the failure this is built to stop. A real one reads
-"You already have X. What is the version of the project that uses it?" — one
-thing, pointing forward, not two things and a choice.
+Where the claim is about something they ABANDONED or repeated, do not
+console them and do not scold them. It is not a telling-off and it is not a
+diagnosis. It is a fact they had no way of seeing, and the question should
+be the one a friend asks after noticing it.
+
+THE QUESTION MAY NOT OFFER A CHOICE. Not the wording — the SHAPE. Any
+question whose answer is one of two things the question itself supplied is
+the failure this is built to stop, however it is phrased. All of these are
+the same banned move:
+  "X, and also Y — which is it?"
+  "Does <project> do X, or does it stay Y?"
+  "Is this about X or about Y?"
+Two live rejects, both from this exact template:
+  "Does Pupils trace how he grows up, or does it stay in the nursery?"
+  "Does Tame impala synth sessions run on footwork, or does it stay on the synth?"
+They are answerable in five seconds by picking a side, so nothing happens for
+three days — and picking a side was never the point.
+
+Start the question with What, How, or Which ONE, and never with Does, Is,
+Are, Will, Should or Can. A question that starts with "Does" has already
+narrowed to yes/no before it has said anything.
+
+A real one reads "You already have X. What is the version of the project that
+uses it?" — one thing, pointing forward, open at the end.
 
 For each pair, write ONE thing for them to carry around.
+
+TWO SENTENCES. The first states the fact, plainly, the way you would say it
+out loud to a friend. The second asks. Nothing else.
+
+The first sentence must not collect scraps. Every live draft has ended up
+padded with bits of the project description:
+  "You gave up on custom t-shirts in January and started creating custom
+   t-shirts for friends from scratch in June WITH CREATIVE LOGO T-SHIRTS."
+That tail is lifted wholesale from a field and says nothing. Cut it:
+  "You gave up on custom t-shirts in January. In June you started them
+   again from scratch."
+If a detail is not doing work in the question, it does not go in the setup.
 
 WHAT THIS IS FOR. They read it on the way past and do nothing. It sits for
 three days. On a walk, on the fourth day, they work out the answer — and the
@@ -663,14 +716,22 @@ not carry any of the note's actual words was not written from the note.`
       if (!stake) noStake++
       out.push({ pairing, text, quote, stake })
     }
-    if (declined || noQuote || noStake) {
-      trace.push(
-        `draft call: ${rows.length} pairs came back` +
-        `${declined ? `, ${declined} declined by the model` : ''}` +
-        `${noQuote ? `, ${noQuote} with no quote (the gate re-checks the question itself)` : ''}` +
-        `${noStake ? `, ${noStake} with no stake` : ''}`,
-      )
-    }
+    // Always traced, including the zero case. This line used to be pushed
+    // only when something was declined or missing a field, so a model that
+    // answered `{"pairs": []}` -- or with no `pairs` key at all -- left NO
+    // line, and the trace jumped straight from "4 sent to draft" to
+    // "drafts: 0 of 4 pairs written" with nothing in between. A live run
+    // did exactly that, and the four possible causes (declined, unparseable,
+    // empty array, wrong shape) read identically from outside. Same class as
+    // every other silent decline in this channel: the step has to say it
+    // was the one that stopped.
+    trace.push(
+      `draft call: ${rows.length} pairs came back` +
+      `${Array.isArray(parsed?.pairs) ? '' : ' (no `pairs` array in the response)'}` +
+      `${declined ? `, ${declined} declined by the model` : ''}` +
+      `${noQuote ? `, ${noQuote} with no quote (the gate re-checks the question itself)` : ''}` +
+      `${noStake ? `, ${noStake} with no stake` : ''}`,
+    )
     return out
   } catch (e) {
     // This returned [] and said so only in the Vercel log, so a failed or
@@ -700,6 +761,7 @@ export async function generateMull(
   if (subjects.length === 0) return []
 
   const orbiters = await findOrbitPairs(supabase, userId, QUESTIONS_PER_RUN + 1, trace)
+  const shapes = await findProjectShapes(supabase, userId, trace)
 
   const blindSpots = await nameBlindSpots(subjects, echo)
   trace.push(
@@ -739,7 +801,39 @@ export async function generateMull(
     },
   }))
 
-  const pairings = [...orbitPairs, ...searched]
+  // Facts about the project table and the calendar. Nothing here resembles
+  // anything, so no search can reach it: a thing given up on and quietly
+  // started again six months later, a day when three projects were opened
+  // and none survived. Computed, carried straight to the draft, and put in
+  // front of orbit because a claim about what they DID beats a claim about
+  // what a vector says (project-shapes.ts).
+  const shapePairs: Pairing[] = shapes.map(sh => ({
+    subject: {
+      kind: 'project' as const,
+      shape: undefined,
+      id: sh.projectId ?? `shape:${sh.kind}`,
+      projectId: sh.projectId,
+      title: sh.projectTitle,
+      block: sh.fact,
+      line: sh.fact,
+      ownWords: sh.evidence,
+      strength: sh.strength,
+    },
+    blindSpot: sh.fact,
+    searchQuery: '',
+    orbitFact: sh.fact,
+    connector: {
+      kind: 'memory' as const,
+      // Not a row id — these facts are computed, not fetched. Stable per
+      // shape so `rankPairs` can tell two of them apart.
+      id: `shape:${sh.kind}:${sh.projectTitle}`,
+      title: 'what they wrote at the time',
+      text: sh.evidence,
+      similarity: 1,
+    },
+  }))
+
+  const pairings = [...shapePairs, ...orbitPairs, ...searched]
   if (pairings.length === 0) {
     trace.push('connectors: nothing orbiting and none in band for any blind spot — see the lines above')
     return []
@@ -810,7 +904,33 @@ export async function generateMull(
     )
   }
 
-  for (const draft of survivors) {
+  // A zero means the note never reached the question: the setup quotes them
+  // and the question is written in the model's own vocabulary, so it could
+  // have been asked with no corpus at all. Live, one run produced
+  //   1.00  "...started custom t-shirts again in June. Who gets the first
+  //          one printed?"
+  //   0.00  "...including world memory palace to map all 198 countries.
+  //          Which country starts continent by continent?"
+  // The second is not a weaker question, it is a broken one. When something
+  // better exists there is no reason to spend a four-day slot on it.
+  //
+  // Only when something better exists. A lone zero still ships — the slot
+  // is otherwise empty, and this channel's repeated lesson is that a
+  // mediocre question beats nothing.
+  const best = survivors.length > 0
+    ? draftQuality(survivors[0].text, survivors[0].pairing.connector.text)
+    : 0
+  const worthShipping = best > 0
+    ? survivors.filter(d => draftQuality(d.text, d.pairing.connector.text) > 0)
+    : survivors
+  if (worthShipping.length < survivors.length) {
+    trace.push(
+      `dropped ${survivors.length - worthShipping.length}: the note never reached the question, ` +
+      'and a better draft did',
+    )
+  }
+
+  for (const draft of worthShipping) {
     if (shippedSubjects.has(draft.pairing.subject.id)) continue
     // Checked against the questions already asked AND against the other
     // draft from this same run — two questions written in one breath are
@@ -835,8 +955,11 @@ export async function generateMull(
     baked.push({
       type: 'mull',
       text: draft.text,
-      project_id: draft.pairing.subject.projectId,
+      // `|| null` rather than the value: a subject with no project must not
+      // reach a uuid column as an empty string (project-shapes.ts).
+      project_id: draft.pairing.subject.projectId || null,
       expires_at: expiresAt(SHELF_LIFE_HOURS),
+      stake: draft.stake,
       // The second question is not shown yet: it waits behind the first
       // and only becomes the standing question once that one is answered
       // or runs out. Its shelf life is measured from then, not from now,
@@ -869,6 +992,62 @@ export async function generateMull(
  * that, with a dated fact and a question attached. An empty slot is the
  * honest alternative, and the home surface already renders nothing there.
  */
+/**
+ * Read the project table and compute the shapes no search can find.
+ *
+ * One query. The arithmetic is free; the whole point is that this costs
+ * nothing next to a model call and finds the material the vector path
+ * structurally cannot (project-shapes.ts).
+ */
+async function findProjectShapes(
+  supabase: SupabaseClient,
+  userId: string,
+  trace: string[],
+): Promise<ProjectShape[]> {
+  const res = await supabase
+    .from('projects')
+    .select('id, title, description, status, state, created_at, embedding')
+    .eq('user_id', userId)
+    .limit(300)
+  if (res.error) {
+    trace.push(`!! project-shapes query FAILED: ${res.error.message}`)
+    return []
+  }
+
+  const rows = (res.data ?? [])
+    // A project the user buried is still evidence of what they did -- being
+    // dead is the whole point of these shapes -- but one they HARVESTED is
+    // finished, not abandoned, and must never be counted as a failure.
+    .filter((p: any) => p.state !== 'harvested')
+    .map((p: any) => ({
+      id: p.id, title: p.title, status: p.status,
+      createdAt: p.created_at, embedding: p.embedding, description: p.description,
+    }))
+
+  // List items too: a sitting where a pile went on a list and none of it
+  // was ever touched. Same kind of fact, different table.
+  const listRes = await supabase
+    .from('list_items')
+    .select('content, status, created_at, lists(title)')
+    .eq('user_id', userId)
+    .limit(1000)
+  if (listRes.error) trace.push(`!! haul query FAILED: ${listRes.error.message}`)
+  const hauls = findUntouchedHaul((listRes.data ?? []).map((i: any) => ({
+    content: i.content ?? '',
+    status: i.status ?? null,
+    createdAt: i.created_at,
+    listTitle: i.lists?.title ?? null,
+  })).filter((i: any) => i.content && i.createdAt))
+
+  const found = [...findRestarts(rows), ...findAbandonedBatches(rows), ...hauls]
+  trace.push(
+    found.length === 0
+      ? `project shapes: none in ${rows.length} projects`
+      : `project shapes: ${found.map(f => `${f.kind} "${f.projectTitle.slice(0, 26)}"`).join(' | ')}`,
+  )
+  return found
+}
+
 export async function bakeMull(
   supabase: SupabaseClient,
   userId: string,

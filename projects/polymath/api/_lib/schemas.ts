@@ -85,6 +85,29 @@ export function parseModelJson(text: string): unknown {
   }
 }
 
+/**
+ * Strip a title the model echoed back into the body it wrote.
+ *
+ * `extractMetadata` is handed the note's current title so it can improve on
+ * it, and sometimes the model opens the rewritten body by quoting that title
+ * back: `"Prioritizing Long Term Wardrobe Comfort Investments" - I've been
+ * thinking about style...`. Eight of seventy-five notes came out of one
+ * reprocessing run like that.
+ *
+ * It matters more than it looks. The body is what gets embedded, and it is
+ * the text the mull channel quotes as THE USER'S OWN WORDS — so the channel
+ * started reading an AI-generated title back to the person as something they
+ * said: "You wrote four months ago about Prioritizing Long Term Wardrobe
+ * Comfort Investments." Nobody has ever said that sentence.
+ *
+ * Only a quoted opener followed by a separator, and only when it is not the
+ * whole body — a note that genuinely opens on a quotation keeps it.
+ */
+export function stripEchoedTitle(body: string): string {
+  const m = body.match(/^\s*["\u201c]([^"\u201d]{4,120})["\u201d]\s*[-–—:]\s*(\S[\s\S]*)$/)
+  return m ? m[2].trim() : body
+}
+
 /** Optional on model output: absent, null, or malformed all read as absent. */
 function said<T>(schema: z.ZodType<T>): z.ZodType<T | undefined> {
   return z

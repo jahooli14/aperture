@@ -9,6 +9,9 @@ import {
   rankPairs,
   PAIRS_TO_DRAFT,
   stakeIsHollow,
+  stakeSplits,
+  offersAChoice,
+  unsupportedSpecifics,
   CONNECTOR_FLOOR,
   CONNECTOR_CEILING,
   connectorCeiling,
@@ -373,3 +376,85 @@ describe('selectConnectors requiring a project connector, no fallback', () => {
   })
 })
 
+describe('ordinals are not inventions', () => {
+  it('accepts "the 10th" when the fact says "10 January"', () => {
+    // Live: two drafts in one run died on "3rd" and "10th" against a fact
+    // reading "On 10 January 2026...". English writes dates as ordinals;
+    // the computed facts write them as cardinals.
+    expect(unsupportedSpecifics(
+      'You put ten things on a list on the 10th. Which one goes first?',
+      ['On 10 January 2026 they put 10 things on a list in one sitting.'],
+    )).toEqual([])
+  })
+
+  it('still catches a day nothing supports', () => {
+    expect(unsupportedSpecifics(
+      'You put ten things on a list on the 23rd. Which one goes first?',
+      ['On 10 January 2026 they put 10 things on a list in one sitting.'],
+    )).toContain('23rd')
+  })
+
+  it('does not treat any number as an ordinal', () => {
+    expect(unsupportedSpecifics('You wrote 198 of them.', ['They wrote 12 of them.'])).toContain('198')
+  })
+})
+
+/**
+ * The binary gate and the one exemption that lets a real either/or through.
+ *
+ * Neither had a test, which is how a live question shipped reading "Does
+ * Aperture pull the raw thoughts straight from your notes, or wait until
+ * they are finished?" — the exact shape `offersAChoice` exists to stop.
+ * Both halves are here now: the questions the gate must catch, and the
+ * stakes that earn a pass.
+ */
+describe('offersAChoice', () => {
+  const binaries = [
+    'Does Pupils trace how he grows up, or does it stay in the nursery?',
+    'Does Tame impala synth sessions run on footwork, or does it stay on the synth?',
+    'Does Aperture pull the raw thoughts straight from your notes, or wait until they are finished?',
+    'Are you making t-shirts for friends, or are you just running the same January project twice?',
+  ]
+  for (const q of binaries) {
+    it(`catches: ${q.slice(0, 44)}…`, () => expect(offersAChoice(q)).toBe(true))
+  }
+
+  // Both halves are required on purpose. A gate firing on either one throws
+  // away good questions, which this channel has done before and pays for in
+  // empty slots.
+  const fine = [
+    'What would it take to finish it, or to admit it is finished?',
+    'Which name goes on the first tag?',
+    'Does the knowledge base keep running while you are away?',
+  ]
+  for (const q of fine) {
+    it(`lets through: ${q.slice(0, 44)}…`, () => expect(offersAChoice(q)).toBe(false))
+  }
+})
+
+describe('stakeSplits', () => {
+  // The channel's own teaching examples. Two of the three have a TWO-WORD
+  // second side, which is why a four-words-a-side rule was the wrong test:
+  // English drops the repeated subject in the second branch.
+  const real = [
+    'The shed gets racking or gets emptied.',
+    'The plot gets planted this spring or handed back.',
+    'He writes the last line this week, or admits he wanted the hours.',
+  ]
+  for (const s of real) it(`splits: ${s}`, () => expect(stakeSplits(s)).toBe(true))
+
+  const decorative: [string, string][] = [
+    ['He picks a direction.', 'no second branch at all'],
+    ['He picks a direction, or he picks a direction.', 'the same outcome twice'],
+    ['He decides, or he does not decide.', 'a restatement wearing a suffix'],
+    ['Eight things come off the list.', 'one outcome, no or'],
+    // "either way" used to pass this function unconditionally. It means
+    // "regardless of which branch", which is the opposite of a split, and it
+    // is what a model writes when both branches land in the same place.
+    ['He learns something about the app either way.', 'either way is not a split'],
+    ['He gets a deeper sense of their themes either way.', 'either way is not a split'],
+  ]
+  for (const [s, why] of decorative) {
+    it(`does not split (${why}): ${s}`, () => expect(stakeSplits(s)).toBe(false))
+  }
+})

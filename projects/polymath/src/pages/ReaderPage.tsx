@@ -15,7 +15,8 @@
  *     ideas the app suggests (see api/_lib/reading-corpus.ts).
  */
 
-import { useEffect, useState, useMemo, useCallback } from 'react'
+import { useEffect, useState, useMemo, useCallback, useRef } from 'react'
+import { shouldAskVerdict } from '../lib/verdictPrompt'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ArrowLeft, ExternalLink, Loader2, Highlighter, Clock, Type, Mic, X, Check, WifiOff } from 'lucide-react'
@@ -343,17 +344,36 @@ export function ReaderPage() {
     }
   }
 
+  // Leaving is where the verdict actually gets asked for.
+  //
+  // The two buttons live at the bottom of the article and almost nobody
+  // reaches the bottom, so a gate that works perfectly has been guarding an
+  // input nobody ever filled: 297 articles, zero verdicts. The rule is not
+  // loosened — this just puts it where you leave from (verdictPrompt.ts).
+  const [askingVerdict, setAskingVerdict] = useState(false)
+  const askedRef = useRef(false)
+
+  /** Go back, unless they owe this piece a verdict and read enough to have one. */
+  const leave = useCallback(() => {
+    if (shouldAskVerdict({ resonance, progress, alreadyAsked: askedRef.current })) {
+      askedRef.current = true
+      setAskingVerdict(true)
+      return
+    }
+    navigate(-1)
+  }, [resonance, progress, navigate])
+
   // Escape goes back.
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.preventDefault()
-        navigate(-1)
+        leave()
       }
     }
     window.addEventListener('keydown', handleKeyPress)
     return () => window.removeEventListener('keydown', handleKeyPress)
-  }, [navigate])
+  }, [leave])
 
   // Mobile: swipe right from the left edge goes back.
   useEffect(() => {
@@ -375,7 +395,7 @@ export function ReaderPage() {
       const deltaTime = Date.now() - touchStartTime
 
       if (touchStartX < 50 && deltaX > 100 && deltaY < 100 && deltaTime < 300) {
-        navigate(-1)
+        leave()
       }
     }
 
@@ -556,7 +576,7 @@ export function ReaderPage() {
             }}
           >
             <button
-              onClick={() => navigate(-1)}
+              onClick={leave}
               className="h-10 w-10 rounded-full flex items-center justify-center hover:bg-white/[0.06] transition-colors"
               aria-label="Back"
             >
@@ -751,6 +771,60 @@ export function ReaderPage() {
             onDone={() => navigate(-1)}
           />
         </main>
+
+        {/* Asked on the way out, once, only of someone who read enough to
+            have a view. Leaving without answering is a first-class choice —
+            an article you have no opinion on is exactly what the gate is
+            for, and nagging would only produce votes that mean nothing. */}
+        {askingVerdict && (
+          <div
+            className="fixed inset-0 z-50 flex items-end justify-center"
+            style={{ background: 'rgba(0,0,0,0.55)' }}
+            onClick={() => { setAskingVerdict(false); navigate(-1) }}
+          >
+            <div
+              className="glass-card w-full max-w-md m-3 p-4"
+              style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))' }}
+              onClick={e => e.stopPropagation()}
+            >
+              <p className="text-[14px] mb-3" style={{ color: 'var(--brand-text-primary)' }}>
+                Was that one good?
+              </p>
+              <div className="flex items-center gap-2">
+                <button
+                  className="px-3 py-2 rounded-lg text-[13px] font-medium flex-1 disabled:opacity-50"
+                  style={{
+                    background: 'rgba(var(--brand-primary-rgb), 0.12)',
+                    border: '1px solid rgba(var(--brand-primary-rgb), 0.32)',
+                    color: 'rgb(var(--brand-primary-rgb))',
+                  }}
+                  disabled={savingVerdict}
+                  onClick={async () => { await handleVerdict('good'); navigate(-1) }}
+                >
+                  This was good
+                </button>
+                <button
+                  className="px-3 py-2 rounded-lg text-[13px] flex-1 disabled:opacity-50"
+                  style={{
+                    border: '1px solid rgba(255,255,255,0.14)',
+                    color: 'var(--brand-text-secondary)',
+                  }}
+                  disabled={savingVerdict}
+                  onClick={async () => { await handleVerdict('not_for_me'); navigate(-1) }}
+                >
+                  Not for me
+                </button>
+              </div>
+              <button
+                className="text-[12px] mt-3 transition-opacity hover:opacity-90"
+                style={{ color: 'var(--brand-text-secondary)', opacity: 0.5 }}
+                onClick={() => { setAskingVerdict(false); navigate(-1) }}
+              >
+                skip
+              </button>
+            </div>
+          </div>
+        )}
 
         <ReaderSettingsSheet
           open={showSettings}
