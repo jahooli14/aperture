@@ -33,6 +33,10 @@ describe('findRestarts', () => {
     expect(found[0].projectTitle).toBe('Create custom t-shirts for friends')
     expect(found[0].fact).toContain('gave up on "Custom t-shirts"')
     expect(found[0].fact).toContain('from scratch')
+    // Both months named, not just the gap. A question that says "and started
+    // it again in June" must not be rejected as inventing June.
+    const months = (found[0].fact.match(/January|February|March|April|May|June|July|August|September|October|November|December/g) ?? [])
+    expect(months.length).toBeGreaterThanOrEqual(2)
     // A month named, not "a while ago" — the part they cannot argue with.
     expect(found[0].fact).toMatch(/January|February|March|April|May|June|July|August|September|October|November|December/)
   })

@@ -115,10 +115,17 @@ export function findRestarts(projects: ShapeProject[], now: Date = new Date()): 
         kind: 'restarted',
         projectId: later.id,
         projectTitle: later.title,
+        // BOTH months, named. The fact used to say only "6 months later",
+        // and the draft would reasonably write "and started it again in
+        // June" -- which `unsupportedSpecifics` then rejected as an
+        // invention, because June appeared nowhere in the evidence. Every
+        // restart question died on a date the fact could have supplied.
+        // A gate that can only see what it is given has to be given it.
         fact:
           `They gave up on "${dead.title}" in ${monthYear(dead.createdAt)}. ` +
-          `${months} months later they started "${later.title}" from scratch, ` +
-          `as a separate project, with no reference to the first one.`,
+          `In ${monthYear(later.createdAt)} — ${months} months later — they started ` +
+          `"${later.title}" from scratch, as a separate project, ` +
+          `with no reference to the first one.`,
         evidence: `${dead.title}. ${dead.description ?? ''}`.trim(),
         // The longer the gap, the less chance it was a deliberate redo.
         strength: 1.2 + Math.min(gap / 730, 0.3),

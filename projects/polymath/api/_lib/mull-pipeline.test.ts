@@ -205,6 +205,43 @@ describe('the mull channel, end to end', () => {
     expect(rpcCalls.filter(n => n === 'match_memories').length).toBeGreaterThan(1)
   })
 
+  it('carries a project-table fact all the way to the draft, intact', async () => {
+    // The structural fix: a computed claim used to become a blind-spot
+    // prompt, become a search query, pair on similarity, and lose the fact
+    // on the way. These go straight to the draft the way orbit does.
+    const data = corpus() as any
+    // "Custom t-shirts" given up on, then started again half a year later.
+    data.projects.push(
+      { user_id: 'u1', id: 'p-tee-1', title: 'Custom t-shirts', description: 'Screen prints for friends',
+        metadata: {}, last_closeout_text: null, created_at: ago(260), last_active: ago(260),
+        last_session_ended_at: null, state: 'mull', status: 'abandoned', embedding: [0, 0, 1] },
+      { user_id: 'u1', id: 'p-tee-2', title: 'Create custom t-shirts for friends', description: 'Screen prints for friends',
+        metadata: {}, last_closeout_text: null, created_at: ago(80), last_active: ago(80),
+        last_session_ended_at: null, state: 'mull', status: 'active', embedding: [0, 0, 1] },
+    )
+    generateText.mockResolvedValueOnce(BLIND_SPOTS).mockResolvedValueOnce(DRAFTS)
+
+    const trace: string[] = []
+    await bakeMull(fakeSupabase(data).client, 'u1', undefined, trace)
+
+    expect(trace.join('\n')).toMatch(/project shapes: .*restarted/)
+    // The claim reaches the draft call in its own words, dated, with both
+    // project titles — not boiled down to a search query.
+    const draftPrompt = generateText.mock.calls[1][0] as string
+    expect(draftPrompt).toContain('gave up on "Custom t-shirts"')
+    expect(draftPrompt).toContain('Create custom t-shirts for friends')
+    expect(draftPrompt).toMatch(/from scratch/)
+  })
+
+  it('says so in the trace when the project table has no shape in it', async () => {
+    // Silence has to be readable here too — an empty result and a failed
+    // query are the pair this channel keeps being bitten by.
+    generateText.mockResolvedValueOnce(BLIND_SPOTS).mockResolvedValueOnce(DRAFTS)
+    const trace: string[] = []
+    await bakeMull(fakeSupabase(corpus() as any).client, 'u1', undefined, trace)
+    expect(trace.join('\n')).toMatch(/project shapes: none in \d+ projects/)
+  })
+
   it('asks about every subject in one call, and the dates are real', async () => {
     generateText.mockResolvedValueOnce(BLIND_SPOTS).mockResolvedValueOnce(DRAFTS)
     await bakeMull(fakeSupabase(corpus() as any).client, 'u1')
