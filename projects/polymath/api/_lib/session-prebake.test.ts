@@ -20,6 +20,8 @@ const bake = (over: Partial<PrebakedSession> = {}): PrebakedSession => ({
   truncatedCount: 0,
   builtAt: new Date().toISOString(),
   windowMinutes: 60,
+  unblocked: null,
+  removed: [],
   fingerprint: fingerprintFor(tasks, exitNote),
   ...over,
 })

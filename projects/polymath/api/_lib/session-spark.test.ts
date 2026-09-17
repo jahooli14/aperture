@@ -88,6 +88,13 @@ describe('sparkForSession', () => {
     expect((await sparkForSession(input))?.taskId).toBeNull()
   })
 
+  it('marks itself as a spark -- SessionContract.tsx renders set apart, dashed, only on this flag', async () => {
+    vi.mocked(generateText).mockResolvedValueOnce(JSON.stringify({
+      items: [{ text: 'Chop a vocal into a stutter under the second half', evidence: ['w1'], minutes: 10 }],
+    }))
+    expect((await sparkForSession(input))?.spark).toBe(true)
+  })
+
   it('caps the minutes to the window share, whatever the model asked for', async () => {
     vi.mocked(generateText).mockResolvedValueOnce(JSON.stringify({
       items: [{ text: 'Chop a vocal into a stutter under the second half', evidence: ['w1'], minutes: 45 }],

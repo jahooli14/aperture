@@ -11,6 +11,7 @@ import {
   humanizeDuration,
   type ShapeContext,
 } from './session-shaper.js'
+import { fingerprintFor } from './session-prebake.js'
 
 // Real checkReady always fails closed in this test env (no GEMINI_API_KEY),
 // which is exactly what every existing shapeSession test below already
@@ -766,5 +767,145 @@ describe('shapeSession', () => {
     )
     expect(result.items.map(i => i.text)).toEqual(['Bounce a cleaner vocal take'])
     expect(result.removed).toEqual([{ text: 'Write a distribution plan' }])
+  })
+
+  describe('a missing prerequisite (checkReady kind: "add")', () => {
+    it('is proposed first, not written to the project', async () => {
+      vi.mocked(checkReady).mockResolvedValueOnce({
+        kind: 'add',
+        item: { text: 'Tape the stencil down', source: 'needed before: mix it', taskId: null },
+        minutes: 10,
+        sizeMinutes: null,
+        compound: false,
+      })
+      const updates: Record<string, unknown>[] = []
+      const { shapeSession } = await import('./session-shaper.js')
+      const result = await shapeSession(
+        stubClient({ project, onUpdate: p => updates.push(p) }), 'u1', 'p1', 60,
+      )
+      expect(result.items[0].text).toBe('Tape the stencil down')
+      expect(result.items[0].taskId).toMatch(/^pending-/)
+      expect(result.items[1].text).toBe('mix it')
+      expect(result.unblocked).toEqual({ text: 'Tape the stencil down', before: 'mix it', added: true })
+      // Nothing was written back to metadata.tasks -- the proposal only
+      // becomes real if it's ticked off at close-out, the same way a
+      // spark or a top-up suggestion does.
+      expect(updates).toHaveLength(0)
+    })
+
+    it('is charged against the window, so the real step after it is not overbooked', async () => {
+      const twoSteps = {
+        ...project,
+        metadata: {
+          end_goal: 'released',
+          tasks: [
+            { id: 't1', text: 'mix it', done: false, order: 0, estimated_minutes: 45, estimate_set: true },
+            { id: 't2', text: 'master it', done: false, order: 1, estimated_minutes: 45, estimate_set: true },
+          ],
+        },
+      }
+      vi.mocked(checkReady).mockResolvedValueOnce({
+        kind: 'add',
+        item: { text: 'Tape the stencil down', source: 'needed before: mix it', taskId: null },
+        minutes: 20,
+        sizeMinutes: null,
+        compound: false,
+      })
+      const { shapeSession } = await import('./session-shaper.js')
+      // 60-minute window: 20 for the prerequisite leaves 40, which fits
+      // "mix it" (45, rounds to the nearest budget slot it can) but not
+      // both real steps -- the prerequisite's minutes have to come off
+      // the top or this would try to fit 20+45+45 into 60.
+      const result = await shapeSession(stubClient({ project: twoSteps }), 'u1', 'p1', 60)
+      expect(result.items.map(i => i.text)).not.toContain('master it')
+    })
+  })
+
+  describe('a prerequisite already on the list (checkReady kind: "move")', () => {
+    it('reorders the real step up and persists it, unlike an invented one', async () => {
+      const twoSteps = {
+        ...project,
+        metadata: {
+          end_goal: 'released',
+          tasks: [
+            { id: 't1', text: 'mix it', done: false, order: 0 },
+            { id: 't2', text: 'record the missing verse', done: false, order: 1 },
+          ],
+        },
+      }
+      vi.mocked(checkReady).mockResolvedValueOnce({
+        kind: 'move', taskId: 't2', text: 'record the missing verse', sizeMinutes: null, compound: false,
+      })
+      const updates: Record<string, unknown>[] = []
+      const { shapeSession } = await import('./session-shaper.js')
+      const result = await shapeSession(
+        stubClient({ project: twoSteps, onUpdate: p => updates.push(p) }), 'u1', 'p1', 60,
+      )
+      expect(result.items.map(i => i.text)).toEqual(['record the missing verse', 'mix it'])
+      expect(result.unblocked).toEqual({ text: 'record the missing verse', before: 'mix it', added: false })
+      // A reorder of real, already-written content persists immediately --
+      // it isn't an invention, so it doesn't need the "only real if
+      // ticked" treatment the "add" case above gets.
+      expect(updates).toHaveLength(1)
+      expect((updates[0].metadata as any).tasks.map((t: any) => t.id)).toEqual(['t2', 't1'])
+    })
+  })
+
+  describe('serving a fresh overnight bake', () => {
+    it('carries the bake\'s own unblocked/removed through, rather than hiding what it did', async () => {
+      // Baking runs shapeSession the same as opening the project live --
+      // it can reorder a step or write in a proposed prerequisite exactly
+      // as the tests above show. Before this, that explanation was
+      // dropped when a fresh bake was served, and the fast path
+      // (prebaking covers the projects you're most likely to open) never
+      // showed it.
+      const baked = {
+        ...project,
+        metadata: {
+          ...project.metadata,
+          session_prebake: {
+            items: [{ text: 'Tape the stencil down', source: 'needed before: mix it', taskId: 'pending-ready-t1' }, { text: 'mix it', source: 'already on the project', taskId: 't1' }],
+            doneLooksLike: 'Mixed.',
+            source: 'tasks',
+            friction: null,
+            packdown: null,
+            truncatedCount: 0,
+            builtAt: new Date().toISOString(),
+            windowMinutes: 60,
+            unblocked: { text: 'Tape the stencil down', before: 'mix it', added: true },
+            removed: [],
+            fingerprint: fingerprintFor(project.metadata.tasks, project.last_closeout_text),
+          },
+        },
+      }
+      const { shapeSession } = await import('./session-shaper.js')
+      const result = await shapeSession(stubClient({ project: baked }), 'u1', 'p1', 60)
+      expect(result.unblocked).toEqual({ text: 'Tape the stencil down', before: 'mix it', added: true })
+    })
+
+    it('defaults to no explanation for a bake stored before these fields existed', async () => {
+      const legacyBake = {
+        ...project,
+        metadata: {
+          ...project.metadata,
+          session_prebake: {
+            items: [{ text: 'mix it', source: 'already on the project', taskId: 't1' }],
+            doneLooksLike: 'Mixed.',
+            source: 'tasks',
+            friction: null,
+            packdown: null,
+            truncatedCount: 0,
+            builtAt: new Date().toISOString(),
+            windowMinutes: 60,
+            fingerprint: fingerprintFor(project.metadata.tasks, project.last_closeout_text),
+            // unblocked/removed deliberately absent, as an old row would be.
+          },
+        },
+      }
+      const { shapeSession } = await import('./session-shaper.js')
+      const result = await shapeSession(stubClient({ project: legacyBake }), 'u1', 'p1', 60)
+      expect(result.unblocked).toBeNull()
+      expect(result.removed).toEqual([])
+    })
   })
 })

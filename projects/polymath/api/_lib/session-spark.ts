@@ -184,6 +184,11 @@ export async function sparkForSession(input: SparkInput): Promise<GroundedItem |
       source: `while you're in there — ${signal.source} · ${minutes} min`,
       taskId: null,
       partial: false,
+      // The frontend's whole "set apart, dashed border, only if you fancy
+      // it" treatment (SessionContract.tsx) keys off this -- without it
+      // the spark rendered as an ordinary numbered step, indistinguishable
+      // from a real task. See GroundedItem's own doc comment.
+      spark: true,
     }
   } catch (e) {
     console.error('[session-spark] failed, going without:', e)

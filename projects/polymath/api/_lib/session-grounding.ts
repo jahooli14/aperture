@@ -54,6 +54,11 @@ export interface GroundedItem {
   /** True when the item is deliberately a piece of a bigger step, not the
    *  whole of it -- ticking it records progress, not completion. */
   partial?: boolean
+  /** True only for the one "while you're in there" punt session-spark.ts
+   *  can add -- the frontend (SessionContract.tsx) reads this to render it
+   *  set apart from the numbered plan, never mixed into it. Absent on
+   *  every other item; only session-spark.ts's own return sets it. */
+  spark?: boolean
 }
 
 /**

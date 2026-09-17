@@ -490,8 +490,11 @@ export async function shapeSession(
         packdown: bake.packdown,
         truncatedCount: bake.truncatedCount,
         planned: 0,
-        unblocked: null,
-        removed: [],
+        // Whatever the overnight bake actually did -- reordered a step,
+        // wrote in a proposed prerequisite -- carried through rather than
+        // hidden, the same as the live path always shows it.
+        unblocked: bake.unblocked ?? null,
+        removed: bake.removed ?? [],
       }
     }
   }
@@ -817,12 +820,33 @@ export async function shapeSession(
   // spine is a handful of steps for a whole project, so a real
   // prerequisite can simply never have been written down -- and sitting
   // down to a step you can't start is the worst thing a rare hour can
-  // produce. When one is found, the PLAN changes, not just this session:
-  // a step already further down moves up, and a missing one is written
-  // in front of the step it blocks. Skipped when the step is already
-  // part-done, which settles the question by itself.
+  // produce. Two different fixes for two different findings:
+  //
+  //   - the missing thing is ALREADY on the list, further down: that's a
+  //     real, existing step, so the plan itself changes -- it moves up,
+  //     the same way it would if the user had reordered it by hand.
+  //   - the missing thing ISN'T on the list: that's an invention risk
+  //     (session-ready.ts's own header names it -- a model asked "what
+  //     has to happen first?" will always find something). So unlike a
+  //     reorder, this does NOT get written to the project. It's handed
+  //     to the session the same way a spark or a top-up suggestion is:
+  //     first in line, clearly a proposal (`taskId` starts 'pending-'),
+  //     and it only becomes a real step on the project if it's actually
+  //     ticked off at close-out (session-closeout.ts already does this
+  //     for every other ungrounded session item). Get it wrong and it
+  //     costs nothing; the next session just asks the readiness question
+  //     again. Get it right and it's real. Neither costs a permanent,
+  //     unconfirmed line on the plan the way writing it in advance did.
+  //
+  // Skipped when the step is already part-done, which settles the
+  // question by itself.
   let steps = openTasks
   let unblocked: ShapeResult['unblocked'] = null
+  // A prerequisite session-ready.ts found nowhere on the real list --
+  // prepended to whichever item list this call ends up returning
+  // (withPrereq, below), never written to metadata.tasks.
+  let pendingPrereq: GroundedItem | null = null
+  let prereqMinutes = 0
   // Set from the same checkReady call below -- true only when the top
   // step's own text plainly bundles more than one separately-schedulable
   // job. Independent of readiness, so it's read after the fact rather
@@ -858,35 +882,38 @@ export async function shapeSession(
       resized = true
     }
 
-    if (readiness.kind !== 'ready') {
-      const now = new Date()
+    if (readiness.kind === 'move') {
+      const from = nextTasks.findIndex(t => t?.id === readiness.taskId)
       const blockedAt = () => nextTasks.findIndex(t => t?.id === top.id)
-
-      if (readiness.kind === 'move') {
-        const from = nextTasks.findIndex(t => t?.id === readiness.taskId)
-        if (from !== -1 && blockedAt() !== -1) {
-          const [moved] = nextTasks.splice(from, 1)
-          nextTasks.splice(blockedAt(), 0, moved)
-          unblocked = { text: readiness.text, before: top.text, added: false }
-        }
-      } else {
-        const at = blockedAt()
-        nextTasks.splice(at === -1 ? 0 : at, 0, {
-          id: `t-${now.getTime()}-pre`,
-          text: readiness.item.text,
-          done: false,
-          created_at: now.toISOString(),
-          order: 0,
-          origin: 'session',
-          source: readiness.item.source,
-          estimated_minutes: readiness.minutes,
-          estimate_set: true,
-        })
-        unblocked = { text: readiness.item.text, before: top.text, added: true }
+      if (from !== -1 && blockedAt() !== -1) {
+        // Re-found AFTER the splice, not before -- removing `from` shifts
+        // every later index down by one, so a target index taken up front
+        // would land one slot too far whenever the moved step sat ahead
+        // of the one it's moving in front of.
+        const [moved] = nextTasks.splice(from, 1)
+        nextTasks.splice(blockedAt(), 0, moved)
+        // The splice just established a new ARRAY order, but
+        // normalizeTaskOrder (below) sorts by each task's stored `order`
+        // field over array position (task-order.ts's own header explains
+        // why) -- so without renumbering here, it would trust the two
+        // moved tasks' stale `order` values and sort the reorder straight
+        // back to where it started. This was a real, silent bug: nothing
+        // exercised the 'move' verdict before this file's tests did.
+        nextTasks = nextTasks.map((t, i) => ({ ...t, order: i }))
+        unblocked = { text: readiness.text, before: top.text, added: false }
       }
+    } else if (readiness.kind === 'add') {
+      pendingPrereq = {
+        text: readiness.item.text,
+        source: readiness.item.source,
+        taskId: `pending-ready-${top.id}`,
+        partial: false,
+      }
+      prereqMinutes = readiness.minutes
+      unblocked = { text: readiness.item.text, before: top.text, added: true }
     }
 
-    if (unblocked || resized) {
+    if (unblocked?.added === false || resized) {
       allTasks = normalizeTaskOrder(nextTasks)
       steps = toOpenSteps(allTasks)
       const { error: saveErr } = await supabase
@@ -897,6 +924,12 @@ export async function shapeSession(
       if (saveErr) console.warn('[session-shaper] could not save the reordered plan:', saveErr.message)
     }
   }
+
+  // Prepends the pending prerequisite, when there is one -- the one place
+  // every return path below has to remember it, so it can't be dropped by
+  // forgetting it on a path added later.
+  const withPrereq = (list: GroundedItem[]): GroundedItem[] =>
+    pendingPrereq ? [pendingPrereq, ...list] : list
 
   let setup: FrictionLine | null = readStoredFriction(metadata.setup)
   let packdown: FrictionLine | null = readStoredFriction(metadata.packdown)
@@ -915,7 +948,7 @@ export async function shapeSession(
         const step = steps.find(st => st.id === i.taskId)
         return total + (step?.minutes ?? 0)
       }, 0)
-      const left = (workingMinutes(windowMinutes, setup?.minutes, packdown?.minutes) ?? 0) - plannedMinutes
+      const left = (workingMinutes(windowMinutes, (setup?.minutes ?? 0) + prereqMinutes, packdown?.minutes) ?? 0) - plannedMinutes
       if (left < sparkMinutesCap(windowMinutes)) return null
     }
     return sparkForSession({
@@ -965,7 +998,7 @@ export async function shapeSession(
       const minutesByTaskId = new Map(steps.map(s => [s.id, s.minutes]))
       const budgeted = selectByBudget(
         briefing.items.map(i => ({ item: i, minutes: minutesByTaskId.get(i.taskId as string) ?? 20 })),
-        workingMinutes(windowMinutes, setup?.minutes, packdown?.minutes),
+        workingMinutes(windowMinutes, (setup?.minutes ?? 0) + prereqMinutes, packdown?.minutes),
         count,
       )
       const items = budgeted.selected.map(b => b.item)
@@ -973,7 +1006,7 @@ export async function shapeSession(
       return {
         ...base, unblocked, friction: setup, packdown,
         truncatedCount: notShown(items),
-        items: spark ? [...items, spark] : items,
+        items: withPrereq(spark ? [...items, spark] : items),
         doneLooksLike: briefing.doneLooksLike,
         source: 'briefing',
       }
@@ -982,7 +1015,7 @@ export async function shapeSession(
 
   // ── The next steps, in order, as many as fit ──────────────────────
   const { selected, rest } = selectByBudget(
-    steps, workingMinutes(windowMinutes, setup?.minutes, packdown?.minutes), count,
+    steps, workingMinutes(windowMinutes, (setup?.minutes ?? 0) + prereqMinutes, packdown?.minutes), count,
   )
   const first = selected[0]
 
@@ -1026,7 +1059,7 @@ export async function shapeSession(
       return {
         ...base, unblocked, friction: setup, packdown,
         truncatedCount: notShown(splitItems),
-        items: splitSpark ? [...splitItems, splitSpark] : splitItems,
+        items: withPrereq(splitSpark ? [...splitItems, splitSpark] : splitItems),
         doneLooksLike: split.doneLooksLike ?? doneLineForSteps(split.moves),
         source: 'split',
       }
@@ -1047,7 +1080,7 @@ export async function shapeSession(
   // from", and topping THAT up would risk padding around a step that's
   // still genuinely too big rather than genuinely short a plan.
   if (rest.length === 0 && windowMinutes != null && !oversized && !flaggedCompound) {
-    const remainingMinutes = (workingMinutes(windowMinutes, setup?.minutes, packdown?.minutes) ?? windowMinutes)
+    const remainingMinutes = (workingMinutes(windowMinutes, (setup?.minutes ?? 0) + prereqMinutes, packdown?.minutes) ?? windowMinutes)
       - sumMinutes(selected)
     if (remainingMinutes >= 15) {
       const topUpItems = await topUpSession({
@@ -1067,6 +1100,6 @@ export async function shapeSession(
   return {
     ...base, unblocked, friction: setup, packdown,
     truncatedCount: notShown(items),
-    items, doneLooksLike: doneLineForSteps(selected), source: 'tasks',
+    items: withPrereq(items), doneLooksLike: doneLineForSteps(selected), source: 'tasks',
   }
 }

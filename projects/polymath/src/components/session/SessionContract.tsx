@@ -25,7 +25,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Clock, Square, ArrowUp, Check, Keyboard, Mic, Wrench, Flag } from 'lucide-react'
+import { Clock, Square, ArrowUp, Check, Keyboard, Mic, Wrench, Flag, Plus } from 'lucide-react'
 import { VoiceInput } from '../VoiceInput'
 import { useSessionStore, WINDOW_PRESETS, planningSecondsFor, type CloseResult } from '../../stores/useSessionStore'
 import { useVoicePreference } from '../../stores/useVoicePreference'
@@ -839,32 +839,58 @@ export function SessionContract({
           </div>
         ) : (
           <ol className="space-y-0.5" style={shaping ? { opacity: 0.45 } : undefined}>
-            {steps.map((item, i) => (
-              <li key={`${i}-${item.text}`} className="flex items-start gap-2.5 py-2">
-                <span
-                  className="mt-0.5 text-[11px] tabular-nums font-semibold flex-shrink-0 w-4"
-                  style={{ color: 'rgba(var(--brand-primary-rgb),0.8)' }}
-                >
-                  {i + 1}
-                </span>
-                <span className="flex-1 min-w-0">
-                  <span className="text-sm leading-snug block">{item.text}</span>
-                  {/* The receipt. Every line either points at the step it
-                      is (or is a piece of), or says nothing that needs a
-                      source. Seeing which is which at a glance is the
-                      difference between a list you can act on and one you
-                      have to fact-check first. */}
-                  {item.source && (
+            {steps.map((item, i) => {
+              // Not a step you wrote: a missing prerequisite session-ready
+              // found, or a top-up suggestion (session-topup.ts) proposed
+              // when the real backlog ran out. Neither is on the project --
+              // both only become a real step if actually ticked off
+              // (session-closeout.ts) -- so both get the same "proposed,
+              // not yours yet" mark instead of a plain number, wherever
+              // they land in the order. A real step keeps its plain
+              // number; that's the whole difference this is for.
+              const proposed = !item.taskId || item.taskId.startsWith('pending-')
+              return (
+                <li key={`${i}-${item.text}`} className="flex items-start gap-2.5 py-2">
+                  {proposed ? (
                     <span
-                      className="text-[10.5px] leading-tight block mt-0.5"
-                      style={{ color: 'var(--brand-text-secondary)', opacity: 0.45 }}
+                      className="mt-0.5 h-4 w-4 rounded-full flex items-center justify-center flex-shrink-0 border border-dashed"
+                      style={{ borderColor: 'rgba(var(--brand-primary-rgb),0.5)' }}
+                      title="Not on your list yet — only if you do it"
                     >
-                      {item.source}
+                      <Plus size={9} strokeWidth={2.5} style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.8 }} />
+                    </span>
+                  ) : (
+                    <span
+                      className="mt-0.5 text-[11px] tabular-nums font-semibold flex-shrink-0 w-4"
+                      style={{ color: 'rgba(var(--brand-primary-rgb),0.8)' }}
+                    >
+                      {i + 1}
                     </span>
                   )}
-                </span>
-              </li>
-            ))}
+                  <span className="flex-1 min-w-0">
+                    <span className="text-sm leading-snug block" style={proposed ? { opacity: 0.85 } : undefined}>
+                      {item.text}
+                    </span>
+                    {/* The receipt. Every line either points at the step it
+                        is (or is a piece of), or says nothing that needs a
+                        source. Seeing which is which at a glance is the
+                        difference between a list you can act on and one you
+                        have to fact-check first. */}
+                    {item.source && (
+                      <span
+                        className="text-[10.5px] leading-tight block mt-0.5"
+                        style={{
+                          color: proposed ? 'rgb(var(--brand-primary-rgb))' : 'var(--brand-text-secondary)',
+                          opacity: proposed ? 0.6 : 0.45,
+                        }}
+                      >
+                        {item.source}
+                      </span>
+                    )}
+                  </span>
+                </li>
+              )
+            })}
           </ol>
         )}
 
