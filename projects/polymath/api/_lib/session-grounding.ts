@@ -242,6 +242,17 @@ export function hasAdequateCoverage(text: string, evidence: Evidence[], minRatio
 }
 
 /**
+ * Evidence describing work that's already done ("you finished this on 15
+ * Sept", "already finished" — session-shaper's doneTasks). It exists so the
+ * model knows what not to repeat, never as a source for something it's
+ * about to hand back as a live step: a session item "supported" by one of
+ * these reads as the app suggesting a task it itself says is finished.
+ */
+function isFinishedWorkEvidence(e: Evidence): boolean {
+  return e.label === 'already finished' || e.label.startsWith('you finished this on')
+}
+
+/**
  * Drops every item the app can't stand behind. Returns what survived, and
  * what didn't with the reason — the rejections are logged, not shown, but
  * they're the thing to look at when the lists come back thin.
@@ -279,7 +290,13 @@ export function filterGrounded(
       continue
     }
 
-    const supporting = cited.find(e => citationSupports(text, e.text))
+    const groundable = cited.filter(e => !isFinishedWorkEvidence(e))
+    if (groundable.length === 0) {
+      rejected.push({ text, reason: `cites only already-finished work (${cited.map(c => c.id).join(', ')})` })
+      continue
+    }
+
+    const supporting = groundable.find(e => citationSupports(text, e.text))
     if (!supporting) {
       rejected.push({ text, reason: `citation does not support it (${cited.map(c => c.id).join(', ')})` })
       continue
