@@ -45,6 +45,13 @@ export function StandingQuestion() {
   const [rerolling, setRerolling] = useState(false)
   const [receipt, setReceipt] = useState<string | null>(null)
   const [note, setNote] = useState<string | null>(null)
+  // The regular bar has a high floor and a high ceiling on purpose — see
+  // CLAUDE.md. Once a reroll comes back with nothing under it, this offers
+  // one deliberate way past it rather than leaving "nothing else worth
+  // asking yet" as the end of the road. A second, explicit tap, so the
+  // corpus never runs out of *something* to ask even when it's run out of
+  // the good stuff — handy for a demo, or just a slow week.
+  const [offerCreative, setOfferCreative] = useState(false)
   // The one question back. A computed fact can be true and still be out of
   // date — "you gave up on it in January" is arithmetic, whether that is
   // still how they think about it is only knowable from them. Two turns,
@@ -123,11 +130,11 @@ export function StandingQuestion() {
     await save([text])
   }
 
-  const reroll = async () => {
+  const reroll = async (creative = false) => {
     setRerolling(true)
     setNote(null)
     try {
-      const data = await api.post('utilities?resource=reroll-spark', {}) as {
+      const data = await api.post('utilities?resource=reroll-spark', { creative }) as {
         rerolled?: boolean
         spark?: StandingQuestionSpark
       }
@@ -136,10 +143,18 @@ export function StandingQuestion() {
         setSpark(data.spark)
         setAnswering(false)
         setText('')
-      } else {
+        setOfferCreative(false)
+      } else if (!creative) {
         // Honest about silence rather than pretending to think — and the
-        // question you had is still there.
+        // question you had is still there. Offer the looser pass instead
+        // of just repeating "nothing else" forever.
         setNote('Nothing else worth asking yet.')
+        setOfferCreative(true)
+      } else {
+        // Even the looser pass found nothing grounded in anything real —
+        // that's a genuinely empty corpus, not a high bar.
+        setNote('Really nothing to work with right now.')
+        setOfferCreative(false)
       }
     } catch (err) {
       // A rejected request and an unreachable one are different problems and
@@ -177,7 +192,7 @@ export function StandingQuestion() {
           className="text-[13px] transition-opacity hover:opacity-90 disabled:opacity-40"
           style={{ color: 'var(--brand-text-secondary)', opacity: 0.6 }}
           disabled={rerolling}
-          onClick={reroll}
+          onClick={() => reroll()}
         >
           {rerolling ? 'thinking…' : 'give me something to think about'}
         </button>
@@ -185,6 +200,16 @@ export function StandingQuestion() {
           <p className="text-[11px] mt-1.5" style={{ color: 'var(--brand-text-secondary)', opacity: 0.45 }}>
             {note}
           </p>
+        )}
+        {offerCreative && (
+          <button
+            className="text-[12px] mt-1.5 transition-opacity hover:opacity-90 disabled:opacity-40"
+            style={{ color: 'var(--brand-text-secondary)', opacity: 0.6, textDecoration: 'underline' }}
+            disabled={rerolling}
+            onClick={() => reroll(true)}
+          >
+            {rerolling ? 'thinking…' : 'get more creative'}
+          </button>
         )}
       </div>
     )
@@ -233,10 +258,23 @@ export function StandingQuestion() {
             className="text-[12px] transition-opacity hover:opacity-90 disabled:opacity-30"
             style={quietActionStyle}
             disabled={rerolling}
-            onClick={reroll}
+            onClick={() => reroll()}
           >
             {rerolling ? 'thinking…' : 'ask me something else'}
           </button>
+          {offerCreative && (
+            <>
+              <span style={{ color: 'var(--brand-text-secondary)', opacity: 0.25 }}>·</span>
+              <button
+                className="text-[12px] transition-opacity hover:opacity-90 disabled:opacity-30"
+                style={quietActionStyle}
+                disabled={rerolling}
+                onClick={() => reroll(true)}
+              >
+                {rerolling ? 'thinking…' : 'get more creative'}
+              </button>
+            </>
+          )}
         </div>
       )}
 

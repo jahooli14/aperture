@@ -536,6 +536,14 @@ export interface ValidationInput extends MullDraft {
    *  a specific can legitimately come from — a good question names the
    *  project, and the project is not in the note. */
   subjectText?: string
+  /** "Get more creative" — the reroll's fallback tier for when the regular
+   *  bar has run the corpus dry. Relaxes taste, never honesty: the gates
+   *  that stop the model explaining itself or shipping a decorative binary
+   *  are skipped, but grounding (the note's own words survive into the
+   *  question) and unsupportedSpecifics (nothing invented) are not
+   *  negotiable in any tier — a looser bar is not a licence to make things
+   *  up. See rejectionReason. */
+  loose?: boolean
 }
 
 /**
@@ -675,21 +683,30 @@ export function rejectionReason(input: ValidationInput): string | null {
     return 'the note is decoration, not a lens'
   }
 
-  const explainer = EXPLAINER_PATTERNS.find(re => re.test(text))
-  if (explainer) return `explains the link: ${explainer.source}`
+  // From here down are taste gates, not honesty gates — they stop a
+  // question that's clumsy or decorative, not one that invents. `loose`
+  // (the reroll's "get more creative" tier) skips them so a corpus that's
+  // run out of high-bar material still produces something, rather than a
+  // fourth straight empty slot. Grounding above and unsupportedSpecifics
+  // below stay on regardless: a looser bar changes how good the question
+  // has to be, never whether it's allowed to make something up.
+  if (!input.loose) {
+    const explainer = EXPLAINER_PATTERNS.find(re => re.test(text))
+    if (explainer) return `explains the link: ${explainer.source}`
 
-  // A binary is only fake when both branches land in the same place. The
-  // prompt already demands the model say what the user would DO differently
-  // depending on the answer, so the stake is the evidence: one that names
-  // two outcomes means the either/or is real and worth carrying --
-  //   "Do you have it now, or did you miss the work?"
-  //   stake: "He writes the last line this week, or admits he wanted the hours."
-  // -- while a single outcome behind a two-sided question means the sides
-  // were decoration:
-  //   "Does Pupils trace how he grows up, or does it stay in the nursery?"
-  //   stake: "He picks a direction."
-  if (offersAChoice(text) && !stakeSplits(input.stake)) {
-    return 'offers a choice between two things it supplied, and nothing different happens either way'
+    // A binary is only fake when both branches land in the same place. The
+    // prompt already demands the model say what the user would DO differently
+    // depending on the answer, so the stake is the evidence: one that names
+    // two outcomes means the either/or is real and worth carrying --
+    //   "Do you have it now, or did you miss the work?"
+    //   stake: "He writes the last line this week, or admits he wanted the hours."
+    // -- while a single outcome behind a two-sided question means the sides
+    // were decoration:
+    //   "Does Pupils trace how he grows up, or does it stay in the nursery?"
+    //   stake: "He picks a direction."
+    if (offersAChoice(text) && !stakeSplits(input.stake)) {
+      return 'offers a choice between two things it supplied, and nothing different happens either way'
+    }
   }
 
   // Only when the caller supplied the subject. Half the evidence is not
@@ -704,7 +721,7 @@ export function rejectionReason(input: ValidationInput): string | null {
     return `names something that is in neither the note nor the project: ${invented.join(', ')}`
   }
 
-  if (stakeIsHollow(input.stake)) return `nothing changes either way: "${input.stake}"`
+  if (!input.loose && stakeIsHollow(input.stake)) return `nothing changes either way: "${input.stake}"`
 
   const voice = findVoiceViolations(text)
   if (voice.length > 0) return voice[0]

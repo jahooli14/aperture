@@ -2802,6 +2802,10 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
  */
 async function retireAndRebake(
   supabase: ReturnType<typeof getSupabaseClient>, userId: string, force = false,
+  /** "Get more creative" — see generateMull. Only ever set by an explicit
+   *  second tap on the app's own reroll button, after the first (strict)
+   *  reroll already came back with nothing. Never set by cron. */
+  creative = false,
 ): Promise<
   | { rerolled: true; spark: unknown }
   | { rerolled: false; reason: string }
@@ -2853,7 +2857,7 @@ async function retireAndRebake(
     if (served) return { rerolled: true, spark: served }
   }
 
-  let baked = await bakeMull(supabase, userId)
+  let baked = await bakeMull(supabase, userId, undefined, [], creative)
 
   // Silence often isn't a thin corpus — it's an empty fragments table.
   // A project's captures are most of what a blind spot is found in, so
@@ -2864,7 +2868,7 @@ async function retireAndRebake(
   if (baked.length === 0) {
     const { backfillFragments } = await import('./_lib/fragments.js')
     const attached = await backfillFragments(supabase, userId, 8)
-    if (attached > 0) baked = await bakeMull(supabase, userId)
+    if (attached > 0) baked = await bakeMull(supabase, userId, undefined, [], creative)
   }
 
   if (baked.length === 0) {
@@ -3136,7 +3140,10 @@ async function handleExecutionSparks(req: VercelRequest, res: VercelResponse) {
     if (req.method !== 'POST') return res.status(405).json({ error: 'POST required' })
     const userId = await getUserId(req)
     if (!userId) return res.status(401).json({ error: 'Unauthorized' })
-    return res.status(200).json(await retireAndRebake(supabase, userId))
+    // "Get more creative" -- the app only ever sends this after a first,
+    // strict reroll already came back with nothing. See retireAndRebake.
+    const creative = req.body?.creative === true
+    return res.status(200).json(await retireAndRebake(supabase, userId, false, creative))
   }
 
   // ─── RETIRE-AND-REBAKE (cron) ───────────────────────────────────────
