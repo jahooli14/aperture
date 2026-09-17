@@ -46,6 +46,26 @@
   .sub{font-size:1rem; color:var(--ink-2); max-width:62ch; margin-top:.8rem;}
   .sub b{color:var(--ink); font-weight:700;}
 
+  .why{display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-top:1.4rem;}
+  .why__item{background:var(--panel); border:1px solid var(--rule); border-left:2px solid var(--lit);
+             border-radius:0 8px 8px 0; padding:1rem 1.1rem;}
+  .why__h{font-family:var(--mono); font-size:.62rem; letter-spacing:.11em; text-transform:uppercase;
+          color:var(--lit); margin-bottom:.45rem;}
+  .why__t{font-size:.92rem; color:var(--ink-2); line-height:1.55;}
+  .why__t b{color:var(--ink); font-weight:600;}
+  @media (max-width:620px){ .why{grid-template-columns:1fr;} }
+
+  .worth{margin-top:.9rem; padding-top:.9rem; border-top:1px dashed var(--rule);}
+  .worth__l{font-family:var(--mono); font-size:.61rem; letter-spacing:.12em; text-transform:uppercase;
+            color:var(--ink-3); margin-bottom:.4rem;}
+  .worth__t{font-size:.95rem; color:var(--ink-2); line-height:1.55; max-width:60ch;}
+  .worth__t b{color:var(--ink); font-weight:600;}
+
+  .delivery{background:var(--panel); border:1px solid var(--rule); border-radius:10px;
+            padding:1.2rem 1.4rem; display:flex; flex-wrap:wrap; gap:1rem 1.8rem; align-items:center;}
+  .delivery__h{font-size:1rem; font-weight:700;}
+  .delivery__t{font-size:.92rem; color:var(--ink-2); max-width:50ch;}
+
   /* ---------- the wall ---------- */
   .wall{background:var(--well); border:1px solid var(--rule); border-radius:10px;
         padding:1.1rem 1.15rem 1rem; position:relative;}
@@ -151,8 +171,19 @@
 
   <header>
     <p class="kicker">A worked example · specialty insurance</p>
-    <h1>Every note from six months. Five of them are secretly the same story.</h1>
-    <p class="sub">Two hundred meeting notes — invented, but the kind anyone in this job actually writes. Each square below is one note. <b>Pick a pattern and watch which ones light up.</b> You don't need to know anything about insurance; everything is explained in plain English as it comes.</p>
+    <h1>You've talked to everyone. You can only use what you remember.</h1>
+    <p class="sub">That's the whole problem. Your value to a client is that you've spoken to everyone else in the market — but walking into any given meeting, you can deploy the fraction you happen to recall. Six months of conversations, and maybe the last three weeks are live in your head.</p>
+    <div class="why">
+      <div class="why__item">
+        <p class="why__h">What it does for you</p>
+        <p class="why__t">Reads all two hundred conversations, every week, and hands you the two or three worth knowing <b>before you walk in</b> — including things the client doesn't know about their own market.</p>
+      </div>
+      <div class="why__item">
+        <p class="why__h">What it does for the firm</p>
+        <p class="why__t">Somewhere in these notes is a team of yours sitting idle with nothing booked, and five clients describing the exact problem it solves. <b>Nobody spotted it, because nobody reads all the notes at once.</b></p>
+      </div>
+    </div>
+    <p class="sub" style="margin-top:1.3rem;">Below is that corpus. Every square is one note. <b>Pick a pattern and watch which ones light up.</b> No insurance knowledge needed — it's all explained in plain English as it comes.</p>
   </header>
 
   <div class="wall">
@@ -171,6 +202,13 @@
   <div class="picker" id="picker" role="group" aria-label="Choose a pattern"></div>
 
   <div class="readout" id="readout"></div>
+
+  <div class="delivery">
+    <div>
+      <p class="delivery__h">And it reaches you three days early.</p>
+      <p class="delivery__t">Findings attach themselves to your diary. Before the meeting, not the morning after — one line to carry in, never a summary of the last one.</p>
+    </div>
+  </div>
 
   <footer class="foot">
     <div class="stats">
@@ -253,7 +291,9 @@
       '<div class="plain"><p class="plain__l">In plain terms</p><p>'+f.plain+'</p></div>' +
       '<div class="beats">'+beats+'</div>' +
       '<p class="punch">'+f.punch+'</p>' +
-      '<div class="say"><p class="say__l">What you get to say</p><p class="say__t">'+f.say+'</p></div>';
+      '<div class="say"><p class="say__l">What you get to say</p><p class="say__t">'+f.say+'</p>' +
+      '<div class="worth"><p class="worth__l">Why that is worth something</p>' +
+      '<p class="worth__t">'+f.worth+'</p></div></div>';
   }
 
   D.findings.forEach(function(f){
