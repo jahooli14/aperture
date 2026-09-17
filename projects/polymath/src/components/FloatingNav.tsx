@@ -12,7 +12,6 @@ import { useOnlineStatus } from '../hooks/useOnlineStatus'
 import { useKeyboardVisible } from '../hooks/useKeyboardVisible'
 import { useMemoryStore } from '../stores/useMemoryStore'
 import { useDriftStore, wrapWithDriftContext } from '../stores/useDriftStore'
-import type { Memory } from '../types'
 import { useOfflineSync } from '../hooks/useOfflineSync'
 import { useToast } from './ui/toast'
 import { useAuthContext } from '../contexts/AuthContext'
@@ -55,15 +54,6 @@ export function FloatingNav() {
   const { user } = useAuthContext()
 
   const location = useLocation()
-
-  const allMemories = useMemoryStore((s: { memories: Memory[] }) => s.memories)
-  const hasRecentMemories = allMemories.some((m: Memory) => {
-    const created = m.created_at || m.audiopen_created_at
-    if (!created) return false
-    const mTime = new Date(created).getTime()
-    const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000
-    return mTime > oneDayAgo
-  })
 
   // The reader is the one immersive route. The nav and the voice FAB both
   // go away for as long as you're in an article — two floating buttons
@@ -342,7 +332,6 @@ export function FloatingNav() {
                   const Icon = option.icon
                   const colors = SCHEMA_COLORS[option.color]
                   const active = isActive(option)
-                  const dot = option.id === 'thoughts' && hasRecentMemories
                   return (
                     <motion.button
                       key={option.id}
@@ -379,16 +368,6 @@ export function FloatingNav() {
                             }}
                           />
                         </motion.div>
-                        {dot && (
-                          <span
-                            className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full"
-                            title="Captured something in the last day"
-                            style={{
-                              background: colors.primary,
-                              boxShadow: `0 0 4px ${colors.glow}`,
-                            }}
-                          />
-                        )}
                       </div>
                       {active && (
                         <motion.div

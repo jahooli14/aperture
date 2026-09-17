@@ -18,6 +18,7 @@ import { identifyRottingProjects, generateZebraReport, buryProject, resurrectPro
 import { updateItemConnections } from './_lib/connection-logic.js'
 import { recomputeHeatForUser, DRAWER_STATUSES, MUTATION_MODES, MODES_THAT_RETIRE_PARENT, type MutationMode } from './_lib/metabolism.js'
 import { backfillProjectTags } from './_lib/project-tags.js'
+import { isGraveyarded } from './_lib/project-state.js'
 
 // Validation schema for rating suggestions
 const RateRequestSchema = z.object({
@@ -653,7 +654,7 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
         [...priorityProjects, ...upNextProjects, ...recentSlot].map((p: any) => p.id)
       )
 
-      const all = allProjects.filter((p: any) => !focusIds.has(p.id))
+      const all = allProjects.filter((p: any) => !focusIds.has(p.id) && !isGraveyarded(p))
       const warmed = all.filter((p: any) => (p.heat_score || 0) > 0 && p.heat_reason)
       const warmedIds = new Set(warmed.map((p: any) => p.id))
       const rest = all.filter((p: any) => !warmedIds.has(p.id))
@@ -1689,6 +1690,11 @@ Return JSON only:
         updates.is_priority = false
         updates.up_next_position = null
         updates.booked_session_at = null
+        // recomputeHeatForUser skips graveyarded projects entirely (metabolism.ts),
+        // so it never clears a heat_score/heat_reason set before burial -- without
+        // this, a buried project keeps showing up in "for you today" forever.
+        updates.heat_score = 0
+        updates.heat_reason = null
       }
 
       // The projects.status CHECK constraint permits upcoming / active /

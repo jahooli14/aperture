@@ -46,14 +46,33 @@ function MasonryGrid({
 }) {
   const columns = 2
 
-  // Distribute memories into columns:
-  // Col 1: Index 0, 3, 6...
-  // Col 2: Index 1, 4, 7...
-  // Col 3: Index 2, 5, 8...
+  // Column membership is sticky per memory id, not recomputed from array
+  // position. Recomputing by `i % columns` every render meant removing one
+  // card (e.g. tapping "Reviewed") reshuffled every card after it into a
+  // different column — the card that had been sitting in the other column
+  // would slide into the just-vacated slot mid-exit-animation, which read
+  // as "I pressed the left button and the right card reacted." Assigning
+  // once, on first sight of an id, and reusing that assignment on every
+  // later render (round-robin for new ids only) keeps every other card
+  // exactly where it already was.
+  const columnAssignments = useRef<Map<string, number>>(new Map())
+  const nextColumn = useRef(0)
   const distributedColumns = useMemo(() => {
     const cols: Memory[][] = Array.from({ length: columns }, () => [])
+    const assignments = columnAssignments.current
+    const liveIds = new Set(memories.map(m => m.id).filter(Boolean))
+    for (const id of assignments.keys()) {
+      if (!liveIds.has(id)) assignments.delete(id)
+    }
     memories.forEach((memory, i) => {
-      cols[i % columns].push(memory)
+      const key = memory.id
+      let col = key ? assignments.get(key) : undefined
+      if (col === undefined) {
+        col = nextColumn.current % columns
+        nextColumn.current += 1
+        if (key) assignments.set(key, col)
+      }
+      cols[col ?? i % columns].push(memory)
     })
     return cols
   }, [memories, columns])
