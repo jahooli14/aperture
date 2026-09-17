@@ -277,4 +277,45 @@ describe('filterGrounded', () => {
     expect(kept).toHaveLength(0)
     expect(rejected[0].reason).toContain('citation does not support it')
   })
+
+  // The actual bug: a step still open shares wording with a sibling step
+  // that's already been marked done, so the model's citation for it can
+  // land on the "finished" evidence instead of the real open one. Showing
+  // that label under a live session item reads as the app suggesting work
+  // it itself says is already finished.
+  it('never sources an item from evidence that says the work is already done', () => {
+    const evidenceWithDone: Evidence[] = [
+      ...EVIDENCE,
+      { id: 'e3', label: 'you finished this on 15 Sept', text: 'Draft the first entries for the appendix.' },
+      { id: 'e4', label: 'already finished', text: 'Draft the first entries for the appendix.' },
+    ]
+
+    const { kept, rejected } = filterGrounded(
+      [
+        { text: 'Draft the first entries for the appendix.', evidence: ['e3'] },
+        { text: 'Draft the first entries for the appendix.', evidence: ['e4'] },
+      ],
+      evidenceWithDone,
+      TITLE,
+    )
+    expect(kept).toHaveLength(0)
+    expect(rejected.every(r => r.reason.includes('already-finished work'))).toBe(true)
+  })
+
+  it('still grounds the item in a real open step when one is also cited', () => {
+    const evidenceWithDone: Evidence[] = [
+      ...EVIDENCE,
+      { id: 'e3', label: 'you finished this on 15 Sept', text: 'Draft the first entries for the appendix.' },
+      { id: 'e4', label: 'already on the project', text: 'Sketch a layout for the final missing page.' },
+    ]
+
+    const { kept } = filterGrounded(
+      [{ text: 'Sketch a layout for the final missing page.', evidence: ['e3', 'e4'] }],
+      evidenceWithDone,
+      TITLE,
+      { e4: 'task-99' },
+    )
+    expect(kept[0].source).toBe('already on the project')
+    expect(kept[0].taskId).toBe('task-99')
+  })
 })
