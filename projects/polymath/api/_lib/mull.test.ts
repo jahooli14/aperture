@@ -162,6 +162,32 @@ describe('rejectionReason', () => {
     const text = 'Your ten more proper conversations with dad unlock a transformative question. What are those chapters for?'
     expect(rejectionReason({ ...good, text })).toMatch(/banned word/)
   })
+
+  describe('loose (the "get more creative" reroll tier)', () => {
+    it('still rejects a question ungrounded in the note — loose changes taste, not honesty', () => {
+      expect(rejectionReason({
+        ...good,
+        loose: true,
+        text: 'What would the book be if you stopped rewriting chapter three?',
+        connectorText: 'A completely unrelated note about the bird feeder and the frost.',
+      })).toMatch(/^nothing of the note survives into the question/)
+    })
+
+    it('lets an explained link through', () => {
+      const text = 'You have ten more proper conversations with dad. Which mirrors the book swapping Lena out. What are those chapters for?'
+      expect(rejectionReason({ ...good, loose: true, text })).toBeNull()
+    })
+
+    it('lets a decorative binary through', () => {
+      const text = 'Do you have ten more proper conversations with dad, or does the greenhouse take them instead?'
+      expect(rejectionReason({ ...good, loose: true, text, stake: 'Nothing changes either way.' })).toBeNull()
+    })
+
+    it('lets a hollow stake through', () => {
+      expect(rejectionReason({ ...good, loose: true, stake: 'It would give them a deeper sense of their themes.' }))
+        .toBeNull()
+    })
+  })
 })
 
 describe('rankPairs', () => {

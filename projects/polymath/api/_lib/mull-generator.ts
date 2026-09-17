@@ -348,6 +348,7 @@ async function findConnectors(
   userId: string,
   blindSpots: BlindSpot[],
   trace: MullTrace = [],
+  creative = false,
 ): Promise<Pairing[]> {
   let embeddings: number[][]
   try {
@@ -468,12 +469,26 @@ async function findConnectors(
     // an article, a project-less pair -- requires one; there is no
     // version of this channel's stated purpose where a question with no
     // project on either side counts as done.
-    const connectors = selectConnectors(candidates, {
+    let connectors = selectConnectors(candidates, {
       subjectText: blind.subject.ownWords,
       excludeIds,
       preferProject: hasProject ? false : blind.subject.kind === 'joint',
       requireProject: hasProject ? false : blind.subject.kind !== 'joint',
     })
+    // "Get more creative": the one place `requireProject`'s no-fallback
+    // rule (mull.ts) is deliberately overridden rather than loosened at
+    // the source, because that rule is right on its own terms — a
+    // project-less pairing is exactly what this channel was rebuilt to
+    // stop producing. The creative tier is an explicit opt-in second
+    // pass, only reached when the strict pass found nothing at all.
+    if (creative && connectors.length === 0) {
+      connectors = selectConnectors(candidates, {
+        subjectText: blind.subject.ownWords,
+        excludeIds,
+        preferProject: false,
+        requireProject: false,
+      })
+    }
     // The numbers, not a verdict: how many the vector returned at all, the
     // best score it saw, and the band it had to fit. An empty search and a
     // search whose every hit was a restatement look identical from outside
@@ -758,8 +773,24 @@ export async function generateMull(
   userId: string,
   echo: EchoContext,
   trace: MullTrace = [],
+  /** "Get more creative" — reroll's fallback tier once the regular bar has
+   *  emptied the corpus for the day. Loosens three things, each an
+   *  explicit opt-in at its own call site rather than a global switch:
+   *  subjects a recent question already covered are no longer demoted
+   *  (there is nothing left BUT recently-covered ground once this tier is
+   *  reached), a project-less pairing is allowed where the strict pass
+   *  requires one, and rejectionReason's taste gates (not its honesty
+   *  gates) stand down. Still checked: it must be grounded in something
+   *  real, and it still can't repeat a question verbatim (echoesRecent,
+   *  below). Never used by the nightly bake — only by a manual reroll that
+   *  already came back empty once. */
+  creative = false,
 ): Promise<BakedSpark[]> {
-  const subjects = await gatherSubjects(supabase, userId, trace, echo.recentProjectIds, echo.recentSubjectIds)
+  const subjects = await gatherSubjects(
+    supabase, userId, trace,
+    creative ? undefined : echo.recentProjectIds,
+    creative ? undefined : echo.recentSubjectIds,
+  )
   trace.push(
     subjects.length === 0
       ? 'subjects: none — no joint, project, thought, list item or article qualified'
@@ -778,7 +809,7 @@ export async function generateMull(
   )
   if (blindSpots.length === 0) return []
 
-  const searched = await findConnectors(supabase, userId, blindSpots, trace)
+  const searched = await findConnectors(supabase, userId, blindSpots, trace, creative)
 
   // Orbit pairs first. Their relationship is computed rather than
   // searched, so the draft call gets a claim instead of a coincidence --
@@ -893,6 +924,7 @@ export async function generateMull(
       // note -- so the subject is evidence too, or every mention of it
       // reads as invented.
       subjectText: `${draft.pairing.subject.title} ${draft.pairing.subject.line}`,
+      loose: creative,
     })
     if (reason) {
       trace.push(`dropped: ${reason}`)
@@ -1062,9 +1094,10 @@ export async function bakeMull(
   userId: string,
   echo?: EchoContext,
   trace: MullTrace = [],
+  creative = false,
 ): Promise<BakedSpark[]> {
   const context = echo ?? (await loadEchoContext(supabase, userId, trace))
-  const mulls = await generateMull(supabase, userId, context, trace)
+  const mulls = await generateMull(supabase, userId, context, trace, creative)
   if (mulls.length === 0) trace.push('nothing worth asking — empty slot')
   return mulls
 }
