@@ -11,7 +11,7 @@
  * ongoing conversation.
  */
 
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect, useCallback, type ReactNode } from 'react'
 import { ArrowUp, Plus, Check, Target, Trash2, Pencil, RotateCcw, FileText, ArrowDownUp } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { supabase } from '../../lib/supabase'
@@ -46,7 +46,6 @@ interface SessionBrief {
   phaseLabel: string
   focusSuggestion: string
   proactiveQuestion: string
-  knowledgeNudge: string | null
   momentum: 'rising' | 'steady' | 'fading' | 'cold'
   completedSinceLastVisit: string[]
   stats: {
@@ -109,6 +108,10 @@ interface InlineGuideProps {
    *  scroll to and flash the card it changed — makes the connection
    *  between the conversation and the artifact visible. */
   onApplied?: (kind: 'goal' | 'tasks' | 'note') => void
+  /** Renders inside this same card, below the input, behind a hairline
+   *  divider — the "Start session" trigger, so the guide and the session
+   *  it leads into read as one arc instead of two stacked cards. */
+  footer?: ReactNode
 }
 
 
@@ -120,6 +123,7 @@ export function InlineGuide({
   onUpdateGoal,
   onAppendNote,
   onApplied,
+  footer,
 }: InlineGuideProps) {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
@@ -944,22 +948,6 @@ export function InlineGuide({
         </div>
       )}
 
-      {/* Knowledge nudge */}
-      {brief?.knowledgeNudge && messages.length <= 1 && (
-        <motion.div
-          initial={{ opacity: 0, y: 4 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
-          className="flex items-center gap-2 mt-3 px-3 py-2 rounded-xl"
-          style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.04)' }}
-        >
-          <span className="w-1 h-1 rounded-full flex-shrink-0" style={{ background: 'var(--brand-text-secondary)', opacity: 0.25 }} />
-          <span className="text-[12px]" style={{ color: 'var(--brand-text-secondary)', opacity: 0.35 }}>
-            {brief.knowledgeNudge}
-          </span>
-        </motion.div>
-      )}
-
       {/* Input */}
       {!briefLoading && (
         <div className="mt-4 flex items-center gap-2">
@@ -993,6 +981,14 @@ export function InlineGuide({
           >
             <ArrowUp className="h-4 w-4" strokeWidth={2.5} />
           </button>
+        </div>
+      )}
+
+      {/* Footer — the "Start session" trigger, sharing this card rather
+          than sitting in a separate one below it. */}
+      {footer && !briefLoading && (
+        <div className="mt-4 pt-4" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+          {footer}
         </div>
       )}
     </div>

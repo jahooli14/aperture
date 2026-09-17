@@ -116,7 +116,9 @@ export function ProposalCard({ destructive, children }: { destructive?: boolean;
 
 /** Sits under the very last guide reply once it's fully settled — the only
  *  way to redo a reply that missed the mark used to be dismissing every
- *  card and retyping the whole message. */
+ *  card and retyping the whole message. "Try again" read as an error
+ *  affordance on a reply that worked fine and just wasn't the take they
+ *  wanted — this is a redo, not a retry. */
 export function RegenerateRow({ onRegenerate }: { onRegenerate: () => void }) {
   return (
     <button
@@ -124,7 +126,7 @@ export function RegenerateRow({ onRegenerate }: { onRegenerate: () => void }) {
       className="flex items-center gap-1.5 px-1 py-1 rounded-lg transition-colors hover:bg-white/[0.05] text-[11px] font-medium"
       style={{ color: 'var(--brand-text-secondary)', opacity: 0.45 }}
     >
-      <RotateCcw className="h-3 w-3" /> Try again
+      <RotateCcw className="h-3 w-3" /> Ask again
     </button>
   )
 }
