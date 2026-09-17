@@ -10,6 +10,7 @@ import { useProjectStore } from '../stores/useProjectStore'
 import { useSessionStore } from '../stores/useSessionStore'
 import { SessionContract } from '../components/session/SessionContract'
 import { ProjectNotes } from '../components/projects/ProjectNotes'
+import { ProjectArc } from '../components/projects/ProjectArc'
 import { ProjectPath } from '../components/projects/ProjectPath'
 import type { Task } from '../components/projects/TaskList'
 import { InlineGuide } from '../components/projects/InlineGuide'
@@ -969,6 +970,17 @@ export function ProjectDetailPage() {
                   )}
                 </div>
               </div>
+              )}
+
+              {/* Not shown on a repeating project -- metadata.cycle already
+                  has its own version of this (cycleCount, above), and the
+                  backend never writes milestones for one (they'd double up
+                  the same checkpoint). */}
+              {!(project.metadata as any)?.cycle && (
+                <ProjectArc
+                  milestones={(project.metadata?.milestones as any) || []}
+                  targetDate={project.metadata?.target_date as string | undefined}
+                />
               )}
 
               {/* Paused — why it stalled, and, for a dormant project, the

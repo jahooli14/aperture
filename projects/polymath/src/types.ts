@@ -584,6 +584,17 @@ export interface Task {
   progress_at?: string
 }
 
+/** One checkpoint in a project's arc -- every time the task list ran out,
+ *  what judgeFinishLine actually said against the stated finish line.
+ *  Mirrors api/_lib/project-milestones.ts's Milestone. */
+export interface ProjectMilestone {
+  n: number
+  at: string
+  reached: boolean
+  reason: string
+  steps: string[]
+}
+
 export interface ProjectMetadata {
   tags?: string[]
   energy_level?: 'low' | 'medium' | 'high'
@@ -598,6 +609,8 @@ export interface ProjectMetadata {
   motivation?: string // The "why" - user's purpose/reason for this project
   end_goal?: string // Definition of Done - what does completion look like?
   end_goal_source?: 'guide' | 'manual' // How end_goal was last set - powers the "via Guide" tag on the Finish Line card
+  target_date?: string // ISO date. Optional, user-volunteered only -- never asked for, same as end_goal itself.
+  milestones?: ProjectMilestone[] // The arc: every time the list ran out, what judgeFinishLine said (api/_lib/project-milestones.ts)
   project_mode?: 'completion' | 'recurring' // completion = has end goal, recurring = ongoing habit
   rejected_suggestions?: string[] // AI suggestions user removed - avoid suggesting again
   conversation?: ChatTurn[] // Persisted project chat history (Phase 2)

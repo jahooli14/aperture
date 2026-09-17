@@ -22,7 +22,7 @@ This file is the **single source of truth** for working on this repo. If somethi
 |---------|----------|--------|-------------|
 | **Pupils** | `projects/wizard-of-oz/` | Production | Baby photo alignment & milestone tracking |
 | **Polymath** | `projects/polymath/` | Production | Creative harness — captures thoughts and directs your creative willpower toward the right project |
-| **Analogue** | `projects/analogue/` | Active | Book publishing / manuscript editing IDE |
+| **Analogue** | `projects/analogue/` | **Deprecated** — owner's call: Polymath becomes the one place project management happens, not just for the book. Analogue's code and data are untouched (no migration run, nothing deleted) — this is a direction, not a decommission. Don't build new features into it or bridge Polymath to it; extend Polymath's own project model instead (see "The arc" below). |
 | **Idea Engine** | `projects/polymath/api/_lib/idea-engine-v2/` | Active | Evolutionary ideation system — emails a curated daily digest of frontier-of-human-knowledge ideas. Not part of Polymath's product surface (don't conflate with Polymath's home feed). TypeScript, lives inside the polymath API — see Cron section below. |
 | **Golf Masters** | `projects/golf-masters/` | Active | Masters pool tracker with live ESPN scores |
 | **Heart Recovery** | `projects/heart-recovery/` | Active | Day-by-day post-heart-attack (stent/PCI) recovery guide — single user, no backend, localStorage only |
@@ -162,6 +162,12 @@ Active, partly-shaped, dormant, and abandoned are different states. Long-dormant
 - `project_mode` is legacy and derived: a cycle means `recurring` regardless of `end_goal` now.
 
 **The order of `metadata.tasks` is the plan.** The session takes the top open steps in order, so every writer keeps `order` contiguous (`api/_lib/task-order.ts`), generated steps declare what they come `after`, and what a close-out says comes next goes to the *front* of the open list. A step worked on but not finished carries `progress_note` — the user's own words — read back as the re-entry line for that step.
+
+**The arc — real progress on a project that runs longer than one spine** (`api/_lib/project-milestones.ts`, `ProjectArc.tsx`). A spine is 5-8 steps and gets replanned every time the list empties (task-spine.ts) — the right way to plan a big, open-ended project, backwards from the goal, a stretch at a time, but it left nothing behind: each replan silently starts a new list, and `completedTasks / totalTasks` (the only number ever shown) runs toward 100% as done tasks pile up in `metadata.tasks` forever, whatever fraction of the *real* goal is actually left. There is no honest percentage to compute here — the app doesn't know how many spines a project will take, and inventing one would be exactly the fabricated precision this app refuses everywhere else.
+
+The app already asks the right question at the right moment: `judgeFinishLine` runs every time the open list hits zero, reading the stated finish line against what's actually been done and saying which, in one plain sentence. That verdict used to be shown once in the close-out receipt and thrown away. Now it's kept as a checkpoint (`Milestone: { n, at, reached, reason, steps }`, `metadata.milestones`) — the arc is the sequence of these, and the latest one's `reason` is the real "how close is this" signal (shown on the project page via `ProjectArc.tsx`, and fed into the Guide's catch-up greeting via `session-brief.ts`'s `lastCheckpoint`, so "still needs a synopsis and three comp titles" can actually be said out loud next time the project's opened, not just buried in a receipt from three weeks ago).
+
+Skipped entirely for a repeating project (`metadata.cycle` above) — it already gets the same idea via `cycle.history`, and recording both would double up the same checkpoint. `target_date` is the other half: an optional, ISO date, **never asked for** — same rule as `end_goal` itself — offered in the edit sheet only once a finish line exists (a deadline with nothing it's a deadline *for* is just a nag). Shown as plain day-count arithmetic ("14 days until the target date" / "3 days past it"), never a projected pace — there's rarely enough data for a real rate, and a confident-sounding wrong one is worse than none.
 
 ### Attaching a capture to a project (`api/_lib/fragments.ts`)
 

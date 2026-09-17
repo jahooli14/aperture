@@ -36,6 +36,7 @@ export function EditProjectDialog({ project, isOpen, onOpenChange }: EditProject
         title: project.title,
         description: project.description || '',
         end_goal: project.metadata?.end_goal || '',
+        target_date: project.metadata?.target_date || '',
         type: project.type || 'Creative',
     })
 
@@ -45,6 +46,7 @@ export function EditProjectDialog({ project, isOpen, onOpenChange }: EditProject
             title: project.title,
             description: project.description || '',
             end_goal: project.metadata?.end_goal || '',
+            target_date: project.metadata?.target_date || '',
             type: project.type || 'Creative',
         })
     }, [project])
@@ -69,6 +71,7 @@ export function EditProjectDialog({ project, isOpen, onOpenChange }: EditProject
                     ...project.metadata,
                     end_goal: formData.end_goal || undefined,
                     ...(goalChanged ? { end_goal_source: 'manual' as const } : {}),
+                    target_date: formData.target_date || undefined,
                 },
             })
 
@@ -165,6 +168,26 @@ export function EditProjectDialog({ project, isOpen, onOpenChange }: EditProject
                             autoComplete="off"
                         />
                     </div>
+
+                    {/* Target date — optional, only offered once there's a real
+                        finish line to aim it at. Never required, never asked for
+                        on its own; a deadline with nothing it's a deadline FOR
+                        is just a nag. Clearing it back to blank is always fine. */}
+                    {formData.end_goal.trim() && (
+                        <div className="space-y-2 pb-4">
+                            <Label htmlFor="target_date" className="text-xs font-medium tracking-wide text-[var(--brand-text-secondary)]">
+                                target date (optional)
+                            </Label>
+                            <Input
+                                id="target_date"
+                                type="date"
+                                value={formData.target_date}
+                                onChange={(e) => setFormData({ ...formData, target_date: e.target.value })}
+                                onFocus={handleInputFocus}
+                                className="h-12 bg-[var(--glass-surface)] border-[var(--glass-surface-hover)] focus:border-brand-primary"
+                            />
+                        </div>
+                    )}
 
                     <BottomSheetFooter>
                         <Button

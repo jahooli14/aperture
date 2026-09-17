@@ -66,6 +66,7 @@ import { handleFixQueue } from './_lib/fix-queue/route.js'
 import { reconcileCloseout, parseTicked } from './_lib/session-closeout.js'
 import { judgeFinishLine } from './_lib/finish-line.js'
 import { readCycleState, cycleLabel, rollToNextCycle, lastCycleSteps } from './_lib/project-cycles.js'
+import { appendMilestone, readMilestones } from './_lib/project-milestones.js'
 import { bakeMull, SHELF_LIFE_HOURS } from './_lib/mull-generator.js'
 import { canMorphProject, anyProjectMorphedToday, MORPH_COOLDOWN_DAYS } from './_lib/morph.js'
 import { considerMorph } from './_lib/morph-generator.js'
@@ -1158,6 +1159,15 @@ async function handleSessionBrief(req: VercelRequest, res: VercelResponse) {
       return { text: f.text as string, when }
     })
 
+  // The last time this project's list ran out, judged against its own
+  // stated finish line (project-milestones.ts) -- the real "how close is
+  // this" signal, kept only while it's still the current answer.
+  const milestones = readMilestones(project.metadata)
+  const latestMilestone = milestones[milestones.length - 1] ?? null
+  const lastCheckpoint = latestMilestone && !latestMilestone.reached
+    ? { reason: latestMilestone.reason }
+    : null
+
   const prompt = buildSessionBriefPrompt({
     title: project.title,
     description: project.description,
@@ -1172,6 +1182,7 @@ async function handleSessionBrief(req: VercelRequest, res: VercelResponse) {
     incompleteTasks,
     recentCompletionTexts,
     recentCaptures,
+    lastCheckpoint,
   })
 
   const aiRaw = await generateText(prompt, { temperature: 0.75, maxTokens: 200, responseFormat: 'json' })
@@ -2213,6 +2224,7 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
     let finish: { reached: boolean; reason: string } | null = null
     const openLeft = outcome.openLeft
     const endGoal = typeof currentMetadata?.end_goal === 'string' ? currentMetadata.end_goal.trim() : ''
+    const doneTaskTexts = normalizeTaskOrder(tasks).filter(t => t?.done && typeof t.text === 'string').map(t => t.text)
     if (tasksChanged && openLeft === 0 && markedDoneTexts.length > 0) {
       if (endGoal) {
         const { data: closeoutRows } = await supabase
@@ -2226,7 +2238,7 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
         finish = await judgeFinishLine({
           title: projRow?.title || 'this project',
           endGoal,
-          doneTasks: normalizeTaskOrder(tasks).filter(t => t?.done && typeof t.text === 'string').map(t => t.text),
+          doneTasks: doneTaskTexts,
           closeouts: (closeoutRows || []).map(r => r.closeout_text as string).filter(Boolean),
         })
       } else {
@@ -2249,6 +2261,24 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
       const n = cycleState.done + 1
       cycle = { n, label: cycleLabel(cycleState.unit, n), unit: cycleState.unit, reason: finish.reason }
       finish = null
+    }
+
+    // The arc -- every checkpoint a non-repeating project has been
+    // through, kept rather than shown once and thrown away
+    // (project-milestones.ts). Skipped for a repeating project, which
+    // already gets the same idea via cycle.history above. A second small
+    // write because the task-list update already fired earlier in this
+    // handler (before this verdict existed) -- rare enough (only when the
+    // list empties) that a second round trip is the simple, correct
+    // choice over threading milestones through the earlier write.
+    if (finish && !cycleState) {
+      const milestones = appendMilestone(currentMetadata, finish, doneTaskTexts, endedAt)
+      const { error: milestoneErr } = await supabase
+        .from('projects')
+        .update({ metadata: { ...currentMetadata, tasks, milestones } })
+        .eq('id', session.project_id)
+        .eq('user_id', userId)
+      if (milestoneErr) console.warn('[utilities/sessions] could not save the arc checkpoint:', milestoneErr.message)
     }
 
     // A brief receipt of what actually happened to the task list -- shown
