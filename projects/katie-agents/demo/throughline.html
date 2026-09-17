@@ -78,6 +78,44 @@
   .obj__close{font-size:1rem; font-weight:600; color:var(--ink); max-width:56ch; line-height:1.5;
               padding-top:.3rem; border-top:1px dashed var(--rule);}
 
+  .score{display:flex; flex-wrap:wrap; gap:1.4rem 2rem; margin:.2rem 0 .3rem;}
+  .score .n{display:block; font-family:var(--mono); font-size:1.35rem; font-weight:500;
+            color:var(--lit); font-variant-numeric:tabular-nums;}
+  .score .l{display:block; font-family:var(--mono); font-size:.62rem; letter-spacing:.06em;
+            text-transform:uppercase; color:var(--ink-3); margin-top:.2rem; max-width:12rem;}
+
+  .caught{background:var(--panel); border:1px solid var(--rule); border-left:3px solid var(--lit);
+          border-radius:0 7px 7px 0; padding:1rem 1.15rem; max-width:62ch;}
+  .caught__l{font-family:var(--mono); font-size:.6rem; letter-spacing:.11em; text-transform:uppercase;
+             color:var(--ink-3); margin-bottom:.5rem;}
+  .caught__t{font-size:1rem; line-height:1.55; color:var(--ink);}
+  .caught__t em{font-style:italic;}
+
+  .obj__cols{display:grid; grid-template-columns:1fr 1fr; gap:1rem;}
+  .obj__col{background:var(--panel); border:1px solid var(--rule); border-radius:8px; padding:1.05rem 1.15rem;}
+  .obj__col h3{font-family:var(--sans); font-size:.82rem; font-weight:700; letter-spacing:.01em;
+               margin:0 0 .75rem; color:var(--ink);}
+  .obj__col--no h3{color:var(--ink-3);}
+  .obj__col--no h3::before{content:"✕ "; color:var(--ink-3);}
+  .obj__col--yes h3::before{content:"✓ "; color:var(--lit);}
+  .obj__col ul{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:.7rem;}
+  .obj__col li{font-size:.88rem; color:var(--ink-2); line-height:1.5;}
+  .obj__col li b{color:var(--ink); font-weight:600;}
+  .obj__col--no li{text-decoration-line:line-through; text-decoration-color:var(--rule);
+                    text-decoration-thickness:1px; opacity:.72;}
+  .obj__col--no li b{text-decoration:none; display:inline;}
+  @media (max-width:620px){ .obj__cols{grid-template-columns:1fr;} }
+
+  .promptbox{border-top:1px solid var(--rule); padding-top:1rem;}
+  .promptbox summary{cursor:pointer; font-family:var(--mono); font-size:.74rem; color:var(--lit);
+                     list-style:none; user-select:none;}
+  .promptbox summary::-webkit-details-marker{display:none;}
+  .promptbox summary::before{content:"▸ "; }
+  .promptbox[open] summary::before{content:"▾ "; }
+  .promptbox pre{margin:1rem 0 0; background:var(--well); border:1px solid var(--rule); border-radius:7px;
+                 padding:1.1rem 1.2rem; font-family:var(--mono); font-size:.78rem; line-height:1.65;
+                 color:var(--ink-2); white-space:pre-wrap; max-width:66ch;}
+
   .delivery{background:var(--panel); border:1px solid var(--rule); border-radius:10px;
             padding:1.2rem 1.4rem; display:flex; flex-wrap:wrap; gap:1rem 1.8rem; align-items:center;}
   .delivery__h{font-size:1rem; font-weight:700;}
@@ -228,21 +266,71 @@
   </div>
 
   <section class="obj">
-    <p class="obj__l">The obvious objection</p>
+    <p class="obj__l">The obvious objection — tested, not argued</p>
     <h2>Why not just ask Claude to read your notes before the meeting?</h2>
 
-    <p class="obj__concede"><b>For the meeting brief — you should.</b> It works today, needs no system, and two hundred notes fit in a chat window with room to spare. If that were the whole idea, don't build anything.</p>
+    <p class="obj__lead">We stopped arguing and ran it. A fresh copy of Opus 5, no knowledge of this corpus, this page, or what we'd built &mdash; given only the raw notes and one carefully written prompt (the same five shapes as above: echoes, contradictions, first movers, silences, cross-vocabulary matches). Then we scored what it found against the same answer key.</p>
 
-    <p class="obj__lead">The difference is everything that <em>isn't</em> about the meeting you're walking into:</p>
+    <div class="score">
+      <div><span class="n">8 / 10</span><span class="l">Planted findings, found cleanly</span></div>
+      <div><span class="n">4 / 4</span><span class="l">Traps correctly avoided</span></div>
+      <div><span class="n">+2</span><span class="l">Real things we hadn't planted</span></div>
+      <div><span class="n">1</span><span class="l">Clean miss</span></div>
+    </div>
 
-    <ul class="obj__list">
-      <li><span class="obj__n">01</span><p><b>You can't write a prompt for the thing you don't know to ask.</b> Four of the five patterns above aren't about the person you're seeing. To get the first one out of a chat you'd have to type &ldquo;is anything I'm being told actually my own firm's report coming back to me?&rdquo; Nobody types that.</p></li>
-      <li><span class="obj__n">02</span><p><b>An absence has nothing to retrieve.</b> You cannot look up the thing that stopped being said. It only exists as a gap between two months.</p></li>
-      <li><span class="obj__n">03</span><p><b>Asked to find patterns, anything will find some.</b> Tested with the safeguards switched off, three of four deliberately planted traps fired — one firm's IT project read as an industry trend, and this firm's own report read as market consensus.</p></li>
-      <li><span class="obj__n">04</span><p><b>It happens whether or not you remember to do it.</b> The manual version survives about three weeks. A scheduled one also knows what it told you last week, so it doesn't repeat itself until you stop reading.</p></li>
-    </ul>
+    <p class="obj__concede">That's a genuinely strong result, and it undercuts two of our original four reasons. We're saying so plainly rather than explaining it away.</p>
 
-    <p class="obj__close">None of this needs a cleverer model. It's a fixed set of questions, asked reliably, with a rule about when to say nothing.</p>
+    <div class="caught">
+      <p class="caught__l">What it caught, unprompted, in the hardest case we built</p>
+      <p class="caught__t">Our own firm's number was quietly circulating back to us through three clients as if it were market consensus &mdash; the single trap designed to catch a system that finds patterns too eagerly. It named the exact mechanism itself: <em>&ldquo;This is not a market pattern. Three people appearing to converge all trace back to one organisation &mdash; your own firm &hellip; that is the firm hearing its own echo.&rdquo;</em></p>
+    </div>
+
+    <div class="obj__cols">
+      <div class="obj__col obj__col--no">
+        <h3>Didn't survive contact with the evidence</h3>
+        <ul>
+          <li><b>You can't write a prompt for what you don't know to ask.</b> Wrong &mdash; one prompt, five categories, all five worked.</li>
+          <li><b>An absence has nothing to retrieve.</b> Wrong &mdash; told to look for silences, it found the gap cleanly.</li>
+        </ul>
+      </div>
+      <div class="obj__col obj__col--yes">
+        <h3>Still real, and now evidenced rather than asserted</h3>
+        <ul>
+          <li><b>The prompt is doing the real work, not the model.</b> Five named categories, an explicit 3+ threshold, an explicit &ldquo;say nothing if unsure&rdquo; instruction. That's close to a spec &mdash; write it once, and maintain it.</li>
+          <li><b>One good run isn't a process.</b> This was tested once. We don't know if it's stable week to week, and that's exactly the question a scored check exists to answer and a single test can't.</li>
+          <li><b>It missed the one finding that needs no reasoning at all</b> &mdash; the same organisation's name appearing in two unrelated notes, months apart. Free to catch by grouping, and a careful read over prose still slid past it.</li>
+        </ul>
+      </div>
+    </div>
+
+    <p class="obj__close">So: start with the prompt, not a pipeline. It's most of the value for a fraction of the build. Keep code only for what this test actually exposed &mdash; a cheap structural check, and a periodic re-score against a known answer so a good week doesn't quietly become a bad month.</p>
+
+    <details class="promptbox">
+      <summary>The prompt we actually used</summary>
+      <pre>You are helping a business development person in the specialty insurance
+practice of a large professional services firm. [...corpus context...]
+
+Read every single note, then find the things a busy person could never
+notice themselves because no single conversation reveals them:
+
+1. Echoes — something the firm itself said, showing up later as if it
+   were independent external opinion.
+2. Contradictions — two people disagreeing, resolved by a third
+   conversation elsewhere in the notes.
+3. First movers — someone who said something early and correctly,
+   before others said it independently, not realising they weren't first.
+4. Silences — a topic that was frequent and then abruptly stopped,
+   especially where the absence connects to something else in the notes.
+5. Cross-vocabulary matches — the same problem or opportunity in
+   completely different words, including a problem matched to a
+   capability elsewhere.
+
+Rules: cite exact date, person, and quote verbatim. A convergence claim
+needs 3+ independent organisations — 2 people is not a trend. If several
+mentions all trace to ONE organisation, say so explicitly and do not
+report it as a market pattern. If you're not confident, say so or leave
+it out. Most of 200 notes should contain nothing worth flagging.</pre>
+    </details>
   </section>
 
   <footer class="foot">
