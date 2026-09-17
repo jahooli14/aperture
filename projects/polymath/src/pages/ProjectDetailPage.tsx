@@ -854,7 +854,11 @@ export function ProjectDetailPage() {
       <div className="max-w-2xl mx-auto px-5 sm:px-6 space-y-8">
               {/* Guide — primary surface. This is what a project's mid-life
                   view is for: keep the chat that scopes/frames/edits front
-                  and center, not just at project creation. */}
+                  and center, not just at project creation. "Start session"
+                  renders as this card's own footer (below) rather than as a
+                  second card underneath it, so the catch-up and the session
+                  it leads into read as one arc instead of two stacked
+                  pieces of UI with a gap between them. */}
               {!sessionOpen && project && (
                 <InlineGuide
                   project={project}
@@ -864,6 +868,19 @@ export function ProjectDetailPage() {
                   onUpdateGoal={handleChatUpdateGoal}
                   onAppendNote={handleChatAppendNote}
                   onApplied={handleGuideApplied}
+                  footer={
+                    <button
+                      onClick={() => { setSessionOpen(true) }}
+                      className="w-full py-3 rounded-xl text-[12px] font-semibold uppercase tracking-widest flex items-center justify-center gap-2 transition-all active:scale-[0.99]"
+                      style={{
+                        background: 'rgba(var(--brand-primary-rgb),0.10)',
+                        border: '1px solid rgba(var(--brand-primary-rgb),0.28)',
+                        color: 'rgb(var(--brand-primary-rgb))',
+                      }}
+                    >
+                      <Play className="h-3.5 w-3.5 fill-current" /> Start session
+                    </button>
+                  }
                 />
               )}
 
@@ -873,25 +890,13 @@ export function ProjectDetailPage() {
                   its own timer and its own summary. There's one now: the
                   same contract the home runs, opened here so you can look
                   around the project first and then start without leaving. */}
-              {sessionOpen ? (
+              {sessionOpen && (
                 <SessionContract
                   project={project}
                   presetWindowMinutes={windowMinutes}
                   onDone={() => { setSessionOpen(false); void fetchProjects() }}
                   onFinish={() => handleStatusChange('completed')}
                 />
-              ) : (
-                <button
-                  onClick={() => { setSessionOpen(true) }}
-                  className="w-full py-3 rounded-2xl text-[12px] font-semibold uppercase tracking-widest flex items-center justify-center gap-2 transition-all active:scale-[0.99]"
-                  style={{
-                    background: 'rgba(var(--brand-primary-rgb),0.10)',
-                    border: '1px solid rgba(var(--brand-primary-rgb),0.28)',
-                    color: 'rgb(var(--brand-primary-rgb))',
-                  }}
-                >
-                  <Play className="h-3.5 w-3.5 fill-current" /> Start session
-                </button>
               )}
 
               {/* Everything below is the project's record — the finish
