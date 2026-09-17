@@ -48,6 +48,15 @@ export interface PrebakedSession {
   builtAt: string
   windowMinutes: number
   fingerprint: string
+  /** Carried through from the bake so a plan the overnight run silently
+   *  reordered or rewrote isn't served without the same explanation the
+   *  live path always shows (SessionContract.tsx). Baking is the common
+   *  path for the projects you're most likely to open, so dropping these
+   *  here meant the app could quietly move a step up, or write a new one
+   *  in, and the first sign of it was a numbered list that looked
+   *  different with nothing said about why. */
+  unblocked: ShapeResult['unblocked']
+  removed: ShapeResult['removed']
 }
 
 /**
@@ -150,6 +159,8 @@ export async function prebakeProject(
       truncatedCount: result.truncatedCount,
       builtAt: new Date().toISOString(),
       windowMinutes: PREBAKE_WINDOW_MINUTES,
+      unblocked: result.unblocked,
+      removed: result.removed,
       fingerprint: fingerprintFor(
         Array.isArray(metadata.tasks) ? metadata.tasks : [],
         project.last_closeout_text,

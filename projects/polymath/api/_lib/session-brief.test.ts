@@ -21,6 +21,7 @@ const baseInput: SessionBriefPromptInput = {
   incompleteTasks: [{ text: 'Convert act 3 to an appendix of definitions', task_type: 'core' }],
   recentCompletionTexts: [],
   recentCaptures: [],
+  lastCheckpoint: null,
 }
 
 describe('detectSessionBriefPhase', () => {
@@ -102,6 +103,21 @@ describe('buildSessionBriefPrompt — catching up on what changed', () => {
     const p = buildSessionBriefPrompt({ ...baseInput, phase: 'stale', daysSinceActive: 21 })
     expect(p).toContain("THEY'VE BEEN AWAY FOR 21 DAYS")
     expect(p).not.toContain('BUILDING — steps in flight')
+  })
+
+  it('says nothing about a checkpoint when there is none yet', () => {
+    const p = buildSessionBriefPrompt(baseInput)
+    expect(p).not.toContain('LAST TIME THE LIST RAN OUT')
+  })
+
+  it('surfaces the last honest "how close is this" verdict when the list has emptied before', () => {
+    const p = buildSessionBriefPrompt({
+      ...baseInput,
+      lastCheckpoint: { reason: 'Still needs a synopsis and three comp titles.' },
+    })
+    expect(p).toContain('LAST TIME THE LIST RAN OUT')
+    expect(p).toContain('Still needs a synopsis and three comp titles.')
+    expect(p).toContain('more honest than\na task count')
   })
 
   it('never asks what done looks like on a project with no tasks', () => {

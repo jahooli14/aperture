@@ -125,6 +125,12 @@ export interface SessionBriefPromptInput {
    *  grounded evidence -- the model may use it, but only if it actually
    *  bears on what comes next. */
   recentCaptures: RecentCapture[]
+  /** judgeFinishLine's own verdict from the last time this project's list
+   *  ran out (project-milestones.ts) -- the one honest "how close is
+   *  this" signal the app has. Null before the first checkpoint, or once
+   *  the finish line has actually been reached (nothing left to catch up
+   *  on). */
+  lastCheckpoint: { reason: string } | null
 }
 
 function taskSummary(incompleteTasks: { text: string; task_type?: string }[]): string {
@@ -151,11 +157,22 @@ ${recentCaptures.map(c => `- (${c.when}) "${c.text}"`).join('\n')}
 Only mention one of these if it actually changes what they'd work on next -- a real correction, a new constraint, something that makes the current plan wrong. If none of them do, ignore this section completely. Do not force a connection that isn't there just because something was captured.`
 }
 
+/** Empty once there's no checkpoint yet, or the finish line is already
+ *  reached -- in either case there's nothing left to catch up on. */
+function checkpointSummary(lastCheckpoint: { reason: string } | null): string {
+  if (!lastCheckpoint) return ''
+  return `LAST TIME THE LIST RAN OUT, this is what was actually still missing: "${lastCheckpoint.reason}"
+That's the real, current answer to "how close is this" -- more honest than
+a task count, because it's grounded in the finish line itself. If it's
+still true, it's worth saying plainly rather than only implying it
+through the task list.`
+}
+
 export function buildSessionBriefPrompt(input: SessionBriefPromptInput): string {
   const {
     title, description, motivation, endGoal, phase, momentum, daysSinceActive,
     completedTasks, totalTasks, progressPercent, incompleteTasks, recentCompletionTexts,
-    recentCaptures,
+    recentCaptures, lastCheckpoint,
   } = input
   const hasGoal = !!endGoal
   const hasTasks = totalTasks > 0
@@ -200,6 +217,7 @@ PROGRESS: ${completedTasks}/${totalTasks} tasks (${progressPercent}%)
 ${taskSummary(incompleteTasks)}
 ${completionSummary(recentCompletionTexts)}
 ${capturesSummary(recentCaptures)}
+${checkpointSummary(lastCheckpoint)}
 
 ═══════════════════════════════════════════════════════════════════
 STATE-SPECIFIC INSTRUCTIONS — follow exactly
