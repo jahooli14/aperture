@@ -766,6 +766,123 @@ not carry any of the note's actual words was not written from the note.`
   }
 }
 
+/**
+ * The deepest tier of "get more creative": no connector at all, not even
+ * an orbit or project-shapes fact — one subject's own material, read for a
+ * problem already sitting inside it. Only reached when creative connector
+ * search (findConnectors, above) has already come back with nothing.
+ *
+ * Subject.block is deliberately kept away from the regular draft call —
+ * see its own comment. Handing the model ten of a project's own fragments
+ * lets it pick two and collide them, which is pair-first invention rebuilt
+ * inside a single subject, with no connector left to do any real work. A
+ * live run of that exact mistake produced "You wanted to map all 198
+ * countries to a memory palace. Yet you left your painted coasters sitting
+ * for eleven months after writing down the Esqui ice saga" — three
+ * fragments of one project, collided, asking what any of it had to do with
+ * the rest. This function opts back into precisely that failure mode, on
+ * purpose, because at this tier there is nothing else left to supply the
+ * tension: the block becomes the material, and the ask changes to match —
+ * don't bridge to anything else, find the plot twist already sitting in
+ * what's here. Grounding still applies (the gates don't know the material
+ * came from a block instead of a connector), so a genuine collision still
+ * has to be quoted, not invented.
+ */
+async function draftSolo(subjects: Subject[], echo: EchoContext, trace: string[] = []): Promise<Drafted[]> {
+  if (subjects.length === 0) return []
+
+  const blocks = subjects.map((s, i) => `--- SUBJECT ${i + 1} ---
+${s.title}
+${s.block.slice(0, 1200)}`).join('\n\n')
+
+  const prompt = `${blocks}
+${echo.identity}
+There is nothing else in the corpus right now to pair any of these with. So
+instead of finding a link between two things, find a PROBLEM already
+sitting inside ONE of them — a plot twist. Read the material for each
+subject and look for: a claim one line undercuts a few lines later, a thing
+said once and never returned to, a decision that keeps getting put off, two
+fragments that quietly don't agree with each other. Reach for the least
+obvious tension, not the first one you notice — but every word of the
+problem still has to come from what's actually written below it. Invent
+nothing that isn't in the material.
+
+State the problem plainly, in one sentence, the way you'd say it out loud
+to a friend who was there. Then ask the question it opens. Two sentences,
+nothing else.
+
+Same rules as always:
+- Start with What, How, or Which ONE — never Does, Is, Are, Will, Should,
+  or Can. A yes/no question is answered in five seconds and forgotten.
+- Do not explain the twist. State it and ask. Writing "which shows" or
+  "this reveals" or "both are about" means you've explained it, and
+  explaining it is the tell that there wasn't one.
+- A phrase of THEIR words has to appear in the QUESTION ITSELF, not only in
+  the sentence that sets it up. Lift three or four words straight out of
+  the material and build the question around them.
+- Say what CHANGES depending on the answer — not what they'd understand,
+  what they'd DO. If you can't write a real one, return null for that
+  subject.
+- If nothing in a subject's own material holds a genuine tension, return
+  null for it rather than manufacturing one. A subject with nothing to say
+  is a correct answer, not a failure.
+${echo.resonance}
+${echo.avoid}
+${PLAIN_ENGLISH_RULES}
+
+Respond with JSON only:
+{ "subjects": [ { "n": 1, "spark": "..." | null, "quote": "a run of words copied character-for-character out of that subject's own material below — not reworded", "stake": "what they would actually DO differently" }, ... ] }
+
+The quote is checked against the material above it. If the words you hand
+back are not in it, the question is thrown away unread however good it is
+— so copy them, and make sure some of them survive into the question
+itself.`
+
+  try {
+    const parsed = JSON.parse(await generateText(prompt, { responseFormat: 'json' }))
+    const rows = Array.isArray(parsed?.subjects) ? parsed.subjects : []
+    const out: Drafted[] = []
+    let declined = 0
+    for (const row of rows) {
+      const subject = subjects[Number(row?.n) - 1]
+      const text = typeof row?.spark === 'string' ? row.spark.trim() : ''
+      const quote = typeof row?.quote === 'string' ? row.quote.trim() : ''
+      const stake = typeof row?.stake === 'string' ? row.stake.trim() : ''
+      if (!subject) continue
+      if (!text) { declined++; continue }
+      out.push({
+        pairing: {
+          subject,
+          blindSpot: subject.line,
+          searchQuery: '',
+          orbitFact: subject.line,
+          connector: {
+            kind: 'memory' as const,
+            id: `solo:${subject.id}`,
+            title: 'what they already wrote',
+            text: subject.block,
+            similarity: 1,
+          },
+        },
+        text,
+        quote,
+        stake,
+      })
+    }
+    trace.push(
+      `solo draft call: ${rows.length} subjects came back` +
+      `${Array.isArray(parsed?.subjects) ? '' : ' (no `subjects` array in the response)'}` +
+      `${declined ? `, ${declined} declined by the model` : ''}`,
+    )
+    return out
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e)
+    trace.push(`!! solo draft call FAILED: ${message}`)
+    console.warn('[mull] solo draft failed:', message)
+    return []
+  }
+}
+
 // ─── The channel ──────────────────────────────────────────────────────
 
 export async function generateMull(
@@ -807,9 +924,15 @@ export async function generateMull(
       ? 'blind spots: none — the model found nothing unexamined in any subject'
       : `blind spots: ${blindSpots.map(b => `[${b.subject.kind}] ${b.searchQuery.slice(0, 60)}`).join(' | ')}`,
   )
-  if (blindSpots.length === 0) return []
-
-  const searched = await findConnectors(supabase, userId, blindSpots, trace, creative)
+  // No early return on empty, unlike subjects above: draftSolo (the
+  // deepest creative tier, below) needs nothing from this point on but
+  // `subjects` itself, so a creative run with no blind spots still has a
+  // path to a question. A non-creative run reaches the same empty `baked`
+  // either way, just by falling through the empty arrays below instead of
+  // returning here — no behaviour change for it.
+  const searched = blindSpots.length > 0
+    ? await findConnectors(supabase, userId, blindSpots, trace, creative)
+    : []
 
   // Orbit pairs first. Their relationship is computed rather than
   // searched, so the draft call gets a claim instead of a coincidence --
@@ -874,21 +997,22 @@ export async function generateMull(
   const pairings = [...shapePairs, ...orbitPairs, ...searched]
   if (pairings.length === 0) {
     trace.push('connectors: nothing orbiting and none in band for any blind spot — see the lines above')
-    return []
   }
 
-  const chosen = rankPairs(
-    pairings.map(p => ({
-      ...p,
-      subjectId: p.subject.id,
-      connectorId: p.connector.id,
-      similarity: p.connector.similarity,
-      subjectStrength: p.subject.strength,
-    })),
-  )
+  const chosen = pairings.length > 0
+    ? rankPairs(
+        pairings.map(p => ({
+          ...p,
+          subjectId: p.subject.id,
+          connectorId: p.connector.id,
+          similarity: p.connector.similarity,
+          subjectStrength: p.subject.strength,
+        })),
+      )
+    : []
 
   trace.push(`pairs: ${pairings.length} found, ${chosen.length} sent to draft`)
-  const drafts = await draftAll(chosen, echo, trace)
+  const drafts = chosen.length > 0 ? await draftAll(chosen, echo, trace) : []
   trace.push(`drafts: ${drafts.length} of ${chosen.length} pairs written`)
   const baked: BakedSpark[] = []
   // Each draft stands on its own: one failing a gate doesn't take the
@@ -913,100 +1037,123 @@ export async function generateMull(
   // dream sound loud or quiet when you wake up?"). The second shipped
   // because its pair scored higher. draftQuality is the difference,
   // measured rather than judged.
-  const survivors: typeof drafts = []
-  for (const draft of drafts) {
-    const reason = rejectionReason({
-      text: draft.text,
-      quote: draft.quote,
-      stake: draft.stake,
-      connectorText: draft.pairing.connector.text,
-      // A good question names the project, and the project is not in the
-      // note -- so the subject is evidence too, or every mention of it
-      // reads as invented.
-      subjectText: `${draft.pairing.subject.title} ${draft.pairing.subject.line}`,
-      loose: creative,
-    })
-    if (reason) {
-      trace.push(`dropped: ${reason}`)
-      console.log(`[mull] dropped: ${reason}`)
-      continue
-    }
-    survivors.push(draft)
-  }
-  survivors.sort((a, b) =>
-    draftQuality(b.text, b.pairing.connector.text) -
-    draftQuality(a.text, a.pairing.connector.text))
-  if (survivors.length > 1) {
-    trace.push(
-      `ranked ${survivors.length} that cleared the gates: ` +
-      survivors.map(d => draftQuality(d.text, d.pairing.connector.text).toFixed(2)).join(', '),
-    )
-  }
-
-  // A zero means the note never reached the question: the setup quotes them
-  // and the question is written in the model's own vocabulary, so it could
-  // have been asked with no corpus at all. Live, one run produced
-  //   1.00  "...started custom t-shirts again in June. Who gets the first
-  //          one printed?"
-  //   0.00  "...including world memory palace to map all 198 countries.
-  //          Which country starts continent by continent?"
-  // The second is not a weaker question, it is a broken one. When something
-  // better exists there is no reason to spend a four-day slot on it.
   //
-  // Only when something better exists. A lone zero still ships — the slot
-  // is otherwise empty, and this channel's repeated lesson is that a
-  // mediocre question beats nothing.
-  const best = survivors.length > 0
-    ? draftQuality(survivors[0].text, survivors[0].pairing.connector.text)
-    : 0
-  const worthShipping = best > 0
-    ? survivors.filter(d => draftQuality(d.text, d.pairing.connector.text) > 0)
-    : survivors
-  if (worthShipping.length < survivors.length) {
-    trace.push(
-      `dropped ${survivors.length - worthShipping.length}: the note never reached the question, ` +
-      'and a better draft did',
-    )
+  // A closure rather than inlined once, because draftSolo (the deepest
+  // creative tier, below) needs the exact same gates run against a
+  // different set of candidates — sharing this rather than duplicating it
+  // is what keeps the solo fallback honest instead of a second, looser
+  // path to ship through.
+  const shipSurvivors = (candidates: Drafted[]) => {
+    const survivors: Drafted[] = []
+    for (const draft of candidates) {
+      const reason = rejectionReason({
+        text: draft.text,
+        quote: draft.quote,
+        stake: draft.stake,
+        connectorText: draft.pairing.connector.text,
+        // A good question names the project, and the project is not in the
+        // note -- so the subject is evidence too, or every mention of it
+        // reads as invented.
+        subjectText: `${draft.pairing.subject.title} ${draft.pairing.subject.line}`,
+        loose: creative,
+      })
+      if (reason) {
+        trace.push(`dropped: ${reason}`)
+        console.log(`[mull] dropped: ${reason}`)
+        continue
+      }
+      survivors.push(draft)
+    }
+    survivors.sort((a, b) =>
+      draftQuality(b.text, b.pairing.connector.text) -
+      draftQuality(a.text, a.pairing.connector.text))
+    if (survivors.length > 1) {
+      trace.push(
+        `ranked ${survivors.length} that cleared the gates: ` +
+        survivors.map(d => draftQuality(d.text, d.pairing.connector.text).toFixed(2)).join(', '),
+      )
+    }
+
+    // A zero means the note never reached the question: the setup quotes
+    // them and the question is written in the model's own vocabulary, so
+    // it could have been asked with no corpus at all. Live, one run
+    // produced
+    //   1.00  "...started custom t-shirts again in June. Who gets the first
+    //          one printed?"
+    //   0.00  "...including world memory palace to map all 198 countries.
+    //          Which country starts continent by continent?"
+    // The second is not a weaker question, it is a broken one. When
+    // something better exists there is no reason to spend a four-day slot
+    // on it.
+    //
+    // Only when something better exists. A lone zero still ships — the
+    // slot is otherwise empty, and this channel's repeated lesson is that
+    // a mediocre question beats nothing.
+    const best = survivors.length > 0
+      ? draftQuality(survivors[0].text, survivors[0].pairing.connector.text)
+      : 0
+    const worthShipping = best > 0
+      ? survivors.filter(d => draftQuality(d.text, d.pairing.connector.text) > 0)
+      : survivors
+    if (worthShipping.length < survivors.length) {
+      trace.push(
+        `dropped ${survivors.length - worthShipping.length}: the note never reached the question, ` +
+        'and a better draft did',
+      )
+    }
+
+    for (const draft of worthShipping) {
+      if (shippedSubjects.has(draft.pairing.subject.id)) continue
+      // Checked against the questions already asked AND against the other
+      // draft from this same run — two questions written in one breath are
+      // where a repeated image is most likely and least excusable.
+      if (echoesRecent(draft.text, seen)) {
+        // Name the overlap. "Echoes a recent question" four times in a row
+        // says the filter fired, not what it caught -- and what it caught
+        // was a project title carried in by the forgotten offer.
+        const shared = motifWords(draft.text).filter(w =>
+          seen.some(prev => motifWords(prev).includes(w)))
+        trace.push(`dropped: echoes a recent question (shared: ${shared.slice(0, 6).join(', ') || 'a repeated motif'})`)
+        console.log('[mull] dropped: echoes a recent question')
+        continue
+      }
+      seen.push(draft.text)
+      shippedSubjects.add(draft.pairing.subject.id)
+
+      // Attribute to a project where there is one, so the card can say what
+      // it's about and the answer files itself somewhere. A note with no
+      // project and an article both leave this null rather than guessing.
+      if (baked.length >= QUESTIONS_PER_RUN) break
+      baked.push({
+        type: 'mull',
+        text: draft.text,
+        // `|| null` rather than the value: a subject with no project must
+        // not reach a uuid column as an empty string (project-shapes.ts).
+        project_id: draft.pairing.subject.projectId || null,
+        expires_at: expiresAt(SHELF_LIFE_HOURS),
+        stake: draft.stake,
+        subject_id: draft.pairing.subject.id,
+        subject_kind: draft.pairing.subject.kind,
+        // The second question is not shown yet: it waits behind the first
+        // and only becomes the standing question once that one is answered
+        // or runs out. Its shelf life is measured from then, not from now,
+        // or it would expire in the queue having never been seen.
+        banked: baked.length > 0,
+      })
+    }
   }
 
-  for (const draft of worthShipping) {
-    if (shippedSubjects.has(draft.pairing.subject.id)) continue
-    // Checked against the questions already asked AND against the other
-    // draft from this same run — two questions written in one breath are
-    // where a repeated image is most likely and least excusable.
-    if (echoesRecent(draft.text, seen)) {
-      // Name the overlap. "Echoes a recent question" four times in a row
-      // says the filter fired, not what it caught -- and what it caught
-      // was a project title carried in by the forgotten offer.
-      const shared = motifWords(draft.text).filter(w =>
-        seen.some(prev => motifWords(prev).includes(w)))
-      trace.push(`dropped: echoes a recent question (shared: ${shared.slice(0, 6).join(', ') || 'a repeated motif'})`)
-      console.log('[mull] dropped: echoes a recent question')
-      continue
-    }
-    seen.push(draft.text)
-    shippedSubjects.add(draft.pairing.subject.id)
+  shipSurvivors(drafts)
 
-    // Attribute to a project where there is one, so the card can say what
-    // it's about and the answer files itself somewhere. A note with no
-    // project and an article both leave this null rather than guessing.
-    if (baked.length >= QUESTIONS_PER_RUN) break
-    baked.push({
-      type: 'mull',
-      text: draft.text,
-      // `|| null` rather than the value: a subject with no project must not
-      // reach a uuid column as an empty string (project-shapes.ts).
-      project_id: draft.pairing.subject.projectId || null,
-      expires_at: expiresAt(SHELF_LIFE_HOURS),
-      stake: draft.stake,
-      subject_id: draft.pairing.subject.id,
-      subject_kind: draft.pairing.subject.kind,
-      // The second question is not shown yet: it waits behind the first
-      // and only becomes the standing question once that one is answered
-      // or runs out. Its shelf life is measured from then, not from now,
-      // or it would expire in the queue having never been seen.
-      banked: baked.length > 0,
-    })
+  // The deepest tier of "get more creative": no connector at all, just one
+  // subject's own material read for a plot twist. Only reached when
+  // creative connector search has already come back with nothing at all —
+  // see draftSolo's own comment for why this material is normally kept
+  // away from the draft call.
+  if (creative && baked.length === 0) {
+    const solo = await draftSolo(subjects, echo, trace)
+    trace.push(`solo drafts: ${solo.length} of ${subjects.length} subjects written`)
+    shipSurvivors(solo)
   }
 
   if (baked.length > 1) {
