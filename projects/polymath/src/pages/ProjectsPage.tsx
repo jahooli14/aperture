@@ -33,17 +33,88 @@ function formatDurationShort(createdAt: string, updatedAt?: string): string {
   return years === 1 ? '1 year' : `${years} years`
 }
 
-function CompletedProjectsTimeline({ projects, onNavigate }: { projects: Project[], onNavigate: (id: string) => void }) {
+function GraveyardSection({ projects, onNavigate, onRevive }: { projects: Project[], onNavigate: (id: string) => void, onRevive: (project: Project) => void }) {
+  const [expanded, setExpanded] = useState(false)
+  if (projects.length === 0) return null
+
+  const sorted = [...projects].sort((a, b) =>
+    new Date(b.updated_at || b.created_at).getTime() - new Date(a.updated_at || a.created_at).getTime()
+  )
+
+  return (
+    <div className="mt-10 pt-6" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+      <button
+        onClick={() => setExpanded(e => !e)}
+        className="w-full flex items-center justify-between gap-2 text-left"
+        aria-expanded={expanded}
+      >
+        <span className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--brand-text-muted)' }}>
+          <Skull className="h-3.5 w-3.5" style={{ opacity: 0.6 }} />
+          Parked ({sorted.length})
+        </span>
+        <span className="text-xs" style={{ color: 'var(--brand-text-muted)' }}>{expanded ? 'Hide' : 'Show'}</span>
+      </button>
+
+      {expanded && (
+        <div className="space-y-3 mt-4">
+          <p className="text-xs mb-1" style={{ color: 'var(--brand-text-secondary)' }}>
+            Projects you park land here. You can bring any of them back.
+          </p>
+          {sorted.map((project, i) => {
+            const buriedDate = project.updated_at ? new Date(project.updated_at) : null
+            return (
+              <motion.div
+                key={project.id}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: i * 0.06 }}
+                className="flex items-center gap-3 p-4 rounded-xl"
+                style={{
+                  background: 'rgba(255,255,255,0.02)',
+                  border: '1px solid rgba(255,255,255,0.06)',
+                }}
+              >
+                <button onClick={() => onNavigate(project.id)} className="flex-1 min-w-0 text-left">
+                  <h3 className="font-black uppercase tracking-tight text-sm text-[var(--brand-text-primary)] line-clamp-1 mb-1">
+                    {project.title}
+                  </h3>
+                  {buriedDate && (
+                    <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--brand-text-muted)' }}>
+                      Parked {buriedDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
+                    </p>
+                  )}
+                </button>
+                <button
+                  onClick={() => onRevive(project)}
+                  className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all hover:scale-105"
+                  style={{ background: 'rgba(52,211,153,0.1)', border: '1px solid rgba(52,211,153,0.2)', color: 'rgb(var(--color-accent-light-rgb))' }}
+                >
+                  <Sprout className="h-3 w-3" />
+                  Revive
+                </button>
+              </motion.div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function CompletedProjectsTimeline({ projects, graveyardProjects, onNavigate, onRevive }: { projects: Project[], graveyardProjects: Project[], onNavigate: (id: string) => void, onRevive: (project: Project) => void }) {
   const sorted = [...projects].sort((a, b) =>
     new Date(b.updated_at || b.created_at).getTime() - new Date(a.updated_at || a.created_at).getTime()
   )
 
   if (sorted.length === 0) {
     return (
-      <div className="text-center py-24">
-        <Check className="w-12 h-12 mb-4 mx-auto" style={{ color: '#34d399' }} />
-        <p className="text-[var(--brand-text-primary)] font-black uppercase tracking-tight text-lg mb-2">No completed projects yet</p>
-        <p className="text-sm" style={{ color: 'var(--brand-text-secondary)' }}>When you finish something, it'll live here.</p>
+      <div className="max-w-2xl mx-auto px-4 py-6 pb-32">
+        <div className="text-center py-24">
+          <Check className="w-12 h-12 mb-4 mx-auto" style={{ color: '#34d399' }} />
+          <p className="text-[var(--brand-text-primary)] font-black uppercase tracking-tight text-lg mb-2">No completed projects yet</p>
+          <p className="text-sm" style={{ color: 'var(--brand-text-secondary)' }}>When you finish something, it'll live here.</p>
+        </div>
+        <GraveyardSection projects={graveyardProjects} onNavigate={onNavigate} onRevive={onRevive} />
       </div>
     )
   }
@@ -122,69 +193,8 @@ function CompletedProjectsTimeline({ projects, onNavigate }: { projects: Project
           })}
         </div>
       </div>
-    </div>
-  )
-}
 
-function GraveyardTimeline({ projects, onNavigate, onRevive }: { projects: Project[], onNavigate: (id: string) => void, onRevive: (project: Project) => void }) {
-  const sorted = [...projects].sort((a, b) =>
-    new Date(b.updated_at || b.created_at).getTime() - new Date(a.updated_at || a.created_at).getTime()
-  )
-
-  if (sorted.length === 0) {
-    return (
-      <div className="text-center py-24">
-        <Skull className="w-12 h-12 mb-4 mx-auto" style={{ color: 'var(--brand-text-muted)', opacity: 0.5 }} />
-        <p className="text-[var(--brand-text-primary)] font-black uppercase tracking-tight text-lg mb-2">Nothing here</p>
-        <p className="text-sm" style={{ color: 'var(--brand-text-secondary)' }}>Projects you park land here. You can bring any of them back.</p>
-      </div>
-    )
-  }
-
-  return (
-    <div className="max-w-2xl mx-auto px-4 py-6 pb-32">
-      <div className="mb-8">
-        <h2 className="page-hero-sm">The graveyard.</h2>
-        <div className="page-eyebrow">{sorted.length} parked</div>
-      </div>
-
-      <div className="space-y-3">
-        {sorted.map((project, i) => {
-          const buriedDate = project.updated_at ? new Date(project.updated_at) : null
-          return (
-            <motion.div
-              key={project.id}
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: i * 0.06 }}
-              className="flex items-center gap-3 p-4 rounded-xl"
-              style={{
-                background: 'rgba(255,255,255,0.02)',
-                border: '1px solid rgba(255,255,255,0.06)',
-              }}
-            >
-              <button onClick={() => onNavigate(project.id)} className="flex-1 min-w-0 text-left">
-                <h3 className="font-black uppercase tracking-tight text-sm text-[var(--brand-text-primary)] line-clamp-1 mb-1">
-                  {project.title}
-                </h3>
-                {buriedDate && (
-                  <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--brand-text-muted)' }}>
-                    Parked {buriedDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
-                  </p>
-                )}
-              </button>
-              <button
-                onClick={() => onRevive(project)}
-                className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all hover:scale-105"
-                style={{ background: 'rgba(52,211,153,0.1)', border: '1px solid rgba(52,211,153,0.2)', color: 'rgb(var(--color-accent-light-rgb))' }}
-              >
-                <Sprout className="h-3 w-3" />
-                Revive
-              </button>
-            </motion.div>
-          )
-        })}
-      </div>
+      <GraveyardSection projects={graveyardProjects} onNavigate={onNavigate} onRevive={onRevive} />
     </div>
   )
 }
@@ -212,7 +222,7 @@ function ProjectsPageInner() {
     updateProject
   } = useProjectStore()
   const { addToast } = useToast()
-  const [view, setView] = useState<'active' | 'completed' | 'graveyard'>('active')
+  const [view, setView] = useState<'active' | 'completed'>('active')
 
   // Check for updates on mount if we have no data
   useEffect(() => {
@@ -283,13 +293,11 @@ function ProjectsPageInner() {
               )}
               <div className="min-w-0">
                 <h1 className="page-hero break-words">
-                  {view === 'completed' ? 'What you’ve built.' : view === 'graveyard' ? 'The graveyard.' : 'Your projects.'}
+                  {view === 'completed' ? 'What you’ve built.' : 'Your projects.'}
                 </h1>
                 <div className="page-eyebrow">
                   {view === 'completed'
                     ? `${projects.filter(p => p.status === 'completed').length} finished`
-                    : view === 'graveyard'
-                    ? `${projects.filter(p => isGraveyard(p.status)).length} parked`
                     : `${projects.filter(p => !isRetired(p.status)).length} on the go`}
                 </div>
               </div>
@@ -297,14 +305,6 @@ function ProjectsPageInner() {
             <div className="page-masthead-actions">
               {view === 'active' && (
                 <>
-                  <button
-                    onClick={() => setView('graveyard')}
-                    className="masthead-action press-spring"
-                    aria-label="View the graveyard"
-                    title="View the graveyard"
-                  >
-                    <Skull className="h-5 w-5" />
-                  </button>
                   <button
                     onClick={() => setView('completed')}
                     className="masthead-action press-spring"
@@ -335,15 +335,14 @@ function ProjectsPageInner() {
           exit={{ opacity: 0, y: -20 }}
           transition={{ duration: 0.2 }}
         >
-          {/* Completed / Graveyard Timelines */}
+          {/* Completed Timeline, with the graveyard as an expandable
+              section underneath — it used to be its own masthead icon +
+              top-level view, which gave "parked and forgotten about"
+              equal billing with "finished". It belongs under Done. */}
           {view === 'completed' ? (
             <CompletedProjectsTimeline
               projects={projects.filter(p => p.status === 'completed')}
-              onNavigate={(id) => navigate(`/projects/${id}`)}
-            />
-          ) : view === 'graveyard' ? (
-            <GraveyardTimeline
-              projects={projects.filter(p => isGraveyard(p.status))}
+              graveyardProjects={projects.filter(p => isGraveyard(p.status))}
               onNavigate={(id) => navigate(`/projects/${id}`)}
               onRevive={handleRevive}
             />
