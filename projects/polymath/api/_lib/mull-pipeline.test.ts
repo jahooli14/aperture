@@ -783,6 +783,52 @@ describe('a question with no project on either side is correct silence, end to e
     const baked = await bakeMull(client as any, 'u1', undefined, trace)
     expect(trace.join('\n')).toMatch(/search \[memory\].*-> 1 in band/)
   })
+
+  it('creative mode drafts from the subject alone when even the loosened search finds nothing', async () => {
+    // Same fixture as the first test in this block: one project-less
+    // memory, no project ever in band, so the strict pass — and even
+    // creative mode's requireProject fallback — has nothing to pair it
+    // with. Unlike the strict pass, creative mode does not stop there:
+    // draftSolo gets a shot at the subject's own material with no
+    // connector at all. Two model calls total, not the usual two-different
+    // calls: blind spot naming, then the solo draft, never draftAll.
+    generateText.mockResolvedValueOnce(BLIND_SPOTS).mockResolvedValueOnce(JSON.stringify({
+      subjects: [{
+        n: 1,
+        spark: 'You wrote that you keep meaning to come back to and never have. What is different about the version of you who finally does?',
+        quote: 'keep meaning to come back to and never have',
+        stake: 'They put an actual date on it instead of letting it drift another year.',
+      }],
+    }))
+    const data = corpus() as any
+    data.joints = []
+    data.fragments = []
+    // Unlike the first test in this block, the list item and reading rows
+    // have to go too: creative mode's connector relaxation (findConnectors,
+    // above) can find m-unfiled as a connector for one of THOSE subjects
+    // once requireProject stands down, which ships a normal creative
+    // question and never reaches draftSolo at all — a real and correct
+    // outcome, just not the one this test exists to check. Stripping them
+    // leaves m-unfiled the only subject, self-excluded from its own
+    // connector search regardless of tier, so this test actually reaches
+    // the last-resort path.
+    data.list_items = []
+    data.reading_queue = []
+    data.memories = [
+      {
+        user_id: 'u1', id: 'm-unfiled', title: 'Old reflection',
+        body: 'Something I keep meaning to come back to and never have, a real thought with no project attached to it at all.',
+        created_at: ago(280), memory_type: 'insight',
+      },
+    ]
+    const trace: string[] = []
+    const baked = await bakeMull(fakeSupabase(data).client, 'u1', undefined, trace, true)
+    expect(baked).toHaveLength(1)
+    expect(baked[0].text).toContain('come back to and never have')
+    expect(baked[0].subject_id).toBe('m-unfiled')
+    expect(generateText).toHaveBeenCalledTimes(2)
+    expect(trace.join('\n')).toMatch(/solo draft call: 1 subjects came back/)
+  })
 })
 
 describe('a buried project is not resurfaced as a subject or a connector', () => {
