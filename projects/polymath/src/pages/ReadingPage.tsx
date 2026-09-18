@@ -147,8 +147,6 @@ export function ReadingPage() {
   const fetchRSSItems = useCallback(async () => {
     setLoadingRSS(true)
     try {
-      const allItems: RSSItem[] = []
-
       // Safely check if feeds exist and is an array
       if (!feeds || !Array.isArray(feeds)) {
         setRssItems([])
@@ -156,25 +154,36 @@ export function ReadingPage() {
         return
       }
 
-      for (const feed of feeds.filter(f => f.enabled)) {
+      const enabledFeeds = feeds.filter(f => f.enabled)
+
+      // Fetch every feed in parallel — a slow or hanging feed used to stall
+      // the sequential loop, so nothing rendered until every feed resolved.
+      const perFeed = await Promise.all(enabledFeeds.map(async (feed) => {
         try {
-          // Fetch feed items using rss-parser via API
           const response = await fetch(`/api/reading?resource=rss&action=items&feed_id=${feed.id}`)
-          if (response.ok) {
-            const data = await response.json()
-            if (data.items) {
-              allItems.push(...data.items.map((item: any) => ({
-                ...item,
-                content: item.content || item.description || '', // Ensure content is populated
-                feed_id: feed.id,
-                feed_title: feed.title || 'Unknown Feed' // Fallback for title
-              })))
-            }
-          }
+          if (!response.ok) return [] as RSSItem[]
+          const data = await response.json()
+          if (!data.items) return [] as RSSItem[]
+          return data.items
+            .map((item: any) => ({
+              ...item,
+              content: item.content || item.description || '', // Ensure content is populated
+              feed_id: feed.id,
+              feed_title: feed.title || 'Unknown Feed' // Fallback for title
+            }))
+            .sort((a: RSSItem, b: RSSItem) =>
+              new Date(b.published_at || 0).getTime() - new Date(a.published_at || 0).getTime()
+            )
         } catch (err) {
           console.error(`Failed to fetch items from feed ${feed.id}:`, err)
+          return [] as RSSItem[]
         }
-      }
+      }))
+
+      // Cap each feed's contribution before merging, so one prolific feed
+      // can't fill every slot and crowd out the rest of the subscriptions.
+      const perFeedCap = Math.max(2, Math.ceil(20 / Math.max(1, enabledFeeds.length)))
+      const allItems = perFeed.flatMap(items => items.slice(0, perFeedCap))
 
       // Sort by published date
       allItems.sort((a, b) => {
@@ -996,18 +1005,34 @@ export function ReadingPage() {
               </div>
 
               {activeTab === 'updates' && (
-                <button
-                  onClick={() => navigate('/rss')}
-                  className="px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wide transition-all flex items-center gap-1.5"
-                  style={{
-                    color: "var(--brand-text-secondary)",
-                    border: '1px solid rgba(255,255,255,0.15)',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.5)',
-                  }}
-                >
-                  <Rss className="h-3.5 w-3.5" />
-                  Manage feeds
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={fetchRSSItems}
+                    disabled={loadingRSS}
+                    aria-label="Refresh updates"
+                    title="Refresh updates"
+                    className="p-1.5 rounded-lg transition-all disabled:opacity-50"
+                    style={{
+                      color: "var(--brand-text-secondary)",
+                      border: '1px solid rgba(255,255,255,0.15)',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.5)',
+                    }}
+                  >
+                    <RefreshCw className={`h-3.5 w-3.5 ${loadingRSS ? 'animate-spin' : ''}`} />
+                  </button>
+                  <button
+                    onClick={() => navigate('/rss')}
+                    className="px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wide transition-all flex items-center gap-1.5"
+                    style={{
+                      color: "var(--brand-text-secondary)",
+                      border: '1px solid rgba(255,255,255,0.15)',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.5)',
+                    }}
+                  >
+                    <Rss className="h-3.5 w-3.5" />
+                    Manage feeds
+                  </button>
+                </div>
               )}
             </div>
 
