@@ -1,119 +1,25 @@
 /**
  * The mull channel's rules, with no IO in them.
  *
- * The old channel had nine question shapes, each pulling its own slice of
- * the corpus. The failure was always the same and it wasn't the writing:
- * a generator picked two things and asked the model to link them, so the
- * model always found a link, and what it found was a resemblance dressed
- * up as a thought. "You like how Tame Impala treats synths as machines
- * that generate ideas — does the water scene in your book do that too?"
- * Nothing there is wrong. It's just not true of anything.
+ * The channel used to pick one subject, name what it never examined, strip
+ * that of its own vocabulary, and search the corpus in band for a
+ * connector — built to stop the model finding a resemblance and dressing
+ * it up as a thought ("You like how Tame Impala treats synths as machines
+ * that generate ideas — does the water scene in your book do that too?").
+ * Nothing there was wrong. It just wasn't true of anything.
  *
- * The replacement inverts it, the same way composites were fixed (joint →
- * pair, never pair → invented bridge):
- *
- *   1. Take ONE thing — a project, a note, an article.
- *   2. Name the blind spot: what it assumes and has never examined.
- *   3. Write that blind spot as a plain human question with none of the
- *      subject's own vocabulary left in it, and use THAT as the search.
- *   4. Whatever the corpus returns is the connector. It was chosen by
- *      the blind spot, so there is nothing to invent.
- *
- * Step 3 is the load-bearing one. Search the blind spot in its own words
- * and the nearest thing is always the subject restated — more notes about
- * the book, for a question about the book. Strip the vocabulary and the
- * same question reaches the note about your dad's garden.
- *
- * This file holds the parts that decide whether the result is any good,
- * because those are rules rather than taste and rules can be tested.
+ * Measured against the real corpus, that search wasn't what was keeping it
+ * honest — this file was. A single call handed the whole corpus at once
+ * (mull-generator.ts) passed these same gates just as cleanly, so the
+ * search is gone and this file is unchanged: grounding, the binary-shape
+ * gate, the explainer-pattern gate, the word limit, the invented-specifics
+ * check. Rules rather than taste, and rules can be tested regardless of
+ * how the material in front of them was found.
  */
 
 import { motifWords } from './spark-echo.js'
 import { findVoiceViolations } from './plain-english.js'
 export { isGraveyarded } from './project-state.js'
-
-/** What a connector can be. Sparks attribute to a project when there is
- *  one, so a project subject keeps its id and a note doesn't invent one. */
-export type MullSourceKind = 'memory' | 'project' | 'article'
-
-/** What today's question is built on. `joint` is the fourth and the best:
- *  something said more than once, already quoted and clustered by
- *  joint-miner.ts, sitting in the corpus unused by this channel until now.
- *  A thing you keep saying and have never made is the shortest path there
- *  is to "oh — I should make that." */
-export type MullSubjectKind = MullSourceKind | 'joint' | 'pair'
-
-export interface MullCandidate {
-  kind: MullSourceKind
-  id: string
-  title: string
-  /** The words themselves — quoted back, and checked against. */
-  text: string
-  /** Cosine similarity to the blind-spot query, 0–1. */
-  similarity: number
-}
-
-/**
- * Below this the match is noise: the corpus simply has nothing to say
- * about this blind spot, and silence is the right answer.
- */
-export const CONNECTOR_FLOOR = 0.45
-
-/**
- * Above this it isn't a connection, it's the same note again. A blind
- * spot about swapping characters matches the chapter outline at 0.9 —
- * true, and worth nothing to think about on a walk. The ceiling is what
- * keeps the channel from congratulating the user on what they already
- * wrote down.
- */
-export const CONNECTOR_CEILING = 0.82
-
-/**
- * How much subject vocabulary the domain rule needs to be worth anything.
- *
- * The two guards are meant to work together: the vector says the connector
- * answers the blind spot, the vocabulary says it answers from somewhere
- * else. But the vocabulary half only exists if the subject HAS distinctive
- * words, and the best subjects don't. "It only works if it's one take" is
- * three distinctive words and nine stopwords, so sharesDomain blocks
- * nothing for it — including the note that is that exact idea in different
- * clothes, which is the one thing it was there to catch.
- *
- * So when one guard goes missing the other tightens. A connector at 0.75
- * against a three-word joint is almost certainly a restatement; against a
- * ninety-word project block it is a genuine neighbour. Same number,
- * different meaning, and the ceiling has to reflect that rather than
- * pretend both are equally protected.
- *
- * The number is 8 rather than 12 because motifWords got stricter — the
- * channel's own framing ("wrote", month names) and contractions came out of
- * it — so the same subject now scores lower than when 12 was chosen. A dated
- * conviction, which CLAUDE.md calls the strongest subject there is, counted
- * 6 words and now counts 3: at 12 that dropped its ceiling to 0.67 and shut
- * out the 0.69 connector a real run had found. This is a recalibration after
- * the vocabulary changed under it, not a new finding. What it means has not
- * moved: enough distinctive words that a two-word overlap with a
- * restatement is actually likely.
- */
-export const VOCAB_FULL_GUARD = 8
-/** The ceiling when the subject offers no vocabulary guard at all. */
-export const CONNECTOR_CEILING_TIGHT = 0.62
-
-export function connectorCeiling(subjectText: string): number {
-  const distinctive = motifWords(subjectText).length
-  if (distinctive >= VOCAB_FULL_GUARD) return CONNECTOR_CEILING
-  const share = distinctive / VOCAB_FULL_GUARD
-  return CONNECTOR_CEILING_TIGHT + share * (CONNECTOR_CEILING - CONNECTOR_CEILING_TIGHT)
-}
-
-/**
- * Two distinctive words shared with the subject means the same domain:
- * another note about the book, for a question about the book. The
- * embedding says it answers the blind spot; this says it answers it from
- * somewhere else. Relevance from the vector, distance from the vocabulary
- * — that pairing is the whole mechanism.
- */
-export const DOMAIN_OVERLAP_LIMIT = 2
 
 /** Three sentences of carry-around, not an essay. */
 export const MAX_MULL_WORDS = 60
@@ -144,112 +50,6 @@ const EXPLAINER_PATTERNS: readonly RegExp[] = [
   // onto "Yet you". Two facts side by side need no pivot between them.
   /(^|[.;,]\s*)(yet|but|though|whereas)\s+you\b/i,
 ]
-
-export function sharesDomain(a: string, b: string, limit = DOMAIN_OVERLAP_LIMIT): boolean {
-  const words = new Set(motifWords(a))
-  if (words.size === 0) return false
-  let shared = 0
-  for (const word of motifWords(b)) {
-    if (words.has(word) && ++shared >= limit) return true
-  }
-  return false
-}
-
-export interface ConnectorFilter {
-  /** The subject's own words — anything sharing its vocabulary is out. */
-  subjectText: string
-  /** Ids that ARE the subject, in any table. */
-  excludeIds: string[]
-  /** Soft version of `requireProject`: a project connector wins when one
-   *  is in band, otherwise falls back to the best of whatever else is.
-   *  Used for joints -- CLAUDE.md frames a joint with no project as the
-   *  mechanism for surfacing a NEW project ("a thing you keep saying and
-   *  have never made is the shortest path there is to 'oh, I should make
-   *  that'"), so its connector is allowed to point at something that
-   *  isn't a project yet either, as long as the pairing can still name
-   *  one. */
-  preferProject?: boolean
-  /** Hard version: only a project-kind candidate is eligible at all --
-   *  everything else in the band is discarded, and an empty result is
-   *  correct silence rather than a fallback. Set for every subject with
-   *  no project of its own EXCEPT joints (see `preferProject`): an
-   *  unfiled thought, an article, a project-less pair. Without this the
-   *  connector search still returns match_projects rows for every
-   *  subject, but ranked purely by similarity, so "watched the Arsenal
-   *  match, well organised this season" paired exactly as readily with
-   *  another stray note as with an actual project -- in an app whose
-   *  entire premise (per its own product spec) is a question that
-   *  unlocks a project or a creative outcome, not a question that merely
-   *  passed the other quality gates. A subject already anchored to a
-   *  project (a project subject itself, or a joint/pair whose captures
-   *  trace back to one) sets neither flag: forcing a SECOND project
-   *  connector onto it would manufacture the kind of project-to-project
-   *  bridge the joint -> pair composite mechanism exists to build
-   *  carefully instead of this channel doing it by accident. */
-  requireProject?: boolean
-}
-
-/**
- * Which returned item becomes the lens.
- *
- * Inside the band, the highest similarity wins: the band has already
- * thrown out the restatements above it and the noise below, so what's
- * left is ranked by how squarely it answers the blind spot. Nothing here
- * prefers a distant match for its own sake — distance is enforced by the
- * vocabulary rule, not by picking a worse answer on purpose.
- */
-export function selectConnector(
-  candidates: MullCandidate[],
-  filter: ConnectorFilter,
-): MullCandidate | null {
-  const excluded = new Set(filter.excludeIds)
-  const ceiling = connectorCeiling(filter.subjectText)
-  const eligible = candidates.filter(c =>
-    c.text.trim().length > 0 &&
-    !excluded.has(c.id) &&
-    c.similarity >= CONNECTOR_FLOOR &&
-    c.similarity <= ceiling &&
-    !sharesDomain(filter.subjectText, `${c.title} ${c.text}`)
-  )
-  if (eligible.length === 0) return null
-  return eligible.reduce((best, c) => (c.similarity > best.similarity ? c : best))
-}
-
-/**
- * Every connector worth a question, not just the best one.
- *
- * A blind spot with forty candidates in the corpus produced exactly one
- * pair, and one pair means one draft, and one draft means any single
- * quality gate ends the run with nothing. The narrowing was a choice, not
- * a limit in the data. Returning the top few costs nothing — the search
- * has already run — and turns one shot into several.
- */
-export function selectConnectors(
-  candidates: MullCandidate[],
-  filter: ConnectorFilter,
-  limit = 3,
-): MullCandidate[] {
-  const excluded = new Set(filter.excludeIds)
-  const ceiling = connectorCeiling(filter.subjectText)
-  const eligible = candidates.filter(c =>
-    c.text.trim().length > 0 &&
-    !excluded.has(c.id) &&
-    c.similarity >= CONNECTOR_FLOOR &&
-    c.similarity <= ceiling &&
-    !sharesDomain(filter.subjectText, `${c.title} ${c.text}`)
-  )
-  if (filter.requireProject) {
-    // No fallback. A pairing with no project on either side is exactly
-    // the case this channel was rebuilt to stop producing, so nothing in
-    // band is correct silence, not a reason to settle for a note instead.
-    return eligible.filter(c => c.kind === 'project').sort((a, b) => b.similarity - a.similarity).slice(0, limit)
-  }
-  if (filter.preferProject) {
-    const projects = eligible.filter(c => c.kind === 'project')
-    if (projects.length > 0) return projects.sort((a, b) => b.similarity - a.similarity).slice(0, limit)
-  }
-  return eligible.sort((a, b) => b.similarity - a.similarity).slice(0, limit)
-}
 
 /** Quotes get retyped with different punctuation and spacing; matching has
  *  to survive that without becoming a fuzzy match that lets invention in. */
@@ -729,70 +529,3 @@ export function rejectionReason(input: ValidationInput): string | null {
   return null
 }
 
-/**
- * Which of the day's candidate questions actually get written.
- *
- * The model calls are the expensive part and retrieval is nearly free, so
- * the channel builds several (blind spot → connector) pairs per run and
- * writes up the best ones in one go. Ranking them is deterministic: no
- * third model call to choose, because choosing is the kind of judgement a
- * score makes better than a paragraph of reasoning.
- *
- * Two halves. `similarity` says how squarely the connector answers the
- * blind spot — already inside the band, so higher is better. `strength`
- * comes from the subject's temporal shape (corpus-time.ts): a thing said
- * since 2023 and never built outranks an article someone saved, and it
- * does so by arithmetic over dates rather than by a hardcoded preference
- * for one table over another.
- */
-const SUBJECT_WEIGHT = 0.35
-
-export interface RankablePair {
-  subjectId: string
-  connectorId: string
-  similarity: number
-  /** The temporal shape's own strength, 0–1.5. */
-  subjectStrength: number
-}
-
-/**
- * How many pairs get written up in the one draft call.
- *
- * Two was the number of questions wanted, which quietly became the number
- * attempted — so the gates had no slack: one rejection and the run was
- * empty. Drafting four costs nothing extra (it is the same single call,
- * a little more output) and the run only needs two of them to survive.
- * Depth belongs before the quality bar, not in place of it.
- */
-export const PAIRS_TO_DRAFT = 4
-
-export function rankPairs<T extends RankablePair>(pairs: T[], limit = PAIRS_TO_DRAFT): T[] {
-  const score = (p: T) => p.similarity + p.subjectStrength * SUBJECT_WEIGHT
-  const scored = [...pairs].sort((a, b) => score(b) - score(a))
-
-  // Distinct subjects and distinct notes first: two questions about the
-  // same thing is one question and a repeat, and the second is what the
-  // user gets days later when the repeat is most obvious.
-  const chosen: T[] = []
-  const usedSubjects = new Set<string>()
-  const usedConnectors = new Set<string>()
-  for (const pair of scored) {
-    if (usedSubjects.has(pair.subjectId) || usedConnectors.has(pair.connectorId)) continue
-    chosen.push(pair)
-    usedSubjects.add(pair.subjectId)
-    usedConnectors.add(pair.connectorId)
-    if (chosen.length >= limit) break
-  }
-
-  // Then top up from what was skipped. A near-duplicate pair is a poor
-  // question to SHIP, but a fine one to have in reserve when the gates
-  // reject the others — and only the survivors are ever shown, in order.
-  if (chosen.length < limit) {
-    for (const pair of scored) {
-      if (chosen.includes(pair)) continue
-      chosen.push(pair)
-      if (chosen.length >= limit) break
-    }
-  }
-  return chosen
-}

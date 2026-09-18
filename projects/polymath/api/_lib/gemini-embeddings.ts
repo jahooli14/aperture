@@ -125,9 +125,12 @@ function toVector(values: number[]): number[] {
  * space both drop out of the top six for vaguer pairs.
  *
  * Every measured constant in this codebase (ATTACH_MARGIN, ORBIT_FLOOR /
- * CEILING / RIVAL_MARGIN, CONNECTOR_FLOOR / CEILING, RESTART_SIM,
- * RECURRENCE_SIM_THRESHOLD) was measured in this space. Changing it is a flag
- * day for the vectors AND a retune of all eight, which is why this is a
+ * CEILING / RIVAL_MARGIN, RECURRENCE_SIM_THRESHOLD) was measured in this
+ * space. CONNECTOR_FLOOR/CEILING and RESTART_SIM are retired along with the
+ * connector-search pipeline they tuned (see mull-generator.ts) — the numbers
+ * above are the historical record of why this constant exists, not a live
+ * inventory. Changing the task is still a flag day for the vectors and a
+ * retune of everything still measured in this space, which is why this is a
  * constant with the numbers attached rather than a per-call parameter someone
  * can set on one writer and quietly break the thresholds everywhere else.
  *

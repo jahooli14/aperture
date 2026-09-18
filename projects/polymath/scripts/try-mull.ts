@@ -1,11 +1,11 @@
 /**
  * Run the real question channel against the real corpus, locally.
  *
- * Two model calls and a handful of queries — about a third of a penny a
- * run. That number is the point: a week was spent reasoning about why
- * every draft scored 0.00, and one run of this answered it in five
- * minutes by printing what the model actually wrote. Nothing about this
- * channel should be argued about again while it costs this little to look.
+ * One model call, handed the whole corpus at once — about half a cent a
+ * run at this corpus's current size. That number is the point: whole
+ * design changes to this channel have been settled by a handful of real
+ * runs rather than by argument, and that only works while it costs this
+ * little to look.
  *
  *   SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... GEMINI_API_KEY=... \
  *     npm run mull:try

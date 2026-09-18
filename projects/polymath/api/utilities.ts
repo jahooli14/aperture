@@ -2774,12 +2774,10 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
 /**
  * Bake a question.
  *
- * There used to be a fallback chain here, because there used to be nine
- * shapes of question and a shape that found nothing could hand over to the
- * next one. There is one mechanism now (mull-generator.ts): a blind spot,
- * and whatever the corpus says about it. When that finds nothing there is
- * nothing else to try — the forgotten-project offer inside bakeMull is the
- * one thing left, and after that the honest answer is no question today.
+ * One mechanism (mull-generator.ts): the whole corpus, handed to one
+ * prompt, gated exactly as strictly as it always was (mull.ts). When that
+ * finds nothing, "get more creative" (bakeMull's `creative` flag) is the
+ * one thing left to try before the honest answer is no question today.
  */
 /**
  * Retires whatever spark is currently standing and bakes a replacement,
