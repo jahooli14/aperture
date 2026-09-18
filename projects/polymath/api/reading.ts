@@ -59,6 +59,18 @@ const rssParser = new Parser({ timeout: 15000 })
 const RSS_ITEMS_PER_SYNC = 5
 const RSS_EXTRACT_TIMEOUT_MS = 12000
 
+// The per-item timeout above bounds ONE fetch, but not the sum of them —
+// with several feeds each having a handful of new items, the extractions
+// alone can add up past api/reading.ts's 30s maxDuration, and Vercel kills
+// the function mid-loop with no response at all. Whatever feed was being
+// processed when that happens, and everything after it in the list, never
+// gets synced — so the same one or two feeds (whichever sort first) were
+// the only ones that ever landed in the queue. A wall-clock budget checked
+// before each extraction call means a feed running late falls back to its
+// own blurb (already the extraction-failure path below) instead of eating
+// the whole run, so every feed still gets a pass.
+const RSS_SYNC_DEADLINE_MS = 22000
+
 /**
  * Browser-headers fetch + parse, for known canonical feed URLs (sync,
  * items handlers). No discovery fallback — if it 4xxs, we propagate.
@@ -2506,6 +2518,7 @@ Return ONLY the JSON, no other text.`
         }
 
         let totalArticlesAdded = 0
+        const syncStart = Date.now()
         for (const feed of feeds) {
           try {
             const feedData = await fetchFeedDirect(feed.feed_url)
@@ -2547,48 +2560,59 @@ Return ONLY the JSON, no other text.`
 
               let content = item.contentSnippet || item.description || ''
 
-              try {
-                const response = await fetchWithTimeout(
-                  `https://r.jina.ai/${link}`,
-                  RSS_EXTRACT_TIMEOUT_MS,
-                  {
-                    'Accept': 'application/json',
-                    'X-Return-Format': 'json',
-                    // Anchor text stays, the URL doesn't — see the full
-                    // explanation on the on-demand Jina tier above. Same
-                    // "too many links" complaint applies to every RSS item
-                    // pulled through this path.
-                    'X-Retain-Links': 'text',
-                  },
-                )
-                const text = response.ok ? await response.text() : ''
-                if (text) {
-                  const result = JSON.parse(text)
-                  const rawContent = result.data?.content || result.content || content
+              // Once the run is close to the function's own time limit, stop
+              // spending the extraction budget on this feed — every feed
+              // still gets its items inserted (cheap: Supabase + the feed's
+              // own blurb), just without full-text extraction, rather than
+              // this feed eating the rest of the run and every feed after
+              // it in the list getting skipped entirely.
+              const timeLeft = RSS_SYNC_DEADLINE_MS - (Date.now() - syncStart)
+              if (timeLeft < 3000) {
+                content = cleanHtml(content, link)
+              } else {
+                try {
+                  const response = await fetchWithTimeout(
+                    `https://r.jina.ai/${link}`,
+                    Math.min(RSS_EXTRACT_TIMEOUT_MS, timeLeft - 1000),
+                    {
+                      'Accept': 'application/json',
+                      'X-Return-Format': 'json',
+                      // Anchor text stays, the URL doesn't — see the full
+                      // explanation on the on-demand Jina tier above. Same
+                      // "too many links" complaint applies to every RSS item
+                      // pulled through this path.
+                      'X-Retain-Links': 'text',
+                    },
+                  )
+                  const text = response.ok ? await response.text() : ''
+                  if (text) {
+                    const result = JSON.parse(text)
+                    const rawContent = result.data?.content || result.content || content
 
-                  // Same bot-wall risk as the on-demand path: if the origin
-                  // challenged Jina's own crawler, rawContent IS the
-                  // challenge page. Throwing here routes into the feed-blurb
-                  // fallback below instead of storing "please verify you're
-                  // human" as the article.
-                  const wall = detectBotWallText(result.data?.title, rawContent)
-                  if (wall) {
-                    throw new Error(`Bot challenge for ${host} (matched "${wall}")`)
+                    // Same bot-wall risk as the on-demand path: if the origin
+                    // challenged Jina's own crawler, rawContent IS the
+                    // challenge page. Throwing here routes into the feed-blurb
+                    // fallback below instead of storing "please verify you're
+                    // human" as the article.
+                    const wall = detectBotWallText(result.data?.title, rawContent)
+                    if (wall) {
+                      throw new Error(`Bot challenge for ${host} (matched "${wall}")`)
+                    }
+
+                    const cleanedMarkdown = cleanMarkdownContent(rawContent)
+                    const parsedHtml = marked.parse(cleanedMarkdown)
+                    const htmlString = typeof parsedHtml === 'string' ? parsedHtml : await (parsedHtml as any)
+                    content = cleanHtml(htmlString, link)
+                  } else {
+                    content = cleanHtml(content, link)
                   }
-
-                  const cleanedMarkdown = cleanMarkdownContent(rawContent)
-                  const parsedHtml = marked.parse(cleanedMarkdown)
-                  const htmlString = typeof parsedHtml === 'string' ? parsedHtml : await (parsedHtml as any)
-                  content = cleanHtml(htmlString, link)
-                } else {
-                  content = cleanHtml(content, link)
+                } catch (extractErr) {
+                  // Timed out, blocked, or unparseable JSON. The feed's own
+                  // content is the fallback below — an item with a headline
+                  // and a blurb still beats no item at all.
+                  console.warn('[RSS Sync] Extraction failed for', link, extractErr instanceof Error ? extractErr.message : extractErr)
+                  content = ''
                 }
-              } catch (extractErr) {
-                // Timed out, blocked, or unparseable JSON. The feed's own
-                // content is the fallback below — an item with a headline
-                // and a blurb still beats no item at all.
-                console.warn('[RSS Sync] Extraction failed for', link, extractErr instanceof Error ? extractErr.message : extractErr)
-                content = ''
               }
 
               // FALLBACK: If Jina failed or returned empty content, use feed content
