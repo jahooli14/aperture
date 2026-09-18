@@ -1218,10 +1218,11 @@ function ArticleListMode({ list, navigate }: ArticleListModeProps) {
                     <div className="page-masthead-actions">
                         <button
                             onClick={() => fetchArticles(undefined, true)}
-                            className="masthead-action press-spring"
+                            disabled={loading}
+                            className="masthead-action press-spring disabled:opacity-50"
                             title="Refresh"
                         >
-                            <RefreshCw className="h-4 w-4" />
+                            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
                         </button>
                     </div>
                 </header>
