@@ -139,7 +139,7 @@ export const CaptureMemoryBody = z
       .union([
         z.string().max(500),
         z.object({
-          type: z.enum(['article', 'project', 'suggestion', 'list_item']),
+          type: z.enum(['article', 'project', 'suggestion', 'list_item', 'spark']),
           id: z.string().max(200),
           title: z.string().max(500).optional(),
           url: z.string().max(2000).optional(),

@@ -24,8 +24,10 @@ export interface TriageInfo {
 }
 
 export interface SourceReference {
-  type: 'article' | 'project' | 'suggestion' | 'list_item'
+  type: 'article' | 'project' | 'suggestion' | 'list_item' | 'spark'
   id: string
+  /** For spark: the question text itself, so a saved answer can show what
+   *  it was answering. */
   title?: string
   url?: string
   /** For list_item: the list type (film, book, etc.) for icon rendering */

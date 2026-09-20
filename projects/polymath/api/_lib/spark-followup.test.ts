@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
-  worthFollowingUp, buildFollowUpPrompt, readFollowUp, joinTurns, MIN_ANSWER_CHARS,
+  worthFollowingUp, buildFollowUpPrompt, readFollowUp, readFollowUpReason, joinTurns, MIN_ANSWER_CHARS,
 } from './spark-followup.js'
 
 describe('worthFollowingUp', () => {
@@ -90,6 +90,19 @@ describe('readFollowUp', () => {
   it('refuses a speech rather than a question', () => {
     const long = 'What do you think it was about that particular project that made you want to set it down and then come back to it again later on in the year?'
     expect(readFollowUp(long)).toBeNull()
+  })
+})
+
+describe('readFollowUpReason', () => {
+  it('reads which reason the model gave', () => {
+    expect(readFollowUpReason(asked('correction', 'Which list did it move to?'))).toBe('correction')
+    expect(readFollowUpReason(asked('next_step', 'What needs to happen to start it?'))).toBe('next_step')
+  })
+
+  it('is null for none, junk, or a bare question with no JSON shape', () => {
+    expect(readFollowUpReason(asked('none', null))).toBeNull()
+    expect(readFollowUpReason(asked('vibes', 'Something?'))).toBeNull()
+    expect(readFollowUpReason('Which list did it move to?')).toBeNull()
   })
 })
 

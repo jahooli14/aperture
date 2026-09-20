@@ -187,6 +187,15 @@ const [bridges, setBridges] = useState<BridgeWithMemories[]>([])
                 </h2>
               </div>
 
+              {memory.source_reference?.type === 'spark' && memory.source_reference.title && (
+                <p
+                  className="mb-4 text-sm italic leading-relaxed pr-2"
+                  style={{ color: 'var(--brand-text-secondary)' }}
+                >
+                  In answer to: "{memory.source_reference.title}"
+                </p>
+              )}
+
               {memory.triage?.bridge_insight && (
                 <p
                   className="mb-5 text-sm italic leading-relaxed pr-2"

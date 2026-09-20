@@ -31,8 +31,8 @@ function corpus() {
       { user_id: 'u1', id: 'p-dead', title: 'Abandoned mural', description: 'A wall mural nobody finished', state: 'mull', status: 'abandoned', created_at: ago(500), last_active: ago(400) },
     ],
     memories: [
-      { user_id: 'u1', id: 'm1', title: 'Dad', body: 'Ten more proper conversations with dad, probably, and we spend them on the greenhouse. It is the only tidy room in a messy house.', created_at: ago(280), tags: [] },
-      { user_id: 'u1', id: 'm-spark', title: 'Answered', body: 'This whole reply only exists because the app asked me something.', created_at: ago(2), tags: ['spark-response'] },
+      { user_id: 'u1', id: 'm1', title: 'Dad', body: 'Ten more proper conversations with dad, probably, and we spend them on the greenhouse. It is the only tidy room in a messy house.', created_at: ago(280), tags: [], source_reference: null },
+      { user_id: 'u1', id: 'm-spark', title: 'Answered', body: 'This whole reply only exists because the app asked me something.', created_at: ago(2), tags: ['spark-response'], source_reference: null },
     ],
     fragments: [
       { user_id: 'u1', id: 'f1', text: 'chapter nine needs to feel like arriving', created_at: ago(500), memory_id: null, project_id: 'p-book', projects: { title: 'The book', state: 'mull', status: 'active' } },
@@ -79,6 +79,7 @@ function fakeSupabase(data: Record<string, Row[]>) {
       lt: (c: string, v: string) => { rows = rows.filter(r => String(r[c]) < v); return chain },
       is: (c: string, v: null) => { rows = rows.filter(r => (v === null ? r[c] == null : r[c] === v)); return chain },
       not: (c: string, _op: string, v: null) => { rows = rows.filter(r => (v === null ? r[c] != null : true)); return chain },
+      contains: (c: string, v: unknown[]) => { rows = rows.filter(r => Array.isArray(r[c]) && v.every(x => r[c].includes(x))); return chain },
       order: () => chain,
       limit: () => chain,
       insert: (payload: Row | Row[]) => { inserted.push(...(Array.isArray(payload) ? payload : [payload])); return chain },
@@ -315,7 +316,7 @@ describe('creative mode ("get more creative")', () => {
       project: null,
     }]))
     const baked = await generateMull(fakeSupabase(corpus()).client, 'u1', {
-      recentTexts: [], avoid: '', resonance: '',
+      recentTexts: [], avoid: '', resonance: '', corrections: '',
     }, [], true)
     expect(baked).toHaveLength(1)
   })
@@ -328,7 +329,7 @@ describe('creative mode ("get more creative")', () => {
       project: null,
     }]))
     const baked = await generateMull(fakeSupabase(corpus()).client, 'u1', {
-      recentTexts: [], avoid: '', resonance: '',
+      recentTexts: [], avoid: '', resonance: '', corrections: '',
     }, [], true)
     expect(baked).toEqual([])
   })
@@ -344,9 +345,59 @@ describe('recentSubjectIds and recentProjectIds are named in the avoid-list by t
       stake: 'He writes down the one trait that cannot change.',
       project: 'The book',
     }]))
-    const echo = { recentTexts: [], recentSubjectIds: new Set(['m1']), avoid: '', resonance: '' }
+    const echo = { recentTexts: [], recentSubjectIds: new Set(['m1']), avoid: '', resonance: '', corrections: '' }
     await generateMull(fakeSupabase(corpus()).client, 'u1', echo, [])
     const prompt = generateText.mock.calls[0][0] as string
     expect(prompt).toMatch(/already covered, whatever the wording.*Dad/)
+  })
+})
+
+describe('a correction from the one follow-up reaches the next draft call', () => {
+  beforeEach(() => { generateText.mockReset() })
+
+  it('hands a spark-correction note to the prompt as plain context, not as corpus', async () => {
+    const data = corpus() as any
+    data.memories.push({
+      user_id: 'u1', id: 'm-correction', title: 'Spark response',
+      body: 'No, I never gave up on the mural -- it just moved to the someday list.',
+      created_at: ago(1), tags: ['spark-response', 'spark-correction'],
+      source_reference: { type: 'spark', id: 's-old', title: 'You gave up on the mural in June -- what happened?' },
+    })
+    generateText.mockResolvedValueOnce(draftJson([{
+      quote: 'ten more proper conversations with dad',
+      spark: 'You wrote that you get ten more proper conversations with dad. What is the greenhouse standing in for?',
+      stake: 'He picks a different room to have the next one in.',
+      project: null,
+    }]))
+    const echo = await loadEchoContext(fakeSupabase(data).client, 'u1')
+    expect(echo.corrections).toContain('You gave up on the mural in June')
+    expect(echo.corrections).toContain('it just moved to the someday list')
+
+    await generateMull(fakeSupabase(data).client, 'u1', echo, [])
+    const prompt = generateText.mock.calls[0][0] as string
+    expect(prompt).toContain('THEY\'VE CORRECTED US BEFORE')
+    expect(prompt).toContain('it just moved to the someday list')
+  })
+
+  it('never lets a correction note itself become quotable corpus material', async () => {
+    const data = corpus() as any
+    data.memories.push({
+      user_id: 'u1', id: 'm-correction', title: 'Spark response',
+      body: 'No, I never gave up on the mural -- it just moved to the someday list.',
+      created_at: ago(1), tags: ['spark-response', 'spark-correction'],
+      source_reference: { type: 'spark', id: 's-old', title: 'You gave up on the mural in June -- what happened?' },
+    })
+    generateText.mockResolvedValueOnce(draftJson([{
+      quote: 'it just moved to the someday list',
+      spark: 'You said it just moved to the someday list. What would bring it back onto the main one?',
+      stake: 'It gets picked up again.',
+      project: null,
+    }]))
+    const trace: string[] = []
+    const baked = await bakeMull(fakeSupabase(data).client, 'u1', undefined, trace)
+    // The quote is real text (it's IN the corrections context handed to the
+    // model), but it isn't a row in corpus.rows -- app-authored notes never
+    // are (corpus-provenance.ts) -- so it can't resolve as a grounded source.
+    expect(baked).toEqual([])
   })
 })

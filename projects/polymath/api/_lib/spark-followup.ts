@@ -122,6 +122,24 @@ export function readFollowUp(raw: string): string | null {
   return readQuestion(t)
 }
 
+/**
+ * Which of the two reasons the model gave, if it answered in the JSON shape
+ * at all — the bare-question fallback (a model that ignores the format)
+ * carries no reason, and that's fine: it just means the correction tag
+ * below doesn't get set for that one turn.
+ */
+export function readFollowUpReason(raw: string): 'correction' | 'next_step' | null {
+  const t = (raw ?? '').trim()
+  const block = t.match(/\{[\s\S]*\}/)
+  if (!block) return null
+  try {
+    const parsed = JSON.parse(block[0]) as { reason?: string }
+    return parsed.reason === 'correction' || parsed.reason === 'next_step' ? parsed.reason : null
+  } catch {
+    return null
+  }
+}
+
 function readQuestion(raw: string): string | null {
   const t = (raw ?? '').trim().replace(/^["']|["']$/g, '')
   if (!t || /^none$/i.test(t)) return null
@@ -137,14 +155,24 @@ function readQuestion(raw: string): string | null {
   return t
 }
 
-export async function askFollowUp(input: FollowUpInput): Promise<string | null> {
+export interface AskedFollowUp {
+  question: string
+  /** Which reason the model gave for asking — 'correction' is the one that
+   *  matters downstream: `respond` tags that turn's saved note so
+   *  `loadCorrections` can find it later (mull-generator.ts). */
+  reason: 'correction' | 'next_step' | null
+}
+
+export async function askFollowUp(input: FollowUpInput): Promise<AskedFollowUp | null> {
   if (!worthFollowingUp(input.answer)) return null
   try {
     const raw = await generateText(buildFollowUpPrompt(input), {
       responseFormat: 'json',
       ...thinkingFragment('low'),
     })
-    return readFollowUp(raw)
+    const question = readFollowUp(raw)
+    if (!question) return null
+    return { question, reason: readFollowUpReason(raw) }
   } catch (e) {
     // No follow-up is a fine outcome. Their answer is already saved.
     console.warn('[spark-followup] failed:', e instanceof Error ? e.message : e)

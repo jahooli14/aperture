@@ -31,6 +31,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { generateText } from './gemini-chat.js'
 import { PLAIN_ENGLISH_RULES } from './plain-english.js'
 import { avoidBlock, echoesRecent, fetchRecentSparkTexts, fetchRecentSparkProjectIds, fetchRecentSparkSubjectIds, motifWords } from './spark-echo.js'
+import { SPARK_CORRECTION_TAG } from './corpus-provenance.js'
 import { examplesBlock } from './mull-examples.js'
 import { loadCorpus, findSource, normaliseTitle, type Corpus, type CorpusRow } from './mull-corpus.js'
 import { rejectionReason, draftQuality, longestSharedRun } from './mull.js'
@@ -99,6 +100,10 @@ export interface EchoContext {
   /** Questions this person actually answered, and what they said back —
    *  plus the ones they read and ignored. See loadResonance. */
   resonance: string
+  /** Premises earlier questions got wrong, now on record. See
+   *  loadCorrections. Plain context, not corpus — never something to quote
+   *  from or draft a new question around. */
+  corrections: string
 }
 
 /**
@@ -163,16 +168,62 @@ for the reader to do.
 `
 }
 
+/**
+ * Corrections a follow-up caught — a wrong premise, put right, in their own
+ * words (spark-followup.ts, corpus-provenance.ts's SPARK_CORRECTION_TAG).
+ *
+ * These notes are excluded from `loadCorpus` for the same reason every
+ * spark response is: dated today, filed as a "capture," they'd fake the
+ * exact "just came back to it" signal the exclusion exists to prevent. But
+ * throwing the correction away entirely means the channel can ask the same
+ * wrong-premise question again — the whole point of the one follow-up was
+ * to catch that. So it's handed to the draft prompt separately, as plain
+ * context with no date attached: not material to quote from or build a new
+ * question around, just a standing note of what's actually true now.
+ */
+async function loadCorrections(supabase: SupabaseClient, userId: string): Promise<string> {
+  const { data, error } = await supabase
+    .from('memories')
+    .select('body, source_reference')
+    .eq('user_id', userId)
+    .contains('tags', [SPARK_CORRECTION_TAG])
+    .order('created_at', { ascending: false })
+    .limit(15)
+  if (error) {
+    console.warn('[mull] could not read past corrections:', error.message)
+    return ''
+  }
+
+  const rows = (data ?? [])
+    .map((m: any) => {
+      const said = typeof m.body === 'string' ? m.body.trim() : ''
+      if (!said) return null
+      const asked = m.source_reference?.type === 'spark' ? m.source_reference.title : null
+      return asked ? `  Asked: "${asked}"\n  They corrected it: "${said}"` : `  They corrected: "${said}"`
+    })
+    .filter((r): r is string => !!r)
+  if (rows.length === 0) return ''
+
+  return `
+THEY'VE CORRECTED US BEFORE — premises earlier questions got wrong, now on record (${rows.length}):
+${rows.join('\n\n')}
+Don't build a new question on a premise one of these already corrected. These
+are not material to quote from or ask about directly — just don't repeat the
+mistake.
+`
+}
+
 export async function loadEchoContext(
   supabase: SupabaseClient, userId: string,
 ): Promise<EchoContext> {
-  const [recentTexts, recentProjectIds, recentSubjectIds, resonance] = await Promise.all([
+  const [recentTexts, recentProjectIds, recentSubjectIds, resonance, corrections] = await Promise.all([
     fetchRecentSparkTexts(supabase, userId),
     fetchRecentSparkProjectIds(supabase, userId),
     fetchRecentSparkSubjectIds(supabase, userId),
     loadResonance(supabase, userId),
+    loadCorrections(supabase, userId),
   ])
-  return { recentTexts, recentProjectIds, recentSubjectIds, avoid: avoidBlock(recentTexts), resonance }
+  return { recentTexts, recentProjectIds, recentSubjectIds, avoid: avoidBlock(recentTexts), resonance, corrections }
 }
 
 function expiresAt(hours: number): string {
@@ -231,7 +282,7 @@ What makes a good one:
 - If nothing here holds a real question right now, say so -- return
   "spark": null rather than manufacturing one. An honest "nothing" is
   correct and better than a forced question.
-${howMany === 2 ? '- The two questions must be about genuinely different subjects, not two angles on the same one.\n' : ''}${echo.resonance}
+${howMany === 2 ? '- The two questions must be about genuinely different subjects, not two angles on the same one.\n' : ''}${echo.resonance}${echo.corrections}
 GOOD -- ten of them, and they are not ten versions of one question. Some end
 in a choice, some in a name, some in a counterfactual, some ask for a fact
 you have and the notes don't. Copy the register, never the skeleton:
