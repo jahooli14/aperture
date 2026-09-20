@@ -307,6 +307,16 @@ export function StandingQuestion() {
             {followUp}
           </p>
           <VoiceInput onTranscript={setFollowUpText} maxDuration={30} />
+          {/* Talk or type — voice being the only way in left this
+              unanswerable without a mic. */}
+          <textarea
+            value={followUpText}
+            onChange={e => setFollowUpText(e.target.value)}
+            placeholder="Or type it..."
+            rows={2}
+            className="w-full mt-2 rounded-xl px-3 py-2 text-sm bg-transparent border resize-none outline-none"
+            style={{ borderColor: 'var(--glass-border-bold)', color: 'var(--brand-text-primary)' }}
+          />
           <div className="flex items-center gap-3 mt-2">
             <button
               className="px-3 py-1.5 rounded-lg text-[12px] font-medium disabled:opacity-50"
@@ -335,6 +345,16 @@ export function StandingQuestion() {
       {answering && !followUp && (
         <div className="mt-2.5">
           <VoiceInput onTranscript={setText} maxDuration={30} />
+          {/* Talk or type — voice being the only way in left this
+              unanswerable without a mic. */}
+          <textarea
+            value={text}
+            onChange={e => setText(e.target.value)}
+            placeholder="Or type it..."
+            rows={2}
+            className="w-full mt-2 rounded-xl px-3 py-2 text-sm bg-transparent border resize-none outline-none"
+            style={{ borderColor: 'var(--glass-border-bold)', color: 'var(--brand-text-primary)' }}
+          />
           <div className="flex items-center gap-3 mt-2">
             {text && (
               <button
