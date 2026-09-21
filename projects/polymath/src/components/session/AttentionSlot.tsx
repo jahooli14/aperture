@@ -27,7 +27,7 @@
  * whole spec exists to avoid.
  */
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useSessionStore } from '../../stores/useSessionStore'
 import { useProjectStore } from '../../stores/useProjectStore'
 import { VoiceInput } from '../VoiceInput'
@@ -54,7 +54,7 @@ const primaryButtonStyle = {
 }
 const accentTextStyle = { color: 'rgb(var(--brand-primary-rgb))' }
 
-type SlotKind = 'closeout' | 'mirror' | 'reask' | 'composite' | 'morph' | 'spark' | null
+type SlotKind = 'closeout' | 'mirror' | 'reask' | 'composite' | 'morph' | null
 
 interface ReaskSuggestion {
   project_id: string
@@ -74,13 +74,6 @@ interface Proposal {
   project_id: string | null
   project_id_2: string | null
   proposed_text: string
-}
-
-interface Spark {
-  id: string
-  type: string
-  text: string
-  project_id: string | null
 }
 
 const MIRROR_SEEN_KEY_PREFIX = 'aperture-mirror-seen-'
@@ -159,6 +152,17 @@ function MirrorSlot({ rows, onDismiss }: { rows: MirrorRow[]; onDismiss: () => v
       </div>
       <p className="text-sm" style={secondaryTextStyle}>Anything missing?</p>
       <VoiceInput onTranscript={setMissingText} maxDuration={20} />
+      {/* Talk or type -- same reasoning as the close-out below: voice being
+          the only way in left a once-a-month correction unanswerable
+          without a mic. */}
+      <textarea
+        value={missingText}
+        onChange={e => setMissingText(e.target.value)}
+        placeholder="Or type it..."
+        rows={2}
+        className="w-full rounded-xl px-3 py-2 text-sm bg-transparent border resize-none outline-none"
+        style={{ ...borderStyle, color: 'var(--brand-text-primary)' }}
+      />
       <div className="flex gap-2">
         <button
           className="flex-1 py-2 rounded-lg text-sm font-medium disabled:opacity-50"
@@ -208,74 +212,6 @@ function ProposalSlot({ proposal, onResolved }: { proposal: Proposal; onResolved
           that's not it
         </button>
       </div>
-    </div>
-  )
-}
-
-/** How long the "here's what that did" line stays up before the slot
- *  clears itself. Long enough to read, short enough that it never becomes
- *  another thing to dismiss. */
-const SPARK_RECEIPT_MS = 4000
-
-function SparkSlot({ spark, onResolved }: { spark: Spark; onResolved: () => void }) {
-  const [text, setText] = useState('')
-  const [submitting, setSubmitting] = useState(false)
-  const [receipt, setReceipt] = useState<string | null>(null)
-  const receiptTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  // Navigating away mid-receipt used to leave the timeout running and call
-  // onResolved (a setState on the parent) after this component had already
-  // unmounted.
-  useEffect(() => () => {
-    if (receiptTimeoutRef.current) clearTimeout(receiptTimeoutRef.current)
-  }, [])
-
-  const respond = async () => {
-    if (!text.trim()) return
-    setSubmitting(true)
-    try {
-      const data = await api.post('utilities?resource=respond', {
-        spark_id: spark.id, response_text: text,
-      }).catch(() => ({})) as { project_title?: string }
-      // Say what answering actually did. Not a streak, not a point -- the
-      // real mechanism: it goes in the corpus, and the session briefing
-      // reads the corpus, so the next sitting on that project starts
-      // somewhere different because of this. Only names a project when the
-      // spark actually had one; otherwise it stays quiet rather than
-      // dressing up a vaguer claim.
-      setReceipt(data?.project_title
-        ? `In. It'll be there next time you sit down with ${data.project_title}.`
-        : 'In.')
-      setSubmitting(false)
-      receiptTimeoutRef.current = setTimeout(onResolved, SPARK_RECEIPT_MS)
-    } catch {
-      setSubmitting(false)
-      onResolved()
-    }
-  }
-
-  if (receipt) {
-    return (
-      <div className="glass-card p-6">
-        <p className="text-sm" style={secondaryTextStyle}>{receipt}</p>
-      </div>
-    )
-  }
-
-  return (
-    <div className="glass-card p-6 space-y-3">
-      <p className="text-base">{spark.text}</p>
-      <VoiceInput onTranscript={setText} maxDuration={30} />
-      {text && (
-        <button
-          className="w-full py-2 rounded-lg text-sm font-medium disabled:opacity-50"
-          style={primaryButtonStyle}
-          disabled={submitting}
-          onClick={respond}
-        >
-          Done
-        </button>
-      )}
     </div>
   )
 }
@@ -340,7 +276,6 @@ export function AttentionSlot() {
   const [mirrorRows, setMirrorRows] = useState<MirrorRow[]>([])
   const [reask, setReask] = useState<ReaskSuggestion | null>(null)
   const [proposal, setProposal] = useState<Proposal | null>(null)
-  const [spark, setSpark] = useState<Spark | null>(null)
   const [closeoutText, setCloseoutText] = useState('')
   const [resolved, setResolved] = useState(false)
 
@@ -479,14 +414,6 @@ export function AttentionSlot() {
     return (
       <div className="mt-5 mb-4">
         <ProposalSlot proposal={proposal} onResolved={() => setResolved(true)} />
-      </div>
-    )
-  }
-
-  if (kind === 'spark' && spark) {
-    return (
-      <div className="mt-5 mb-4">
-        <SparkSlot spark={spark} onResolved={() => setResolved(true)} />
       </div>
     )
   }

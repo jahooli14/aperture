@@ -59,6 +59,11 @@ export function StandingQuestion() {
   const [followUp, setFollowUp] = useState<string | null>(null)
   const [followUpText, setFollowUpText] = useState('')
   const [asking, setAsking] = useState(false)
+  // Which reason the model gave for asking the follow-up -- 'correction'
+  // means their first answer already told us a question's premise was
+  // wrong. Carried through to `save` so the note gets tagged and can feed
+  // future questions (spark-followup.ts, mull-generator.ts's loadCorrections).
+  const [followUpReason, setFollowUpReason] = useState<'correction' | 'next_step' | null>(null)
   const [loaded, setLoaded] = useState(false)
 
   useEffect(() => {
@@ -92,6 +97,7 @@ export function StandingQuestion() {
       // thing it can do, because the user has no other copy of what they said.
       const data = await api.post('utilities?resource=respond', {
         spark_id: spark.id, response_text: turns[0], turns,
+        is_correction: followUpReason === 'correction',
       }) as { project_title?: string; processed?: boolean }
       haptic.success()
       setReceipt(
@@ -113,13 +119,15 @@ export function StandingQuestion() {
     // them and a saved answer. If the follow-up call fails or has nothing
     // to ask, this just saves, which is exactly what it did before.
     setAsking(true)
+    setFollowUpReason(null)
     try {
       const data = await api.post('utilities?resource=spark-followup', {
         spark_id: spark.id, answer: text,
-      }) as { question?: string | null }
+      }) as { question?: string | null; reason?: 'correction' | 'next_step' | null }
       if (data.question) {
         haptic.light()
         setFollowUp(data.question)
+        setFollowUpReason(data.reason ?? null)
         setAsking(false)
         return
       }
@@ -144,6 +152,9 @@ export function StandingQuestion() {
         setAnswering(false)
         setText('')
         setOfferCreative(false)
+        setFollowUp(null)
+        setFollowUpText('')
+        setFollowUpReason(null)
       } else if (!creative) {
         // Honest about silence rather than pretending to think — and the
         // question you had is still there. Offer the looser pass instead
@@ -307,6 +318,16 @@ export function StandingQuestion() {
             {followUp}
           </p>
           <VoiceInput onTranscript={setFollowUpText} maxDuration={30} />
+          {/* Talk or type — voice being the only way in left this
+              unanswerable without a mic. */}
+          <textarea
+            value={followUpText}
+            onChange={e => setFollowUpText(e.target.value)}
+            placeholder="Or type it..."
+            rows={2}
+            className="w-full mt-2 rounded-xl px-3 py-2 text-sm bg-transparent border resize-none outline-none"
+            style={{ borderColor: 'var(--glass-border-bold)', color: 'var(--brand-text-primary)' }}
+          />
           <div className="flex items-center gap-3 mt-2">
             <button
               className="px-3 py-1.5 rounded-lg text-[12px] font-medium disabled:opacity-50"
@@ -335,6 +356,16 @@ export function StandingQuestion() {
       {answering && !followUp && (
         <div className="mt-2.5">
           <VoiceInput onTranscript={setText} maxDuration={30} />
+          {/* Talk or type — voice being the only way in left this
+              unanswerable without a mic. */}
+          <textarea
+            value={text}
+            onChange={e => setText(e.target.value)}
+            placeholder="Or type it..."
+            rows={2}
+            className="w-full mt-2 rounded-xl px-3 py-2 text-sm bg-transparent border resize-none outline-none"
+            style={{ borderColor: 'var(--glass-border-bold)', color: 'var(--brand-text-primary)' }}
+          />
           <div className="flex items-center gap-3 mt-2">
             {text && (
               <button

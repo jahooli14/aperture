@@ -1,6 +1,6 @@
 import React, { useState, memo, useCallback, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Edit, Trash2, Copy, Share2, Sprout, Film, Book, Music, MapPin, Gamepad2, Monitor, FileText, Box, CheckSquare, Square } from 'lucide-react'
+import { Edit, Trash2, Copy, Share2, Sprout, Film, Book, Music, MapPin, Gamepad2, Monitor, FileText, Box, CheckSquare, Square, HelpCircle } from 'lucide-react'
 import type { Memory } from '../types'
 import { useMemoryStore } from '../stores/useMemoryStore'
 import { useToast } from './ui/toast'
@@ -8,6 +8,7 @@ import { haptic } from '../utils/haptics'
 import { ContextMenu, type ContextMenuItem } from './ui/context-menu'
 import { useConfirmDialog } from './ui/confirm-dialog'
 import { motion } from 'framer-motion'
+import { NEVER_SHOWN_AS_TAG } from '../lib/internalTags'
 
 /**
  * Collapse markdown into a single readable prose string for card previews.
@@ -260,7 +261,11 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
   const displayDate = new Date(memory.audiopen_created_at || memory.created_at).toLocaleDateString('en-US', {
     month: 'short', day: 'numeric', year: 'numeric',
   })
-  const firstTag = memory.tags?.find(t => t !== 'offline-pending')
+  // Every tag the app writes for its own bookkeeping, not just
+  // offline-pending -- a spark answer's own SPARK_RESPONSE_TAG/
+  // SPARK_CORRECTION_TAG used to win this pick and show "spark-response" as
+  // the card's tag pill, since they land first in the merged tags array.
+  const firstTag = memory.tags?.find(t => !NEVER_SHOWN_AS_TAG.includes(t))
 
   return (
     <>
@@ -321,6 +326,21 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
             </div>
           )
         })()}
+
+        {/* Which question this answers -- processing rewrites title and
+            body to the AI's own summary, so without this a spark answer
+            reads as an ordinary thought with no trace of what prompted it. */}
+        {memory.source_reference?.type === 'spark' && memory.source_reference.title && (
+          <div className="px-3.5 pt-1.5">
+            <span
+              className="inline-flex items-start gap-1 text-[10px] font-medium italic"
+              style={{ color: 'var(--brand-text-muted)' }}
+            >
+              <HelpCircle className="w-2.5 h-2.5 flex-shrink-0 mt-0.5" />
+              <span className="line-clamp-1">In answer to: "{memory.source_reference.title}"</span>
+            </span>
+          </div>
+        )}
 
         {/* Checklist or body preview */}
         {memory.checklist_items && memory.checklist_items.length > 0 ? (

@@ -27,6 +27,19 @@
 export const SPARK_RESPONSE_TAG = 'spark-response'
 
 /**
+ * A spark response where the one follow-up caught a wrong premise —
+ * corrected, not just answered. Still app-authored (never a capture, never
+ * dated evidence of return — the reasoning above applies exactly as much to
+ * a correction as to any other answer), so it stays out of `userSaid` the
+ * same as `SPARK_RESPONSE_TAG`. It's singled out with its own tag so
+ * `mull-generator.ts`'s `loadCorrections` can find it and hand the
+ * correction itself back to the draft prompt as plain, undated context —
+ * not a capture to quote from, just a reason not to ask the same wrong
+ * thing again.
+ */
+export const SPARK_CORRECTION_TAG = 'spark-correction'
+
+/**
  * Every tag meaning "the app caused this row to exist".
  *
  * Kept as one list so a new app-authored note type is one line here rather
@@ -34,6 +47,7 @@ export const SPARK_RESPONSE_TAG = 'spark-response'
  */
 export const APP_AUTHORED_TAGS = [
   SPARK_RESPONSE_TAG,
+  SPARK_CORRECTION_TAG,
   'morning-followup',
   'bedtime-synthesis',
   'proposal-rejected',

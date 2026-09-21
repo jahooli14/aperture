@@ -73,7 +73,7 @@ import { considerMorph } from './_lib/morph-generator.js'
 import { getStalledProjects, attachFragments, proposeComposite } from './_lib/composite-generator.js'
 import { mineJoints } from './_lib/joint-miner.js'
 import { runDriftDecay } from './_lib/drift-runner.js'
-import { SPARK_RESPONSE_TAG } from './_lib/corpus-provenance.js'
+import { SPARK_RESPONSE_TAG, SPARK_CORRECTION_TAG } from './_lib/corpus-provenance.js'
 
 /** Bearer-token cron auth, duplicated per-file to match this codebase's
  *  existing convention (projects.ts and idea-engine.ts each keep their own
@@ -3078,8 +3078,10 @@ async function handleExecutionSparks(req: VercelRequest, res: VercelResponse) {
     if (!spark?.text) return res.status(200).json({ question: null })
 
     const { askFollowUp } = await import('./_lib/spark-followup.js')
-    const question = await askFollowUp({ question: spark.text, answer })
-    return res.status(200).json({ question })
+    const followUp = await askFollowUp({ question: spark.text, answer })
+    // `reason` rides along so `respond` can tag a correction when they
+    // finish — see the SPARK_CORRECTION_TAG comment in corpus-provenance.ts.
+    return res.status(200).json({ question: followUp?.question ?? null, reason: followUp?.reason ?? null })
   }
 
   if (resource === 'dismiss-spark') {
@@ -3123,7 +3125,7 @@ async function handleExecutionSparks(req: VercelRequest, res: VercelResponse) {
     const userId = await getUserId(req)
     if (!userId) return res.status(401).json({ error: 'Unauthorized' })
 
-    const { spark_id, response_text, turns } = req.body || {}
+    const { spark_id, response_text, turns, is_correction } = req.body || {}
     // `turns` is the answer plus whatever they said to the follow-up. Only
     // THEIR words -- the app's follow-up question is scaffolding and is
     // never stored, or model prose would enter the corpus as "their own
@@ -3134,6 +3136,18 @@ async function handleExecutionSparks(req: VercelRequest, res: VercelResponse) {
       ? joinTurns(turns.filter((t: unknown): t is string => typeof t === 'string'))
       : response_text
     if (!spark_id || !body) return res.status(400).json({ error: 'spark_id and response_text required' })
+
+    // Fetched once, up front -- used both to record which question this
+    // note answers (source_reference, below) and, further down, to report
+    // which project it landed on. Processing (extractMetadata) overwrites
+    // title and body with its own summary, so source_reference is the one
+    // place left, after the fact, that still says what prompted this note.
+    const { data: sparkRow } = await supabase
+      .from('sparks')
+      .select('text, project_id')
+      .eq('id', spark_id)
+      .eq('user_id', userId)
+      .maybeSingle()
 
     const uniqueId = `spark_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`
     const { data: memory, error: memErr } = await supabase
@@ -3149,7 +3163,23 @@ async function handleExecutionSparks(req: VercelRequest, res: VercelResponse) {
         // treats the corpus as a record of what the user said UNPROMPTED
         // filters on this: an answer is a real thought, but it is not
         // evidence that they returned to a project on their own.
-        tags: [SPARK_RESPONSE_TAG],
+        //
+        // `is_correction` comes from the one follow-up (spark-followup.ts):
+        // the model named "correction" as ITS reason for asking, meaning
+        // their answer already told us a question's premise was wrong.
+        // SPARK_CORRECTION_TAG singles that note out so loadCorrections
+        // (mull-generator.ts) can hand it back to future draft calls as
+        // plain, undated context -- not a capture, just a reason not to
+        // ask the same wrong thing again.
+        tags: is_correction === true
+          ? [SPARK_RESPONSE_TAG, SPARK_CORRECTION_TAG]
+          : [SPARK_RESPONSE_TAG],
+        // Provenance only -- never fed to the model as "something they
+        // said" (corpus-provenance.ts). Lets the note reference what it's
+        // answering even after processing rewrites title and body.
+        source_reference: sparkRow?.text
+          ? { type: 'spark', id: spark_id, title: sparkRow.text.slice(0, 300) }
+          : null,
         audiopen_created_at: new Date().toISOString(),
         processed: false,
         user_id: userId,
@@ -3197,14 +3227,9 @@ async function handleExecutionSparks(req: VercelRequest, res: VercelResponse) {
     // did rather than swallowing it. The claim is real: the answer goes
     // through the same pipeline as any capture, and the session briefing
     // reads both attached fragments and corpus-wide recall, so it genuinely
-    // shows up the next time this project is planned.
+    // shows up the next time this project is planned. Reuses the spark row
+    // fetched above rather than asking again.
     let projectTitle: string | null = null
-    const { data: sparkRow } = await supabase
-      .from('sparks')
-      .select('project_id')
-      .eq('id', spark_id)
-      .eq('user_id', userId)
-      .maybeSingle()
     if (sparkRow?.project_id) {
       const { data: proj } = await supabase
         .from('projects')
