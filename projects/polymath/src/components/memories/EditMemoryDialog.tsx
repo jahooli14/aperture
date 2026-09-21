@@ -19,6 +19,13 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { RichTextEditor } from '../ui/RichTextEditor'
 import { useBodyEditor } from '../../hooks/useBodyEditor'
 import type { Memory } from '../../types'
+// APP_AUTHORED_TAGS: shown raw in this comma-separated field they'd read as
+// junk, and easy to strip by accident while cleaning up the visible ones.
+// Losing spark-response/spark-correction here would silently undo the
+// provenance exclusion (and the correction feedback loop) those tags exist
+// for, so they're hidden from the field and re-merged on save regardless
+// of what the visible text says.
+import { APP_AUTHORED_TAGS as HIDDEN_TAGS } from '../../lib/internalTags'
 
 function ToolbarBtn({ title, onClick, children }: { title: string; onClick: () => void; children: React.ReactNode }) {
   return (
@@ -78,7 +85,7 @@ export function EditMemoryDialog({ memory, open, onOpenChange, onMemoryUpdated }
     if (memory && open) {
       setFormData({
         title: memory.title,
-        tags: memory.tags?.join(', ') || '',
+        tags: memory.tags?.filter(t => !HIDDEN_TAGS.includes(t)).join(', ') || '',
         memory_type: memory.memory_type || '',
       })
       setBody(memory.body)
@@ -185,10 +192,15 @@ export function EditMemoryDialog({ memory, open, onOpenChange, onMemoryUpdated }
     setLoading(true)
 
     try {
-      const tags = formData.tags
+      // The hidden ones (see HIDDEN_TAGS) never appear in the visible field,
+      // so they can't have been edited -- carried over from the original
+      // row regardless of what's typed here.
+      const hiddenTags = (memory.tags || []).filter(t => HIDDEN_TAGS.includes(t))
+      const visibleTags = formData.tags
         .split(',')
         .map((t) => t.trim())
         .filter((t) => t.length > 0)
+      const tags = [...hiddenTags, ...visibleTags]
 
       // Upload new images
       const newImageUrls = await uploadImages()

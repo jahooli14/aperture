@@ -8,6 +8,7 @@ import { haptic } from '../utils/haptics'
 import { ContextMenu, type ContextMenuItem } from './ui/context-menu'
 import { useConfirmDialog } from './ui/confirm-dialog'
 import { motion } from 'framer-motion'
+import { NEVER_SHOWN_AS_TAG } from '../lib/internalTags'
 
 /**
  * Collapse markdown into a single readable prose string for card previews.
@@ -260,7 +261,11 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
   const displayDate = new Date(memory.audiopen_created_at || memory.created_at).toLocaleDateString('en-US', {
     month: 'short', day: 'numeric', year: 'numeric',
   })
-  const firstTag = memory.tags?.find(t => t !== 'offline-pending')
+  // Every tag the app writes for its own bookkeeping, not just
+  // offline-pending -- a spark answer's own SPARK_RESPONSE_TAG/
+  // SPARK_CORRECTION_TAG used to win this pick and show "spark-response" as
+  // the card's tag pill, since they land first in the merged tags array.
+  const firstTag = memory.tags?.find(t => !NEVER_SHOWN_AS_TAG.includes(t))
 
   return (
     <>
