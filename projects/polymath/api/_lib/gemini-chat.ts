@@ -126,7 +126,7 @@ export async function generateText(
       const usage = result.response.usageMetadata
       if (usage) {
         trackTokenUsage('generateText', usage.promptTokenCount || 0, usage.candidatesTokenCount || 0)
-        console.log(`[Token Stats] Input: ${usage.promptTokenCount}, Output: ${usage.candidatesTokenCount}, Total cost: $${tokenStats.estimated_cost_usd.toFixed(4)}`)
+        console.log(`[Token Stats] Input: ${usage.promptTokenCount}, Output: ${usage.candidatesTokenCount}, Thinking: ${(usage as { thoughtsTokenCount?: number }).thoughtsTokenCount ?? 0}, Total cost: $${tokenStats.estimated_cost_usd.toFixed(4)}`)
       }
 
       return text

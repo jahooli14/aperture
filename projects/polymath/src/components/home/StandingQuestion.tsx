@@ -142,7 +142,10 @@ export function StandingQuestion() {
     setRerolling(true)
     setNote(null)
     try {
-      const data = await api.post('utilities?resource=reroll-spark', { creative }) as {
+      // A reroll is one model call over the whole corpus, which can run well
+      // past the client's default 30s. The server allows 300s; stopping at 30
+      // abandoned bakes that were still working and called it "unreachable".
+      const data = await api.post('utilities?resource=reroll-spark', { creative }, { timeout: 120_000 }) as {
         rerolled?: boolean
         spark?: StandingQuestionSpark
       }
@@ -177,7 +180,9 @@ export function StandingQuestion() {
       setNote(
         status && status >= 500
           ? 'Something broke writing that one.'
-          : "Couldn't reach the server."
+          : status === 408
+            ? 'That took too long. Try again.'
+            : "Couldn't reach the server."
       )
     } finally {
       setRerolling(false)

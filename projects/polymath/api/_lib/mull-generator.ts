@@ -297,7 +297,14 @@ in it, the question is thrown away unread however good it is -- so copy
 them, and make sure some of them survive into the question itself.`
 
   try {
-    const raw = await generateText(prompt, { responseFormat: 'json', model: 'gemini-flash-latest', maxTokens: 8192 })
+    // Timed because "the reroll timed out" has no other way to say which
+    // part was slow — bake-explain prints this line.
+    const draftStart = Date.now()
+    // Capped at medium: at the default depth a reroll could think past the
+    // app's timeout. The owner's call, and the one creative call that is
+    // capped -- if questions get worse, raise it here first.
+    const raw = await generateText(prompt, { responseFormat: 'json', model: 'gemini-flash-latest', maxTokens: 8192, thinkingLevel: 'medium' })
+    trace.push(`draft call: ${Date.now() - draftStart}ms, prompt ${prompt.length} chars`)
     const parsed = JSON.parse(raw)
     const rows = Array.isArray(parsed?.questions) ? parsed.questions : []
     const out: Drafted[] = []
@@ -342,12 +349,14 @@ export async function generateMull(
    *  has to resolve to a real row regardless of tier. */
   creative = false,
 ): Promise<BakedSpark[]> {
+  const corpusStart = Date.now()
   const corpus = await loadCorpus(supabase, userId, trace)
+  const corpusMs = Date.now() - corpusStart
   if (corpus.rows.length === 0) {
     trace.push('corpus: nothing to draw from — no project, note, fragment, list item or article qualified')
     return []
   }
-  trace.push(`corpus: ${corpus.rows.length} rows, ${corpus.text.length} chars`)
+  trace.push(`corpus: ${corpus.rows.length} rows, ${corpus.text.length} chars, loaded in ${corpusMs}ms`)
 
   // `avoidBlock` only ever caught a repeated TEXT or a close paraphrase —
   // the exact same source material asked about with fresh wording slipped
@@ -456,7 +465,9 @@ export async function bakeMull(
   trace: MullTrace = [],
   creative = false,
 ): Promise<BakedSpark[]> {
+  const echoStart = Date.now()
   const context = echo ?? (await loadEchoContext(supabase, userId))
+  if (!echo) trace.push(`echo context: loaded in ${Date.now() - echoStart}ms`)
   const mulls = await generateMull(supabase, userId, context, trace, creative)
   if (mulls.length === 0) trace.push('nothing worth asking — empty slot')
   return mulls
