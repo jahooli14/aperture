@@ -300,7 +300,10 @@ them, and make sure some of them survive into the question itself.`
     // Timed because "the reroll timed out" has no other way to say which
     // part was slow — bake-explain prints this line.
     const draftStart = Date.now()
-    const raw = await generateText(prompt, { responseFormat: 'json', model: 'gemini-flash-latest', maxTokens: 8192 })
+    // Capped at medium: at the default depth a reroll could think past the
+    // app's timeout. The owner's call, and the one creative call that is
+    // capped -- if questions get worse, raise it here first.
+    const raw = await generateText(prompt, { responseFormat: 'json', model: 'gemini-flash-latest', maxTokens: 8192, thinkingLevel: 'medium' })
     trace.push(`draft call: ${Date.now() - draftStart}ms, prompt ${prompt.length} chars`)
     const parsed = JSON.parse(raw)
     const rows = Array.isArray(parsed?.questions) ? parsed.questions : []
