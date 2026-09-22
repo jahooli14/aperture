@@ -1,59 +1,85 @@
 /**
- * The mull channel: one thing to carry around, built from the whole corpus
- * at once.
+ * The mull channel: questions that bring a revelation, built from the
+ * whole corpus.
  *
- * This used to compute a subject, name what it never examined, strip that
- * of its own vocabulary, and search the corpus for a connector in band —
- * three separate model-adjacent steps built to stop the model inventing a
- * link between two things. Measured against the real corpus and the real
- * gates (rejectionReason, in mull.ts), that turned out not to be what kept
- * it honest. The GATES did. A single call handed the whole corpus passed
- * the same grounding checks just as cleanly, covered ten different subjects
- * across ten sequential pulls with zero repeats once told plainly what had
- * already been asked, and never went silent. So the search is gone; the
- * gates are exactly as strict as they were.
+ * The rebuild's one idea: a revelation is something the person already
+ * knows and has never said, and it only shows when things they captured
+ * apart are put side by side. The old channel grounded every question in
+ * ONE row and checked it by regex, so it could only ever read a note back
+ * with a question mark on the end -- live: "What is 'a piece they need to
+ * create'?". Honest, and empty.
  *
- * One call, up to two questions. The second is banked, unexpired, behind
- * the first — it becomes the next standing question and the instant
- * answer to "ask me something else", with no further calls at all.
+ * Three steps now:
  *
- * The one thing the old design got right that this has to replicate by
- * hand: a QUOTE alone doesn't say where it came from. The model reports
- * one; this resolves it back to a real row in the corpus (mull-corpus.ts's
- * findSource) and then gates the drafted QUESTION against that row's FULL
- * text — not the short quote the model handed back. A live test caught the
- * gap this closes: a real quote ("restrain from being overly clever") with
- * an invented "Penrose stairs" dressed around it in the question, which a
- * quote-only check would have missed entirely.
+ *   1. DRAFT. Two models read the whole corpus in parallel (Pro for depth,
+ *      Flash as the fast net if Pro runs long) and each proposes candidates
+ *      built on two or more rows, cited by ref with verbatim quotes.
+ *   2. GATE. mull.ts checks honesty only: every quote really in its row,
+ *      every name/number/date in the question present in the cited rows,
+ *      plain voice, not yes/no. Nothing about taste.
+ *   3. JUDGE. One call reads each survivor against its FULL evidence rows
+ *      and scores revelation, truth, specificity and answerability --
+ *      harshly. Only what the judge ships, ships.
+ *
+ * Up to three per run: one to show, two banked behind it, so "ask me
+ * something else" is instant and free most of the time.
+ *
+ * Everything reports into the trace, which `bake?explain=1` prints: every
+ * candidate with its evidence, every gate rejection by name, every judge
+ * score with its reason.
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { generateText } from './gemini-chat.js'
-import { PLAIN_ENGLISH_RULES } from './plain-english.js'
-import { avoidBlock, echoesRecent, fetchRecentSparkTexts, fetchRecentSparkProjectIds, fetchRecentSparkSubjectIds, motifWords } from './spark-echo.js'
+import { MODELS } from './models.js'
+import type { ThinkingLevel } from './gemini-thinking.js'
+import { parseModelJson } from './schemas.js'
+import { echoesRecent, fetchRecentSparkTexts, fetchRecentSparkProjectIds, fetchRecentSparkSubjectIds } from './spark-echo.js'
 import { SPARK_CORRECTION_TAG } from './corpus-provenance.js'
-import { examplesBlock } from './mull-examples.js'
-import { loadCorpus, findSource, normaliseTitle, type Corpus, type CorpusRow } from './mull-corpus.js'
-import { rejectionReason, draftQuality, longestSharedRun } from './mull.js'
+import { loadCorpus, normaliseTitle, type Corpus } from './mull-corpus.js'
+import { checkCandidate, judgeShips, judgeRank, parseJudgeScores, type Candidate, type Grounded, type JudgeScore } from './mull.js'
+import { draftPrompt, judgePrompt } from './mull-prompts.js'
 
 /**
  * Four days.
  *
- * The whole value of a mull is that it gets to sit — you read it, you
- * don't answer it, and three days later on a walk the answer turns up. At
- * 24 hours it expired overnight, so it could only ever be answered on the
- * spot or lost, which is the opposite of how thinking about a thing in
- * the background works.
+ * The whole value of a mull is that it gets to sit -- you read it, you
+ * don't answer it, and three days later on a walk the answer turns up.
  */
 export const SHELF_LIFE_HOURS = 96
 
-/** One to show, one banked behind it. */
-const QUESTIONS_PER_RUN = 2
+/** One to show, two banked behind it. */
+const QUESTIONS_PER_RUN = 3
+
+/** Per drafter. Two drafters, so the judge sees up to ten. */
+const CANDIDATES_PER_DRAFTER = 5
+
+/**
+ * The function has 90 seconds (vercel.json) and the client waits 120.
+ * Corpus ~3s + draft 55s + judge 20s leaves room for the insert. A drafter
+ * that runs past its deadline is abandoned, not waited for -- the other's
+ * candidates still go to the judge.
+ */
+const DRAFT_TIMEOUT_MS = 55_000
+const JUDGE_TIMEOUT_MS = 20_000
+
+interface Drafter {
+  name: string
+  model: string
+  /** Unset = the model's own default depth. */
+  thinkingLevel?: ThinkingLevel
+}
+
+/** Pro at full depth does the real finding. Flash (capped at medium, which
+ *  measured ~24s on this corpus) is there so a slow Pro never means an
+ *  empty slot. Both feed the same judge. */
+const DRAFTERS: readonly Drafter[] = [
+  { name: 'pro', model: MODELS.PRO },
+  { name: 'flash', model: 'gemini-flash-latest', thinkingLevel: 'medium' },
+]
 
 /** Every `sparks.type` this channel can write. A runtime array rather than
- *  a bare union because `sparks_type_check` has to list the same values, and
- *  the one time it didn't, every insert 500'd for four days while the trace
- *  showed questions being written fine (`bake?explain=1` skips the insert).
+ *  a bare union because `sparks_type_check` has to list the same values.
  *  `spark-type-schema.test.ts` checks this against the migration. */
 export const SPARK_TYPES_WRITTEN = ['mull'] as const
 
@@ -64,45 +90,29 @@ export interface BakedSpark {
   text: string
   project_id: string | null
   expires_at: string
-  /** What the user would DO differently depending on the answer — the
-   *  gates' own evidence, stored so a leak is diagnosable afterwards. */
+  /** What they would do differently once they've answered. Stored so a
+   *  question that shipped can be diagnosed afterwards. */
   stake?: string
-  /** The corpus row this was drafted from — a real project/memory/fragment/
-   *  list_item/article id, and its kind. Used to demote the same source
-   *  next time (fetchRecentSparkSubjectIds), the same schema the old
-   *  computed-subject design used, now naming a literal row instead. */
+  /** The first row the question was built on -- a real project / memory /
+   *  fragment / list_item / article id -- so the next run can avoid it. */
   subject_id?: string
   subject_kind?: string
-  /** Written now, shown later. Held behind the standing question rather
-   *  than replacing it — the channel's cheapest question is the one that
-   *  was already paid for days ago. */
+  /** Written now, shown later. */
   banked?: boolean
 }
 
-/**
- * Why a run produced nothing.
- *
- * Every query and every drop reports itself here rather than reading a
- * rejected query as an empty corpus — the exact bug (`memories.project_id`
- * did not exist, `sparks.type` missing `'mull'`) that has cost this channel
- * a day at least three times. `bake?explain=1` returns this without writing
- * anything or spending a model call it did not already need.
- */
+/** Why a run produced what it did. See the header. */
 export type MullTrace = string[]
 
 export interface EchoContext {
   recentTexts: string[]
   /** Projects a recent question was already about, by id. */
   recentProjectIds?: Set<string>
-  /** Same idea, generalised to any row kind. */
+  /** Rows a recent question was built on, by id. */
   recentSubjectIds?: Set<string>
-  avoid: string
-  /** Questions this person actually answered, and what they said back —
-   *  plus the ones they read and ignored. See loadResonance. */
+  /** Questions this person actually answered, and what they said back. */
   resonance: string
-  /** Premises earlier questions got wrong, now on record. See
-   *  loadCorrections. Plain context, not corpus — never something to quote
-   *  from or draft a new question around. */
+  /** Premises earlier questions got wrong. Context, never corpus. */
   corrections: string
 }
 
@@ -162,9 +172,9 @@ async function loadResonance(supabase: SupabaseClient, userId: string): Promise<
 
   return `
 ${landed.length > 0 ? `THESE ONES WORKED — they stopped and answered out loud:\n${landed.join('\n\n')}\n` : ''}${missed.length > 0 ? `\nTHESE ONES DIDN'T — read, and left to expire without a word:\n${missed.join('\n')}\n` : ''}
-Whatever is different between those two groups is what matters here. Match the
-first group. Not their subject — their shape, their nerve, how much they left
-for the reader to do.
+Whatever made the first group worth answering is what matters. Not their
+subject or their wording -- what they put in front of the person, and how much
+they left for the person to work out.
 `
 }
 
@@ -223,117 +233,76 @@ export async function loadEchoContext(
     loadResonance(supabase, userId),
     loadCorrections(supabase, userId),
   ])
-  return { recentTexts, recentProjectIds, recentSubjectIds, avoid: avoidBlock(recentTexts), resonance, corrections }
+  return { recentTexts, recentProjectIds, recentSubjectIds, resonance, corrections }
 }
 
 function expiresAt(hours: number): string {
   return new Date(Date.now() + hours * 60 * 60 * 1000).toISOString()
 }
 
-interface Drafted {
-  row: CorpusRow
-  text: string
-  quote: string
-  stake: string
-  project: string | null
+const str = (v: unknown) => (typeof v === 'string' ? v.trim() : '')
+
+/** Model output read leniently: absent, null or malformed all read as absent. */
+export function readCandidates(raw: unknown): Candidate[] {
+  const list = (raw as { candidates?: unknown })?.candidates
+  if (!Array.isArray(list)) return []
+  return list.map((c: any): Candidate => ({
+    question: str(c?.question),
+    noticing: str(c?.noticing),
+    stake: str(c?.stake),
+    project: str(c?.project) || null,
+    evidence: Array.isArray(c?.evidence)
+      ? c.evidence.map((e: any) => ({ ref: str(e?.ref), quote: str(e?.quote) })).filter((e: { quote: string }) => e.quote)
+      : [],
+  })).filter(c => c.question)
 }
 
-/** The model mis-reports what it quoted far more often than it invents
- *  (same lesson mull.ts's rejectionReason is built on) — so a quote that
- *  doesn't resolve verbatim isn't given up on before checking whether the
- *  QUESTION ITSELF still carries a real run of some row's own words. */
-function resolveSource(corpus: Corpus, quote: string, text: string): CorpusRow | null {
-  return findSource(corpus, quote) ?? corpus.rows.find(r => longestSharedRun(text, r.text) !== null) ?? null
-}
-
-/**
- * One call, up to two questions, drawn from the whole corpus at once.
- */
-async function draftFromCorpus(
-  corpus: Corpus, echo: EchoContext, howMany: 1 | 2, trace: MullTrace,
-): Promise<Drafted[]> {
-  const prompt = `Here is everything one person has captured in a personal creative app -- their
-projects, notes, things they said in passing, list items, articles they
-vouched for.
-
-${corpus.text}
-${echo.avoid}
-Your job: find ${howMany === 1 ? 'something' : 'up to two things'} in here worth asking them about. Not a summary,
-not encouragement -- a question that makes them think, that they carry
-around for a few days before the answer arrives on a walk.
-
-What makes a good one:
-- It quotes their own words back at them -- a real phrase, copied exactly,
-  not paraphrased, and that phrase has to appear in the QUESTION ITSELF,
-  not only in the sentence that sets it up.
-- It has a real stake: something changes depending on how they answer.
-  "They'd understand themselves better" is not a stake. "They cut chapters
-  nine to twelve" is a stake.
-- It is answerable -- not a riddle, not a quiz. They should feel like they
-  already have the answer and can't quite reach it.
-- It does not explain itself. State the setup in one plain sentence, then
-  ask. Never write "which shows," "this reveals," or "both are about."
-- Start the question with What, How, or Which ONE. Never Does, Is, Are,
-  Will, Should, or Can -- that shape narrows to a yes/no pick between two
-  things you invented, answerable in five seconds and forgotten.
-- Name the project it's about, if it's clearly about one -- the EXACT
-  title as written above. If it isn't really about a specific project,
-  say null. Don't guess a project just to fill the field.
-- If nothing here holds a real question right now, say so -- return
-  "spark": null rather than manufacturing one. An honest "nothing" is
-  correct and better than a forced question.
-${howMany === 2 ? '- The two questions must be about genuinely different subjects, not two angles on the same one.\n' : ''}${echo.resonance}${echo.corrections}
-GOOD -- ten of them, and they are not ten versions of one question. Some end
-in a choice, some in a name, some in a counterfactual, some ask for a fact
-you have and the notes don't. Copy the register, never the skeleton:
-${examplesBlock()}
-${PLAIN_ENGLISH_RULES}
-
-Respond with JSON only:
-{ "questions": [ { "quote": "exact words copied character-for-character from the corpus above", "spark": "setup. question?" | null, "stake": "what changes", "project": "exact project title from above" | null }, ${howMany === 2 ? '... up to 2 entries' : 'one entry'} ] }
-
-The quote is checked against the corpus. If the words you hand back are not
-in it, the question is thrown away unread however good it is -- so copy
-them, and make sure some of them survive into the question itself.`
-
+async function draft(drafter: Drafter, prompt: string, trace: MullTrace): Promise<Candidate[]> {
+  const start = Date.now()
   try {
-    // Timed because "the reroll timed out" has no other way to say which
-    // part was slow — bake-explain prints this line.
-    const draftStart = Date.now()
-    // Capped at medium: at the default depth a reroll could think past the
-    // app's timeout. The owner's call, and the one creative call that is
-    // capped -- if questions get worse, raise it here first.
-    const raw = await generateText(prompt, { responseFormat: 'json', model: 'gemini-flash-latest', maxTokens: 8192, thinkingLevel: 'medium' })
-    trace.push(`draft call: ${Date.now() - draftStart}ms, prompt ${prompt.length} chars`)
-    const parsed = JSON.parse(raw)
-    const rows = Array.isArray(parsed?.questions) ? parsed.questions : []
-    const out: Drafted[] = []
-    let declined = 0
-    let ungrounded = 0
-    for (const q of rows) {
-      const text = typeof q?.spark === 'string' ? q.spark.trim() : ''
-      const quote = typeof q?.quote === 'string' ? q.quote.trim() : ''
-      const stake = typeof q?.stake === 'string' ? q.stake.trim() : ''
-      const project = typeof q?.project === 'string' ? q.project.trim() : null
-      if (!text) { declined++; continue }
-      const source = resolveSource(corpus, quote, text)
-      if (!source) { ungrounded++; continue }
-      out.push({ row: source, text, quote, stake, project })
-    }
-    trace.push(
-      `draft call: ${rows.length} questions came back` +
-      `${Array.isArray(parsed?.questions) ? '' : ' (no `questions` array in the response)'}` +
-      `${declined ? `, ${declined} declined by the model` : ''}` +
-      `${ungrounded ? `, ${ungrounded} whose quote matched nothing in the corpus` : ''}`,
-    )
-    return out
+    const raw = await generateText(prompt, {
+      responseFormat: 'json', model: drafter.model, maxTokens: 16384,
+      thinkingLevel: drafter.thinkingLevel, timeoutMs: DRAFT_TIMEOUT_MS,
+    })
+    const candidates = readCandidates(parseModelJson(raw))
+    trace.push(`draft/${drafter.name}: ${candidates.length} candidates in ${Date.now() - start}ms`)
+    return candidates
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e)
-    trace.push(`!! draft call FAILED: ${message}`)
-    console.warn('[mull] draft failed:', message)
+    trace.push(`!! draft/${drafter.name} FAILED after ${Date.now() - start}ms: ${message}`)
+    console.warn(`[mull] draft/${drafter.name} failed:`, message)
     return []
   }
 }
+
+async function judge(grounded: Grounded[], loose: boolean, trace: MullTrace): Promise<Map<number, JudgeScore> | null> {
+  const start = Date.now()
+  try {
+    const raw = await generateText(judgePrompt(grounded, loose), {
+      responseFormat: 'json', model: MODELS.PRO, maxTokens: 8192,
+      thinkingLevel: 'low', timeoutMs: JUDGE_TIMEOUT_MS,
+    })
+    const scores = parseJudgeScores(parseModelJson(raw), grounded.length)
+    trace.push(`judge: scored ${scores.size} of ${grounded.length} in ${Date.now() - start}ms`)
+    return scores.size > 0 ? scores : null
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e)
+    trace.push(`!! judge FAILED after ${Date.now() - start}ms: ${message}`)
+    console.warn('[mull] judge failed:', message)
+    return null
+  }
+}
+
+/** The project a question is about: the model's own answer, matched
+ *  against real titles (never trusted as an id), else the first project
+ *  its evidence cites or sits under. */
+function projectFor(c: Grounded, corpus: Corpus): string | null {
+  const named = c.project ? corpus.projectIdByTitle.get(normaliseTitle(c.project)) : undefined
+  if (named) return named
+  return c.rows.find(r => r.kind === 'project')?.id ?? c.rows.find(r => r.projectId)?.projectId ?? null
+}
+
+const label = (c: Grounded) => `"${c.question}" <- ${c.rows.map(r => r.ref).join(', ')}`
 
 // ─── The channel ──────────────────────────────────────────────────────
 
@@ -342,119 +311,115 @@ export async function generateMull(
   userId: string,
   echo: EchoContext,
   trace: MullTrace = [],
-  /** "Get more creative" — reroll's fallback tier once the regular pass has
-   *  come back empty. Drops the avoid-list (there's nothing left but
-   *  recently-covered ground once this tier is reached) and relaxes
-   *  rejectionReason's taste gates. Grounding never relaxes — a quote still
-   *  has to resolve to a real row regardless of tier. */
+  /** "Get more creative" -- reroll's fallback once the strict pass came
+   *  back empty. Recent ground is allowed again, the shape gates stand
+   *  down and the judge's bar drops. Honesty (quotes, specifics, truth)
+   *  never relaxes. */
   creative = false,
 ): Promise<BakedSpark[]> {
   const corpusStart = Date.now()
   const corpus = await loadCorpus(supabase, userId, trace)
-  const corpusMs = Date.now() - corpusStart
   if (corpus.rows.length === 0) {
-    trace.push('corpus: nothing to draw from — no project, note, fragment, list item or article qualified')
+    trace.push('corpus: nothing to draw from -- no project, note, fragment, list item or article qualified')
     return []
   }
-  trace.push(`corpus: ${corpus.rows.length} rows, ${corpus.text.length} chars, loaded in ${corpusMs}ms`)
+  trace.push(`corpus: ${corpus.rows.length} rows, ${corpus.text.length} chars, loaded in ${Date.now() - corpusStart}ms`)
 
-  // `avoidBlock` only ever caught a repeated TEXT or a close paraphrase —
-  // the exact same source material asked about with fresh wording slipped
-  // past it, which is the original bug `fetchRecentSparkSubjectIds` was
-  // built to fix (a subject could ship, get dismissed, and rank exactly as
-  // high the next run because nothing recorded that it had been used).
-  // `subject_id` is now a literal row id, so it can be checked directly
-  // against the rows still in this corpus and named by title, rather than
-  // relying on the question text alone to carry the signal.
-  const recentSubjectTitles = !creative
-    ? corpus.rows.filter(r =>
-        echo.recentSubjectIds?.has(r.id) || (r.kind === 'project' && echo.recentProjectIds?.has(r.id)),
-      ).map(r => r.title || r.kind)
-    : []
-  const subjectAvoid = recentSubjectTitles.length > 0
-    ? `\nAlso already covered, whatever the wording — do not draw a question from any of these again: ${[...new Set(recentSubjectTitles)].join(', ')}.\n`
-    : ''
+  const recentIds = new Set<string>(creative ? [] : [
+    ...(echo.recentSubjectIds ?? []),
+    ...corpus.rows.filter(r => r.kind === 'project' && echo.recentProjectIds?.has(r.id)).map(r => r.id),
+  ])
+  const recentTexts = creative ? [] : echo.recentTexts
 
-  const runEcho: EchoContext = creative ? { ...echo, avoid: '' } : { ...echo, avoid: echo.avoid + subjectAvoid }
-  const drafts = await draftFromCorpus(corpus, runEcho, QUESTIONS_PER_RUN, trace)
+  const prompt = draftPrompt({
+    corpusText: corpus.text,
+    howMany: CANDIDATES_PER_DRAFTER,
+    recentQuestions: recentTexts,
+    recentRefs: corpus.rows.filter(r => recentIds.has(r.id)).map(r => r.ref),
+    resonance: echo.resonance,
+    corrections: echo.corrections,
+  })
+  trace.push(`draft prompt: ${prompt.length} chars`)
+
+  const drafted = await Promise.all(DRAFTERS.map(d => draft(d, prompt, trace)))
+
+  // Interleave so neither drafter's list crowds the other out, and drop a
+  // question both wrote.
+  const pool: Candidate[] = []
+  const seenQuestions = new Set<string>()
+  for (let i = 0; i < Math.max(...drafted.map(d => d.length)); i++) {
+    for (const list of drafted) {
+      const c = list[i]
+      const key = c?.question.toLowerCase().replace(/\W+/g, ' ').trim()
+      if (c && key && !seenQuestions.has(key)) { seenQuestions.add(key); pool.push(c) }
+    }
+  }
+
+  const grounded: Grounded[] = []
+  for (const c of pool) {
+    const check = checkCandidate(c, corpus, creative)
+    if (!check.ok) {
+      trace.push(`dropped: ${check.reason} -- "${c.question.slice(0, 90)}"`)
+      continue
+    }
+    const g = check.grounded
+    if (g.rows.some(r => recentIds.has(r.id))) {
+      trace.push(`dropped: built on a row a recent question used -- ${label(g)}`)
+      continue
+    }
+    if (echoesRecent(g.question, recentTexts)) {
+      trace.push(`dropped: echoes a recent question -- ${label(g)}`)
+      continue
+    }
+    grounded.push(g)
+  }
+  if (grounded.length === 0) {
+    trace.push('nothing survived the honesty gates')
+    return []
+  }
+
+  const scores = await judge(grounded, creative, trace)
+  let ranked: Grounded[]
+  if (scores) {
+    grounded.forEach((g, i) => {
+      const s = scores.get(i + 1)
+      trace.push(s
+        ? `judge ${s.verdict.toUpperCase()} r${s.revelation} t${s.truth} s${s.specific} a${s.answerable}: ${s.reason} -- ${label(g)}`
+        : `judge: no score -- ${label(g)}`)
+    })
+    ranked = grounded
+      .map((g, i) => ({ g, s: scores.get(i + 1) }))
+      .filter((x): x is { g: Grounded; s: JudgeScore } => !!x.s && judgeShips(x.s, creative))
+      .sort((a, b) => judgeRank(b.s) - judgeRank(a.s))
+      .map(x => x.g)
+  } else {
+    // No judge, no taste check -- so only the drafter's own first choice,
+    // never a queue of unjudged ones banked for days.
+    trace.push('judge unavailable -- shipping the first honest candidate only')
+    ranked = grounded.slice(0, 1)
+  }
 
   const baked: BakedSpark[] = []
-  const seen = [...echo.recentTexts]
-  const shippedRows = new Set<string>()
-
-  // Gates first, then rank what survived — draftQuality is the difference
-  // between a question that used its source and one that could have been
-  // asked with no corpus at all, and it's measured after grounding, not
-  // instead of it.
-  const survivors: Drafted[] = []
-  for (const draft of drafts) {
-    const reason = rejectionReason({
-      text: draft.text,
-      quote: draft.quote,
-      stake: draft.stake,
-      // The FULL source row, not the short quote — a real quote with
-      // invented dressing around it passes a quote-only check and fails
-      // this one. subjectText just has to be truthy to switch the
-      // unsupportedSpecifics check on; there's no separate "subject" here
-      // the way there was a computed one before, so the row's own title
-      // is enough.
-      connectorText: draft.row.text,
-      subjectText: draft.row.title || draft.row.kind,
-      loose: creative,
-    })
-    if (reason) {
-      trace.push(`dropped: ${reason}`)
-      console.log(`[mull] dropped: ${reason}`)
-      continue
-    }
-    survivors.push(draft)
-  }
-  survivors.sort((a, b) => draftQuality(b.text, b.row.text) - draftQuality(a.text, a.row.text))
-  if (survivors.length > 1) {
-    trace.push(`ranked ${survivors.length} that cleared the gates: ` +
-      survivors.map(d => draftQuality(d.text, d.row.text).toFixed(2)).join(', '))
-  }
-
-  // A zero means the note never reached the question. A lone zero still
-  // ships — the slot is otherwise empty — but not when something better
-  // exists to spend the slot on instead.
-  const best = survivors.length > 0 ? draftQuality(survivors[0].text, survivors[0].row.text) : 0
-  const worthShipping = best > 0 ? survivors.filter(d => draftQuality(d.text, d.row.text) > 0) : survivors
-
-  for (const draft of worthShipping) {
-    if (shippedRows.has(draft.row.id)) continue
-    if (echoesRecent(draft.text, seen)) {
-      const shared = motifWords(draft.text).filter(w => seen.some(prev => motifWords(prev).includes(w)))
-      trace.push(`dropped: echoes a recent question (shared: ${shared.slice(0, 6).join(', ') || 'a repeated motif'})`)
-      continue
-    }
-    seen.push(draft.text)
-    shippedRows.add(draft.row.id)
-
-    // The model names the project itself (or says null); matched against
-    // the real corpus's titles rather than trusted outright, so a
-    // near-miss or a hallucinated title never reaches a foreign-key column.
-    const projectId = draft.project
-      ? corpus.projectIdByTitle.get(normaliseTitle(draft.project)) ?? null
-      : null
-
+  const usedRows = new Set<string>()
+  for (const g of ranked) {
     if (baked.length >= QUESTIONS_PER_RUN) break
+    if (g.rows.some(r => usedRows.has(r.id))) continue
+    g.rows.forEach(r => usedRows.add(r.id))
     baked.push({
       type: 'mull',
-      text: draft.text,
-      project_id: projectId,
-      expires_at: expiresAt(SHELF_LIFE_HOURS),
-      stake: draft.stake,
-      subject_id: draft.row.id,
-      subject_kind: draft.row.kind,
+      text: g.question,
+      project_id: projectFor(g, corpus),
+      // Each banked one lives a shelf-life longer than the one in front of
+      // it, so the queue order is carried by expiry and nothing expires
+      // unseen while it waits.
+      expires_at: expiresAt(SHELF_LIFE_HOURS * (baked.length + 1)),
+      stake: g.stake || undefined,
+      subject_id: g.rows[0].id,
+      subject_kind: g.rows[0].kind,
       banked: baked.length > 0,
     })
   }
-
-  if (baked.length > 1) {
-    baked[1].expires_at = expiresAt(SHELF_LIFE_HOURS * 2)
-  }
-
+  if (baked.length === 0) trace.push('the judge shipped nothing')
   return baked
 }
 
@@ -469,6 +434,6 @@ export async function bakeMull(
   const context = echo ?? (await loadEchoContext(supabase, userId))
   if (!echo) trace.push(`echo context: loaded in ${Date.now() - echoStart}ms`)
   const mulls = await generateMull(supabase, userId, context, trace, creative)
-  if (mulls.length === 0) trace.push('nothing worth asking — empty slot')
+  if (mulls.length === 0) trace.push('nothing worth asking -- empty slot')
   return mulls
 }

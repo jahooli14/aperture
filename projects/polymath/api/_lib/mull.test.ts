@@ -1,221 +1,130 @@
 import { describe, it, expect } from 'vitest'
 import {
-  quoteIsReal,
-  usesQuote,
-  rejectionReason,
-  stakeIsHollow,
-  stakeSplits,
-  offersAChoice,
-  unsupportedSpecifics,
+  quoteIsReal, resolveEvidence, specifics, unsupportedSpecifics, ordinalSupported,
+  offersAChoice, isClosed, checkCandidate, judgeShips, judgeRank, parseJudgeScores,
+  type Candidate, type JudgeScore,
 } from './mull.js'
+import type { Corpus, CorpusRow } from './mull-corpus.js'
+
+const row = (ref: string, text: string, extra: Partial<CorpusRow> = {}): CorpusRow =>
+  ({ kind: 'memory', id: ref.toLowerCase(), captureId: ref.toLowerCase(), ref, projectId: null, title: '', text, meta: '', ...extra })
+
+const ROWS = [
+  row('N1', 'Ten more proper conversations with dad, probably, and we spend them on the greenhouse.', { meta: '14 March 2025' }),
+  row('N2', "It only works if it's one take. The second take is always worse.", { meta: '2 June 2025' }),
+  row('P1', 'A novel where characters get swapped out partway through', { kind: 'project', title: 'The book', meta: 'active, started 10 January 2024' }),
+]
+const CORPUS: Corpus = { rows: ROWS, byRef: new Map(ROWS.map(r => [r.ref, r])), projectIdByTitle: new Map(), text: '' }
+
+const candidate = (question: string, evidence = [
+  { ref: 'N2', quote: "it only works if it's one take" },
+  { ref: 'P1', quote: 'characters get swapped out partway through' },
+]): Candidate => ({ question, evidence, noticing: '', stake: '', project: null })
 
 describe('quoteIsReal', () => {
-  const source = 'Ten more proper conversations with dad — probably — and we spend them on the greenhouse.'
-
-  it('accepts a quote that is really there', () => {
-    expect(quoteIsReal('ten more proper conversations with dad', source)).toBe(true)
+  it('matches across retyped punctuation, case and person', () => {
+    expect(quoteIsReal('It only works if it is one take', ROWS[1].text)).toBe(true)
+    expect(quoteIsReal('ten more proper conversations with your dad', ROWS[0].text)).toBe(true)
   })
-
-  it('survives retyped punctuation', () => {
-    expect(quoteIsReal('conversations with dad – probably', source)).toBe(true)
-  })
-
-  it('rejects an invented quote', () => {
-    expect(quoteIsReal('ten more summers with dad', source)).toBe(false)
-  })
-
-  it('rejects a quote too short to mean anything', () => {
-    expect(quoteIsReal('dad', source)).toBe(false)
+  it('refuses words that are not there, and anything too short to mean anything', () => {
+    expect(quoteIsReal('the third take is always worse', ROWS[1].text)).toBe(false)
+    expect(quoteIsReal('dad', ROWS[0].text)).toBe(false)
   })
 })
 
-describe('usesQuote', () => {
-  it('true when the question actually reaches for the words', () => {
-    expect(usesQuote('You said the greenhouse takes the last conversations. What are the chapters for?', 'the greenhouse')).toBe(true)
+describe('resolveEvidence', () => {
+  it('resolves a real quote to its cited row', () => {
+    expect(resolveEvidence([{ ref: 'N1', quote: 'spend them on the greenhouse' }], CORPUS).rows.map(r => r.ref)).toEqual(['N1'])
   })
-
-  it('false when the note was appended rather than used', () => {
-    expect(usesQuote('What should happen in chapter nine?', 'the greenhouse')).toBe(false)
+  it('finds the right row when the ref is wrong but the quote is real', () => {
+    expect(resolveEvidence([{ ref: 'P1', quote: 'spend them on the greenhouse' }], CORPUS).rows.map(r => r.ref)).toEqual(['N1'])
   })
-})
-
-describe('rejectionReason', () => {
-  const good = {
-    text: 'You wrote that you have ten more proper conversations with dad and you spend them on the greenhouse. The book swaps Lena out in chapter nine and nobody notices. What are those chapters for?',
-    quote: 'ten more proper conversations with dad',
-    stake: 'If the answer is nothing, chapters nine to twelve come out.',
-    connectorText: 'Ten more proper conversations with dad, and we spend them on the greenhouse.',
-  }
-
-  it('passes a grounded, plain, unexplained collision', () => {
-    expect(rejectionReason(good)).toBeNull()
-  })
-
-  it('rejects a statement with no question in it', () => {
-    expect(rejectionReason({ ...good, text: good.text.replace('What are those chapters for?', 'Those chapters matter.') }))
-      .toBe('not a question')
-  })
-
-  it('keeps a sound question whose quote field is sloppy', () => {
-    // The model mis-reports what it used more often than it invents: a word
-    // dropped, a tense changed. What matters is whether the QUESTION
-    // carries the note's own words, and this one does.
-    expect(rejectionReason({ ...good, quote: 'ten more summers with dad' })).toBeNull()
-  })
-
-  it('rejects a question with nothing of the note in it, however it is labelled', () => {
-    expect(rejectionReason({
-      ...good,
-      text: 'What would the book be if you stopped rewriting chapter three?',
-      quote: 'ten more proper conversations with dad',
-      connectorText: 'A completely unrelated note about the bird feeder and the frost.',
-    })).toMatch(/^nothing of the note survives into the question/)
-  })
-
-  it('rejects a draft that explains its own link', () => {
-    const text = 'You have ten more proper conversations with dad. Which mirrors the book swapping Lena out. What are those chapters for?'
-    expect(rejectionReason({ ...good, text })).toMatch(/explains the link/)
-  })
-
-  it('rejects an essay', () => {
-    const text = `${good.quote} ${'padding word '.repeat(70)}?`
-    expect(rejectionReason({ ...good, text })).toBe('too long to carry around')
-  })
-
-  it('rejects a question nothing turns on', () => {
-    expect(rejectionReason({ ...good, stake: 'It would give them a deeper sense of their themes.' }))
-      .toMatch(/nothing changes either way/)
-  })
-
-  it('rejects consultant voice', () => {
-    const text = 'Your ten more proper conversations with dad unlock a transformative question. What are those chapters for?'
-    expect(rejectionReason({ ...good, text })).toMatch(/banned word/)
-  })
-
-  describe('loose (the "get more creative" reroll tier)', () => {
-    it('still rejects a question ungrounded in the note — loose changes taste, not honesty', () => {
-      expect(rejectionReason({
-        ...good,
-        loose: true,
-        text: 'What would the book be if you stopped rewriting chapter three?',
-        connectorText: 'A completely unrelated note about the bird feeder and the frost.',
-      })).toMatch(/^nothing of the note survives into the question/)
-    })
-
-    it('lets an explained link through', () => {
-      const text = 'You have ten more proper conversations with dad. Which mirrors the book swapping Lena out. What are those chapters for?'
-      expect(rejectionReason({ ...good, loose: true, text })).toBeNull()
-    })
-
-    it('lets a decorative binary through', () => {
-      const text = 'Do you have ten more proper conversations with dad, or does the greenhouse take them instead?'
-      expect(rejectionReason({ ...good, loose: true, text, stake: 'Nothing changes either way.' })).toBeNull()
-    })
-
-    it('lets a hollow stake through', () => {
-      expect(rejectionReason({ ...good, loose: true, stake: 'It would give them a deeper sense of their themes.' }))
-        .toBeNull()
-    })
+  it('reports a quote found nowhere, and counts one row once', () => {
+    const r = resolveEvidence([
+      { ref: 'N1', quote: 'spend them on the greenhouse' },
+      { ref: 'N1', quote: 'ten more proper conversations' },
+      { ref: 'N2', quote: 'nobody said this sentence ever' },
+    ], CORPUS)
+    expect(r.rows).toHaveLength(1)
+    expect(r.bad).toHaveLength(1)
   })
 })
 
-describe('stakeIsHollow', () => {
-  it('accepts a stake that names something they would do', () => {
-    expect(stakeIsHollow('If the answer is nothing, chapters nine to twelve come out.')).toBe(false)
-    expect(stakeIsHollow('They stop buying the third synth and finish the one mix.')).toBe(false)
+describe('specifics', () => {
+  it('picks out numbers and mid-sentence names, not sentence openers', () => {
+    expect(specifics('Since March 2023 you rewrote Lena twice. What changed?')).toEqual(['march', '2023', 'lena'])
   })
-
-  it('rejects the ways of saying there is no stake', () => {
-    expect(stakeIsHollow('It deepens their understanding of the work.')).toBe(true)
-    expect(stakeIsHollow('They might reconsider how the book is structured.')).toBe(true)
-    expect(stakeIsHollow('Changes how they think about the project.')).toBe(true)
-    expect(stakeIsHollow('Nothing concrete.')).toBe(true)
+  it('an ordinal is supported by the bare number', () => {
+    expect(ordinalSupported('10th', 'on 10 january')).toBe(true)
+    expect(ordinalSupported('11th', 'on 10 january')).toBe(false)
   })
-
-  it('rejects a stake too short to be one', () => {
-    expect(stakeIsHollow('Clarity.')).toBe(true)
+  it('flags what no evidence row contains', () => {
+    expect(unsupportedSpecifics('In March you said one take. What would Abbey Road say?', ['14 March 2025 one take'])).toEqual(['abbey', 'road'])
   })
 })
 
-describe('ordinals are not inventions', () => {
-  it('accepts "the 10th" when the fact says "10 January"', () => {
-    // Live: two drafts in one run died on "3rd" and "10th" against a fact
-    // reading "On 10 January 2026...". English writes dates as ordinals;
-    // the computed facts write them as cardinals.
-    expect(unsupportedSpecifics(
-      'You put ten things on a list on the 10th. Which one goes first?',
-      ['On 10 January 2026 they put 10 things on a list in one sitting.'],
-    )).toEqual([])
+describe('question shape', () => {
+  it('a yes/no question is closed; an open one is not', () => {
+    expect(isClosed('You said one take. Should the book be one take too?')).toBe(true)
+    expect(isClosed('You said one take. What would the book look like in one take?')).toBe(false)
   })
-
-  it('still catches a day nothing supports', () => {
-    expect(unsupportedSpecifics(
-      'You put ten things on a list on the 23rd. Which one goes first?',
-      ['On 10 January 2026 they put 10 things on a list in one sitting.'],
-    )).toContain('23rd')
-  })
-
-  it('does not treat any number as an ordinal', () => {
-    expect(unsupportedSpecifics('You wrote 198 of them.', ['They wrote 12 of them.'])).toContain('198')
+  it('offersAChoice needs the opener and the alternative', () => {
+    expect(offersAChoice('Does it stay, or does it go?')).toBe(true)
+    expect(offersAChoice('What would it take to finish it, or to admit it is finished?')).toBe(false)
   })
 })
 
-/**
- * The binary gate and the one exemption that lets a real either/or through.
- *
- * Neither had a test, which is how a live question shipped reading "Does
- * Aperture pull the raw thoughts straight from your notes, or wait until
- * they are finished?" — the exact shape `offersAChoice` exists to stop.
- * Both halves are here now: the questions the gate must catch, and the
- * stakes that earn a pass.
- */
-describe('offersAChoice', () => {
-  const binaries = [
-    'Does Pupils trace how he grows up, or does it stay in the nursery?',
-    'Does Tame impala synth sessions run on footwork, or does it stay on the synth?',
-    'Does Aperture pull the raw thoughts straight from your notes, or wait until they are finished?',
-    'Are you making t-shirts for friends, or are you just running the same January project twice?',
-  ]
-  for (const q of binaries) {
-    it(`catches: ${q.slice(0, 44)}…`, () => expect(offersAChoice(q)).toBe(true))
-  }
-
-  // Both halves are required on purpose. A gate firing on either one throws
-  // away good questions, which this channel has done before and pays for in
-  // empty slots.
-  const fine = [
-    'What would it take to finish it, or to admit it is finished?',
-    'Which name goes on the first tag?',
-    'Does the knowledge base keep running while you are away?',
-  ]
-  for (const q of fine) {
-    it(`lets through: ${q.slice(0, 44)}…`, () => expect(offersAChoice(q)).toBe(false))
-  }
+describe('checkCandidate', () => {
+  it('passes an honest two-row open question', () => {
+    const r = checkCandidate(candidate("You said it only works if it's one take. The book swaps its characters out partway through. What would one take look like for the book?"), CORPUS)
+    expect(r.ok).toBe(true)
+  })
+  it('counts dates and titles from the rows it cites as evidence', () => {
+    const r = checkCandidate(candidate("In June you said it only works if it's one take. The book has been going since January 2024. What would one take look like for it?"), CORPUS)
+    expect(r.ok).toBe(true)
+  })
+  it('refuses a date that is only in a row it does NOT cite', () => {
+    const r = checkCandidate(candidate("In March you said it only works if it's one take. What would one take look like for the book?"), CORPUS)
+    expect(r.ok).toBe(false)
+  })
+  it('refuses one row of evidence', () => {
+    const r = checkCandidate(candidate('What would one take look like for the book?', [{ ref: 'N2', quote: "it only works if it's one take" }]), CORPUS)
+    expect(r).toMatchObject({ ok: false, reason: expect.stringMatching(/needs 2 real rows/) })
+  })
+  it('refuses the model explaining its own pattern', () => {
+    const r = checkCandidate(candidate("You said one take, which mirrors how the book swaps characters. What would that look like?"), CORPUS)
+    expect(r).toMatchObject({ ok: false, reason: expect.stringMatching(/explains the pattern/) })
+  })
+  it('loose skips the shape gates but never the honesty ones', () => {
+    expect(checkCandidate(candidate('You said one take. Should the book be one take?'), CORPUS, true).ok).toBe(true)
+    expect(checkCandidate(candidate('You said one take at Abbey Road. Should the book be one take?'), CORPUS, true).ok).toBe(false)
+  })
 })
 
-describe('stakeSplits', () => {
-  // The channel's own teaching examples. Two of the three have a TWO-WORD
-  // second side, which is why a four-words-a-side rule was the wrong test:
-  // English drops the repeated subject in the second branch.
-  const real = [
-    'The shed gets racking or gets emptied.',
-    'The plot gets planted this spring or handed back.',
-    'He writes the last line this week, or admits he wanted the hours.',
-  ]
-  for (const s of real) it(`splits: ${s}`, () => expect(stakeSplits(s)).toBe(true))
+describe('the judge', () => {
+  const s = (o: Partial<JudgeScore>): JudgeScore =>
+    ({ n: 1, revelation: 8, truth: 8, specific: 8, answerable: 8, verdict: 'ship', reason: '', ...o })
 
-  const decorative: [string, string][] = [
-    ['He picks a direction.', 'no second branch at all'],
-    ['He picks a direction, or he picks a direction.', 'the same outcome twice'],
-    ['He decides, or he does not decide.', 'a restatement wearing a suffix'],
-    ['Eight things come off the list.', 'one outcome, no or'],
-    // "either way" used to pass this function unconditionally. It means
-    // "regardless of which branch", which is the opposite of a split, and it
-    // is what a model writes when both branches land in the same place.
-    ['He learns something about the app either way.', 'either way is not a split'],
-    ['He gets a deeper sense of their themes either way.', 'either way is not a split'],
-  ]
-  for (const [s, why] of decorative) {
-    it(`does not split (${why}): ${s}`, () => expect(stakeSplits(s)).toBe(false))
-  }
+  it('ships only on its own verdict, a true pattern and a real revelation', () => {
+    expect(judgeShips(s({}))).toBe(true)
+    expect(judgeShips(s({ verdict: 'kill' }))).toBe(false)
+    expect(judgeShips(s({ truth: 6 }))).toBe(false)
+    expect(judgeShips(s({ revelation: 6 }))).toBe(false)
+  })
+  it('the loose bar drops taste, never truth', () => {
+    expect(judgeShips(s({ verdict: 'kill', revelation: 3 }), true)).toBe(true)
+    expect(judgeShips(s({ truth: 5 }), true)).toBe(false)
+  })
+  it('revelation outweighs everything else', () => {
+    expect(judgeRank(s({ revelation: 10, specific: 6 }))).toBeGreaterThan(judgeRank(s({ revelation: 8, specific: 9 })))
+  })
+  it('refuses malformed scores rather than inventing them', () => {
+    const scores = parseJudgeScores({ scores: [
+      { n: 1, revelation: 8, truth: 8, specific: 8, answerable: 8, verdict: 'ship', reason: 'ok' },
+      { n: 2, revelation: 11, truth: 8, specific: 8, answerable: 8, verdict: 'ship' },
+      { n: 3, revelation: 8, truth: 8, specific: 8, verdict: 'ship' },
+      { n: 9, revelation: 8, truth: 8, specific: 8, answerable: 8, verdict: 'ship' },
+    ] }, 3)
+    expect([...scores.keys()]).toEqual([1])
+  })
 })

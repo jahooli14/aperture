@@ -1,14 +1,13 @@
 /**
  * The whole channel, end to end, against a fake corpus and a stubbed
- * Gemini — one call, up to two questions, no subject search in between.
+ * Gemini: two drafters, the honesty gates, the judge.
  *
  * Everything else tests a pure function. This is the one place that checks
- * the five corpus reads and the draft call actually fit together: that the
- * columns asked for exist in the shape the code reads, that provenance and
- * graveyard filtering apply to every table that needs them (not just the
- * obvious one), and that a quote resolves back to the real row it came
- * from so the gates can check the drafted question against that row's
- * FULL text rather than the short quote alone.
+ * the five corpus reads, the draft calls and the judge fit together: that
+ * the columns asked for exist in the shape the code reads, that provenance
+ * and graveyard filtering apply to every table that needs them, that cited
+ * evidence resolves to real rows, and that nothing ships without the
+ * judge's say-so.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
@@ -23,7 +22,9 @@ const ago = (days: number) => new Date(Date.now() - days * DAY).toISOString()
 
 /** A realistic small corpus: a live project, a graveyarded one, notes,
  *  fragments (one under each project), a list, an article, and one
- *  app-authored (spark-response) note that must never count. */
+ *  app-authored (spark-response) note that must never count. Refs, in
+ *  load order: P1 the book; N1 dad, N2 one take; F1 chapter nine;
+ *  L1 solder; A1 first takes. */
 function corpus() {
   return {
     projects: [
@@ -32,10 +33,11 @@ function corpus() {
     ],
     memories: [
       { user_id: 'u1', id: 'm1', title: 'Dad', body: 'Ten more proper conversations with dad, probably, and we spend them on the greenhouse. It is the only tidy room in a messy house.', created_at: ago(280), tags: [], source_reference: null },
+      { user_id: 'u1', id: 'm2', title: 'Recording', body: 'It only works if it is one take. The second take is always worse.', created_at: ago(90), tags: [], source_reference: null },
       { user_id: 'u1', id: 'm-spark', title: 'Answered', body: 'This whole reply only exists because the app asked me something.', created_at: ago(2), tags: ['spark-response'], source_reference: null },
     ],
     fragments: [
-      { user_id: 'u1', id: 'f1', text: 'chapter nine needs to feel like arriving', created_at: ago(500), memory_id: null, project_id: 'p-book', projects: { title: 'The book', state: 'mull', status: 'active' } },
+      { user_id: 'u1', id: 'f1', text: 'rewrote chapter nine for the fourth time', created_at: ago(40), memory_id: null, project_id: 'p-book', projects: { title: 'The book', state: 'mull', status: 'active' } },
       { user_id: 'u1', id: 'f-dead', text: 'blue really should dominate the left third', created_at: ago(450), memory_id: null, project_id: 'p-dead', projects: { title: 'Abandoned mural', state: 'mull', status: 'abandoned' } },
     ],
     list_items: [
@@ -94,143 +96,163 @@ function fakeSupabase(data: Record<string, Row[]>) {
   return { client: { from: (table: string) => builder(table) } as any, inserted }
 }
 
-const draftJson = (questions: any[]) => JSON.stringify({ questions })
+
+/** A good candidate: two rows, verbatim, nothing invented. */
+const ONE_TAKE = {
+  noticing: 'Recording has to be one take; the book gets rewritten endlessly.',
+  doubt: 'Music and prose may just work differently for them.',
+  evidence: [
+    { ref: 'N2', quote: 'It only works if it is one take' },
+    { ref: 'F1', quote: 'rewrote chapter nine for the fourth time' },
+  ],
+  question: "You said a recording only works if it is one take. You rewrote chapter nine for the fourth time. What would the book look like written in one take?",
+  stake: 'Chapter ten gets drafted in one sitting and left alone.',
+  project: 'The book',
+}
+
+const GREENHOUSE = {
+  noticing: 'The tidy room holds the conversations that matter.',
+  doubt: 'Maybe the greenhouse is just where dad likes to be.',
+  evidence: [
+    { ref: 'N1', quote: 'we spend them on the greenhouse' },
+    { ref: 'L1', quote: 'Learn to solder properly' },
+  ],
+  question: "You spend the conversations with dad on the greenhouse. Learning to solder properly has sat on your list for years. Who would you learn it from?",
+  stake: 'They ask dad to teach them in the greenhouse.',
+  project: null,
+}
+
+const ship = (n: number, extra: Partial<Record<string, unknown>> = {}) =>
+  ({ n, revelation: 8, truth: 9, specific: 8, answerable: 8, verdict: 'ship', reason: 'lands', ...extra })
+
+/** Route the stub by call: the judge prompt is recognisable, and the two
+ *  drafters by model. Flash returns nothing unless told to. */
+function respond(opts: { pro?: unknown[] | Error; flash?: unknown[] | Error; judge?: unknown[] | Error }) {
+  generateText.mockImplementation(async (prompt: string, o: { model?: string }) => {
+    const pick = prompt.includes('You are the last check')
+      ? opts.judge ?? []
+      : o?.model === 'gemini-flash-latest' ? opts.flash ?? [] : opts.pro ?? []
+    if (pick instanceof Error) throw pick
+    return JSON.stringify(prompt.includes('You are the last check') ? { scores: pick } : { candidates: pick })
+  })
+}
+
+const draftPromptSent = () =>
+  generateText.mock.calls.map(c => c[0] as string).find(p => !p.includes('You are the last check')) ?? ''
+
+const noEcho = { recentTexts: [], resonance: '', corrections: '' }
 
 describe('the mull channel, end to end', () => {
   beforeEach(() => { generateText.mockReset() })
 
-  it('turns a real corpus into a grounded question', async () => {
-    generateText.mockResolvedValueOnce(draftJson([{
-      quote: 'ten more proper conversations with dad',
-      spark: 'You wrote that you get ten more proper conversations with dad, probably, and you spend them on the greenhouse. What is the greenhouse standing in for?',
-      stake: 'He picks a different room to have the next one in.',
-      project: null,
-    }]))
+  it('ships a question built on two real rows once the judge says so', async () => {
+    respond({ pro: [ONE_TAKE], judge: [ship(1)] })
     const trace: string[] = []
     const baked = await bakeMull(fakeSupabase(corpus()).client, 'u1', undefined, trace)
     expect(baked).toHaveLength(1)
-    expect(baked[0].text).toContain('ten more proper conversations with dad')
-    expect(baked[0].subject_id).toBe('m1')
+    expect(baked[0].text).toBe(ONE_TAKE.question)
+    expect(baked[0].project_id).toBe('p-book')
+    expect(baked[0].subject_id).toBe('m2')
     expect(baked[0].subject_kind).toBe('memory')
+    expect(baked[0].stake).toBe(ONE_TAKE.stake)
+    expect(trace.join('\n')).toMatch(/judge SHIP r8 t9/)
   })
 
-  it('resolves the model-named project to a real id, not a guess', async () => {
-    generateText.mockResolvedValueOnce(draftJson([{
-      quote: 'characters get swapped out partway through',
-      spark: 'Your book has characters get swapped out partway through. What has to stay the same for the swap to be believable?',
-      stake: 'He writes down the one trait that cannot change.',
-      project: 'The book',
-    }]))
+  it('refuses a question built on one row -- that is a summary, not a pattern', async () => {
+    respond({ pro: [{ ...ONE_TAKE, evidence: [ONE_TAKE.evidence[0]] }], judge: [ship(1)] })
+    const trace: string[] = []
+    expect(await bakeMull(fakeSupabase(corpus()).client, 'u1', undefined, trace)).toEqual([])
+    expect(trace.join('\n')).toMatch(/needs 2 real rows of evidence, has 1/)
+  })
+
+  it('a fragment and the note it was cut from are one capture, not two', async () => {
+    const data = corpus() as any
+    data.fragments.push({ user_id: 'u1', id: 'f-cut', text: 'the second take is always worse', created_at: ago(90), memory_id: 'm2', project_id: 'p-book', projects: { title: 'The book', state: 'mull', status: 'active' } })
+    respond({ pro: [{ ...ONE_TAKE, evidence: [ONE_TAKE.evidence[0], { ref: 'F1', quote: 'the second take is always worse' }] }], judge: [ship(1)] })
+    const trace: string[] = []
+    expect(await bakeMull(fakeSupabase(data).client, 'u1', undefined, trace)).toEqual([])
+    expect(trace.join('\n')).toMatch(/needs 2 real rows of evidence, has 1/)
+  })
+
+  it('refuses a quote that is in no row, and says which', async () => {
+    respond({ pro: [{ ...ONE_TAKE, evidence: [ONE_TAKE.evidence[0], { ref: 'F1', quote: 'a sentence nobody ever wrote down' }] }], judge: [ship(1)] })
+    const trace: string[] = []
+    expect(await bakeMull(fakeSupabase(corpus()).client, 'u1', undefined, trace)).toEqual([])
+    expect(trace.join('\n')).toMatch(/not in the corpus: F1 "a sentence nobody ever wrote down"/)
+  })
+
+  it('forgives a wrong ref when the quote is real somewhere else', async () => {
+    respond({ pro: [{ ...ONE_TAKE, evidence: [{ ref: 'P1', quote: 'It only works if it is one take' }, ONE_TAKE.evidence[1]] }], judge: [ship(1)] })
+    const baked = await bakeMull(fakeSupabase(corpus()).client, 'u1')
+    expect(baked[0]?.subject_id).toBe('m2')
+  })
+
+  it('checks the question against the FULL cited rows -- a real quote with an invented detail fails', async () => {
+    respond({ pro: [{ ...ONE_TAKE, question: 'You said a recording only works if it is one take. You rewrote chapter nine at Abbey Road. What would one take look like?' }], judge: [ship(1)] })
+    const trace: string[] = []
+    expect(await bakeMull(fakeSupabase(corpus()).client, 'u1', undefined, trace)).toEqual([])
+    expect(trace.join('\n')).toMatch(/names something its evidence doesn't: abbey, road/)
+  })
+
+  it('refuses a yes/no question', async () => {
+    respond({ pro: [{ ...ONE_TAKE, question: 'You said a recording only works if it is one take. You rewrote chapter nine for the fourth time. Should the book be one take too?' }], judge: [ship(1)] })
+    expect(await bakeMull(fakeSupabase(corpus()).client, 'u1')).toEqual([])
+  })
+
+  it('ships nothing the judge kills, however honest', async () => {
+    respond({ pro: [ONE_TAKE], judge: [ship(1, { verdict: 'kill', reason: 'they already know this' })] })
+    const trace: string[] = []
+    expect(await bakeMull(fakeSupabase(corpus()).client, 'u1', undefined, trace)).toEqual([])
+    expect(trace.join('\n')).toMatch(/judge KILL .*they already know this/)
+  })
+
+  it('ships nothing the judge calls untrue, even with a ship verdict', async () => {
+    respond({ pro: [ONE_TAKE], judge: [ship(1, { truth: 4 })] })
+    expect(await bakeMull(fakeSupabase(corpus()).client, 'u1')).toEqual([])
+  })
+
+  it('orders by the judge, not by the drafter', async () => {
+    respond({ pro: [GREENHOUSE, ONE_TAKE], judge: [ship(1, { revelation: 7 }), ship(2, { revelation: 10 })] })
+    const baked = await bakeMull(fakeSupabase(corpus()).client, 'u1')
+    expect(baked.map(b => b.text)).toEqual([ONE_TAKE.question, GREENHOUSE.question])
+    expect(baked[1].banked).toBe(true)
+    expect(new Date(baked[1].expires_at).getTime()).toBeGreaterThan(new Date(baked[0].expires_at).getTime())
+  })
+
+  it('without a judge, ships only the first honest candidate', async () => {
+    respond({ pro: [ONE_TAKE, GREENHOUSE], judge: new Error('timeout') })
     const trace: string[] = []
     const baked = await bakeMull(fakeSupabase(corpus()).client, 'u1', undefined, trace)
-    expect(baked[0].project_id).toBe('p-book')
+    expect(baked.map(b => b.text)).toEqual([ONE_TAKE.question])
+    expect(trace.join('\n')).toMatch(/judge FAILED/)
+  })
+
+  it('a failed Pro draft still leaves Flash\'s candidates for the judge', async () => {
+    respond({ pro: new Error('Request timed out'), flash: [ONE_TAKE], judge: [ship(1)] })
+    const trace: string[] = []
+    const baked = await bakeMull(fakeSupabase(corpus()).client, 'u1', undefined, trace)
+    expect(baked).toHaveLength(1)
+    expect(trace.join('\n')).toMatch(/draft\/pro FAILED/)
+  })
+
+  it('pools both drafters and drops a question both wrote', async () => {
+    respond({ pro: [ONE_TAKE], flash: [ONE_TAKE, GREENHOUSE], judge: [ship(1), ship(2)] })
+    const baked = await bakeMull(fakeSupabase(corpus()).client, 'u1')
+    expect(baked).toHaveLength(2)
+    const judgePrompt = generateText.mock.calls.map(c => c[0] as string).find(p => p.includes('You are the last check'))!
+    expect(judgePrompt.match(/QUESTION:/g)).toHaveLength(2)
+  })
+
+  it('two shipped questions never share a row', async () => {
+    const sameRow = { ...GREENHOUSE, evidence: [ONE_TAKE.evidence[0], GREENHOUSE.evidence[1]] }
+    respond({ pro: [ONE_TAKE, sameRow], judge: [ship(1), ship(2)] })
+    expect(await bakeMull(fakeSupabase(corpus()).client, 'u1')).toHaveLength(1)
   })
 
   it('never lets a hallucinated project title reach the column', async () => {
-    generateText.mockResolvedValueOnce(draftJson([{
-      quote: 'ten more proper conversations with dad',
-      spark: 'You wrote that you get ten more proper conversations with dad, and spend them on the greenhouse. What is the greenhouse standing in for?',
-      stake: 'He picks a different room to have the next one in.',
-      project: 'A project that does not exist',
-    }]))
+    respond({ pro: [{ ...GREENHOUSE, project: 'A project that does not exist' }], judge: [ship(1)] })
     const baked = await bakeMull(fakeSupabase(corpus()).client, 'u1')
     expect(baked[0].project_id).toBeNull()
-  })
-
-  it('drops a question whose quote matches nothing in the corpus at all', async () => {
-    generateText.mockResolvedValueOnce(draftJson([{
-      quote: 'a sentence that was never written by anyone in this corpus',
-      spark: 'You wrote that a sentence that was never written by anyone in this corpus. What happens next?',
-      stake: 'Something changes.',
-      project: null,
-    }]))
-    const trace: string[] = []
-    const baked = await bakeMull(fakeSupabase(corpus()).client, 'u1', undefined, trace)
-    expect(baked).toEqual([])
-    expect(trace.join('\n')).toMatch(/whose quote matched nothing in the corpus/)
-  })
-
-  it('checks the drafted question against the FULL source row, not just the short quote', async () => {
-    // The gap a live test found: a real quote with an invented detail
-    // dressed around it in the question passes a quote-only check and
-    // fails this one, because the invented word is nowhere in the row
-    // the quote actually resolved to.
-    generateText.mockResolvedValueOnce(draftJson([{
-      quote: 'ten more proper conversations with dad',
-      spark: 'You wrote that you get ten more proper conversations with dad, structured like a Penrose staircase in your dream journal. What happens after the tenth?',
-      stake: 'He picks a different room to have the next one in.',
-      project: null,
-    }]))
-    const trace: string[] = []
-    const baked = await bakeMull(fakeSupabase(corpus()).client, 'u1', undefined, trace)
-    expect(baked).toEqual([])
-    expect(trace.join('\n')).toMatch(/names something that is in neither the note nor the project/)
-  })
-
-  it('an app-authored note is never the subject of a question', async () => {
-    generateText.mockResolvedValueOnce(draftJson([{
-      quote: 'this whole reply only exists because the app asked me something',
-      spark: 'You wrote that this whole reply only exists because the app asked me something. What would you have said unprompted?',
-      stake: 'He notices the app is leading him.',
-      project: null,
-    }]))
-    const trace: string[] = []
-    const baked = await bakeMull(fakeSupabase(corpus()).client, 'u1', undefined, trace)
-    // The quote is real text, but it lives on an app-authored row, which is
-    // excluded from the corpus entirely -- so it resolves to nothing.
-    expect(baked).toEqual([])
-    expect(trace.join('\n')).toMatch(/whose quote matched nothing in the corpus/)
-  })
-
-  it('a graveyarded project is excluded, and so is a fragment filed under it', async () => {
-    generateText.mockResolvedValueOnce(draftJson([{
-      quote: 'blue really should dominate the left third',
-      spark: 'You wrote that blue really should dominate the left third. Which wall gets it first?',
-      stake: 'He picks the wall and mixes the colour today.',
-      project: 'Abandoned mural',
-    }]))
-    const trace: string[] = []
-    const baked = await bakeMull(fakeSupabase(corpus()).client, 'u1', undefined, trace)
-    expect(baked).toEqual([])
-    expect(trace.join('\n')).toMatch(/whose quote matched nothing in the corpus/)
-  })
-
-  it('an unvoted article never enters the corpus', async () => {
-    generateText.mockResolvedValueOnce(draftJson([{
-      quote: 'nobody has voted on this one yet',
-      spark: 'You saved something where nobody has voted on this one yet. Why has it sat unread?',
-      stake: 'He opens it tonight or deletes it.',
-      project: null,
-    }]))
-    const baked = await bakeMull(fakeSupabase(corpus()).client, 'u1')
-    expect(baked).toEqual([])
-  })
-
-  it('a voted-good article is real corpus material', async () => {
-    generateText.mockResolvedValueOnce(draftJson([{
-      quote: 'once you accept that the whole practice of fixing things afterwards starts to look like a mistake',
-      spark: 'You read that once you accept that the whole practice of fixing things afterwards starts to look like a mistake, editing becomes a kind of lie. Where in your own work have you kept "fixing" something instead of leaving the first take?',
-      stake: 'He picks one thing to leave alone this week.',
-      project: null,
-    }]))
-    const baked = await bakeMull(fakeSupabase(corpus()).client, 'u1')
-    expect(baked).toHaveLength(1)
-    expect(baked[0].subject_kind).toBe('article')
-  })
-
-  it('the model declining outright produces silence, not a manufactured question', async () => {
-    generateText.mockResolvedValueOnce(draftJson([{ quote: '', spark: null, stake: '', project: null }]))
-    const trace: string[] = []
-    const baked = await bakeMull(fakeSupabase(corpus()).client, 'u1', undefined, trace)
-    expect(baked).toEqual([])
-    expect(trace.join('\n')).toMatch(/1 declined by the model/)
-  })
-
-  it('a failed draft call says so in the trace instead of reading as an empty corpus', async () => {
-    generateText.mockResolvedValueOnce('not json at all')
-    const trace: string[] = []
-    await bakeMull(fakeSupabase(corpus()).client, 'u1', undefined, trace)
-    expect(trace.join('\n')).toMatch(/!! draft call FAILED/)
   })
 
   it('an empty corpus is reported, not silently read as a blank prompt', async () => {
@@ -243,161 +265,77 @@ describe('the mull channel, end to end', () => {
     expect(trace.join('\n')).toMatch(/nothing to draw from/)
     expect(generateText).not.toHaveBeenCalled()
   })
+})
 
-  it('banks the second question with a longer life than the first', async () => {
-    generateText.mockResolvedValueOnce(draftJson([
-      {
-        quote: 'ten more proper conversations with dad',
-        spark: 'You wrote that you get ten more proper conversations with dad, and spend them on the greenhouse. What is the greenhouse standing in for?',
-        stake: 'He picks a different room to have the next one in.',
-        project: null,
-      },
-      {
-        quote: 'characters get swapped out partway through',
-        spark: 'Your book has characters get swapped out partway through. What has to stay the same for the swap to be believable?',
-        stake: 'He writes down the one trait that cannot change.',
-        project: 'The book',
-      },
-    ]))
-    const baked = await bakeMull(fakeSupabase(corpus()).client, 'u1')
-    expect(baked).toHaveLength(2)
-    expect(baked[0].banked).toBeFalsy()
-    expect(baked[1].banked).toBe(true)
-    expect(new Date(baked[1].expires_at).getTime()).toBeGreaterThan(new Date(baked[0].expires_at).getTime())
+describe('what the corpus lets in', () => {
+  beforeEach(() => { generateText.mockReset() })
+
+  it('keeps out app-authored notes, graveyarded projects and their fragments, and unvoted articles', async () => {
+    respond({ pro: [] })
+    await bakeMull(fakeSupabase(corpus()).client, 'u1')
+    const prompt = draftPromptSent()
+    expect(prompt).not.toContain('only exists because the app asked me')
+    expect(prompt).not.toContain('Abandoned mural')
+    expect(prompt).not.toContain('blue really should dominate')
+    expect(prompt).not.toContain('Nobody has voted on this one')
   })
 
-  it('two questions from the same run cannot share a subject', async () => {
-    generateText.mockResolvedValueOnce(draftJson([
-      {
-        quote: 'ten more proper conversations with dad',
-        spark: 'You wrote that you get ten more proper conversations with dad, and spend them on the greenhouse. What is the greenhouse standing in for?',
-        stake: 'He picks a different room to have the next one in.',
-        project: null,
-      },
-      {
-        quote: 'ten more proper conversations with dad',
-        spark: 'You wrote that you get ten more proper conversations with dad, and it is the tidiest room in the house. What does tidy mean to you there?',
-        stake: 'He redefines what counts as tidy for himself.',
-        project: null,
-      },
-    ]))
-    const baked = await bakeMull(fakeSupabase(corpus()).client, 'u1')
-    expect(baked).toHaveLength(1)
+  it('lets in a voted-good article, dated, with refs the model can cite', async () => {
+    respond({ pro: [] })
+    await bakeMull(fakeSupabase(corpus()).client, 'u1')
+    const prompt = draftPromptSent()
+    expect(prompt).toContain('[A1] "On first takes"')
+    expect(prompt).toMatch(/\[N2\] "Recording" \(\d{1,2} \w+ \d{4}\): It only works/)
+  })
+
+  it('never lets a correction note become quotable evidence', async () => {
+    const data = corpus() as any
+    data.memories.push({
+      user_id: 'u1', id: 'm-correction', title: 'Spark response',
+      body: 'No, I never gave up on the mural -- it just moved to the someday list.',
+      created_at: ago(1), tags: ['spark-response', 'spark-correction'],
+      source_reference: { type: 'spark', id: 's-old', title: 'You gave up on the mural in June -- what happened?' },
+    })
+    respond({ pro: [{ ...GREENHOUSE, evidence: [GREENHOUSE.evidence[0], { ref: 'N3', quote: 'it just moved to the someday list' }] }], judge: [ship(1)] })
+    const echo = await loadEchoContext(fakeSupabase(data).client, 'u1')
+    expect(echo.corrections).toContain('it just moved to the someday list')
+    const baked = await generateMull(fakeSupabase(data).client, 'u1', echo, [])
+    expect(draftPromptSent()).toContain("THEY'VE CORRECTED US BEFORE")
+    expect(baked).toEqual([])
+  })
+})
+
+describe('recent questions', () => {
+  beforeEach(() => { generateText.mockReset() })
+
+  it('names the rows recent questions used, and drops a candidate built on one', async () => {
+    respond({ pro: [ONE_TAKE], judge: [ship(1)] })
+    const trace: string[] = []
+    const baked = await generateMull(fakeSupabase(corpus()).client, 'u1', { ...noEcho, recentSubjectIds: new Set(['m2']) }, trace)
+    expect(draftPromptSent()).toMatch(/Recent questions were built on N2/)
+    expect(baked).toEqual([])
+    expect(trace.join('\n')).toMatch(/built on a row a recent question used/)
   })
 })
 
 describe('creative mode ("get more creative")', () => {
   beforeEach(() => { generateText.mockReset() })
 
-  it('drops the avoid-list so recently-covered material is eligible again', async () => {
-    generateText.mockResolvedValueOnce(draftJson([{
-      quote: 'ten more proper conversations with dad',
-      spark: 'You wrote that you get ten more proper conversations with dad, and spend them on the greenhouse. What is the greenhouse standing in for?',
-      stake: 'He picks a different room to have the next one in.',
-      project: null,
-    }]))
-    const data = corpus() as any
-    data.sparks = [{
-      user_id: 'u1', type: 'mull', text: 'An old question about the same note', dismissed_at: null,
-      created_at: ago(1), subject_id: 'm1', project_id: null,
-    }]
-    const echo = await loadEchoContext(fakeSupabase(data).client, 'u1')
-    const baked = await generateMull(fakeSupabase(data).client, 'u1', echo, [], true)
+  it('lets recent ground and a yes/no shape through, on the loose judge bar', async () => {
+    const closed = { ...ONE_TAKE, question: 'You said a recording only works if it is one take. You rewrote chapter nine for the fourth time. Should the book be one take too?' }
+    respond({ pro: [closed], judge: [ship(1, { verdict: 'kill', revelation: 4, truth: 7, answerable: 6 })] })
+    const baked = await generateMull(fakeSupabase(corpus()).client, 'u1', { ...noEcho, recentSubjectIds: new Set(['m2']) }, [], true)
     expect(baked).toHaveLength(1)
-    const prompt = generateText.mock.calls[0][0] as string
-    expect(prompt).not.toMatch(/already covered/)
+    expect(draftPromptSent()).not.toMatch(/Recent questions were built on/)
   })
 
-  it('lets a decorative binary through that the strict pass would reject', async () => {
-    generateText.mockResolvedValueOnce(draftJson([{
-      quote: 'ten more proper conversations with dad',
-      spark: 'Do you have ten more proper conversations with dad, or does the greenhouse take them instead?',
-      stake: 'Nothing changes either way.',
-      project: null,
-    }]))
-    const baked = await generateMull(fakeSupabase(corpus()).client, 'u1', {
-      recentTexts: [], avoid: '', resonance: '', corrections: '',
-    }, [], true)
-    expect(baked).toHaveLength(1)
+  it('still refuses invented evidence -- honesty never relaxes', async () => {
+    respond({ pro: [{ ...ONE_TAKE, evidence: [ONE_TAKE.evidence[0], { ref: 'F1', quote: 'a sentence nobody ever wrote down' }] }], judge: [ship(1)] })
+    expect(await generateMull(fakeSupabase(corpus()).client, 'u1', noEcho, [], true)).toEqual([])
   })
 
-  it('still refuses a quote that matches nothing in the corpus -- grounding never relaxes', async () => {
-    generateText.mockResolvedValueOnce(draftJson([{
-      quote: 'a sentence nobody in this corpus ever wrote',
-      spark: 'You wrote that a sentence nobody in this corpus ever wrote. What happens next?',
-      stake: 'Something changes.',
-      project: null,
-    }]))
-    const baked = await generateMull(fakeSupabase(corpus()).client, 'u1', {
-      recentTexts: [], avoid: '', resonance: '', corrections: '',
-    }, [], true)
-    expect(baked).toEqual([])
-  })
-})
-
-describe('recentSubjectIds and recentProjectIds are named in the avoid-list by title', () => {
-  beforeEach(() => { generateText.mockReset() })
-
-  it('names a subject still in the corpus so the model can avoid it by identity, not just wording', async () => {
-    generateText.mockResolvedValueOnce(draftJson([{
-      quote: 'characters get swapped out partway through',
-      spark: 'Your book has characters get swapped out partway through. What has to stay the same for the swap to be believable?',
-      stake: 'He writes down the one trait that cannot change.',
-      project: 'The book',
-    }]))
-    const echo = { recentTexts: [], recentSubjectIds: new Set(['m1']), avoid: '', resonance: '', corrections: '' }
-    await generateMull(fakeSupabase(corpus()).client, 'u1', echo, [])
-    const prompt = generateText.mock.calls[0][0] as string
-    expect(prompt).toMatch(/already covered, whatever the wording.*Dad/)
-  })
-})
-
-describe('a correction from the one follow-up reaches the next draft call', () => {
-  beforeEach(() => { generateText.mockReset() })
-
-  it('hands a spark-correction note to the prompt as plain context, not as corpus', async () => {
-    const data = corpus() as any
-    data.memories.push({
-      user_id: 'u1', id: 'm-correction', title: 'Spark response',
-      body: 'No, I never gave up on the mural -- it just moved to the someday list.',
-      created_at: ago(1), tags: ['spark-response', 'spark-correction'],
-      source_reference: { type: 'spark', id: 's-old', title: 'You gave up on the mural in June -- what happened?' },
-    })
-    generateText.mockResolvedValueOnce(draftJson([{
-      quote: 'ten more proper conversations with dad',
-      spark: 'You wrote that you get ten more proper conversations with dad. What is the greenhouse standing in for?',
-      stake: 'He picks a different room to have the next one in.',
-      project: null,
-    }]))
-    const echo = await loadEchoContext(fakeSupabase(data).client, 'u1')
-    expect(echo.corrections).toContain('You gave up on the mural in June')
-    expect(echo.corrections).toContain('it just moved to the someday list')
-
-    await generateMull(fakeSupabase(data).client, 'u1', echo, [])
-    const prompt = generateText.mock.calls[0][0] as string
-    expect(prompt).toContain('THEY\'VE CORRECTED US BEFORE')
-    expect(prompt).toContain('it just moved to the someday list')
-  })
-
-  it('never lets a correction note itself become quotable corpus material', async () => {
-    const data = corpus() as any
-    data.memories.push({
-      user_id: 'u1', id: 'm-correction', title: 'Spark response',
-      body: 'No, I never gave up on the mural -- it just moved to the someday list.',
-      created_at: ago(1), tags: ['spark-response', 'spark-correction'],
-      source_reference: { type: 'spark', id: 's-old', title: 'You gave up on the mural in June -- what happened?' },
-    })
-    generateText.mockResolvedValueOnce(draftJson([{
-      quote: 'it just moved to the someday list',
-      spark: 'You said it just moved to the someday list. What would bring it back onto the main one?',
-      stake: 'It gets picked up again.',
-      project: null,
-    }]))
-    const trace: string[] = []
-    const baked = await bakeMull(fakeSupabase(data).client, 'u1', undefined, trace)
-    // The quote is real text (it's IN the corrections context handed to the
-    // model), but it isn't a row in corpus.rows -- app-authored notes never
-    // are (corpus-provenance.ts) -- so it can't resolve as a grounded source.
-    expect(baked).toEqual([])
+  it('still refuses what the judge calls untrue', async () => {
+    respond({ pro: [ONE_TAKE], judge: [ship(1, { truth: 3 })] })
+    expect(await generateMull(fakeSupabase(corpus()).client, 'u1', noEcho, [], true)).toEqual([])
   })
 })

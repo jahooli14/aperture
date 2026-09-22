@@ -2658,8 +2658,8 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
 /**
  * Bake a question.
  *
- * One mechanism (mull-generator.ts): the whole corpus, handed to one
- * prompt, gated exactly as strictly as it always was (mull.ts). When that
+ * One mechanism (mull-generator.ts): two drafters read the whole corpus,
+ * mull.ts gates for honesty, a judge call ships only what lands. When that
  * finds nothing, "get more creative" (bakeMull's `creative` flag) is the
  * one thing left to try before the honest answer is no question today.
  */
@@ -2708,8 +2708,8 @@ async function retireAndRebake(
     await supabase.from('sparks').update({ expires_at: nowIso }).eq('id', retiring.id).eq('user_id', userId)
   }
 
-  // The bank first, always. A bake writes up to two questions in one run
-  // and holds the second one back, so "ask me something else" usually
+  // The bank first, always. A bake writes up to three questions in one run
+  // and holds the others back, so "ask me something else" usually
   // costs nothing at all — no model call, and it comes back instantly
   // instead of after ten seconds of thinking. Its shelf life is stamped
   // from now, since until this moment it had never been seen.
@@ -2879,7 +2879,7 @@ async function handleExecutionSparks(req: VercelRequest, res: VercelResponse) {
       return res.status(200).json({ baked: false, trace })
     }
 
-    // A run writes up to two questions for the price of one. Queue order
+    // A run writes up to three questions for the price of one. Queue order
     // is carried by expires_at, which the generator already staggers (the
     // banked one gets a longer life so it can't expire unseen while it
     // waits) -- so `today` serves the soonest-to-expire and the banked one

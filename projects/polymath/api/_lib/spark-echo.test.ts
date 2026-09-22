@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { motifWords, repeatedMotifs, echoesRecent, avoidBlock } from './spark-echo.js'
+import { motifWords, repeatedMotifs, echoesRecent } from './spark-echo.js'
 
 describe('motifWords', () => {
   it('keeps the words that name the subject', () => {
@@ -65,19 +65,6 @@ describe('echoesRecent', () => {
 
   it('does not flag a spark made only of filler', () => {
     expect(echoesRecent('That is the thing about this project.', history)).toBe(false)
-  })
-})
-
-describe('avoidBlock', () => {
-  it('is empty when nothing has been asked yet', () => {
-    expect(avoidBlock([])).toBe('')
-  })
-
-  it('quotes the recent questions verbatim so a synonym swap is visible', () => {
-    const block = avoidBlock(['The water goes on forever.', 'Water again, in the second chapter.'])
-    expect(block).toContain('The water goes on forever.')
-    expect(block).toContain('water')
-    expect(block).toContain('spark": null')
   })
 })
 

@@ -83,6 +83,8 @@ export async function generateText(
     // change). Pass 'minimal'/'low' for mechanical calls to save output tokens,
     // or set GEMINI_THINKING_LEVEL to dial every wired call globally.
     thinkingLevel?: ThinkingLevel
+    /** Abort the request after this long. Unset waits as long as the SDK does. */
+    timeoutMs?: number
   } = {}
 ): Promise<string> {
   if (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY === 'dummy-key-for-initialization') {
@@ -110,7 +112,7 @@ export async function generateText(
         }),
         ...thinkingFragment(options.thinkingLevel)
       }
-    })
+    }, options.timeoutMs ? { timeout: options.timeoutMs } : undefined)
 
     if (!result.response) {
       throw new Error('Gemini API returned no response object')
