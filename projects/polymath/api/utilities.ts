@@ -2747,7 +2747,11 @@ async function retireAndRebake(
   // Attaching a few before giving up turns "ask me something else" into
   // the thing that repairs the layer it depends on, rather than a button
   // that reports the same emptiness however many times it's tapped.
-  if (baked.length === 0) {
+  // Cron only. On the app's button this ran a second full bake after the
+  // first came back empty -- twice the wait on the path already most likely
+  // to be slow, which is how a reroll blew the client's timeout. The daily
+  // job attaches fragments anyway; the button just says "nothing" now.
+  if (baked.length === 0 && force) {
     const { backfillFragments } = await import('./_lib/fragments.js')
     const attached = await backfillFragments(supabase, userId, 8)
     if (attached > 0) baked = await bakeMull(supabase, userId, undefined, [], creative)
