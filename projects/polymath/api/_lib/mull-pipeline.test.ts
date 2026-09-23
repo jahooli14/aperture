@@ -1,6 +1,6 @@
 /**
  * The whole channel, end to end, against a fake corpus and a stubbed
- * Gemini: two drafters, the honesty gates, the judge.
+ * Gemini: the draft, the honesty gates, the judge.
  *
  * Everything else tests a pure function. This is the one place that checks
  * the five corpus reads, the draft calls and the judge fit together: that
@@ -125,13 +125,10 @@ const GREENHOUSE = {
 const ship = (n: number, extra: Partial<Record<string, unknown>> = {}) =>
   ({ n, revelation: 8, truth: 9, specific: 8, answerable: 8, verdict: 'ship', reason: 'lands', ...extra })
 
-/** Route the stub by call: the judge prompt is recognisable, and the two
- *  drafters by model. Flash returns nothing unless told to. */
-function respond(opts: { pro?: unknown[] | Error; flash?: unknown[] | Error; judge?: unknown[] | Error }) {
-  generateText.mockImplementation(async (prompt: string, o: { model?: string }) => {
-    const pick = prompt.includes('You are the last check')
-      ? opts.judge ?? []
-      : o?.model === 'gemini-flash-latest' ? opts.flash ?? [] : opts.pro ?? []
+/** Route the stub by call: the judge prompt is recognisable. */
+function respond(opts: { draft?: unknown[] | Error; judge?: unknown[] | Error }) {
+  generateText.mockImplementation(async (prompt: string) => {
+    const pick = prompt.includes('You are the last check') ? opts.judge ?? [] : opts.draft ?? []
     if (pick instanceof Error) throw pick
     return JSON.stringify(prompt.includes('You are the last check') ? { scores: pick } : { candidates: pick })
   })
@@ -146,7 +143,7 @@ describe('the mull channel, end to end', () => {
   beforeEach(() => { generateText.mockReset() })
 
   it('ships a question built on two real rows once the judge says so', async () => {
-    respond({ pro: [ONE_TAKE], judge: [ship(1)] })
+    respond({ draft: [ONE_TAKE], judge: [ship(1)] })
     const trace: string[] = []
     const baked = await bakeMull(fakeSupabase(corpus()).client, 'u1', undefined, trace)
     expect(baked).toHaveLength(1)
@@ -159,7 +156,7 @@ describe('the mull channel, end to end', () => {
   })
 
   it('refuses a question built on one row -- that is a summary, not a pattern', async () => {
-    respond({ pro: [{ ...ONE_TAKE, evidence: [ONE_TAKE.evidence[0]] }], judge: [ship(1)] })
+    respond({ draft: [{ ...ONE_TAKE, evidence: [ONE_TAKE.evidence[0]] }], judge: [ship(1)] })
     const trace: string[] = []
     expect(await bakeMull(fakeSupabase(corpus()).client, 'u1', undefined, trace)).toEqual([])
     expect(trace.join('\n')).toMatch(/needs 2 real rows of evidence, has 1/)
@@ -168,51 +165,51 @@ describe('the mull channel, end to end', () => {
   it('a fragment and the note it was cut from are one capture, not two', async () => {
     const data = corpus() as any
     data.fragments.push({ user_id: 'u1', id: 'f-cut', text: 'the second take is always worse', created_at: ago(90), memory_id: 'm2', project_id: 'p-book', projects: { title: 'The book', state: 'mull', status: 'active' } })
-    respond({ pro: [{ ...ONE_TAKE, evidence: [ONE_TAKE.evidence[0], { ref: 'F1', quote: 'the second take is always worse' }] }], judge: [ship(1)] })
+    respond({ draft: [{ ...ONE_TAKE, evidence: [ONE_TAKE.evidence[0], { ref: 'F1', quote: 'the second take is always worse' }] }], judge: [ship(1)] })
     const trace: string[] = []
     expect(await bakeMull(fakeSupabase(data).client, 'u1', undefined, trace)).toEqual([])
     expect(trace.join('\n')).toMatch(/needs 2 real rows of evidence, has 1/)
   })
 
   it('refuses a quote that is in no row, and says which', async () => {
-    respond({ pro: [{ ...ONE_TAKE, evidence: [ONE_TAKE.evidence[0], { ref: 'F1', quote: 'a sentence nobody ever wrote down' }] }], judge: [ship(1)] })
+    respond({ draft: [{ ...ONE_TAKE, evidence: [ONE_TAKE.evidence[0], { ref: 'F1', quote: 'a sentence nobody ever wrote down' }] }], judge: [ship(1)] })
     const trace: string[] = []
     expect(await bakeMull(fakeSupabase(corpus()).client, 'u1', undefined, trace)).toEqual([])
     expect(trace.join('\n')).toMatch(/not in the corpus: F1 "a sentence nobody ever wrote down"/)
   })
 
   it('forgives a wrong ref when the quote is real somewhere else', async () => {
-    respond({ pro: [{ ...ONE_TAKE, evidence: [{ ref: 'P1', quote: 'It only works if it is one take' }, ONE_TAKE.evidence[1]] }], judge: [ship(1)] })
+    respond({ draft: [{ ...ONE_TAKE, evidence: [{ ref: 'P1', quote: 'It only works if it is one take' }, ONE_TAKE.evidence[1]] }], judge: [ship(1)] })
     const baked = await bakeMull(fakeSupabase(corpus()).client, 'u1')
     expect(baked[0]?.subject_id).toBe('m2')
   })
 
   it('checks the question against the FULL cited rows -- a real quote with an invented detail fails', async () => {
-    respond({ pro: [{ ...ONE_TAKE, question: 'You said a recording only works if it is one take. You rewrote chapter nine at Abbey Road. What would one take look like?' }], judge: [ship(1)] })
+    respond({ draft: [{ ...ONE_TAKE, question: 'You said a recording only works if it is one take. You rewrote chapter nine at Abbey Road. What would one take look like?' }], judge: [ship(1)] })
     const trace: string[] = []
     expect(await bakeMull(fakeSupabase(corpus()).client, 'u1', undefined, trace)).toEqual([])
     expect(trace.join('\n')).toMatch(/names something its evidence doesn't: abbey, road/)
   })
 
   it('refuses a yes/no question', async () => {
-    respond({ pro: [{ ...ONE_TAKE, question: 'You said a recording only works if it is one take. You rewrote chapter nine for the fourth time. Should the book be one take too?' }], judge: [ship(1)] })
+    respond({ draft: [{ ...ONE_TAKE, question: 'You said a recording only works if it is one take. You rewrote chapter nine for the fourth time. Should the book be one take too?' }], judge: [ship(1)] })
     expect(await bakeMull(fakeSupabase(corpus()).client, 'u1')).toEqual([])
   })
 
   it('ships nothing the judge kills, however honest', async () => {
-    respond({ pro: [ONE_TAKE], judge: [ship(1, { verdict: 'kill', reason: 'they already know this' })] })
+    respond({ draft: [ONE_TAKE], judge: [ship(1, { verdict: 'kill', reason: 'they already know this' })] })
     const trace: string[] = []
     expect(await bakeMull(fakeSupabase(corpus()).client, 'u1', undefined, trace)).toEqual([])
     expect(trace.join('\n')).toMatch(/judge KILL .*they already know this/)
   })
 
   it('ships nothing the judge calls untrue, even with a ship verdict', async () => {
-    respond({ pro: [ONE_TAKE], judge: [ship(1, { truth: 4 })] })
+    respond({ draft: [ONE_TAKE], judge: [ship(1, { truth: 4 })] })
     expect(await bakeMull(fakeSupabase(corpus()).client, 'u1')).toEqual([])
   })
 
   it('orders by the judge, not by the drafter', async () => {
-    respond({ pro: [GREENHOUSE, ONE_TAKE], judge: [ship(1, { revelation: 7 }), ship(2, { revelation: 10 })] })
+    respond({ draft: [GREENHOUSE, ONE_TAKE], judge: [ship(1, { revelation: 7 }), ship(2, { revelation: 10 })] })
     const baked = await bakeMull(fakeSupabase(corpus()).client, 'u1')
     expect(baked.map(b => b.text)).toEqual([ONE_TAKE.question, GREENHOUSE.question])
     expect(baked[1].banked).toBe(true)
@@ -220,37 +217,42 @@ describe('the mull channel, end to end', () => {
   })
 
   it('without a judge, ships only the first honest candidate', async () => {
-    respond({ pro: [ONE_TAKE, GREENHOUSE], judge: new Error('timeout') })
+    respond({ draft: [ONE_TAKE, GREENHOUSE], judge: new Error('timeout') })
     const trace: string[] = []
     const baked = await bakeMull(fakeSupabase(corpus()).client, 'u1', undefined, trace)
     expect(baked.map(b => b.text)).toEqual([ONE_TAKE.question])
     expect(trace.join('\n')).toMatch(/judge FAILED/)
   })
 
-  it('a failed Pro draft still leaves Flash\'s candidates for the judge', async () => {
-    respond({ pro: new Error('Request timed out'), flash: [ONE_TAKE], judge: [ship(1)] })
+  it('a failed draft call says so in the trace', async () => {
+    respond({ draft: new Error('Request timed out') })
     const trace: string[] = []
-    const baked = await bakeMull(fakeSupabase(corpus()).client, 'u1', undefined, trace)
-    expect(baked).toHaveLength(1)
-    expect(trace.join('\n')).toMatch(/draft\/pro FAILED/)
+    expect(await bakeMull(fakeSupabase(corpus()).client, 'u1', undefined, trace)).toEqual([])
+    expect(trace.join('\n')).toMatch(/draft FAILED/)
   })
 
-  it('pools both drafters and drops a question both wrote', async () => {
-    respond({ pro: [ONE_TAKE], flash: [ONE_TAKE, GREENHOUSE], judge: [ship(1), ship(2)] })
+  it('drops a question written twice in one response', async () => {
+    respond({ draft: [ONE_TAKE, ONE_TAKE, GREENHOUSE], judge: [ship(1), ship(2)] })
     const baked = await bakeMull(fakeSupabase(corpus()).client, 'u1')
     expect(baked).toHaveLength(2)
     const judgePrompt = generateText.mock.calls.map(c => c[0] as string).find(p => p.includes('You are the last check'))!
     expect(judgePrompt.match(/QUESTION:/g)).toHaveLength(2)
   })
 
+  it('never uses Pro', async () => {
+    respond({ draft: [ONE_TAKE], judge: [ship(1)] })
+    await bakeMull(fakeSupabase(corpus()).client, 'u1')
+    for (const call of generateText.mock.calls) expect(call[1].model).toBe('gemini-flash-latest')
+  })
+
   it('two shipped questions never share a row', async () => {
     const sameRow = { ...GREENHOUSE, evidence: [ONE_TAKE.evidence[0], GREENHOUSE.evidence[1]] }
-    respond({ pro: [ONE_TAKE, sameRow], judge: [ship(1), ship(2)] })
+    respond({ draft: [ONE_TAKE, sameRow], judge: [ship(1), ship(2)] })
     expect(await bakeMull(fakeSupabase(corpus()).client, 'u1')).toHaveLength(1)
   })
 
   it('never lets a hallucinated project title reach the column', async () => {
-    respond({ pro: [{ ...GREENHOUSE, project: 'A project that does not exist' }], judge: [ship(1)] })
+    respond({ draft: [{ ...GREENHOUSE, project: 'A project that does not exist' }], judge: [ship(1)] })
     const baked = await bakeMull(fakeSupabase(corpus()).client, 'u1')
     expect(baked[0].project_id).toBeNull()
   })
@@ -271,7 +273,7 @@ describe('what the corpus lets in', () => {
   beforeEach(() => { generateText.mockReset() })
 
   it('keeps out app-authored notes, graveyarded projects and their fragments, and unvoted articles', async () => {
-    respond({ pro: [] })
+    respond({ draft: [] })
     await bakeMull(fakeSupabase(corpus()).client, 'u1')
     const prompt = draftPromptSent()
     expect(prompt).not.toContain('only exists because the app asked me')
@@ -281,7 +283,7 @@ describe('what the corpus lets in', () => {
   })
 
   it('lets in a voted-good article, dated, with refs the model can cite', async () => {
-    respond({ pro: [] })
+    respond({ draft: [] })
     await bakeMull(fakeSupabase(corpus()).client, 'u1')
     const prompt = draftPromptSent()
     expect(prompt).toContain('[A1] "On first takes"')
@@ -296,7 +298,7 @@ describe('what the corpus lets in', () => {
       created_at: ago(1), tags: ['spark-response', 'spark-correction'],
       source_reference: { type: 'spark', id: 's-old', title: 'You gave up on the mural in June -- what happened?' },
     })
-    respond({ pro: [{ ...GREENHOUSE, evidence: [GREENHOUSE.evidence[0], { ref: 'N3', quote: 'it just moved to the someday list' }] }], judge: [ship(1)] })
+    respond({ draft: [{ ...GREENHOUSE, evidence: [GREENHOUSE.evidence[0], { ref: 'N3', quote: 'it just moved to the someday list' }] }], judge: [ship(1)] })
     const echo = await loadEchoContext(fakeSupabase(data).client, 'u1')
     expect(echo.corrections).toContain('it just moved to the someday list')
     const baked = await generateMull(fakeSupabase(data).client, 'u1', echo, [])
@@ -309,7 +311,7 @@ describe('recent questions', () => {
   beforeEach(() => { generateText.mockReset() })
 
   it('names the rows recent questions used, and drops a candidate built on one', async () => {
-    respond({ pro: [ONE_TAKE], judge: [ship(1)] })
+    respond({ draft: [ONE_TAKE], judge: [ship(1)] })
     const trace: string[] = []
     const baked = await generateMull(fakeSupabase(corpus()).client, 'u1', { ...noEcho, recentSubjectIds: new Set(['m2']) }, trace)
     expect(draftPromptSent()).toMatch(/Recent questions were built on N2/)
@@ -323,19 +325,19 @@ describe('creative mode ("get more creative")', () => {
 
   it('lets recent ground and a yes/no shape through, on the loose judge bar', async () => {
     const closed = { ...ONE_TAKE, question: 'You said a recording only works if it is one take. You rewrote chapter nine for the fourth time. Should the book be one take too?' }
-    respond({ pro: [closed], judge: [ship(1, { verdict: 'kill', revelation: 4, truth: 7, answerable: 6 })] })
+    respond({ draft: [closed], judge: [ship(1, { verdict: 'kill', revelation: 4, truth: 7, answerable: 6 })] })
     const baked = await generateMull(fakeSupabase(corpus()).client, 'u1', { ...noEcho, recentSubjectIds: new Set(['m2']) }, [], true)
     expect(baked).toHaveLength(1)
     expect(draftPromptSent()).not.toMatch(/Recent questions were built on/)
   })
 
   it('still refuses invented evidence -- honesty never relaxes', async () => {
-    respond({ pro: [{ ...ONE_TAKE, evidence: [ONE_TAKE.evidence[0], { ref: 'F1', quote: 'a sentence nobody ever wrote down' }] }], judge: [ship(1)] })
+    respond({ draft: [{ ...ONE_TAKE, evidence: [ONE_TAKE.evidence[0], { ref: 'F1', quote: 'a sentence nobody ever wrote down' }] }], judge: [ship(1)] })
     expect(await generateMull(fakeSupabase(corpus()).client, 'u1', noEcho, [], true)).toEqual([])
   })
 
   it('still refuses what the judge calls untrue', async () => {
-    respond({ pro: [ONE_TAKE], judge: [ship(1, { truth: 3 })] })
+    respond({ draft: [ONE_TAKE], judge: [ship(1, { truth: 3 })] })
     expect(await generateMull(fakeSupabase(corpus()).client, 'u1', noEcho, [], true)).toEqual([])
   })
 })

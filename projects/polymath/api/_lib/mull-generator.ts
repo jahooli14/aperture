@@ -11,9 +11,9 @@
  *
  * Three steps now:
  *
- *   1. DRAFT. Two models read the whole corpus in parallel (Pro for depth,
- *      Flash as the fast net if Pro runs long) and each proposes candidates
- *      built on two or more rows, cited by ref with verbatim quotes.
+ *   1. DRAFT. Flash reads the whole corpus and proposes up to six
+ *      candidates, each built on two or more rows, cited by ref with
+ *      verbatim quotes.
  *   2. GATE. mull.ts checks honesty only: every quote really in its row,
  *      every name/number/date in the question present in the cited rows,
  *      plain voice, not yes/no. Nothing about taste.
@@ -31,8 +31,6 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { generateText } from './gemini-chat.js'
-import { MODELS } from './models.js'
-import type { ThinkingLevel } from './gemini-thinking.js'
 import { parseModelJson } from './schemas.js'
 import { echoesRecent, fetchRecentSparkTexts, fetchRecentSparkProjectIds, fetchRecentSparkSubjectIds } from './spark-echo.js'
 import { SPARK_CORRECTION_TAG } from './corpus-provenance.js'
@@ -51,32 +49,20 @@ export const SHELF_LIFE_HOURS = 96
 /** One to show, two banked behind it. */
 const QUESTIONS_PER_RUN = 3
 
-/** Per drafter. Two drafters, so the judge sees up to ten. */
-const CANDIDATES_PER_DRAFTER = 5
+/** Candidates per draft call; the judge sees all that pass the gates. */
+const CANDIDATES_PER_RUN = 6
+
+/** Flash throughout. Pro was tried in the rebuild and pulled: too slow
+ *  for a reroll someone is waiting on, several times the cost, and Flash
+ *  is close to as good here. Medium thinking measured ~24s on this corpus. */
+const MODEL = 'gemini-flash-latest'
 
 /**
  * The function has 90 seconds (vercel.json) and the client waits 120.
- * Corpus ~3s + draft 55s + judge 20s leaves room for the insert. A drafter
- * that runs past its deadline is abandoned, not waited for -- the other's
- * candidates still go to the judge.
+ * Corpus ~3s + draft 55s + judge 20s leaves room for the insert.
  */
 const DRAFT_TIMEOUT_MS = 55_000
 const JUDGE_TIMEOUT_MS = 20_000
-
-interface Drafter {
-  name: string
-  model: string
-  /** Unset = the model's own default depth. */
-  thinkingLevel?: ThinkingLevel
-}
-
-/** Pro at full depth does the real finding. Flash (capped at medium, which
- *  measured ~24s on this corpus) is there so a slow Pro never means an
- *  empty slot. Both feed the same judge. */
-const DRAFTERS: readonly Drafter[] = [
-  { name: 'pro', model: MODELS.PRO },
-  { name: 'flash', model: 'gemini-flash-latest', thinkingLevel: 'medium' },
-]
 
 /** Every `sparks.type` this channel can write. A runtime array rather than
  *  a bare union because `sparks_type_check` has to list the same values.
@@ -257,20 +243,20 @@ export function readCandidates(raw: unknown): Candidate[] {
   })).filter(c => c.question)
 }
 
-async function draft(drafter: Drafter, prompt: string, trace: MullTrace): Promise<Candidate[]> {
+async function draft(prompt: string, trace: MullTrace): Promise<Candidate[]> {
   const start = Date.now()
   try {
     const raw = await generateText(prompt, {
-      responseFormat: 'json', model: drafter.model, maxTokens: 16384,
-      thinkingLevel: drafter.thinkingLevel, timeoutMs: DRAFT_TIMEOUT_MS,
+      responseFormat: 'json', model: MODEL, maxTokens: 16384,
+      thinkingLevel: 'medium', timeoutMs: DRAFT_TIMEOUT_MS,
     })
     const candidates = readCandidates(parseModelJson(raw))
-    trace.push(`draft/${drafter.name}: ${candidates.length} candidates in ${Date.now() - start}ms`)
+    trace.push(`draft: ${candidates.length} candidates in ${Date.now() - start}ms`)
     return candidates
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e)
-    trace.push(`!! draft/${drafter.name} FAILED after ${Date.now() - start}ms: ${message}`)
-    console.warn(`[mull] draft/${drafter.name} failed:`, message)
+    trace.push(`!! draft FAILED after ${Date.now() - start}ms: ${message}`)
+    console.warn('[mull] draft failed:', message)
     return []
   }
 }
@@ -279,7 +265,7 @@ async function judge(grounded: Grounded[], loose: boolean, trace: MullTrace): Pr
   const start = Date.now()
   try {
     const raw = await generateText(judgePrompt(grounded, loose), {
-      responseFormat: 'json', model: MODELS.PRO, maxTokens: 8192,
+      responseFormat: 'json', model: MODEL, maxTokens: 8192,
       thinkingLevel: 'low', timeoutMs: JUDGE_TIMEOUT_MS,
     })
     const scores = parseJudgeScores(parseModelJson(raw), grounded.length)
@@ -333,7 +319,7 @@ export async function generateMull(
 
   const prompt = draftPrompt({
     corpusText: corpus.text,
-    howMany: CANDIDATES_PER_DRAFTER,
+    howMany: CANDIDATES_PER_RUN,
     recentQuestions: recentTexts,
     recentRefs: corpus.rows.filter(r => recentIds.has(r.id)).map(r => r.ref),
     resonance: echo.resonance,
@@ -341,19 +327,16 @@ export async function generateMull(
   })
   trace.push(`draft prompt: ${prompt.length} chars`)
 
-  const drafted = await Promise.all(DRAFTERS.map(d => draft(d, prompt, trace)))
+  const drafted = await draft(prompt, trace)
 
-  // Interleave so neither drafter's list crowds the other out, and drop a
-  // question both wrote.
-  const pool: Candidate[] = []
+  // Drop a question written twice in one response.
   const seenQuestions = new Set<string>()
-  for (let i = 0; i < Math.max(...drafted.map(d => d.length)); i++) {
-    for (const list of drafted) {
-      const c = list[i]
-      const key = c?.question.toLowerCase().replace(/\W+/g, ' ').trim()
-      if (c && key && !seenQuestions.has(key)) { seenQuestions.add(key); pool.push(c) }
-    }
-  }
+  const pool = drafted.filter(c => {
+    const key = c.question.toLowerCase().replace(/\W+/g, ' ').trim()
+    if (seenQuestions.has(key)) return false
+    seenQuestions.add(key)
+    return true
+  })
 
   const grounded: Grounded[] = []
   for (const c of pool) {
