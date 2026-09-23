@@ -3,7 +3,7 @@
  *
  * Things that can want the screen on open: a deferred close-out, the
  * monthly mirror, the live-project re-ask, a composite proposal, a morph
- * proposal, and today's spark. Competing surfaces are how "guide, not
+ * proposal, and the weekly outside find. Competing surfaces are how "guide, not
  * menu" dies, so this renders AT MOST ONE, in fixed priority order, and
  * whatever loses is not queued behind the winner -- it waits for another
  * day or is dropped, never stacks into a notification tray. It renders
@@ -32,6 +32,7 @@ import { useSessionStore } from '../../stores/useSessionStore'
 import { useProjectStore } from '../../stores/useProjectStore'
 import { VoiceInput } from '../VoiceInput'
 import { api } from '../../lib/apiClient'
+import { OutsideSlot, type OutsideFind } from './OutsideSlot'
 
 const secondaryTextStyle = { color: 'var(--brand-text-secondary)', opacity: 0.7 }
 const borderStyle = { borderColor: 'var(--glass-border-bold)' }
@@ -54,7 +55,7 @@ const primaryButtonStyle = {
 }
 const accentTextStyle = { color: 'rgb(var(--brand-primary-rgb))' }
 
-type SlotKind = 'closeout' | 'mirror' | 'reask' | 'composite' | 'morph' | null
+type SlotKind = 'closeout' | 'mirror' | 'reask' | 'composite' | 'morph' | 'outside' | null
 
 interface ReaskSuggestion {
   project_id: string
@@ -276,6 +277,7 @@ export function AttentionSlot() {
   const [mirrorRows, setMirrorRows] = useState<MirrorRow[]>([])
   const [reask, setReask] = useState<ReaskSuggestion | null>(null)
   const [proposal, setProposal] = useState<Proposal | null>(null)
+  const [outside, setOutside] = useState<OutsideFind | null>(null)
   const [closeoutText, setCloseoutText] = useState('')
   const [resolved, setResolved] = useState(false)
 
@@ -322,6 +324,16 @@ export function AttentionSlot() {
         const chosen = composite ?? proposals.proposals[0]
         setProposal(chosen)
         setKind(chosen.kind)
+        return
+      }
+
+      // Last and quietest: one thing from outside, found weekly for the
+      // live project's next step (outside-find.ts).
+      const outsideResult = await getJson<{ find: OutsideFind | null }>('/api/utilities?resource=outside-find')
+      if (cancelled) return
+      if (outsideResult?.find) {
+        setOutside(outsideResult.find)
+        setKind('outside')
         return
       }
 
@@ -406,6 +418,14 @@ export function AttentionSlot() {
     return (
       <div className="mt-5 mb-4">
         <ReaskSlot suggestion={reask} onResolved={() => setResolved(true)} />
+      </div>
+    )
+  }
+
+  if (kind === 'outside' && outside) {
+    return (
+      <div className="mt-5 mb-4">
+        <OutsideSlot find={outside} onResolved={() => setResolved(true)} />
       </div>
     )
   }

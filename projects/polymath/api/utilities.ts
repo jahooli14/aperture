@@ -5,6 +5,8 @@
  *   POST ?resource=shape-project            — One dump in, a whole project out (title, labels, steps)
  *   POST ?resource=upload-image             — Generate signed upload URL for images (and audio clips)
  *   GET/POST/DELETE ?resource=outputs       — What you made: photos/audio attached to a project
+ *   POST ?resource=find-outside             — Weekly cron: one outside find for the live project
+ *   GET/POST ?resource=outside-find         — Read / resolve this week's outside find
  *   GET  ?resource=book-search&q=...        — Google Books auto-complete
  *   POST ?resource=analyze                  — Analyse onboarding transcripts → themes, insight, project suggestions
  *   POST ?resource=refine-idea              — Reshape an idea given voice feedback
@@ -76,6 +78,7 @@ import { mineJoints } from './_lib/joint-miner.js'
 import { runDriftDecay } from './_lib/drift-runner.js'
 import { SPARK_RESPONSE_TAG, SPARK_CORRECTION_TAG } from './_lib/corpus-provenance.js'
 import { handleProjectOutputs } from './_lib/project-outputs.js'
+import { findOutside, handleOutsideFind } from './_lib/outside-find.js'
 
 /** Bearer-token cron auth, duplicated per-file to match this codebase's
  *  existing convention (projects.ts and idea-engine.ts each keep their own
@@ -130,6 +133,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (EXECUTION_SESSIONS_RESOURCES.has(resource)) return handleExecutionSessions(req, res)
   if (EXECUTION_SPARKS_RESOURCES.has(resource)) return handleExecutionSparks(req, res)
   if (EXECUTION_PROPOSALS_RESOURCES.has(resource)) return handleExecutionProposals(req, res)
+
+  // Weekly, cron-only: one thing from outside for the live project.
+  if (resource === 'find-outside') {
+    if (req.method !== 'POST') return res.status(405).json({ error: 'POST required' })
+    const userId = getCronUserId(req)
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' })
+    return res.status(200).json(await findOutside(getSupabaseClient(), userId))
+  }
+
+  if (resource === 'outside-find') {
+    const userId = await getUserId(req)
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' })
+    return handleOutsideFind(req, res, getSupabaseClient(), userId)
+  }
 
   if (resource === 'outputs') {
     const userId = await getUserId(req)

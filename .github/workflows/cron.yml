@@ -49,6 +49,7 @@ on:
           - reembed-articles
           - backfill-embeddings
           - reprocess-backlog
+          - find-outside
 
 concurrency:
   group: cron
@@ -134,6 +135,9 @@ jobs:
               # Drains the unprocessed-note backlog in 40s slices. Prints
               # `remaining` -- re-run until it reaches 0.
               reprocess-backlog) hit "/api/utilities?resource=reprocess-backlog" ;;
+              # One outside find for the live project. Prints the candidate
+              # and why it was kept or dropped. Won't run twice in 6 days.
+              find-outside) hit "/api/utilities?resource=find-outside" ;;
               *) echo "!! unknown job: $JOB" | tee -a "$FAILED_FILE" ;;
             esac
             if [ -s "$FAILED_FILE" ]; then exit 1; fi
@@ -202,6 +206,8 @@ jobs:
             hit "/api/utilities?resource=generate-composite"
             # Silent, no-confirmation harvest of drifted + stalled projects.
             hit "/api/utilities?resource=drift-decay" &
+            # One thing from outside for the live project's next step.
+            hit "/api/utilities?resource=find-outside" &
           fi
 
           wait
