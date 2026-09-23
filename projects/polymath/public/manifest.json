@@ -35,11 +35,17 @@
   ],
   "shortcuts": [
     {
-      "name": "Capture Thought",
-      "short_name": "Capture",
-      "description": "Quickly capture a new thought with voice or text",
-      "url": "/memories?action=create",
-      "icons": []
+      "name": "Record a thought",
+      "short_name": "Record",
+      "description": "Start recording straight away",
+      "url": "/?capture=voice",
+      "icons": [
+        {
+          "src": "/icon.png",
+          "sizes": "1024x1024",
+          "type": "image/png"
+        }
+      ]
     },
     {
       "name": "Search",

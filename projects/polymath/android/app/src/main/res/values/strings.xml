@@ -4,4 +4,8 @@
     <string name="title_activity_main">Aperture</string>
     <string name="package_name">com.polymath.app</string>
     <string name="custom_url_scheme">com.polymath.app</string>
+    <string name="capture_widget_label">Record a thought</string>
+    <string name="capture_widget_description">Tap to start recording straight away</string>
+    <string name="shortcut_record_short">Record</string>
+    <string name="shortcut_record_long">Record a thought</string>
 </resources>
