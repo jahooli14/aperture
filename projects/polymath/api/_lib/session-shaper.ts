@@ -1014,18 +1014,22 @@ export async function shapeSession(
   }
 
   // ── The next steps, in order, as many as fit ──────────────────────
-  const { selected, rest } = selectByBudget(
-    steps, workingMinutes(windowMinutes, (setup?.minutes ?? 0) + prereqMinutes, packdown?.minutes), count,
-  )
+  const budget = workingMinutes(windowMinutes, (setup?.minutes ?? 0) + prereqMinutes, packdown?.minutes)
+  const { selected, rest } = selectByBudget(steps, budget, count)
   const first = selected[0]
 
   // The next step is bigger than the sitting -- either the numbers say so,
   // or checkReady already flagged it as bundling more than one job. The
   // compound flag matters on its own: nearestEstimate snaps to a ladder
   // topping out at 60, so a step judged "really more like 90 minutes"
-  // still reads as exactly 60 after snapping and would tie (never split)
-  // against a 60-minute window under strict `>` alone.
-  const oversized = first && windowMinutes != null && first.minutes > windowMinutes
+  // still reads as exactly 60 after snapping and would look like it fits
+  // a 90-minute window on the numbers alone.
+  //
+  // "Bigger" includes "exactly as big": a 60-minute step in a 60-minute
+  // hour is one line for the whole sitting, which reads as nothing to do.
+  // Measured against the working minutes, not the raw window, so setup
+  // and clearing away count.
+  const oversized = first && budget != null && first.minutes >= budget
   const flaggedCompound = first && topCompound && first.id === top.id
   if (first && windowMinutes != null && (oversized || flaggedCompound)) {
     const split = await splitStep({

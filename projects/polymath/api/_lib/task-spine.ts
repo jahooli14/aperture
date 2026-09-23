@@ -135,6 +135,16 @@ WHAT NONE OF THEM MAY BE:
   know what software they use or what they own.
 - More than one separately-schedulable job bundled into one line.
 
+THE BALANCE -- making the thing vs working around it:
+Most steps should change the work itself: a part of it gets written,
+rewritten, recorded, built. A few steps may be the process around it --
+getting feedback, sending it off, a pass with a tool -- but only where the
+notes above call for one, and each still names the part of the work it's
+for. A list that's all process is a to-do list for a tool, not a plan.
+  BAD:  "Feed the rewrite comments to the AI" -- process, and no part named.
+  GOOD: "Rewrite the chapters the comments flagged, starting with the first"
+        -- the same job, said as a change to the work.
+
 Give ${MIN_SPINE_STEPS}-${MAX_SPINE_STEPS} steps, in the order they'd be done, first one first.
 Fewer, honest steps beat a long list you had to invent to fill.
 
@@ -380,6 +390,8 @@ WHAT NONE OF THEM MAY BE:
 - A finish line, a deadline, or a description of what "done" looks like —
   that's not what's being asked for here.
 - More than one separately-schedulable job bundled into one move.
+- Setup around the work instead of the work: at least two of the
+  ${FIRST_CUT_STEPS} moves make a first piece of the thing itself.
 
 Give exactly ${FIRST_CUT_STEPS} moves, in the order they'd make sense to do.
 Cite the evidence id each one comes from; a move that names nothing beyond
