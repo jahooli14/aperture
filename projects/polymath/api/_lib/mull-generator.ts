@@ -56,20 +56,25 @@ const CANDIDATES_PER_RUN = 4
  *  for a reroll someone is waiting on, several times the cost, and Flash
  *  is close to as good here.
  *
- *  Thinking is where the time goes, not the corpus: at `medium` the old
- *  draft took ~24s, almost all of it hidden reasoning tokens generated at
- *  output speed before a word of the answer. The draft now reasons in the
- *  open instead -- `noticing` and `doubt` per candidate -- so it runs at
- *  `low`, and the judge (scoring, not finding) at `minimal`. The trace
- *  prints thinking tokens per call; if a call is slow, look there first. */
+ *  Both calls run at `low`, which on this model means NO hidden thinking
+ *  (measured: 0 thinking tokens). The old draft ran at `medium` and took
+ *  ~24s, almost all of it hidden reasoning before a word of the answer.
+ *  The draft reasons in the open instead -- `noticing` and `doubt` per
+ *  candidate. `minimal` is not supported on this model: it 400s. */
 const MODEL = 'gemini-flash-latest'
 
 /**
- * The function has 90 seconds (vercel.json) and the client waits 120.
- * Corpus ~3s + draft 55s + judge 20s leaves room for the insert.
+ * The whole run -- history, corpus, draft, judge -- inside ten seconds,
+ * the owner's ceiling. Measured on a corpus this size (~17k input tokens):
+ * corpus ~2.5s, draft 2.6-5.2s, judge ~1.5s. Each call gets whatever the
+ * budget has left; a judge with no time left is skipped, and the draft's
+ * first honest candidate ships alone.
  */
-const DRAFT_TIMEOUT_MS = 55_000
-const JUDGE_TIMEOUT_MS = 20_000
+export const TOTAL_BUDGET_MS = 10_000
+/** The judge needs about this long; below it, it isn't started. */
+const MIN_JUDGE_MS = 1_200
+/** Left for everything after the judge: gates, ranking, the insert. */
+const TAIL_MS = 300
 
 /** Every `sparks.type` this channel can write. A runtime array rather than
  *  a bare union because `sparks_type_check` has to list the same values.
@@ -255,13 +260,13 @@ type Usage = { input: number; output: number; thinking: number } | null
 const tokens = (u: Usage) =>
   u ? ` (tokens: ${u.input} in, ${u.thinking} thinking, ${u.output} out)` : ''
 
-async function draft(prompt: string, trace: MullTrace): Promise<Candidate[]> {
+async function draft(prompt: string, timeoutMs: number, trace: MullTrace): Promise<Candidate[]> {
   const start = Date.now()
   let usage: Usage = null
   try {
     const raw = await generateText(prompt, {
       responseFormat: 'json', model: MODEL, maxTokens: 16384,
-      thinkingLevel: 'low', timeoutMs: DRAFT_TIMEOUT_MS, onUsage: u => { usage = u },
+      thinkingLevel: 'low', timeoutMs, onUsage: u => { usage = u },
     })
     const candidates = readCandidates(parseModelJson(raw))
     trace.push(`draft: ${candidates.length} candidates in ${Date.now() - start}ms${tokens(usage)}`)
@@ -274,13 +279,13 @@ async function draft(prompt: string, trace: MullTrace): Promise<Candidate[]> {
   }
 }
 
-async function judge(grounded: Grounded[], loose: boolean, trace: MullTrace): Promise<Map<number, JudgeScore> | null> {
+async function judge(grounded: Grounded[], loose: boolean, timeoutMs: number, trace: MullTrace): Promise<Map<number, JudgeScore> | null> {
   const start = Date.now()
   let usage: Usage = null
   try {
     const raw = await generateText(judgePrompt(grounded, loose), {
       responseFormat: 'json', model: MODEL, maxTokens: 8192,
-      thinkingLevel: 'minimal', timeoutMs: JUDGE_TIMEOUT_MS, onUsage: u => { usage = u },
+      thinkingLevel: 'low', timeoutMs, onUsage: u => { usage = u },
     })
     const scores = parseJudgeScores(parseModelJson(raw), grounded.length)
     trace.push(`judge: scored ${scores.size} of ${grounded.length} in ${Date.now() - start}ms${tokens(usage)}`)
@@ -309,21 +314,24 @@ const label = (c: Grounded) => `"${c.question}" <- ${c.rows.map(r => r.ref).join
 export async function generateMull(
   supabase: SupabaseClient,
   userId: string,
-  echo: EchoContext,
+  /** A promise is fine: bakeMull loads it alongside the corpus. */
+  echoIn: EchoContext | Promise<EchoContext>,
   trace: MullTrace = [],
   /** "Get more creative" -- reroll's fallback once the strict pass came
    *  back empty. Recent ground is allowed again, the shape gates stand
    *  down and the judge's bar drops. Honesty (quotes, specifics, truth)
    *  never relaxes. */
   creative = false,
+  /** When the whole run must be finished by. */
+  deadline = Date.now() + TOTAL_BUDGET_MS,
 ): Promise<BakedSpark[]> {
   const corpusStart = Date.now()
-  const corpus = await loadCorpus(supabase, userId, trace)
+  const [corpus, echo] = await Promise.all([loadCorpus(supabase, userId, trace), echoIn])
   if (corpus.rows.length === 0) {
     trace.push('corpus: nothing to draw from -- no project, note, fragment, list item or article qualified')
     return []
   }
-  trace.push(`corpus: ${corpus.rows.length} rows, ${corpus.text.length} chars, loaded in ${Date.now() - corpusStart}ms`)
+  trace.push(`corpus + history: ${corpus.rows.length} rows, ${corpus.text.length} chars, loaded in ${Date.now() - corpusStart}ms`)
 
   const recentIds = new Set<string>(creative ? [] : [
     ...(echo.recentSubjectIds ?? []),
@@ -341,7 +349,12 @@ export async function generateMull(
   })
   trace.push(`draft prompt: ${prompt.length} chars`)
 
-  const drafted = await draft(prompt, trace)
+  const draftBudget = deadline - Date.now() - MIN_JUDGE_MS - TAIL_MS
+  if (draftBudget < 1_000) {
+    trace.push(`!! out of time before the draft (${deadline - Date.now()}ms left)`)
+    return []
+  }
+  const drafted = await draft(prompt, draftBudget, trace)
 
   // Drop a question written twice in one response.
   const seenQuestions = new Set<string>()
@@ -375,7 +388,10 @@ export async function generateMull(
     return []
   }
 
-  const scores = await judge(grounded, creative, trace)
+  const judgeBudget = deadline - Date.now() - TAIL_MS
+  const scores = judgeBudget >= MIN_JUDGE_MS
+    ? await judge(grounded, creative, judgeBudget, trace)
+    : (trace.push(`judge skipped: ${judgeBudget}ms left`), null)
   let ranked: Grounded[]
   if (scores) {
     grounded.forEach((g, i) => {
@@ -427,10 +443,7 @@ export async function bakeMull(
   trace: MullTrace = [],
   creative = false,
 ): Promise<BakedSpark[]> {
-  const echoStart = Date.now()
-  const context = echo ?? (await loadEchoContext(supabase, userId))
-  if (!echo) trace.push(`echo context: loaded in ${Date.now() - echoStart}ms`)
-  const mulls = await generateMull(supabase, userId, context, trace, creative)
+  const mulls = await generateMull(supabase, userId, echo ?? loadEchoContext(supabase, userId), trace, creative)
   if (mulls.length === 0) trace.push('nothing worth asking -- empty slot')
   return mulls
 }

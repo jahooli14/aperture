@@ -245,11 +245,33 @@ describe('the mull channel, end to end', () => {
     for (const call of generateText.mock.calls) expect(call[1].model).toBe('gemini-flash-latest')
   })
 
-  it('keeps hidden thinking low -- that is where the time goes', async () => {
+  it('keeps hidden thinking off -- that is where the time goes', async () => {
     respond({ draft: [ONE_TAKE], judge: [ship(1)] })
     await bakeMull(fakeSupabase(corpus()).client, 'u1')
     const levels = generateText.mock.calls.map(c => [(c[0] as string).includes('You are the last check') ? 'judge' : 'draft', c[1].thinkingLevel])
-    expect(levels).toEqual([['draft', 'low'], ['judge', 'minimal']])
+    expect(levels).toEqual([['draft', 'low'], ['judge', 'low']])
+  })
+
+  it('gives each call only what is left of the ten seconds', async () => {
+    respond({ draft: [ONE_TAKE], judge: [ship(1)] })
+    await bakeMull(fakeSupabase(corpus()).client, 'u1')
+    const [draftCall, judgeCall] = generateText.mock.calls
+    // The draft leaves room for the judge; the judge gets the rest, minus the tail.
+    expect(draftCall[1].timeoutMs).toBeLessThanOrEqual(10_000 - 1_200 - 300)
+    expect(judgeCall[1].timeoutMs).toBeLessThanOrEqual(10_000 - 300)
+  })
+
+  it('skips the judge when the draft used up the time, and ships only the first honest candidate', async () => {
+    respond({ draft: [ONE_TAKE, GREENHOUSE], judge: [ship(1), ship(2)] })
+    const instant = generateText.getMockImplementation()!
+    generateText.mockImplementation(async (...a: unknown[]) => {
+      if (!(a[0] as string).includes('You are the last check')) await new Promise(r => setTimeout(r, 1_500))
+      return instant(...a)
+    })
+    const trace: string[] = []
+    const baked = await generateMull(fakeSupabase(corpus()).client, 'u1', noEcho, trace, false, Date.now() + 2_600)
+    expect(baked.map(b => b.text)).toEqual([ONE_TAKE.question])
+    expect(trace.join('\n')).toMatch(/judge skipped/)
   })
 
   it('two shipped questions never share a row', async () => {
