@@ -1,23 +1,18 @@
 /**
- * The whole corpus, handed to one prompt, instead of a subject picked and
- * searched for a connector.
+ * Everything one person has captured, as one block of text a model can
+ * read and cite.
  *
- * The channel used to compute a subject, name what it never examined, strip
- * that of its own vocabulary, and search the corpus for whatever came back
- * in band. That existed to stop the model inventing a link — but measured
- * against the real corpus and the real gates, a well-built prompt handed
- * everything at once passed the same grounding checks just as cleanly, kept
- * every question on a different subject across ten sequential pulls with no
- * repeats, and never went silent. The gates were what kept it honest, not
- * the search — so the search is gone, and the gates stay exactly as strict.
+ * Every row gets a short ref ("N12", "P3") and the facts the prompt shows
+ * about it (date, status, the project it sits under). The model cites
+ * evidence by ref, and the gates check each quote against exactly that
+ * row -- so "is this real" is a lookup, not a search.
  *
- * What's still true and still enforced here: an app-authored note is not a
- * capture (corpus-provenance.ts), a graveyarded project doesn't count as
- * live — on itself or on a fragment filed under it, which the old pipeline
- * only checked for the project itself — and an article only counts once
- * it's been voted `good` (reading-corpus.ts). Whole-corpus reads are capped,
- * not windowed: a cap only loses the oldest rows once there are genuinely
- * more than CORPUS_LIMIT of them, where a time window loses them every day.
+ * Exclusions, all still enforced here: an app-authored note is not a
+ * capture (corpus-provenance.ts), a graveyarded project is not live -- on
+ * itself or on a fragment filed under it -- and an article only counts
+ * once it has been voted `good` (reading-corpus.ts). Reads are capped, not
+ * windowed: a cap only loses the oldest rows once there are genuinely more
+ * than CORPUS_LIMIT of them, where a time window loses them every day.
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js'
@@ -25,28 +20,40 @@ import { userSaid } from './corpus-provenance.js'
 import { isGraveyarded } from './project-state.js'
 import { isCorpusEligible, type CorpusArticle } from './reading-corpus.js'
 import { articleBody } from './article-text.js'
-import { quoteIsReal } from './mull.js'
 
 const CORPUS_LIMIT = 2000
 /** Below this an article's real text is too thin to be worth quoting from
  *  -- matches the floor the old article gatherer used. */
 const MIN_ARTICLE_CHARS = 120
+/** How much of an article the prompt sees. The row keeps the same cut, so a
+ *  quote can only ever be checked against text the model was shown. */
+const ARTICLE_CHARS = 1500
 
 export type CorpusRowKind = 'project' | 'memory' | 'fragment' | 'list_item' | 'article'
 
 export interface CorpusRow {
   kind: CorpusRowKind
   id: string
-  /** The project it's about or filed under, for attribution -- a project
-   *  row is its own id here, a fragment/memory/list_item/article is null
-   *  unless it's clearly about one. */
+  /** Short handle the prompt uses to cite this row -- "N12", "P3". The
+   *  model cites evidence by ref and the gates check each quote against
+   *  exactly that row, never a search across all of them. */
+  ref: string
+  /** The capture this row came from. A fragment is cut out of a note, so
+   *  the two are ONE thought -- citing both is not two pieces of evidence. */
+  captureId: string
+  /** The project it's about or filed under, for attribution. */
   projectId: string | null
   title: string
   text: string
+  /** Everything else the prompt was told about this row -- date, status,
+   *  the project a fragment sits under. A question may state these facts,
+   *  so the invented-specifics check has to count them as evidence. */
+  meta: string
 }
 
 export interface Corpus {
   rows: CorpusRow[]
+  byRef: Map<string, CorpusRow>
   /** Lowercased, trimmed title -> real id, so the model's own exact-title
    *  answer can be turned into a `sparks.project_id` without guessing. */
   projectIdByTitle: Map<string, string>
@@ -141,58 +148,70 @@ export async function loadCorpus(
 
   const listItems = ((listItemsRes.data ?? []) as any[]).filter(l => typeof l.content === 'string' && l.content.trim())
 
-  const rows: CorpusRow[] = [
-    ...projects.map((p: any): CorpusRow => ({
-      kind: 'project', id: p.id, projectId: p.id,
-      title: p.title, text: p.description ?? '',
-    })),
-    ...memories.map((m: any): CorpusRow => ({
-      kind: 'memory', id: m.id, projectId: null,
-      title: m.title ?? '', text: m.body ?? '',
-    })),
-    ...fragments.map((f: any): CorpusRow => ({
-      kind: 'fragment', id: f.id, projectId: f.project_id ?? null,
-      title: f.projects?.title ?? '', text: f.text,
-    })),
-    ...listItems.map((l: any): CorpusRow => ({
-      kind: 'list_item', id: l.id, projectId: null,
-      title: l.lists?.title ?? 'a list', text: l.content,
-    })),
-    ...articles.map((a: any): CorpusRow => ({
-      kind: 'article', id: a.id, projectId: null,
-      title: a.title ?? 'an article', text: a.body,
-    })),
-  ]
-
   const dateOf = (row: { created_at?: string; memory_id?: string | null }) =>
     // When the thought was had, not when the row was written -- fragments
     // backfilled in one run all carry the same created_at otherwise, which
-    // collapses every span this channel's dated facts depend on.
-    (row.memory_id && memoryDateById.get(row.memory_id)) || row.created_at || ''
+    // collapses every span a question might state.
+    readableDate((row.memory_id && memoryDateById.get(row.memory_id)) || row.created_at || '')
 
-  const text = `
-PROJECTS (${projects.length}):
-${projects.map((p: any) => `- "${p.title}" (${p.status}, started ${(p.created_at ?? '').slice(0, 10)}, last active ${p.last_active?.slice(0, 10) ?? 'never'}): ${p.description ?? ''}`).join('\n')}
+  const rows: CorpusRow[] = [
+    ...projects.map((p: any, i: number): CorpusRow => ({
+      kind: 'project', id: p.id, captureId: p.id, ref: `P${i + 1}`, projectId: p.id,
+      title: p.title ?? '', text: p.description ?? '',
+      meta: `${p.status ?? ''}, started ${readableDate(p.created_at)}, last touched ${readableDate(p.last_active) || 'never'}`,
+    })),
+    ...memories.map((m: any, i: number): CorpusRow => ({
+      kind: 'memory', id: m.id, captureId: m.id, ref: `N${i + 1}`, projectId: null,
+      title: m.title ?? '', text: m.body ?? '', meta: dateOf(m),
+    })),
+    ...fragments.map((f: any, i: number): CorpusRow => ({
+      kind: 'fragment', id: f.id, captureId: f.memory_id ?? f.id, ref: `F${i + 1}`, projectId: f.project_id ?? null,
+      title: f.projects?.title ?? '', text: f.text,
+      meta: `${dateOf(f)}${f.projects?.title ? `, filed under "${f.projects.title}"` : ', not filed under any project'}`,
+    })),
+    ...listItems.map((l: any, i: number): CorpusRow => ({
+      kind: 'list_item', id: l.id, captureId: l.id, ref: `L${i + 1}`, projectId: null,
+      title: l.lists?.title ?? 'a list', text: l.content,
+      meta: `on their "${l.lists?.title ?? 'list'}" list, ${l.status}${l.user_rating ? `, rated ${l.user_rating}` : ''}, added ${readableDate(l.created_at)}`,
+    })),
+    ...articles.map((a: any, i: number): CorpusRow => ({
+      kind: 'article', id: a.id, captureId: a.id, ref: `A${i + 1}`, projectId: null,
+      title: a.title ?? 'an article', text: a.body.slice(0, ARTICLE_CHARS), meta: `saved ${readableDate(a.created_at)}`,
+    })),
+  ]
 
-NOTES (${memories.length}):
-${memories.map((m: any) => `- [${(dateOf(m)).slice(0, 10)}] ${m.title ?? ''}: ${m.body ?? ''}`).join('\n')}
+  const section = (kind: CorpusRowKind, heading: string) => {
+    const of = rows.filter(r => r.kind === kind)
+    return `${heading} (${of.length}):\n${of.map(formatRow).join('\n')}`
+  }
 
-FRAGMENTS -- short things said in passing, some filed under a project, some not (${fragments.length}):
-${fragments.map((f: any) => `- [${dateOf(f).slice(0, 10)}]${f.projects?.title ? ` (${f.projects.title})` : ''} "${f.text}"`).join('\n')}
+  const text = [
+    section('project', 'PROJECTS -- what they said they would make'),
+    section('memory', 'NOTES -- voice notes, tidied, in their words'),
+    section('fragment', 'FRAGMENTS -- short things said in passing'),
+    section('list_item', 'LIST ITEMS -- films, books, music, places they chose. Taste, not their words'),
+    section('article', 'ARTICLES THEY FINISHED AND VOUCHED FOR -- not their words'),
+  ].join('\n\n')
 
-LIST ITEMS (${listItems.length}):
-${listItems.map((l: any) => `- [${l.lists?.title ?? 'list'}] ${l.content}${l.user_rating ? ` (rated ${l.user_rating})` : ''}, added ${(l.created_at ?? '').slice(0, 10)}`).join('\n')}
-
-ARTICLES THEY VOUCHED FOR (${articles.length}):
-${articles.map((a: any) => `- "${a.title}": ${a.body.slice(0, 600)}`).join('\n')}
-`.trim()
-
-  return { rows, projectIdByTitle, text }
+  return { rows, byRef: new Map(rows.map(r => [r.ref, r])), projectIdByTitle, text }
 }
 
-/** Which real row a quote actually came from, using the exact same match
- *  the grounding gate uses -- so "did this pass grounding" and "what did it
- *  ground in" can never disagree. */
-export function findSource(corpus: Corpus, quote: string): CorpusRow | null {
-  return corpus.rows.find(r => quoteIsReal(quote, r.text)) ?? null
+function formatRow(r: CorpusRow): string {
+  const title = r.title && r.kind !== 'fragment' && r.kind !== 'list_item' ? ` "${r.title}"` : ''
+  return `[${r.ref}]${title} (${r.meta}): ${r.text}`
+}
+
+/** "14 March 2025" -- the form a person would say, and the form the
+ *  question will use. An ISO date in the prompt comes back as "2025-03-14"
+ *  in a question nobody talks like. */
+export function readableDate(iso: string | null | undefined): string {
+  if (!iso) return ''
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return ''
+  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' })
+}
+
+/** Everything a question may state about a row without inventing it. */
+export function evidenceText(row: CorpusRow): string {
+  return `${row.title} ${row.meta} ${row.text}`
 }

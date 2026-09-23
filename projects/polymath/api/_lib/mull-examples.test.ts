@@ -1,34 +1,31 @@
 import { describe, it, expect } from 'vitest'
-import { MULL_EXAMPLES, examplesBlock } from './mull-examples.js'
-import { rejectionReason, MAX_MULL_WORDS } from './mull.js'
+import { GOOD_EXAMPLES, BAD_EXAMPLES } from './mull-examples.js'
+import { checkCandidate } from './mull.js'
+import type { Corpus, CorpusRow } from './mull-corpus.js'
 
-/**
- * An example the gates would reject teaches the model to write questions the
- * gates reject — and it does it silently, since the run just comes out empty.
- */
-describe('the examples the prompt teaches from', () => {
-  MULL_EXAMPLES.forEach((e, i) => {
-    it(`#${i + 1} (${e.shape}) survives its own gates`, () => {
-      expect(e.text.split(/\s+/).length).toBeLessThanOrEqual(MAX_MULL_WORDS)
-      expect(rejectionReason({
-        text: e.text,
-        quote: e.quote,
-        stake: e.stake,
-        connectorText: `Earlier that year: ${e.quote}, and a good deal more besides.`,
-      })).toBeNull()
+/** An example the gates would refuse teaches the model to write questions
+ *  the gates refuse. So every good one is run through them against a
+ *  corpus made of its own evidence. */
+describe('the teaching examples', () => {
+  GOOD_EXAMPLES.forEach(e => {
+    it(`clears the honesty gates: ${e.move}`, () => {
+      const rows: CorpusRow[] = e.evidence.map((ev, i) => ({
+        kind: 'memory', id: `x${i}`, captureId: `x${i}`, ref: `X${i + 1}`, projectId: null, title: '', text: ev.text, meta: ev.where,
+      }))
+      const corpus: Corpus = { rows, byRef: new Map(rows.map(r => [r.ref, r])), projectIdByTitle: new Map(), text: '' }
+      const r = checkCandidate({
+        question: e.question, noticing: '', stake: e.stake, project: null,
+        evidence: rows.map(row => ({ ref: row.ref, quote: row.text })),
+      }, corpus)
+      expect(r.ok ? 'ok' : r.reason).toBe('ok')
     })
   })
 
-  it('no two of them end the same way', () => {
-    const closers = MULL_EXAMPLES.map(e => {
-      const m = e.text.match(/[^.?!]*\?\s*$/)
-      return (m?.[0] ?? '').trim().toLowerCase().replace(/[^a-z ]/g, '')
-    })
-    expect(new Set(closers).size).toBe(MULL_EXAMPLES.length)
+  it('every good example builds on at least two things', () => {
+    for (const e of GOOD_EXAMPLES) expect(e.evidence.length).toBeGreaterThanOrEqual(2)
   })
 
-  it('renders every example into the prompt block', () => {
-    const block = examplesBlock()
-    for (const e of MULL_EXAMPLES) expect(block).toContain(e.text)
+  it('every bad example says why', () => {
+    for (const e of BAD_EXAMPLES) expect(e.why.length).toBeGreaterThan(20)
   })
 })

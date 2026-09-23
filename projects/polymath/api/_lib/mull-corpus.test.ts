@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { findSource, normaliseTitle, isTransientError, type Corpus } from './mull-corpus.js'
+import { normaliseTitle, isTransientError, readableDate } from './mull-corpus.js'
 
 describe('isTransientError', () => {
   it('recognises the failure actually seen in production', () => {
@@ -20,29 +20,12 @@ describe('normaliseTitle', () => {
   })
 })
 
-describe('findSource', () => {
-  const corpus: Corpus = {
-    rows: [
-      { kind: 'memory', id: 'm1', projectId: null, title: 'Dad', text: 'Ten more proper conversations with dad, probably.' },
-      { kind: 'project', id: 'p1', projectId: 'p1', title: 'The book', text: 'A novel where characters get swapped out.' },
-    ],
-    projectIdByTitle: new Map([['the book', 'p1']]),
-    text: '',
-  }
-
-  it('resolves a real quote to the row it came from', () => {
-    expect(findSource(corpus, 'ten more proper conversations with dad')?.id).toBe('m1')
+describe('readableDate', () => {
+  it('writes a date the way a person says it', () => {
+    expect(readableDate('2025-03-14T09:00:00Z')).toBe('14 March 2025')
   })
-
-  it('survives retyped punctuation and case', () => {
-    expect(findSource(corpus, 'CHARACTERS GET SWAPPED OUT')?.id).toBe('p1')
-  })
-
-  it('returns null for a quote nothing in the corpus actually says', () => {
-    expect(findSource(corpus, 'a sentence nobody in this corpus ever wrote')).toBeNull()
-  })
-
-  it('returns null for a quote too short to mean anything', () => {
-    expect(findSource(corpus, 'dad')).toBeNull()
+  it('is empty for a missing or broken date rather than "Invalid Date"', () => {
+    expect(readableDate(null)).toBe('')
+    expect(readableDate('not a date')).toBe('')
   })
 })

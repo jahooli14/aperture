@@ -11,7 +11,7 @@
  *
  * Two halves, and they do different jobs:
  *
- *   1. The prompt is told what has already been asked (`avoidBlock`), which
+ *   1. The prompt is told what has already been asked (mull-prompts.ts), which
  *      is the only half that can catch a near-synonym — "waves" for
  *      "ripples", "endlessness" for "infinity".
  *   2. The output is checked against the same history (`echoesRecent`),
@@ -154,30 +154,6 @@ export function echoesRecent(candidate: string, recentTexts: string[]): boolean 
     }
     return false
   })
-}
-
-/**
- * The prompt half: the recent questions verbatim, plus the motifs that have
- * already recurred. Verbatim matters — handed a word list alone the model
- * swaps in a synonym and calls it new; handed the sentences it can see the
- * shape it's being asked not to repeat.
- */
-export function avoidBlock(recentTexts: string[]): string {
-  if (recentTexts.length === 0) return ''
-
-  const asked = recentTexts.map(text => `- "${text}"`).join('\n')
-  const motifs = repeatedMotifs(recentTexts)
-  const motifLine = motifs.length
-    ? `\nThese words and images have already come round more than once: ${motifs.slice(0, 15).join(', ')}. Don't reach for them again, and don't reach for near-synonyms of them either — "waves" for "ripples" is the same spark.\n`
-    : ''
-
-  return `
-ALREADY ASKED, recently:
-${asked}
-${motifLine}
-Say something with a different subject and a different image. If the only thing
-you can find is another version of one of those, return { "spark": null }.
-`
 }
 
 /**

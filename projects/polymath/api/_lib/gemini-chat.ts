@@ -83,6 +83,10 @@ export async function generateText(
     // change). Pass 'minimal'/'low' for mechanical calls to save output tokens,
     // or set GEMINI_THINKING_LEVEL to dial every wired call globally.
     thinkingLevel?: ThinkingLevel
+    /** Abort the request after this long. Unset waits as long as the SDK does. */
+    timeoutMs?: number
+    /** Token counts for this call, so a slow one can say where the time went. */
+    onUsage?: (usage: { input: number; output: number; thinking: number }) => void
   } = {}
 ): Promise<string> {
   if (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY === 'dummy-key-for-initialization') {
@@ -110,7 +114,7 @@ export async function generateText(
         }),
         ...thinkingFragment(options.thinkingLevel)
       }
-    })
+    }, options.timeoutMs ? { timeout: options.timeoutMs } : undefined)
 
     if (!result.response) {
       throw new Error('Gemini API returned no response object')
@@ -125,6 +129,11 @@ export async function generateText(
       // Track token usage
       const usage = result.response.usageMetadata
       if (usage) {
+        options.onUsage?.({
+          input: usage.promptTokenCount || 0,
+          output: usage.candidatesTokenCount || 0,
+          thinking: (usage as { thoughtsTokenCount?: number }).thoughtsTokenCount ?? 0,
+        })
         trackTokenUsage('generateText', usage.promptTokenCount || 0, usage.candidatesTokenCount || 0)
         console.log(`[Token Stats] Input: ${usage.promptTokenCount}, Output: ${usage.candidatesTokenCount}, Thinking: ${(usage as { thoughtsTokenCount?: number }).thoughtsTokenCount ?? 0}, Total cost: $${tokenStats.estimated_cost_usd.toFixed(4)}`)
       }
