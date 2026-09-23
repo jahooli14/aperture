@@ -245,6 +245,13 @@ describe('the mull channel, end to end', () => {
     for (const call of generateText.mock.calls) expect(call[1].model).toBe('gemini-flash-latest')
   })
 
+  it('keeps hidden thinking low -- that is where the time goes', async () => {
+    respond({ draft: [ONE_TAKE], judge: [ship(1)] })
+    await bakeMull(fakeSupabase(corpus()).client, 'u1')
+    const levels = generateText.mock.calls.map(c => [(c[0] as string).includes('You are the last check') ? 'judge' : 'draft', c[1].thinkingLevel])
+    expect(levels).toEqual([['draft', 'low'], ['judge', 'minimal']])
+  })
+
   it('two shipped questions never share a row', async () => {
     const sameRow = { ...GREENHOUSE, evidence: [ONE_TAKE.evidence[0], GREENHOUSE.evidence[1]] }
     respond({ draft: [ONE_TAKE, sameRow], judge: [ship(1), ship(2)] })

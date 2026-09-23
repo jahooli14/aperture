@@ -11,7 +11,7 @@
  *
  * Three steps now:
  *
- *   1. DRAFT. Flash reads the whole corpus and proposes up to six
+ *   1. DRAFT. Flash reads the whole corpus and proposes up to four
  *      candidates, each built on two or more rows, cited by ref with
  *      verbatim quotes.
  *   2. GATE. mull.ts checks honesty only: every quote really in its row,
@@ -50,11 +50,18 @@ export const SHELF_LIFE_HOURS = 96
 const QUESTIONS_PER_RUN = 3
 
 /** Candidates per draft call; the judge sees all that pass the gates. */
-const CANDIDATES_PER_RUN = 6
+const CANDIDATES_PER_RUN = 4
 
 /** Flash throughout. Pro was tried in the rebuild and pulled: too slow
  *  for a reroll someone is waiting on, several times the cost, and Flash
- *  is close to as good here. Medium thinking measured ~24s on this corpus. */
+ *  is close to as good here.
+ *
+ *  Thinking is where the time goes, not the corpus: at `medium` the old
+ *  draft took ~24s, almost all of it hidden reasoning tokens generated at
+ *  output speed before a word of the answer. The draft now reasons in the
+ *  open instead -- `noticing` and `doubt` per candidate -- so it runs at
+ *  `low`, and the judge (scoring, not finding) at `minimal`. The trace
+ *  prints thinking tokens per call; if a call is slow, look there first. */
 const MODEL = 'gemini-flash-latest'
 
 /**
@@ -243,15 +250,21 @@ export function readCandidates(raw: unknown): Candidate[] {
   })).filter(c => c.question)
 }
 
+type Usage = { input: number; output: number; thinking: number } | null
+
+const tokens = (u: Usage) =>
+  u ? ` (tokens: ${u.input} in, ${u.thinking} thinking, ${u.output} out)` : ''
+
 async function draft(prompt: string, trace: MullTrace): Promise<Candidate[]> {
   const start = Date.now()
+  let usage: Usage = null
   try {
     const raw = await generateText(prompt, {
       responseFormat: 'json', model: MODEL, maxTokens: 16384,
-      thinkingLevel: 'medium', timeoutMs: DRAFT_TIMEOUT_MS,
+      thinkingLevel: 'low', timeoutMs: DRAFT_TIMEOUT_MS, onUsage: u => { usage = u },
     })
     const candidates = readCandidates(parseModelJson(raw))
-    trace.push(`draft: ${candidates.length} candidates in ${Date.now() - start}ms`)
+    trace.push(`draft: ${candidates.length} candidates in ${Date.now() - start}ms${tokens(usage)}`)
     return candidates
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e)
@@ -263,13 +276,14 @@ async function draft(prompt: string, trace: MullTrace): Promise<Candidate[]> {
 
 async function judge(grounded: Grounded[], loose: boolean, trace: MullTrace): Promise<Map<number, JudgeScore> | null> {
   const start = Date.now()
+  let usage: Usage = null
   try {
     const raw = await generateText(judgePrompt(grounded, loose), {
       responseFormat: 'json', model: MODEL, maxTokens: 8192,
-      thinkingLevel: 'low', timeoutMs: JUDGE_TIMEOUT_MS,
+      thinkingLevel: 'minimal', timeoutMs: JUDGE_TIMEOUT_MS, onUsage: u => { usage = u },
     })
     const scores = parseJudgeScores(parseModelJson(raw), grounded.length)
-    trace.push(`judge: scored ${scores.size} of ${grounded.length} in ${Date.now() - start}ms`)
+    trace.push(`judge: scored ${scores.size} of ${grounded.length} in ${Date.now() - start}ms${tokens(usage)}`)
     return scores.size > 0 ? scores : null
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e)
