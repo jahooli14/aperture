@@ -236,6 +236,19 @@ Both answers file the article, because answering IS finishing it — there is no
 - **Bot walls posing as articles.** A challenge/interstitial page ("Just a moment…", "Vercel Security Checkpoint") can clear every tier's own length check — Readability's `charThreshold` is 0, Jina's validator only checks text length — so it gets stored as if it were the article. `api/_lib/bot-wall.ts` (unit-tested) closes this two ways: `mitigationFromHeaders` reads the header Vercel's Attack Challenge and Cloudflare's challenge action both stamp on the response (`x-vercel-mitigated` / `cf-mitigated: challenge` — authoritative, no guessing), and `detectBotWallText` pattern-matches the *extracted* text/title against known interstitial phrases as a fallback for vendors that don't stamp a header. Checked on each tier's own extracted content (Readability's `article.textContent`, Jina's validated text), never on a page's raw full-page HTML — a legitimate site's `<noscript>Enable JavaScript</noscript>` fallback would otherwise false-positive. A match throws and falls through to the next tier, same as any other extraction failure; if all four exhaust, the reader shows "Couldn't get the text for this one" with a link to the source rather than junk.
 - **Link-clutter.** Jina's markdown keeps every hyperlink inline (`[text](url)`), and pages that survive Readability sometimes keep "Related stories" rows or nav rails because they live inside the same DOM subtree as the real content with no distinguishing class. Two independent fixes: Jina requests now send `X-Retain-Links: text` (keeps anchor text, drops the URL — the original is one tap away via "Open the original" regardless), and `api/_lib/link-density.ts` (unit-tested) strips DOM blocks that are mostly links rather than prose — applied inside `cleanHtml`, so it runs for every tier and every RSS path at once, not just Jina's.
 
+### What you made (`project_outputs`, `api/_lib/project-outputs.ts`, `MadeWall.tsx`)
+
+The mirror counts hours; this keeps the things. A photo, screenshot or audio clip can be added at close-out (`MadeStrip`, under the "where'd you get to" box) or any time from the project page (`MadeWall`) — most making happens off-app. Files go to the existing public `thought-images` bucket through the same signed-URL upload thought photos use (`upload-image` now also accepts `audio/*`); photos are shrunk to 2000px before upload, and anything over 50MB is refused in plain words.
+
+- **Its own table, not `projects.metadata`.** The PATCH route and the offline sync queue both replace metadata wholesale from a client cache, so anything appended there server-side can be wiped by a stale copy on another device.
+- Rows store only the object name, and the API refuses a URL that isn't in our bucket.
+- `supabase/migrations/20260923_project_outputs.sql` must be run. Until then the API says `available: false` and the UI hides itself.
+- Hidden offline: it's an upload, and failing at the end of a session is the worst time.
+
+### Recording from outside the app (`src/lib/launchCapture.ts`)
+
+Every note not recorded is one the app never sees, so recording is one tap from the home screen: the PWA icon's long-press shortcut (`/?capture=voice`), and on the Android build a static app shortcut plus a one-button home-screen widget (`CaptureWidget.java`), both launching `polymath://capture`. All three end in the same place — the voice recorder already running. A launch can land before sign-in finishes, so the request is held until `FloatingNav` (which owns the recorder) takes it. iOS doesn't support manifest shortcuts.
+
 ### Session context
 
 `useSessionContextStore` carries a per-session `feeling` (focused / scattered / restless), captured by the FeelingPill at app open and persisted to sessionStorage (resets when the tab closes). The on-demand "suggest a project" path passes it into the generator prompt so the re-roll calibrates to right-now state.

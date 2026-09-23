@@ -3,7 +3,8 @@
  *
  * Resources in one file (respecting 12-API cap):
  *   POST ?resource=shape-project            — One dump in, a whole project out (title, labels, steps)
- *   POST ?resource=upload-image             — Generate signed upload URL for images
+ *   POST ?resource=upload-image             — Generate signed upload URL for images (and audio clips)
+ *   GET/POST/DELETE ?resource=outputs       — What you made: photos/audio attached to a project
  *   GET  ?resource=book-search&q=...        — Google Books auto-complete
  *   POST ?resource=analyze                  — Analyse onboarding transcripts → themes, insight, project suggestions
  *   POST ?resource=refine-idea              — Reshape an idea given voice feedback
@@ -74,6 +75,7 @@ import { getStalledProjects, attachFragments, proposeComposite } from './_lib/co
 import { mineJoints } from './_lib/joint-miner.js'
 import { runDriftDecay } from './_lib/drift-runner.js'
 import { SPARK_RESPONSE_TAG, SPARK_CORRECTION_TAG } from './_lib/corpus-provenance.js'
+import { handleProjectOutputs } from './_lib/project-outputs.js'
 
 /** Bearer-token cron auth, duplicated per-file to match this codebase's
  *  existing convention (projects.ts and idea-engine.ts each keep their own
@@ -128,6 +130,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (EXECUTION_SESSIONS_RESOURCES.has(resource)) return handleExecutionSessions(req, res)
   if (EXECUTION_SPARKS_RESOURCES.has(resource)) return handleExecutionSparks(req, res)
   if (EXECUTION_PROPOSALS_RESOURCES.has(resource)) return handleExecutionProposals(req, res)
+
+  if (resource === 'outputs') {
+    const userId = await getUserId(req)
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' })
+    return handleProjectOutputs(req, res, getSupabaseClient(), userId)
+  }
 
   if (req.method === 'POST' && resource === 'upload-image') {
     return handleUploadImage(req, res)
@@ -301,12 +309,13 @@ async function handleUploadImage(req: VercelRequest, res: VercelResponse) {
       })
     }
 
-    // Validate file type
-    if (!fileType.startsWith('image/')) {
+    // Validate file type. Audio is allowed for "what you made" clips
+    // (project-outputs.ts) -- a mix or a demo is the output for some projects.
+    if (!fileType.startsWith('image/') && !fileType.startsWith('audio/')) {
       console.error('[utilities/upload-image] Invalid file type:', fileType)
       return res.status(400).json({
         error: 'Invalid file type',
-        details: 'Only image files are allowed'
+        details: 'Only images and audio are allowed'
       })
     }
 
