@@ -94,6 +94,8 @@ export function splitDoneWhen(text: string): { move: string; doneWhen: string | 
 /** Under this, with nothing ticked, the session didn't really get going. */
 export const SHORT_SESSION_SECONDS = 10 * 60
 
+
+
 /**
  * SPEC.md, closing: normally "where'd you get to?", but after a short or
  * abandoned session, "what got in the way?" -- a bad session is data about
@@ -116,55 +118,6 @@ export function closeoutPrompt(elapsedSec: number, tickedCount: number): {
     placeholder: 'Stopped at … Next … What’s bugging me …',
   }
 }
-
-interface ListTask { id?: unknown; text?: unknown; done?: unknown; order?: unknown }
-
-/**
- * The list ran out before the session did. Rather than an empty screen or
- * a new plan, the next step already on the project -- the one this
- * session didn't include -- offered quietly as a way to keep going.
- */
-export function nextOffList(tasks: unknown, shapes: SessionShape[]): string | null {
-  if (!Array.isArray(tasks)) return null
-  const inSession = new Set(shapes.map(sh => sh.taskId).filter(Boolean))
-  const open = (tasks as ListTask[])
-    .filter(t => t && t.done !== true && typeof t.text === 'string' && typeof t.id === 'string' && !inSession.has(t.id))
-    .sort((a, b) => (typeof a.order === 'number' ? a.order : 0) - (typeof b.order === 'number' ? b.order : 0))
-  return open.length > 0 ? (open[0].text as string) : null
-}
-
-/**
- * What kind of line the first move is, so it can be labelled for what it
- * is rather than every line reading as "your next step". The server marks
- * the two kinds it adds with a `pending-` id (session-shaper.ts).
- */
-export type MoveKind = 'reentry' | 'prereq' | 'suggestion' | 'step'
-
-export function moveKind(taskId: string | null | undefined): MoveKind {
-  if (!taskId) return 'suggestion'
-  if (taskId.startsWith('pending-reentry')) return 'reentry'
-  if (taskId.startsWith('pending-ready')) return 'prereq'
-  if (taskId.startsWith('pending-')) return 'suggestion'
-  return 'step'
-}
-
-export const MOVE_LABEL: Record<MoveKind, string> = {
-  reentry: 'Way back in',
-  prereq: 'First, this',
-  suggestion: 'First move',
-  step: 'First move',
-}
-
-/**
- * The quick "not this one" answers on the plan. Each is said to the
- * reshape exactly as a person would say it, so it goes through the same
- * grounded path as anything spoken -- it can reorder, split or drop, never
- * invent.
- */
-export const RESHAPE_ASKS = {
-  tooBig: 'The first one is too big for this sitting. Give me a smaller first piece of it.',
-  wrongThing: "The first one isn't what I want to do right now. Lead with a different step.",
-} as const
 
 /** Minimised is a choice about this session: coming back to home mid-hour
  *  must not throw the full screen back over what you went there to do. */

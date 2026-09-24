@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
-  needsReentry, buildReentryPrompt, buildStuckPrompt, groundMove,
-  REENTRY_AFTER_DAYS,
+  buildStuckPrompt, groundMove,
 } from './session-moves.js'
 import type { Evidence } from './session-grounding.js'
 
@@ -9,45 +8,6 @@ const evidence: Evidence[] = [
   { id: 'e1', label: 'from your last close-out', text: 'Bounced a rough of the Graham track. The drop is flat.' },
   { id: 'e2', label: 'already on the project', text: 'Fix the drop so it lands' },
 ]
-
-describe('needsReentry', () => {
-  it('fires after a month away with a plan to come back to', () => {
-    expect(needsReentry(REENTRY_AFTER_DAYS, 3)).toBe(true)
-    expect(needsReentry(90, 1)).toBe(true)
-  })
-
-  it('stays out of the way on a warm project', () => {
-    expect(needsReentry(REENTRY_AFTER_DAYS - 1, 3)).toBe(false)
-  })
-
-  it('has nothing to re-enter when there is no plan', () => {
-    expect(needsReentry(120, 0)).toBe(false)
-  })
-})
-
-describe('buildReentryPrompt', () => {
-  const prompt = buildReentryPrompt({
-    title: 'Graham track',
-    daysAway: 42,
-    lastCloseout: 'The drop is flat',
-    nextStep: 'Fix the drop so it lands',
-    evidence,
-  })
-
-  it('says how long it has been, in weeks', () => {
-    expect(prompt).toContain('about 6 weeks')
-  })
-
-  it('treats the old plan as cold rather than the place to start', () => {
-    expect(prompt).toContain('probably cold now')
-    expect(prompt).toContain("Don't pick up where the\nplan says")
-  })
-
-  it('asks to meet the work and say one sentence about it', () => {
-    expect(prompt).toContain('say one sentence out loud')
-    expect(prompt).toContain('Done when')
-  })
-})
 
 describe('buildStuckPrompt', () => {
   const prompt = buildStuckPrompt({

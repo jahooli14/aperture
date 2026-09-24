@@ -1,16 +1,22 @@
 /**
  * The hand-off. What the session changed, and -- the part that matters --
- * what the next one starts with. Seeing your own note waiting for you is
- * what makes leaving it worth the twenty seconds.
+ * the move the next one starts with, written just now from the note you
+ * left. It's shown here, while it's fresh, so a wrong one can be put right
+ * in a sentence instead of discovered cold next time.
  */
 
-import { Check, Flag } from 'lucide-react'
-import type { CloseResult } from '../../../stores/useSessionStore'
+import { useState } from 'react'
+import { ArrowUp, Check, Flag, Pencil } from 'lucide-react'
+import { VoiceInput } from '../../VoiceInput'
+import type { CloseResult, SessionMove } from '../../../stores/useSessionStore'
 import { splitDoneWhen } from '../sessionRunOps'
-import { accent, faint, label, primaryButton, serif } from './ui'
+import { accent, faint, label, primaryButton, quietButton, serif } from './ui'
 
 interface Props {
   result: CloseResult
+  /** The next move as it stands (updated if they change it here). */
+  nextMove: SessionMove | null
+  onSetMove: (text: string) => void
   /** The note they just left, if any. */
   note: string
   minutes: number
@@ -20,9 +26,18 @@ interface Props {
   onNextCycle: () => void
 }
 
-export function Handoff({ result, note, minutes, busy, onClose, onFinish, onNextCycle }: Props) {
-  const startsWith = result.nextAdded[0] ?? null
+export function Handoff({ result, nextMove, onSetMove, note, minutes, busy, onClose, onFinish, onNextCycle }: Props) {
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState('')
+  const startsWith = nextMove?.kind === 'move' ? splitDoneWhen(nextMove.text) : null
   const done = [...result.markedDone, ...result.created]
+  const save = (text: string) => {
+    const clean = text.trim()
+    if (!clean) return
+    onSetMove(clean)
+    setEditing(false)
+    setDraft('')
+  }
 
   return (
     <div className="flex-1 flex flex-col py-6 space-y-7">
@@ -35,14 +50,45 @@ export function Handoff({ result, note, minutes, busy, onClose, onFinish, onNext
         )}
       </div>
 
-      {(startsWith || note.trim()) && (
+      {startsWith ? (
         <div className="space-y-2">
           <p className={label} style={faint(0.45)}>Next time starts with</p>
-          <p className="text-[24px] leading-[1.25]" style={serif}>
-            {startsWith ? splitDoneWhen(startsWith).move : `“${note.trim()}”`}
-          </p>
+          <p className="text-[24px] leading-[1.25]" style={serif}>{startsWith.move}</p>
+          {startsWith.doneWhen && (
+            <p className="flex items-start gap-2 text-[13px] leading-snug" style={faint(0.7)}>
+              <Flag size={13} className="mt-0.5 flex-shrink-0" style={{ color: accent }} />
+              {startsWith.doneWhen}
+            </p>
+          )}
+          {editing ? (
+            <div className="flex items-center gap-2 rounded-xl pl-3 pr-1.5 py-1 mt-2" style={quietButton}>
+              <input
+                autoFocus
+                value={draft}
+                onChange={e => setDraft(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') save(draft) }}
+                placeholder="What should next time start with?"
+                className="flex-1 bg-transparent text-[13px] outline-none py-1.5"
+                style={{ color: 'var(--brand-text-primary)' }}
+              />
+              {draft.trim() ? (
+                <button onClick={() => save(draft)} className="p-1.5" aria-label="Save"><ArrowUp size={16} style={{ color: accent }} /></button>
+              ) : (
+                <VoiceInput variant="icon" onTranscript={save} autoSubmit maxDuration={30} />
+              )}
+            </div>
+          ) : (
+            <button onClick={() => setEditing(true)} className="flex items-center gap-1.5 text-[12px] pt-1" style={faint(0.5)}>
+              <Pencil size={11} /> Not quite — change it
+            </button>
+          )}
         </div>
-      )}
+      ) : note.trim() ? (
+        <div className="space-y-2">
+          <p className={label} style={faint(0.45)}>Your note for next time</p>
+          <p className="text-[20px] leading-[1.3] italic" style={serif}>“{note.trim()}”</p>
+        </div>
+      ) : null}
 
       {done.length > 0 && (
         <div className="space-y-1.5">

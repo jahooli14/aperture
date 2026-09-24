@@ -48,7 +48,8 @@ import { ProjectIdeasHome } from './ProjectIdeasHome'
 import { FocusChat } from './FocusChat'
 import { StandingQuestion } from './StandingQuestion'
 import { SessionContract, type Phase } from '../session/SessionContract'
-import { WINDOW_PRESETS, useSessionStore } from '../../stores/useSessionStore'
+import { useSessionStore, readStoredMove } from '../../stores/useSessionStore'
+import { splitDoneWhen } from '../session/sessionRunOps'
 import { useDifferentThingNudge } from './useDifferentThingNudge'
 import { createProjectFromIdea } from '../../lib/createProjectFromIdea'
 import { haptic } from '../../utils/haptics'
@@ -130,6 +131,9 @@ export function TodaysAnswerCard({
   // started, so the whole flow (window → shapes → timer → close-out)
   // happens in the one box rather than on a second screen.
   const [contractOpen, setContractOpen] = useState(false)
+  // Go on the card IS the decision, so the session starts straight away.
+  // "Change it" opens the same box without starting.
+  const [autoStart, setAutoStart] = useState(false)
   // Tracked so the wrapper below can go true black once a session is
   // actually running -- the one screen you stare at for the length of an
   // hour, where the hero gradient's glow costs real OLED battery for no
@@ -137,20 +141,6 @@ export function TodaysAnswerCard({
   // brief, so it keeps the richer look.
   const [sessionPhase, setSessionPhase] = useState<Phase | null>(null)
 
-  // The page clears for an open contract in EVERY phase, not just once the
-  // clock is running. The two-minute planning ritual is exactly when the
-  // rest of home is other projects competing with the one you just
-  // committed to -- and it used to sit right there under the countdown.
-  useEffect(() => {
-    onExpandedChange?.(engaged || contractOpen)
-  }, [engaged, contractOpen, onExpandedChange])
-  // How long you've got. A control ON the card, never a gate in front of it
-  // -- most opens aren't sessions (capture, browse, logging a close-out),
-  // and asking those a time question first blocks them for nothing. Picking
-  // one here means Start session goes straight to the timer instead of
-  // asking again.
-  const windowMinutes = useSessionStore(s => s.windowMinutes)
-  const setWindowMinutes = useSessionStore(s => s.setWindowMinutes)
 
   // "Work on this one, now" arriving from elsewhere on the page — the ▶ on
   // a mini card, or the chat answering with start_session. Those surfaces
@@ -167,11 +157,6 @@ export function TodaysAnswerCard({
   // hidden because a session was technically running, and no way back into
   // the hour. Starting again from there opened a second session.
   const activeSessionProjectId = useSessionStore(s => s.active?.project_id ?? null)
-
-  const pickWindow = (m: number) => {
-    haptic.light()
-    setWindowMinutes(windowMinutes === m ? null : m)
-  }
 
   useEffect(() => {
     if (!activeSessionProjectId) return
@@ -194,6 +179,7 @@ export function TodaysAnswerCard({
     // one frame where the project list hasn't caught up.
     if (focusProject?.id !== startRequestId) return
     useHomeAnswerStore.getState().clearStartRequest()
+    setAutoStart(true)
     setContractOpen(true)
     // The request usually comes from a card further down the page, so put
     // the session back in front of the user rather than leaving it opened
@@ -357,8 +343,9 @@ export function TodaysAnswerCard({
   // Execution rebuild: opens the contract in place. The old Power Hour
   // overlay it used to hand off to is gone -- there is one session engine
   // now, and this is the way in.
-  const handleStartSession = () => {
+  const handleStartSession = (start: boolean) => {
     haptic.medium()
+    setAutoStart(start)
     setContractOpen(true)
   }
 
@@ -376,19 +363,13 @@ export function TodaysAnswerCard({
   const closeout = focusProject.last_closeout_text?.trim() || null
   const reEntry = closeout && closeout.length >= MIN_USEFUL_CLOSEOUT ? closeout : null
 
-  // The next step on the project's own list, in plan order — the exact
-  // thing the session will open with. This used to be a separate Power
-  // Hour call that generated its own headline, so home promised one thing
-  // and the session then proposed another. One plan, one answer.
-  const nextStep = [...(focusProject.metadata?.tasks ?? [])]
-    .filter((t: any) => t && !t.done && typeof t.text === 'string')
-    .sort((a: any, b: any) => (typeof a.order === 'number' ? a.order : 0) - (typeof b.order === 'number' ? b.order : 0))[0]
-  // Only surface a preview when we actually know what's next. Generic
-  // "continue where you left off" copy is exactly the analyst voice
-  // CLAUDE.md forbids — stay quiet when there's nothing real to say.
-  const answer = nextStep?.text
-  // Where they got to on it last time, when a close-out said so.
-  const pitch = typeof nextStep?.progress_note === 'string' ? `Last time: ${nextStep.progress_note}` : null
+  // The one next move, written when the last session ended
+  // (api/_lib/next-move.ts) and cached on the project, so it's on the card
+  // the instant the app opens. The same move the session opens with --
+  // home never promises one thing and the session another.
+  const storedMove = readStoredMove(focusProject.metadata)
+  const nextMove = storedMove?.kind === 'move' ? splitDoneWhen(storedMove.text) : null
+  const fork = storedMove?.kind === 'fork' ? storedMove.text : null
 
   // No timestamp at all means never touched, not touched in 1970 — the
   // `|| 0` fallback here dated the project to the epoch and stamped a
@@ -451,10 +432,11 @@ export function TodaysAnswerCard({
         <SessionContract
           project={focusProject}
           surface="bare"
-          presetWindowMinutes={windowMinutes}
+          autoStart={autoStart}
           onPhaseChange={setSessionPhase}
           onDone={() => {
             setContractOpen(false)
+            setAutoStart(false)
             setSessionPhase(null)
             // Pull the project back down so the card's re-entry line shows
             // the close-out that was just recorded, not the previous one.
@@ -543,10 +525,34 @@ export function TodaysAnswerCard({
             not something you can act on. Every 1px rectangle at the same
             weight is what made the page read as a stack of outlined
             boxes; fill alone separates it from the card behind it. */}
-        {reEntry ? (
-          /* Where you left off, in your own words. Quoted rather than
-             paraphrased on purpose — a summary of your own sentence is
-             strictly worse than the sentence. */
+        {nextMove ? (
+          <div className="p-3.5 rounded-xl mb-4" style={{ background: 'rgba(255,255,255,0.045)' }}>
+            <p className="text-[10px] font-bold uppercase tracking-[0.28em] mb-1.5" style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.8 }}>
+              next move
+            </p>
+            <p
+              className="text-[19px] leading-[1.3]"
+              style={{ color: 'var(--brand-text-primary)', fontFamily: 'var(--brand-font-serif)' }}
+            >
+              {nextMove.move}
+            </p>
+            {nextMove.doneWhen && (
+              <p className="text-[12.5px] mt-1.5" style={{ color: 'var(--brand-text-secondary)', opacity: 0.65 }}>{nextMove.doneWhen}</p>
+            )}
+            {reEntry && (
+              <p className="text-[12px] mt-2.5 italic line-clamp-2" style={{ color: 'var(--brand-text-secondary)', opacity: 0.5 }}>
+                You stopped with “{reEntry}”
+              </p>
+            )}
+          </div>
+        ) : fork ? (
+          <div className="p-3.5 rounded-xl mb-4" style={{ background: 'rgba(255,255,255,0.045)' }}>
+            <p className="text-[10px] font-bold uppercase tracking-[0.28em] mb-1.5" style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.8 }}>
+              first, decide
+            </p>
+            <p className="text-[19px] leading-[1.3]" style={{ fontFamily: 'var(--brand-font-serif)' }}>{fork}</p>
+          </div>
+        ) : reEntry ? (
           <div className="p-3 rounded-xl mb-4" style={{ background: 'rgba(255,255,255,0.045)' }}>
             <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-[var(--brand-text-secondary)] opacity-40 mb-1">
               where you left off
@@ -558,69 +564,34 @@ export function TodaysAnswerCard({
               “{reEntry}”
             </p>
           </div>
-        ) : answer ? (
-          <div className="p-3 rounded-xl mb-4" style={{ background: 'rgba(255,255,255,0.045)' }}>
-            <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-[var(--brand-text-secondary)] opacity-40 mb-1">
-              what&apos;s next
-            </p>
-            <p
-              className="text-[17px] leading-[1.4] line-clamp-2 mb-1"
-              style={{ color: 'var(--brand-text-secondary)', fontFamily: 'var(--brand-font-serif)' }}
+        ) : null}
+
+        {/* One button. The move is already written, so Go starts the
+            session straight away; "change it" opens the same box without
+            starting, for "too big" / "wrong thing". */}
+        <div className="space-y-2" onClick={e => e.stopPropagation()}>
+          <button
+            onClick={() => handleStartSession(!!nextMove)}
+            className="w-full py-3 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all hover:brightness-110"
+            style={{
+              background: 'rgba(var(--brand-primary-rgb), 0.9)',
+              color: '#0b1220',
+              boxShadow: '0 6px 20px -6px rgba(var(--brand-primary-rgb), 0.5)',
+            }}
+          >
+            <Play className="h-3.5 w-3.5 fill-current" />
+            {nextMove ? 'Go' : fork ? 'Answer it' : 'Find the first move'}
+          </button>
+          {nextMove && (
+            <button
+              onClick={() => handleStartSession(false)}
+              className="w-full text-[11.5px] py-0.5"
+              style={{ color: 'var(--brand-text-secondary)', opacity: 0.5 }}
             >
-              {answer}
-            </p>
-            {pitch && <p className="text-xs text-[var(--brand-text-secondary)] opacity-60 line-clamp-2">{pitch}</p>}
-          </div>
-        ) : (
-          <p className="text-xs mb-4" style={{ color: 'var(--brand-text-secondary)', opacity: 0.4 }}>
-            No plan yet — start and we'll work out the first move together.
-          </p>
-        )}
-
-        <div className="flex items-center gap-2 mb-3" onClick={e => e.stopPropagation()}>
-          <span className="text-[10px] uppercase tracking-[0.2em]" style={{ color: 'var(--brand-text-secondary)', opacity: 0.4 }}>
-            got
-          </span>
-          {WINDOW_PRESETS.map(m => {
-            const active = windowMinutes === m
-            return (
-              <button
-                key={m}
-                onClick={() => pickWindow(m)}
-                className="px-2.5 py-1 rounded-full text-[11px] font-medium transition-all active:scale-[0.97]"
-                style={active
-                  ? { background: 'rgba(var(--brand-primary-rgb),0.16)', border: '1px solid rgba(var(--brand-primary-rgb),0.45)', color: 'rgb(var(--brand-primary-rgb))' }
-                  : { background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.10)', color: 'var(--brand-text-secondary)' }}
-              >
-                {m < 60 ? `${m}m` : `${m / 60}h`}
-              </button>
-            )
-          })}
+              Not this — change it
+            </button>
+          )}
         </div>
-
-        {/* The window is a gate, not a preference. The plan is sized to it,
-            so there is nothing honest to show until it's answered — and a
-            list built for "some amount of time" is the thing that made the
-            old session one vague item long. */}
-        <button
-          onClick={(e) => { e.stopPropagation(); handleStartSession() }}
-          disabled={windowMinutes == null}
-          className="w-full py-2.5 rounded-xl font-semibold text-xs uppercase tracking-widest flex items-center justify-center gap-2 transition-all hover:brightness-110 disabled:cursor-default disabled:hover:brightness-100"
-          style={windowMinutes == null ? {
-            background: 'rgba(255,255,255,0.03)',
-            border: '1px solid rgba(255,255,255,0.10)',
-            color: 'var(--brand-text-secondary)',
-            opacity: 0.5,
-          } : {
-            background: 'rgba(var(--brand-primary-rgb), 0.12)',
-            border: '1px solid rgba(var(--brand-primary-rgb), 0.32)',
-            color: 'rgb(var(--brand-primary-rgb))',
-            boxShadow: '0 4px 16px -4px rgba(var(--brand-primary-rgb), 0.18)',
-          }}
-        >
-          <Play className="h-3.5 w-3.5 fill-current" />
-          {windowMinutes == null ? 'Pick a time first' : 'Start session'}
-        </button>
       </div>
 
       {/* Redirect — stopPropagation so tapping anything in here doesn't

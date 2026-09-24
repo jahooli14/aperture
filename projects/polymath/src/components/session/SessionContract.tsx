@@ -2,23 +2,22 @@
  * SessionContract — the execution session, per SPEC.md. Move, work,
  * breadcrumb.
  *
- *   1. window    — how long have you got (skipped when the card above
- *                  already asked).
- *   2. planning  — ONE first move, big, with its "Done when", and at most
- *                  two quieter ones behind it. "Too big" / "wrong thing" /
- *                  your own words redo it from what's real. Then Go.
- *   3. running   — the whole screen (FocusShell): the move you're on, a
- *                  Done button, "I'm stuck", Stop. Minimise to step out
- *                  without stopping.
- *   4. closeout  — the breadcrumb: where you stopped, what's next, what's
- *                  bugging you. It's the next session's opening line.
- *   5. receipt   — the hand-off: what changed and what next time starts
- *                  with.
+ *   1. move      — the one next move, already written when you stopped
+ *                  last time (api/_lib/next-move.ts), so it's here at once.
+ *                  "Too big" / "wrong thing" / your own words write a new
+ *                  one. A brand-new project may get a question instead.
+ *   2. running   — the whole screen (FocusShell): the move, a Done button,
+ *                  "I'm stuck", Stop. The clock counts up; nothing to size.
+ *                  Minimise to step out without stopping.
+ *   3. closeout  — the breadcrumb: where you stopped, what's next, what's
+ *                  bugging you. The server turns it into the next move.
+ *   4. receipt   — the hand-off: "next time starts with…", correctable
+ *                  right there while it's fresh.
  *
  * Why this shape: in creative work the next step comes out of the last
- * one, so a list is out of date by item two, and the app is on your phone
- * while the work is somewhere else. The two moments that need help are
- * starting and stopping well. Everything in between gets out of the way.
+ * one, so the move is written at the end of a session, not the start of
+ * the next. The two moments that need help are starting and stopping
+ * well; everything in between gets out of the way.
  *
  * The screens are in ./flow; this file owns the state and the store calls.
  */
@@ -29,14 +28,14 @@ import { useSessionStore, type CloseResult } from '../../stores/useSessionStore'
 import { useVoicePreference } from '../../stores/useVoicePreference'
 import { useProjectStore } from '../../stores/useProjectStore'
 import { useOnlineStatus } from '../../hooks/useOnlineStatus'
-import { useSessionNotification } from '../../hooks/useSessionNotification'
+import { useSessionNotification, SESSION_ACTION_EVENT, type SessionAction } from '../../hooks/useSessionNotification'
 import { haptic } from '../../utils/haptics'
 import {
   loadTicks, saveTicks, elapsedSeconds, partitionRunningShapes,
-  closeoutDraft, closeoutPrompt, nextOffList, splitDoneWhen,
+  closeoutDraft, closeoutPrompt, splitDoneWhen,
   loadMinimised, saveMinimised,
 } from './sessionRunOps'
-import { MovePlan } from './flow/MovePlan'
+import { MoveCard } from './flow/MoveCard'
 import { FocusShell } from './flow/FocusShell'
 import { WorkView } from './flow/WorkView'
 import { Breadcrumb } from './flow/Breadcrumb'
@@ -44,7 +43,7 @@ import { Handoff } from './flow/Handoff'
 import { accent, faint, formatClock } from './flow/ui'
 import type { Project } from '../../types'
 
-export type Phase = 'window' | 'planning' | 'running' | 'closeout' | 'receipt' | 'done'
+export type Phase = 'move' | 'running' | 'closeout' | 'receipt'
 
 export function SessionContract({
   project,
@@ -52,7 +51,7 @@ export function SessionContract({
   onFinish,
   source = 'live',
   surface = 'card',
-  presetWindowMinutes = null,
+  autoStart = false,
   onPhaseChange,
 }: {
   project: Project
@@ -67,15 +66,16 @@ export function SessionContract({
   /** 'card' draws its own glass surface (standalone /session route);
    *  'bare' lets the parent own it (the home answer box). */
   surface?: 'card' | 'bare'
-  /** A window the parent already collected (the time chips on home). */
-  presetWindowMinutes?: number | null
+  /** Go straight into the session with the stored move -- the card's own
+   *  Go button already was the decision. */
+  autoStart?: boolean
   /** Lets a 'bare' parent swap its own chrome by phase. */
   onPhaseChange?: (phase: Phase) => void
 }) {
   const shell = (extra: string) => (surface === 'bare' ? extra : `glass-card p-6 ${extra}`)
   const {
-    active, plan, shaping, starting, closing, error,
-    shapePlan, reshapePlan, clearPlan, startSession, closeSession, answerPlanQuestion,
+    active, move, moveFor, moveBusy, starting, closing, error,
+    loadMove, reworkMove, startSession, closeSession,
   } = useSessionStore()
   const { isOnline: online } = useOnlineStatus()
   const prefersText = useVoicePreference(s => s.prefersText)
@@ -85,13 +85,10 @@ export function SessionContract({
   // second one on top of it.
   const resuming = active != null && active.project_id === project.id
 
-  const [phase, setPhase] = useState<Phase>(
-    resuming ? 'running' : presetWindowMinutes != null ? 'planning' : 'window'
-  )
+  const [phase, setPhase] = useState<Phase>(resuming ? 'running' : 'move')
   useEffect(() => { onPhaseChange?.(phase) }, [phase, onPhaseChange])
-  const [windowMinutes, setWindowMinutes] = useState<number | null>(
-    (resuming ? active?.window_minutes ?? null : null) ?? presetWindowMinutes
-  )
+  // Only a session started before moves existed carries a window.
+  const windowMinutes = resuming ? active?.window_minutes ?? null : null
   // The focus screen can be stepped out of (to capture a thought, say)
   // without stopping. The session keeps running; the card shows a bar.
   const [focusOpen, setFocusOpenState] = useState(() => !(resuming && loadMinimised(active?.id)))
@@ -109,29 +106,34 @@ export function SessionContract({
   const [savedNote, setSavedNote] = useState('')
   const [busy, setBusy] = useState(false)
 
-  // ── The plan: fetched once per (project, window) ──────────────────
-  const shapedFor = useRef<string | null>(null)
+  // ── The move: stored, so this is usually instant ──────────────────
   useEffect(() => {
-    if (phase !== 'planning') return
-    const key = `${project.id}:${windowMinutes}`
-    if (shapedFor.current === key) return
-    shapedFor.current = key
-    void shapePlan(project.id, windowMinutes)
-  }, [phase, project.id, windowMinutes, shapePlan])
-
-  const planHere = plan?.projectId === project.id ? plan : null
+    if (!resuming) void loadMove(project.id)
+    // Once per project; a resumed session already has its move.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [project.id])
+  const moveHere = moveFor === project.id ? move : null
 
   const go = useCallback(async () => {
     haptic.medium()
-    const items = planHere?.items?.length ? planHere.items : undefined
-    await startSession(project.id, windowMinutes, source, items, planHere?.friction ?? null, planHere?.packdown ?? null)
+    const items = moveHere?.kind === 'move' ? [{ text: moveHere.text, source: null, taskId: null }] : undefined
+    await startSession(project.id, null, source, items)
     if (useSessionStore.getState().active) {
       setNowMs(Date.now())
       setTicked(new Set())
       setFocusOpen(true)
       setPhase('running')
     }
-  }, [planHere, project.id, windowMinutes, source, startSession])
+  }, [moveHere, project.id, source, startSession])
+
+  // The card's Go button already was the decision: don't ask it twice.
+  const autoStarted = useRef(false)
+  useEffect(() => {
+    if (!autoStart || autoStarted.current || resuming || phase !== 'move') return
+    if (moveHere?.kind !== 'move') return
+    autoStarted.current = true
+    void go()
+  }, [autoStart, resuming, phase, moveHere, go])
 
   // ── The clock: wall time, never an accumulator ────────────────────
   // A locked phone suspends timers; (now - started_at) never lies.
@@ -176,9 +178,25 @@ export function SessionContract({
   const remaining = windowMinutes != null ? windowMinutes * 60 - elapsedSec : elapsedSec
   const timeUp = windowMinutes != null && remaining < 0
   const currentIndex = workIndexes.find(i => !ticked.has(i)) ?? -1
-  const allDone = currentIndex < 0 && workIndexes.length > 0
   const isRunning = phase === 'running' && active != null
   useSessionNotification(isRunning, project.title, currentIndex >= 0 ? shapes[currentIndex].text : null)
+
+  // The notification's buttons: Done ticks the move you're on, I'm stuck
+  // opens the session and asks for a way back in.
+  const [stuckSignal, setStuckSignal] = useState(0)
+  useEffect(() => {
+    if (!isRunning) return
+    const onAction = (e: Event) => {
+      const action = (e as CustomEvent<SessionAction>).detail
+      if (action === 'done' && currentIndex >= 0) toggle(currentIndex)
+      if (action === 'stuck') {
+        setFocusOpen(true)
+        setStuckSignal(n => n + 1)
+      }
+    }
+    window.addEventListener(SESSION_ACTION_EVENT, onAction)
+    return () => window.removeEventListener(SESSION_ACTION_EVENT, onAction)
+  }, [isRunning, currentIndex])
 
   const ask = closeoutPrompt(elapsedSec, ticked.size)
   const did = shapes.filter((sh, i) => ticked.has(i) && sh.source !== 'friction').map(sh => sh.text)
@@ -249,8 +267,8 @@ export function SessionContract({
                   clockSeconds={remaining}
                   hasWindow={windowMinutes != null}
                   timeUp={timeUp}
-                  keepGoing={allDone && !timeUp ? nextOffList(project.metadata?.tasks, shapes) : null}
                   online={online}
+                  stuckSignal={stuckSignal}
                   onToggle={toggle}
                   onStop={stop}
                   onMinimise={() => setFocusOpen(false)}
@@ -276,6 +294,8 @@ export function SessionContract({
               ) : closeResult ? (
                 <Handoff
                   result={closeResult}
+                  nextMove={moveHere ?? closeResult.nextMove}
+                  onSetMove={(text: string) => { void reworkMove(project.id, { action: 'set', text }) }}
                   note={savedNote}
                   minutes={closeResult.duration_minutes}
                   busy={busy}
@@ -291,24 +311,20 @@ export function SessionContract({
     )
   }
 
-  // ── Before: window and the first move ─────────────────────────────
+  // ── Before: the move ──────────────────────────────────────────────
   return (
     <div className={shell('')}>
-      <MovePlan
+      <MoveCard
         title={project.title}
         lastNote={project.last_closeout_text?.trim() || null}
-        windowMinutes={phase === 'window' ? null : windowMinutes}
-        plan={planHere}
-        shaping={shaping}
+        move={moveHere}
+        busy={moveBusy}
         starting={starting}
         online={online}
         error={error}
-        onPickWindow={m => { haptic.light(); setWindowMinutes(m); setPhase('planning') }}
         onGo={() => { void go() }}
-        onReshape={text => { void reshapePlan(text) }}
-        onAnswer={text => { void answerPlanQuestion(text) }}
-        onRetry={() => { void shapePlan(project.id, windowMinutes) }}
-        onNotNow={() => { clearPlan(); onDone() }}
+        onChange={change => { void reworkMove(project.id, change) }}
+        onNotNow={onDone}
       />
     </div>
   )

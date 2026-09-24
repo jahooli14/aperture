@@ -26,8 +26,8 @@ interface Props {
   clockSeconds: number
   hasWindow: boolean
   timeUp: boolean
-  keepGoing: string | null
   online: boolean
+  stuckSignal: number
   onToggle: (index: number) => void
   onStop: () => void
   onMinimise: () => void
@@ -35,7 +35,7 @@ interface Props {
 
 export function WorkView({
   projectId, title, shapes, workIndexes, ticked, clockSeconds, hasWindow, timeUp,
-  keepGoing, online, onToggle, onStop, onMinimise,
+  online, stuckSignal, onToggle, onStop, onMinimise,
 }: Props) {
   const currentIndex = workIndexes.find(i => !ticked.has(i)) ?? -1
   const current = currentIndex >= 0 ? shapes[currentIndex] : null
@@ -107,16 +107,11 @@ export function WorkView({
           ) : (
             <motion.div key="all-done" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
               <p className="text-[28px] leading-[1.2]" style={serif}>
-                {allDone ? 'That’s the lot.' : 'Nothing on the list.'}
+                {allDone ? 'That’s the move done.' : 'Nothing on the list.'}
               </p>
-              {keepGoing && !timeUp ? (
-                <div className="space-y-1">
-                  <p className={label} style={faint(0.45)}>If you want to keep going</p>
-                  <p className="text-[16px] leading-snug" style={faint(0.8)}>{splitDoneWhen(keepGoing).move}</p>
-                </div>
-              ) : (
-                <p className="text-[15px]" style={faint(0.6)}>Good place to stop.</p>
-              )}
+              <p className="text-[15px] leading-snug" style={faint(0.6)}>
+                {timeUp ? 'Good place to stop.' : 'Keep going while it’s flowing. When you stop, say where you got to — that’s next time’s move.'}
+              </p>
             </motion.div>
           )}
         </AnimatePresence>
@@ -140,7 +135,7 @@ export function WorkView({
           </button>
         )}
         {current && (
-          <StuckMove projectId={projectId} step={current.source === 'friction' ? null : current.text} online={online} />
+          <StuckMove projectId={projectId} step={current.source === 'friction' ? null : current.text} online={online} askSignal={stuckSignal} />
         )}
         <button
           className="w-full py-3 rounded-2xl text-[14px] font-medium flex items-center justify-center gap-2 transition-transform active:scale-[0.98]"

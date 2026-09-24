@@ -17,9 +17,12 @@ interface Props {
   /** The step you're on right now. Null when everything's ticked. */
   step: string | null
   online: boolean
+  /** Bumped from outside (the notification's "I'm stuck" button) to ask
+   *  without a tap on this screen. */
+  askSignal?: number
 }
 
-export function StuckMove({ projectId, step, online }: Props) {
+export function StuckMove({ projectId, step, online, askSignal = 0 }: Props) {
   const askStuck = useSessionStore(s => s.askStuck)
   const [move, setMove] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -28,9 +31,8 @@ export function StuckMove({ projectId, step, online }: Props) {
   // A move is for one step. Ticking it moves you on, so the move goes.
   useEffect(() => { setMove(null); setEmpty(false) }, [step])
 
-  if (!step || !online) return null
-
   const ask = async () => {
+    if (!step) return
     haptic.light()
     setBusy(true)
     setEmpty(false)
@@ -39,6 +41,15 @@ export function StuckMove({ projectId, step, online }: Props) {
     if (next) setMove(next)
     else setEmpty(true)
   }
+  useEffect(() => {
+    if (askSignal > 0 && step && online) void ask()
+    // Only a new signal asks; step/online changes alone must not.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [askSignal])
+
+  if (!step || !online) return null
+
+
 
   if (move) {
     return (

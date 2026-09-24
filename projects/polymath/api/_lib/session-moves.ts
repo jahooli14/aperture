@@ -1,96 +1,26 @@
 /**
- * One move, at the two moments a session actually needs help.
+ * "I'm stuck" -- one move back into the step you're on.
  *
- * A plan helps least in the middle of creative work: once you're in it,
- * you're either flowing or stuck, and neither wants a list. The moments
- * that want help are getting going and getting unstuck, and both want the
- * same thing -- ONE small move in the medium's own verbs, with a clear
- * point where it's done. Never a new plan.
+ * Mid-session you're either flowing or stuck, and neither wants a list.
+ * Stuck wants one thing to do with your hands: smaller, sideways, or a
+ * constraint. Never a new plan, and never saved -- if it helped, the
+ * close-out will say so in your own words. (Getting started is the other
+ * moment that needs help; that's next-move.ts.)
  *
- *   - RE-ENTRY. A project left for a month has a plan written by someone
- *     who remembered it. Its top step is cold, and sitting down to it
- *     costs double. The first move back is to meet the work again: play
- *     the last bounce, read the last page, look at the last canvas, and
- *     say one sentence about it. That sentence is what the close-out then
- *     carries forward.
- *   - STUCK. Mid-session, on the step you're on. One move that gets hands
- *     back on it -- smaller, sideways, or a constraint -- not a replan.
- *
- * Both are grounded the same way as a split move: nothing named that the
- * project's own evidence doesn't name. Neither is written to the plan.
- * The re-entry move rides the session as a `pending-` item, so it only
- * becomes a (done) task if it's ticked at close-out. The stuck move is
- * scaffolding and is thrown away.
- *
- * Pure except `reentryMove` and `stuckMove`.
+ * Grounded like every generated line: nothing named that the project's
+ * evidence doesn't name. Pure except `stuckMove`.
  */
 
 import { generateText } from './gemini-chat.js'
 import { MODELS } from './models.js'
 import { PLAIN_ENGLISH_RULES, CLEAR_STEP_RULES, CREATIVE_MOVE_RULES, FIRST_MOVE_RULES } from './plain-english.js'
-import { evidenceHaystack, hasOnlyKnownSpecifics, type Evidence, type GroundedItem } from './session-grounding.js'
+import { evidenceHaystack, hasOnlyKnownSpecifics, type Evidence } from './session-grounding.js'
 import { sanitizeRawItems } from './session-items.js'
-
-/** A month away and the plan is someone else's. Short of that, the
- *  re-entry line (the last close-out) is enough to get going. */
-export const REENTRY_AFTER_DAYS = 28
-/** What the re-entry move is budgeted at inside the window. */
-export const REENTRY_MINUTES = 10
-export const REENTRY_SOURCE = "a way back in — it's been a while"
-
-export interface ReentryInput {
-  title: string
-  daysAway: number
-  lastCloseout: string | null
-  /** The step the plan would otherwise open on. */
-  nextStep: string | null
-  evidence: Evidence[]
-}
-
-export function needsReentry(daysAway: number, openStepCount: number): boolean {
-  return openStepCount > 0 && daysAway >= REENTRY_AFTER_DAYS
-}
 
 function evidenceBlock(evidence: Evidence[]): string {
   return evidence.length
     ? evidence.map(e => `[${e.id}] ${e.text}`).join('\n')
     : '(nothing beyond the title)'
-}
-
-export function buildReentryPrompt(input: ReentryInput): string {
-  const weeks = Math.round(input.daysAway / 7)
-  return `Nobody has worked on "${input.title}" for about ${weeks} weeks. They're sitting
-down to it now. Give them ONE move to get back into it.
-
-${input.lastCloseout ? `WHERE THEY STOPPED LAST TIME, in their words: "${input.lastCloseout}"\n` : ''}${input.nextStep ? `THE PLAN'S NEXT STEP (written before the break, probably cold now): "${input.nextStep}"\n` : ''}
-EVERYTHING KNOWN ABOUT THIS PROJECT:
-${evidenceBlock(input.evidence)}
-
-That list is the whole of it. Anything not in it, you do not know.
-
-After a long break the old plan is out of date. Don't pick up where the
-plan says. Meet the work again first: play, read, look at or run the
-last thing that exists, then say one sentence out loud about what's
-wrong with it or what it needs. That sentence is where the session goes
-next.
-  BAD:  "Review your notes and make a plan for the next stage"
-        -- planning language, and nothing is touched.
-  GOOD: "Play the last bounce once and say one sentence about what's wrong with it. Done when you've said it."
-  GOOD: "Read the last page you wrote, out loud. Done when you can say what the next line needs."
-
-If nothing above says what the last thing made was, name it plainly
-("the last thing you made") rather than inventing it.
-
-${PLAIN_ENGLISH_RULES}
-
-${CLEAR_STEP_RULES}
-
-${CREATIVE_MOVE_RULES}
-
-${FIRST_MOVE_RULES}
-
-Respond with JSON only:
-{ "move": "..." }`
 }
 
 export interface StuckInput {
@@ -164,22 +94,6 @@ async function askForMove(prompt: string): Promise<unknown> {
     thinkingLevel: 'low',
   })
   return JSON.parse(response)?.move
-}
-
-export async function reentryMove(input: ReentryInput, projectId: string): Promise<GroundedItem | null> {
-  try {
-    const text = groundMove(
-      await askForMove(buildReentryPrompt(input)),
-      input.evidence,
-      input.title,
-      [input.lastCloseout ?? '', input.nextStep ?? ''],
-    )
-    if (!text) return null
-    return { text, source: REENTRY_SOURCE, taskId: `pending-reentry-${projectId}`, partial: false }
-  } catch (e) {
-    console.error('[session-moves] re-entry move failed, opening on the plan:', e)
-    return null
-  }
 }
 
 export async function stuckMove(input: StuckInput): Promise<string | null> {
