@@ -210,6 +210,13 @@ describe('buildFirstCutPrompt', () => {
 })
 
 describe('sanitizeSteps', () => {
+  it('does not count the "Done when" against the length limit', () => {
+    const move = 'Sketch the telegraph pole three times from the kitchen window in pencil, ten minutes each, no rubbing out at all.'
+    const text = `${move} Done when three sketches exist and you know which one you would draw again.`
+    expect(text.length).toBeGreaterThan(140)
+    expect(sanitizeSteps([{ text }])).toHaveLength(1)
+  })
+
   it('strips list formatting the model adds anyway', () => {
     expect(sanitizeSteps(['1. Record the vocal', '- Mix it']).map(s => s.text))
       .toEqual(['Record the vocal', 'Mix it'])

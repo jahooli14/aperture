@@ -47,7 +47,7 @@ export function sanitizeRawItems(raw: unknown, count: number): RawItem[] {
     if (typeof rawText !== 'string') continue
     const text = rawText.trim().replace(/^[-*•]\s*/, '').replace(/^\d+[.)]\s*/, '').trim()
     if (!text) continue
-    if (text.length > 120) continue
+    if (stripDoneWhen(text).length > 120 || text.length > 220) continue
     if (isAdminItem(text)) continue
     const key = text.toLowerCase().replace(/[^a-z0-9]/g, '')
     if (!key || seen.has(key)) continue

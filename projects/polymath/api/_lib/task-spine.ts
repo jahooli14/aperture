@@ -25,7 +25,7 @@
 import { generateText } from './gemini-chat.js'
 import { PLAIN_ENGLISH_RULES, CLEAR_STEP_RULES, CREATIVE_MOVE_RULES, FIRST_MOVE_RULES } from './plain-english.js'
 import { filterGrounded, type Evidence } from './session-grounding.js'
-import { isAdminItem } from './session-items.js'
+import { isAdminItem, stripDoneWhen } from './session-items.js'
 import { ESTIMATE_MINUTES, nearestEstimate, type EstimateMinutes } from './session-estimate.js'
 import { orderSteps } from './task-order.js'
 import { MODELS } from './models.js'
@@ -200,7 +200,10 @@ export function sanitizeSteps(
     const rawText = typeof entry === 'string' ? entry : entry?.text
     if (typeof rawText !== 'string') return
     const text = rawText.trim().replace(/^[-*•]\s*/, '').replace(/^\d+[.)]\s*/, '').trim()
-    if (!text || text.length > 140) return
+    // The length limit is on the move itself. A first move also carries
+    // "Done when …" (FIRST_MOVE_RULES), and counting that against the
+    // limit threw away exactly the steps the rule asks for.
+    if (!text || stripDoneWhen(text).length > 140 || text.length > 240) return
     if (isAdminItem(text)) return
     const key = text.toLowerCase().replace(/[^a-z0-9]/g, '')
     if (!key || seen.has(key)) return
@@ -303,7 +306,11 @@ export async function generateTaskSpine(input: SpineInput): Promise<SpineStep[]>
       // Low, like the session shaper: this is reading a stated goal and
       // working back from it, not inventing a project.
       temperature: 0.3,
-      maxTokens: 2000,
+      maxTokens: 3000,
+      // Uncapped, a thinking model can spend the whole output budget
+      // reasoning and hand back no JSON at all -- which reads as "nothing
+      // to plan". Same cap the split and readiness calls already use.
+      thinkingLevel: 'low',
     })
     const cleaned = sanitizeSteps(JSON.parse(response)?.steps)
     const { kept, rejected } = filterGrounded(cleaned, evidence, input.title)
@@ -434,7 +441,8 @@ export async function generateFirstCutTasks(input: FirstCutInput): Promise<Spine
       model: MODELS.TASK_SPINE_CHAT,
       responseFormat: 'json',
       temperature: 0.4,
-      maxTokens: 800,
+      maxTokens: 1500,
+      thinkingLevel: 'low',
     })
     const cleaned = sanitizeSteps(JSON.parse(response)?.steps, FIRST_CUT_STEPS)
     const { kept, rejected } = filterGrounded(cleaned, evidence, input.title)
