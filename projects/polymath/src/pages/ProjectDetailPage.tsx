@@ -11,6 +11,7 @@ import { useSessionStore } from '../stores/useSessionStore'
 import { SessionContract } from '../components/session/SessionContract'
 import { ProjectNotes } from '../components/projects/ProjectNotes'
 import { ProjectArc } from '../components/projects/ProjectArc'
+import { MadeWall } from '../components/projects/MadeWall'
 import { ProjectPath } from '../components/projects/ProjectPath'
 import type { Task } from '../components/projects/TaskList'
 import { InlineGuide } from '../components/projects/InlineGuide'
@@ -982,6 +983,8 @@ export function ProjectDetailPage() {
                   targetDate={project.metadata?.target_date as string | undefined}
                 />
               )}
+
+              <MadeWall projectId={project.id} />
 
               {/* Paused — why it stalled, and, for a dormant project, the
                   new framing the system found for it. Used to be two

@@ -47,6 +47,7 @@ import {
   nextOffList,
 } from './sessionRunOps'
 import type { Project } from '../../types'
+import { MadeStrip } from '../projects/MadeWall'
 
 function formatClock(seconds: number): string {
   const abs = Math.abs(seconds)
@@ -567,6 +568,10 @@ export function SessionContract({
           className="w-full rounded-xl px-3 py-2 text-sm bg-transparent border resize-none outline-none"
           style={{ ...borderStyle, color: 'var(--brand-text-primary)' }}
         />
+        {/* The thing itself, not just the words about it. Offline sessions
+            have no server id yet, so their photos land on the project
+            without a session. */}
+        <MadeStrip projectId={project.id} sessionId={active?.offline ? null : active?.id} />
         <button
           className="w-full py-2 rounded-lg text-sm font-medium disabled:opacity-50"
           style={primaryButtonStyle}

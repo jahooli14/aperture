@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Long-press the app icon → "Record a thought" opens the app already
+     recording (src/lib/launchCapture.ts). -->
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="record"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_mic"
+        android:shortcutShortLabel="@string/shortcut_record_short"
+        android:shortcutLongLabel="@string/shortcut_record_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:data="polymath://capture"
+            android:targetPackage="com.polymath.app"
+            android:targetClass="com.polymath.app.MainActivity" />
+    </shortcut>
+</shortcuts>

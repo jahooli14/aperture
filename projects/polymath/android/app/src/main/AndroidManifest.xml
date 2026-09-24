@@ -37,7 +37,31 @@
                 <data android:scheme="polymath" android:host="share" />
             </intent-filter>
 
+            <!-- Open already recording: app shortcut and home-screen widget -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="polymath" android:host="capture" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
+
         </activity>
+
+        <receiver
+            android:name=".CaptureWidget"
+            android:exported="false"
+            android:label="@string/capture_widget_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/capture_widget_info" />
+        </receiver>
 
         <provider
             android:name="androidx.core.content.FileProvider"

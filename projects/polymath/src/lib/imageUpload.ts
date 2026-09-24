@@ -11,7 +11,7 @@ import { fetchWithTimeout } from './network'
 // of hanging the UI indefinitely.
 const UPLOAD_TIMEOUT_MS = 20000
 
-export async function uploadImageFile(file: File): Promise<string> {
+export async function uploadImageFile(file: File, timeoutMs = UPLOAD_TIMEOUT_MS): Promise<string> {
   const fileExt = file.name.split('.').pop() || 'png'
   const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`
 
@@ -40,7 +40,7 @@ export async function uploadImageFile(file: File): Promise<string> {
       headers: { 'Content-Type': file.type || 'image/png', 'x-upsert': 'true' },
       body: file,
     },
-    UPLOAD_TIMEOUT_MS
+    timeoutMs
   )
 
   if (!uploadResponse.ok) throw new Error(`Upload failed (${uploadResponse.status})`)

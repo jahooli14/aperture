@@ -4,6 +4,7 @@ import { ToastProvider } from './components/ui/toast'
 import { OfflineIndicator } from './components/OfflineIndicator'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { FloatingNav } from './components/FloatingNav'
+import { isCaptureLaunch, requestCapture } from './lib/launchCapture'
 import { PWAInstallBanner } from './components/PWAInstallBanner'
 import { AuthProvider } from './contexts/AuthContext'
 import { AutoSuggestionProvider } from './contexts/AutoSuggestionContext'
@@ -288,7 +289,16 @@ export default function App() {
 
     // Handle deep links for OAuth callbacks
     const setupListener = async () => {
+      // Opened from the app shortcut or home-screen widget: start recording.
+      // A cold start delivers the URL as the launch URL, not as an event.
+      const launch = await CapacitorApp.getLaunchUrl().catch(() => undefined)
+      if (launch?.url && isCaptureLaunch(launch.url)) requestCapture()
+
       listenerHandle = await CapacitorApp.addListener('appUrlOpen', async (event) => {
+        if (isCaptureLaunch(event.url)) {
+          requestCapture()
+          return
+        }
         try {
           const url = new URL(event.url)
 

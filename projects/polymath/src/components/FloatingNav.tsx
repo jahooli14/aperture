@@ -15,6 +15,7 @@ import { useDriftStore, wrapWithDriftContext } from '../stores/useDriftStore'
 import { useOfflineSync } from '../hooks/useOfflineSync'
 import { useToast } from './ui/toast'
 import { useAuthContext } from '../contexts/AuthContext'
+import { CAPTURE_EVENT, CAPTURE_PARAM, isCaptureLaunch, requestCapture, takePendingCapture } from '../lib/launchCapture'
 
 // Schema colors for each section — unique per page to reduce blue monotony
 const SCHEMA_COLORS = {
@@ -64,6 +65,27 @@ export function FloatingNav() {
   const isReaderPage = location.pathname.startsWith('/reading/') && location.pathname !== '/reading'
 
   const shouldHide = isReaderPage
+
+  // Launched to record (home-screen shortcut, widget, `/?capture=voice`):
+  // open the recorder already running. Waits for sign-in, since the
+  // recorder only mounts for a signed-in user. The param is dropped so a
+  // reload or back doesn't start another recording.
+  React.useEffect(() => {
+    if (!user) return
+    if (isCaptureLaunch(location.search)) {
+      const params = new URLSearchParams(location.search)
+      params.delete(CAPTURE_PARAM)
+      const search = params.toString()
+      navigate({ pathname: location.pathname, search: search ? `?${search}` : '' }, { replace: true })
+      requestCapture()
+    }
+    const take = () => {
+      if (takePendingCapture()) window.dispatchEvent(new Event('openVoiceCapture'))
+    }
+    take()
+    window.addEventListener(CAPTURE_EVENT, take)
+    return () => window.removeEventListener(CAPTURE_EVENT, take)
+  }, [user, location.pathname, location.search, navigate])
 
   // Listen for voice captures queued offline (from useMediaRecorderVoice)
   React.useEffect(() => {
