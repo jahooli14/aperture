@@ -15,6 +15,7 @@ import { buildOfflinePlan } from '../lib/offline/offlinePlan'
 import { queueOperation } from '../lib/offlineQueue'
 import { useOfflineStore } from './useOfflineStore'
 import { isOnline } from '../lib/network'
+import { clearSessionNotification } from '../hooks/useSessionNotification'
 
 export interface SessionShape {
   text: string
@@ -209,6 +210,9 @@ interface SessionState {
   /** "That's mix 5 — line up the next one." Files what the finished one
    *  took and plans the next from that shape. */
   startNextCycle: (projectId: string) => Promise<boolean>
+  /** "I'm stuck" on the step you're on: one move back into it, never a
+   *  new plan. Null when nothing honest could be said. */
+  askStuck: (projectId: string, step: string) => Promise<string | null>
 }
 
 interface ShapeResponse {
@@ -478,6 +482,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
                 ended_at: endedAt,
               }
             )
+            clearSessionNotification()
             set({ active: null, closing: false })
             return {
               moved: result.moved,
@@ -521,6 +526,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       })
       await useOfflineStore.getState().updateQueueSize()
 
+      clearSessionNotification()
       set({ active: null, closing: false })
       return {
         moved: null,
@@ -550,6 +556,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
           done_items: doneItems,
         }
       )
+      clearSessionNotification()
       set({ active: null, closing: false })
       return {
         moved: result.moved,
@@ -606,6 +613,19 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     } catch (e) {
       console.error('[session] could not line up the next one:', e)
       return false
+    }
+  },
+
+  askStuck: async (projectId, step) => {
+    try {
+      const { move } = await postJson<{ move: string | null }>(
+        '/api/utilities?resource=stuck',
+        { project_id: projectId, step },
+      )
+      return move
+    } catch (e) {
+      console.error('[session] stuck move failed:', e)
+      return null
     }
   },
 }))

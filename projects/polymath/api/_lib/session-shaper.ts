@@ -50,6 +50,7 @@ import { nearestEstimate, type EstimateMinutes } from './session-estimate.js'
 import { splitStep, doneLineForSteps, sanitizeDoneLooksLike } from './session-split.js'
 import { checkReady } from './session-ready.js'
 import { topUpSession } from './session-topup.js'
+import { needsReentry, reentryMove, REENTRY_MINUTES } from './session-moves.js'
 import { briefSession, isUsableExitNote } from './session-briefing.js'
 import { sparkForSession, sparkMinutesCap, type WeekSignal } from './session-spark.js'
 import { readPrebake, isPrebakeFresh } from './session-prebake.js'
@@ -925,11 +926,37 @@ export async function shapeSession(
     }
   }
 
-  // Prepends the pending prerequisite, when there is one -- the one place
-  // every return path below has to remember it, so it can't be dropped by
-  // forgetting it on a path added later.
-  const withPrereq = (list: GroundedItem[]): GroundedItem[] =>
-    pendingPrereq ? [pendingPrereq, ...list] : list
+  // ── A month away: meet the work before the plan ───────────────────
+  // The plan was written by someone who remembered the project. After a
+  // long break its top step is cold, so the first move back is to play,
+  // read or look at the last thing that exists and say one sentence about
+  // it (session-moves.ts). Counted from the last SESSION, not last_active:
+  // a thought captured about a project isn't work on it. Rides the session
+  // as a pending item like the prerequisite -- never written to the plan.
+  const lastWorked = project.last_session_ended_at || project.last_active || project.created_at
+  const daysAway = lastWorked
+    ? Math.floor((Date.now() - new Date(lastWorked).getTime()) / 86_400_000)
+    : 0
+  let reentry: GroundedItem | null = null
+  if (needsReentry(daysAway, steps.length)) {
+    reentry = await reentryMove({
+      title: project.title,
+      daysAway,
+      lastCloseout: ctx.lastCloseout,
+      nextStep: steps[0]?.text ?? null,
+      evidence,
+    }, projectId)
+    if (reentry) prereqMinutes += REENTRY_MINUTES
+  }
+
+  // Prepends the re-entry move and the pending prerequisite, when there
+  // are any -- the one place every return path below has to remember
+  // them, so they can't be dropped by forgetting them on a path added later.
+  const withPrereq = (list: GroundedItem[]): GroundedItem[] => [
+    ...(reentry ? [reentry] : []),
+    ...(pendingPrereq ? [pendingPrereq] : []),
+    ...list,
+  ]
 
   let setup: FrictionLine | null = readStoredFriction(metadata.setup)
   let packdown: FrictionLine | null = readStoredFriction(metadata.packdown)

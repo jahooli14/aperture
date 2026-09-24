@@ -220,11 +220,29 @@ it can't be done in the time available. Offer to book it instead.
 1–3 items. Never four — four is a chore list. The first item is deliberately small; it
 exists to get you moving, not to be accurate. Proposed, then shaped by voice.
 
+Steps are written as **moves, not tasks** (`CREATIVE_MOVE_RULES`, `FIRST_MOVE_RULES` in
+`plain-english.ts`): the medium's own verbs (play, cut, sketch, bounce), a real named
+thing from the notes, and a first move under ten minutes that ends "Done when …".
+Project-manager language — "research reference tracks", "define the palette", "source
+materials" — reads like homework and never gets opened mid-work. A brand-new project
+whose notes haven't settled what it's about gets a fork settled by *making* both sides,
+never a "decide" step.
+
+**After a month away** (`session-moves.ts`, `REENTRY_AFTER_DAYS`, counted from the last
+session, not the last capture) the plan's top step is cold. The session opens on one
+re-entry move instead — play, read or look at the last thing that exists, say one
+sentence about it — carried as a `pending-` item, never written to the plan.
+
 ### The timer
 
 - Counts **up** by default. Counts down only when you named a hard stop.
 - Never interrupts, never nags, no progress bar.
 - Stopping is one tap and is always fine.
+- **"I'm stuck"** sits under the list: one move on the step you're on — smaller,
+  sideways, or a constraint. Never a new plan, never saved (`resource=stuck`).
+- **On Android the step you're on sits in a persistent, silent notification** for the
+  whole session, because once the work is open you won't go back to the app to check.
+  Cleared the moment the session ends.
 
 ### Closing — the highest-value input in the system
 

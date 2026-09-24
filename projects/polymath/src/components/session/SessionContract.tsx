@@ -27,11 +27,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Clock, Square, ArrowUp, Check, Keyboard, Mic, Wrench, Flag, Plus } from 'lucide-react'
 import { VoiceInput } from '../VoiceInput'
+import { StuckMove } from './StuckMove'
 import { useSessionStore, WINDOW_PRESETS, planningSecondsFor, type CloseResult } from '../../stores/useSessionStore'
 import { useVoicePreference } from '../../stores/useVoicePreference'
 import { useProjectStore } from '../../stores/useProjectStore'
 import { useOnlineStatus } from '../../hooks/useOnlineStatus'
 import { haptic } from '../../utils/haptics'
+import { useSessionNotification } from '../../hooks/useSessionNotification'
 import {
   loadTicks,
   saveTicks,
@@ -342,6 +344,17 @@ export function SessionContract({
     setPhase('done')
   }
 
+  // The step you're on, in the notification shade while the session runs
+  // -- computed up here because hooks can't sit below the early returns.
+  const isRunning = phase === 'running' && active != null
+  const runningStep = (() => {
+    if (!isRunning || !active) return null
+    const { workIndexes } = partitionRunningShapes(active.shapes)
+    const i = workIndexes.find(idx => !ticked.has(idx))
+    return i != null ? active.shapes[i].text : null
+  })()
+  useSessionNotification(isRunning, project.title, runningStep)
+
   // ─── done ──────────────────────────────────────────────────────────
   if (phase === 'done') {
     return (
@@ -539,7 +552,7 @@ export function SessionContract({
         <textarea
           value={closeoutText}
           onChange={e => setCloseoutText(e.target.value)}
-          placeholder="Did: ... Next: ..."
+          placeholder="Stopped at … Next … What's bugging me …"
           rows={3}
           className="w-full rounded-xl px-3 py-2 text-sm bg-transparent border resize-none outline-none"
           style={{ ...borderStyle, color: 'var(--brand-text-primary)' }}
@@ -699,6 +712,12 @@ export function SessionContract({
             </span>
           </button>
         )}
+
+        <StuckMove
+          projectId={project.id}
+          step={currentIndex >= 0 ? shapes[currentIndex].text : null}
+          online={online}
+        />
 
         <button
           className="w-full py-2 rounded-lg border text-sm flex items-center justify-center gap-2"
