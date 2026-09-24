@@ -85,3 +85,13 @@ export function dedupeSimilar<T extends { text: string }>(items: T[], against: T
   }
   return out
 }
+
+/**
+ * A first move ends "Done when …" (plain-english.ts, FIRST_MOVE_RULES) --
+ * right for the move, wrong for the record of what you did. A ticked move
+ * becomes a done task, and the log should read "Sketched the pole three
+ * times", not carry the stopping rule along with it.
+ */
+export function stripDoneWhen(text: string): string {
+  return text.replace(/([.!?])\s+done when\b.*$/i, '$1').trim()
+}

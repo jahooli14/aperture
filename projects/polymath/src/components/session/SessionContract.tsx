@@ -5,15 +5,17 @@
  *   1. window   — how long have you got. A real gate: the list can't be
  *                 sized until it knows. Skipped when the card above
  *                 already collected it.
- *   2. planning — the two minutes. An AI-shaped list of 3-6 moves sized to
- *                 the window, reshaped by saying what's wrong with it. A
+ *   2. planning — the two minutes. One first move to get going, then at
+ *                 most two more (SPEC: never four), reshaped by saying
+ *                 what's wrong with it. A
  *                 2:00 countdown starts the moment you first touch it, so
  *                 shaping is always done but can never become the session.
  *                 At 0:00 it flips itself into the work.
  *   3. running  — the clock counts the window down and the agreed list is
  *                 on screen the whole time, ticked off as you go. Never a
  *                 timer with nothing under it.
- *   4. closeout — where'd you get to, spoken. Ticked items pre-fill it so
+ *   4. closeout — where you stopped and what's next, spoken: the next
+ *                 session's opening move. Ticked items pre-fill it so
  *                 there's something to say even at the end of a bad hour.
  *
  * Voice throughout — the window, the reshape and the close-out are all
@@ -40,6 +42,9 @@ import {
   elapsedSeconds,
   partitionRunningShapes,
   closeoutDraft,
+  splitDoneWhen,
+  closeoutPrompt,
+  nextOffList,
 } from './sessionRunOps'
 import type { Project } from '../../types'
 
@@ -70,9 +75,9 @@ const primaryButtonStyle = {
 }
 
 function ReEntry({ project }: { project: Project }) {
-  if (!project.last_closeout_text) {
-    return <p className="text-sm" style={secondaryTextStyle}>First session on this one.</p>
-  }
+  // Nothing to play back is nothing to say. "First session on this one"
+  // was also wrong for any project whose sessions ended without a note.
+  if (!project.last_closeout_text) return null
   return (
     <p className="text-sm italic" style={secondaryTextStyle}>
       "{project.last_closeout_text}"
@@ -355,6 +360,11 @@ export function SessionContract({
   })()
   useSessionNotification(isRunning, project.title, runningStep)
 
+  const closeoutAsk = closeoutPrompt(
+    active ? elapsedSeconds(active.started_at, nowMs) : 0,
+    ticked.size,
+  )
+
   // ─── done ──────────────────────────────────────────────────────────
   if (phase === 'done') {
     return (
@@ -501,7 +511,7 @@ export function SessionContract({
   if (phase === 'closeout') {
     return (
       <div className={shell('space-y-4')}>
-        <p className="text-base">Where'd you get to?</p>
+        <p className="text-base">{closeoutAsk.question}</p>
         {active?.askMvsSeed && (
           <div className="space-y-1">
             <p className="text-sm" style={secondaryTextStyle}>
@@ -552,7 +562,7 @@ export function SessionContract({
         <textarea
           value={closeoutText}
           onChange={e => setCloseoutText(e.target.value)}
-          placeholder="Stopped at … Next … What's bugging me …"
+          placeholder={closeoutAsk.placeholder}
           rows={3}
           className="w-full rounded-xl px-3 py-2 text-sm bg-transparent border resize-none outline-none"
           style={{ ...borderStyle, color: 'var(--brand-text-primary)' }}
@@ -585,15 +595,18 @@ export function SessionContract({
   if (phase === 'running' && active) {
     const elapsedSec = elapsedSeconds(active.started_at, nowMs)
     const remaining = windowMinutes != null ? windowMinutes * 60 - elapsedSec : elapsedSec
-    // The spark is a punt, not a step you owe -- it keeps the apartness it
-    // had in planning instead of becoming item five, and it can never be
-    // promoted to "Right now" just because the real work is done.
+    // Sessions no longer get a week-spark (session-shaper.ts), but one
+    // started before that change may still carry it: kept apart, never
+    // promoted to "Right now".
     const shapes = active.shapes
     const { workIndexes, sparkIndex } = partitionRunningShapes(shapes)
     // The one thing you're actually meant to be doing right now --
     // everything after it is later, not now.
     const currentIndex = workIndexes.find(i => !ticked.has(i)) ?? -1
     const currentPos = workIndexes.indexOf(currentIndex)
+    const allDone = currentIndex < 0 && workIndexes.length > 0
+    const timeUp = windowMinutes != null && remaining < 0
+    const keepGoing = allDone && !timeUp ? nextOffList(project.metadata?.tasks, shapes) : null
     const toggle = (i: number) => {
       haptic.light()
       setTicked(prev => {
@@ -665,9 +678,14 @@ export function SessionContract({
                       ? { ...secondaryTextStyle, textDecoration: 'line-through', opacity: 0.45 }
                       : isCurrent ? { fontWeight: 600 } : { ...secondaryTextStyle, opacity: 0.55 }}
                   >
-                    {shape.text}
+                    {splitDoneWhen(shape.text).move}
                     {shape.partial && (
                       <span className="text-xs" style={secondaryTextStyle}> — you'll pick up the rest next time</span>
+                    )}
+                    {isCurrent && !done && splitDoneWhen(shape.text).doneWhen && (
+                      <span className="block text-xs font-normal mt-1" style={{ ...secondaryTextStyle, opacity: 0.6 }}>
+                        {splitDoneWhen(shape.text).doneWhen}
+                      </span>
                     )}
                   </span>
                   {shape.source === 'friction' && (
@@ -713,18 +731,33 @@ export function SessionContract({
           </button>
         )}
 
+        {/* The list ran out before the session did. Not a new plan and not
+            an empty screen: the next step already on the project, offered
+            once, quietly. Ignoring it and stopping is just as fine. */}
+        {currentIndex < 0 && keepGoing && (
+          <p className="text-sm leading-snug" style={secondaryTextStyle}>
+            <span className="text-[10px] uppercase tracking-[0.14em] block mb-1" style={{ opacity: 0.6 }}>
+              All done. If you want to keep going
+            </span>
+            {splitDoneWhen(keepGoing).move}
+          </p>
+        )}
+
         <StuckMove
           projectId={project.id}
           step={currentIndex >= 0 ? shapes[currentIndex].text : null}
           online={online}
         />
 
+        {/* The stopping point. Time running out never interrupts -- the
+            button just becomes the obvious next thing, so stopping well is
+            one tap rather than a decision. */}
         <button
           className="w-full py-2 rounded-lg border text-sm flex items-center justify-center gap-2"
-          style={borderStyle}
+          style={timeUp || allDone ? { ...primaryButtonStyle, borderColor: 'transparent' } : borderStyle}
           onClick={handleStop}
         >
-          <Square size={14} /> Stop
+          <Square size={14} /> {timeUp ? 'Time’s up — stop here' : allDone ? 'Stop here' : 'Stop'}
         </button>
       </div>
     )
@@ -745,11 +778,7 @@ export function SessionContract({
   // order IS the plan; the one way to change it is to say so.
   if (phase === 'planning') {
     const items = plan?.projectId === project.id ? plan.items : []
-    // The spine is the real work. The spark is one punt from the week's
-    // corpus -- shown apart from the numbered steps so it reads as an
-    // extra you can ignore, never as another task you owe.
-    const steps = items.filter(i => !i.spark)
-    const sparkItem = items.find(i => i.spark) ?? null
+    const steps = items
     const needsInput = plan?.projectId === project.id ? plan.needsInput : null
     const reEntry = project.last_closeout_text?.trim() || null
     const elapsedFrac = planLeft == null ? 0 : 1 - planLeft / planningSecondsFor(windowMinutes)
@@ -887,15 +916,28 @@ export function SessionContract({
                     </span>
                   )}
                   <span className="flex-1 min-w-0">
-                    <span className="text-sm leading-snug block" style={proposed ? { opacity: 0.85 } : undefined}>
-                      {item.text}
+                    {/* The first move is the one that matters: it's what gets
+                        you from opened-the-app to working. It carries the
+                        weight and its stopping point; the rest are quieter,
+                        because by the time you reach them they'll have
+                        changed anyway. */}
+                    <span
+                      className="text-sm leading-snug block"
+                      style={i === 0 ? { fontWeight: 600 } : { opacity: proposed ? 0.75 : 0.7 }}
+                    >
+                      {splitDoneWhen(item.text).move}
                     </span>
+                    {i === 0 && splitDoneWhen(item.text).doneWhen && (
+                      <span className="text-xs leading-snug block mt-0.5" style={{ ...secondaryTextStyle, opacity: 0.65 }}>
+                        {splitDoneWhen(item.text).doneWhen}
+                      </span>
+                    )}
                     {/* The receipt. Every line either points at the step it
                         is (or is a piece of), or says nothing that needs a
                         source. Seeing which is which at a glance is the
                         difference between a list you can act on and one you
                         have to fact-check first. */}
-                    {item.source && (
+                    {item.source && item.source !== 'already on the project' && !item.source.startsWith('part of:') && (
                       <span
                         className="text-[10.5px] leading-tight block mt-0.5"
                         style={{
@@ -913,26 +955,6 @@ export function SessionContract({
           </ol>
         )}
 
-        {/* One thing to try that came out of the week, not out of the
-            project. Set apart from the numbered steps on purpose: it's a
-            punt with a time box on it, and ignoring it costs nothing. */}
-        {sparkItem && (
-          <div
-            className="rounded-xl px-3.5 py-3 space-y-1"
-            style={{
-              background: 'rgba(var(--brand-primary-rgb),0.05)',
-              border: '1px dashed rgba(var(--brand-primary-rgb),0.28)',
-            }}
-          >
-            <p className="text-sm leading-snug">{sparkItem.text}</p>
-            {sparkItem.source && (
-              <p className="text-[10.5px] leading-tight" style={{ ...secondaryTextStyle, opacity: 0.55 }}>
-                {sparkItem.source}
-              </p>
-            )}
-          </div>
-        )}
-
         {/* Clearing away is part of the hour, so it's on screen as part of
             the hour rather than remembered at the end of it. */}
         {plan?.packdown && (
@@ -945,8 +967,10 @@ export function SessionContract({
 
         {/* What exists at the end of the hour if the list lands -- the
             contract's other half. "Its obligation is not to exceed the
-            window; yours is to start." */}
-        {plan?.doneLooksLike && items.length > 0 && !needsInput && (
+            window; yours is to start." Only when it says something the
+            list doesn't: for a plan that's the list verbatim it just
+            restated the last line. */}
+        {plan?.doneLooksLike && items.length > 0 && !needsInput && plan.source !== 'tasks' && (
           <p className="text-sm leading-snug" style={{ ...secondaryTextStyle, opacity: 0.75 }}>
             <span className="text-[10.5px] uppercase tracking-wide mr-1.5" style={{ opacity: 0.6 }}>done today</span>
             {plan.doneLooksLike}
@@ -971,27 +995,18 @@ export function SessionContract({
               I'll only suggest things you've actually told me about.
             </p>
           </div>
-        ) : items.length > 0 ? (
+        ) : items.length > 0 && (plan?.source === 'offline' || plan?.source === 'derived' || plan?.source === 'split') ? (
+          // Said only when it changes how to read the list. "The next steps
+          // on your list, in order" told you what you were already looking at.
           <p className="text-xs" style={{ ...secondaryTextStyle, opacity: 0.45 }}>
-            {plan?.source === 'briefing'
-              ? 'Picked up from where you left off last time.'
-              : plan?.source === 'offline'
+            {plan?.source === 'offline'
               ? 'Planned from your list — offline, so it’s not reshaped. Reconnect to make changes.'
               : plan?.source === 'derived'
                 ? 'Offline list — built from your last close-out, not shaped.'
-                : plan?.source === 'tasks'
-                  ? 'The next steps on your list, in order.'
-                  : plan?.source === 'split'
-                    ? `The next step, cut to fit ${windowLabel}.`
-                    : 'Say what\u2019s off and it\u2019ll redo the list.'}
+                : `The next step, cut to fit ${windowLabel}.`}
           </p>
         ) : null}
 
-        {!!plan?.truncatedCount && (
-          <p className="text-xs" style={{ ...secondaryTextStyle, opacity: 0.4 }}>
-            +{plan.truncatedCount} more on your list, not shown today.
-          </p>
-        )}
 
         {/* Voice by default, listening the moment there's a list to react
             to; typing is what you opt into. Remounted on every new list

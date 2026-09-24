@@ -52,7 +52,6 @@ import { checkReady } from './session-ready.js'
 import { topUpSession } from './session-topup.js'
 import { needsReentry, reentryMove, REENTRY_MINUTES } from './session-moves.js'
 import { briefSession, isUsableExitNote } from './session-briefing.js'
-import { sparkForSession, sparkMinutesCap, type WeekSignal } from './session-spark.js'
 import { readPrebake, isPrebakeFresh } from './session-prebake.js'
 import { generateTaskSpine, generateFirstCutTasks, toStoredTasks } from './task-spine.js'
 import { normalizeTaskOrder } from './task-order.js'
@@ -61,16 +60,16 @@ import { parseEmbedding } from './project-ideas/seed-picker.js'
 export { isAdminItem, sanitizeItems, sanitizeRawItems, dedupeSimilar } from './session-items.js'
 
 /**
- * "3-6 depending on time." A 20-minute window that lists six things is
- * lying to you, and an hour with three is under-using the hour. These are
- * ceilings on how many real steps go on screen, not targets to pad to.
+ * SPEC.md: "1–3 items. Never four — four is a chore list." In creative
+ * work the next step comes out of the last one, so a long list is out of
+ * date by item two and gets ignored. A short window gets two; anything
+ * longer gets three, and a long session that runs out of list just keeps
+ * going on the next step (SessionContract's "keep going" line). Ceilings,
+ * never targets to pad to.
  */
 export function itemCountForWindow(windowMinutes: number | null): number {
-  if (windowMinutes == null) return 4
-  if (windowMinutes <= 20) return 3
-  if (windowMinutes <= 45) return 4
-  if (windowMinutes <= 75) return 5
-  return 6
+  if (windowMinutes != null && windowMinutes <= 20) return 2
+  return 3
 }
 
 /**
@@ -466,9 +465,11 @@ export async function shapeSession(
       // items off the front: they're already in priority order, so this
       // is a pure trim rather than a reason to re-shape.
       const room = itemCountForWindow(windowMinutes)
+      // A bake from before the week-spark was removed may still carry one.
+      const baked = bake.items.filter(i => !i.spark)
       const items = windowMinutes != null && windowMinutes < bake.windowMinutes
-        ? bake.items.slice(0, room)
-        : bake.items
+        ? baked.slice(0, room)
+        : baked
       return {
         confidence: confidenceFor({
           endGoal: metadata.end_goal ?? null,
@@ -536,8 +537,7 @@ export async function shapeSession(
       : Promise.resolve({ data: [] as any[] }),
     // Identity signal: what they've recently added to a list and what
     // they've been highlighting, same shape project-ideas/gather.ts reads.
-    // The freshest one sets ambient tone (`identityLine`); the handful
-    // feeds the "while you're in there" spark (session-spark.ts).
+    // The freshest one sets ambient tone (`identityLine`).
     supabase
       .from('list_items')
       .select('content, created_at')
@@ -584,38 +584,6 @@ export async function shapeSession(
   const identityLine = identityCandidates[0]
     ? `Just for tone, not something to plan around: they've recently been into "${identityCandidates[0].text}".`
     : null
-
-  // The same material, but citable: what the week has actually been made
-  // of, each entry carrying the plain phrase that will appear under the
-  // spark as its receipt. Recent only -- a list item from March says
-  // nothing about who's sitting down tonight.
-  const fourteenDaysAgo = Date.now() - 14 * 86_400_000
-  const weekSignals: WeekSignal[] = []
-  const addSignal = (text: string, source: string, ts: number) => {
-    if (!text?.trim() || ts < fourteenDaysAgo || weekSignals.length >= 8) return
-    weekSignals.push({ id: `w${weekSignals.length + 1}`, label: source, text: text.trim(), source })
-  }
-  ;(listItemRows || []).forEach((r: any) => {
-    if (r?.content) addSignal(r.content, `you added "${r.content}" to a list`, new Date(r.created_at).getTime())
-  })
-  ;(highlightRows || []).forEach((r: any) => {
-    const t = r?.reading_queue?.title
-    if (t) addSignal(t, `you've been reading "${t}"`, new Date(r.created_at).getTime())
-  })
-  // `recalled` deliberately does NOT feed the spark. Every entry in it was
-  // matched against THIS project's own embedding, so it is project
-  // evidence -- and it already reaches the plan that way, cited as "a
-  // capture that connects". Offering the same note to the spark as
-  // something from outside the project manufactured exactly the fake
-  // correspondence the spark's own prompt bans: the app noticing a
-  // connection between a project and a note about that project, and
-  // dressing it up as a leap. It also came in with a Date.now()
-  // timestamp, which walked it straight past the fourteen-day gate every
-  // other signal has to clear.
-  //
-  // So the week is the identity layer only: what you added to a list,
-  // what you've been reading. Fewer sparks, and every one of them a real
-  // crossing.
 
   const pastCloseouts = (sessionRows || [])
     .filter(r => r.closeout_text && r.closeout_text !== project.last_closeout_text)
@@ -830,7 +798,7 @@ export async function shapeSession(
   //     (session-ready.ts's own header names it -- a model asked "what
   //     has to happen first?" will always find something). So unlike a
   //     reorder, this does NOT get written to the project. It's handed
-  //     to the session the same way a spark or a top-up suggestion is:
+  //     to the session the same way a top-up suggestion is:
   //     first in line, clearly a proposal (`taskId` starts 'pending-'),
   //     and it only becomes a real step on the project if it's actually
   //     ticked off at close-out (session-closeout.ts already does this
@@ -952,40 +920,22 @@ export async function shapeSession(
   // Prepends the re-entry move and the pending prerequisite, when there
   // are any -- the one place every return path below has to remember
   // them, so they can't be dropped by forgetting them on a path added later.
-  const withPrereq = (list: GroundedItem[]): GroundedItem[] => [
-    ...(reentry ? [reentry] : []),
-    ...(pendingPrereq ? [pendingPrereq] : []),
-    ...list,
-  ]
+  //
+  // Still capped at the window's count: a way back in plus a prerequisite
+  // plus three steps is five lines, and five is a chore list. The steps at
+  // the end give way -- they'll be there next session.
+  const withPrereq = (list: GroundedItem[]): GroundedItem[] => {
+    const lead = [...(reentry ? [reentry] : []), ...(pendingPrereq ? [pendingPrereq] : [])]
+    return [...lead, ...list.slice(0, Math.max(1, itemCountForWindow(windowMinutes) - lead.length))]
+  }
 
   let setup: FrictionLine | null = readStoredFriction(metadata.setup)
   let packdown: FrictionLine | null = readStoredFriction(metadata.packdown)
 
-  // ── One thing to try, from what the week has been made of ─────────
-  // Appended last on any path, and only when the real work has left room
-  // for it: the spark is the colour, never the spine. Skipped entirely on
-  // a reshape (the user is steering; adding an uninvited idea mid-steer
-  // is the app talking over them).
-  const sparkFor = async (planned: GroundedItem[]): Promise<GroundedItem | null> => {
-    if (weekSignals.length === 0 || planned.length >= itemCountForWindow(windowMinutes)) return null
-    // Room is checked against the same working minutes everything else is
-    // budgeted from, so a punt can never be what makes the hour overrun.
-    if (windowMinutes != null) {
-      const plannedMinutes = planned.reduce((total, i) => {
-        const step = steps.find(st => st.id === i.taskId)
-        return total + (step?.minutes ?? 0)
-      }, 0)
-      const left = (workingMinutes(windowMinutes, (setup?.minutes ?? 0) + prereqMinutes, packdown?.minutes) ?? 0) - plannedMinutes
-      if (left < sparkMinutesCap(windowMinutes)) return null
-    }
-    return sparkForSession({
-      title: project.title,
-      projectEvidence: evidence,
-      weekSignals,
-      currentItems: planned.map(i => i.text),
-      windowMinutes,
-    })
-  }
+  // No "while you're in there" punt from the week's reading. A session is
+  // one project and the moves that get it going; a line about something
+  // else entirely is exactly the interruption the session exists to keep
+  // out. (session-spark.ts is deleted -- don't bring it back.)
 
   // ── What the hour is actually worth ───────────────────────────────
   // Setting up and clearing away are spent inside the window, not around
@@ -1029,11 +979,10 @@ export async function shapeSession(
         count,
       )
       const items = budgeted.selected.map(b => b.item)
-      const spark = await sparkFor(items)
       return {
         ...base, unblocked, friction: setup, packdown,
         truncatedCount: notShown(items),
-        items: withPrereq(spark ? [...items, spark] : items),
+        items: withPrereq(items),
         doneLooksLike: briefing.doneLooksLike,
         source: 'briefing',
       }
@@ -1086,11 +1035,10 @@ export async function shapeSession(
           })
         : []
       const splitItems = [...split.moves, ...splitTopUp]
-      const splitSpark = await sparkFor(splitItems)
       return {
         ...base, unblocked, friction: setup, packdown,
         truncatedCount: notShown(splitItems),
-        items: withPrereq(splitSpark ? [...splitItems, splitSpark] : splitItems),
+        items: withPrereq(splitItems),
         doneLooksLike: split.doneLooksLike ?? doneLineForSteps(split.moves),
         source: 'split',
       }
@@ -1125,8 +1073,6 @@ export async function shapeSession(
     }
   }
 
-  const spark = await sparkFor(items)
-  if (spark) items.push(spark)
 
   return {
     ...base, unblocked, friction: setup, packdown,

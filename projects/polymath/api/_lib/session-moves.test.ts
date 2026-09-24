@@ -93,3 +93,12 @@ describe('groundMove', () => {
     expect(groundMove(null, evidence, 'Graham track')).toBeNull()
   })
 })
+
+describe('stripDoneWhen', () => {
+  it('drops the stopping rule so the log reads as what was done', async () => {
+    const { stripDoneWhen } = await import('./session-items.js')
+    expect(stripDoneWhen('Sketch the pole three times. Done when three sketches exist.'))
+      .toBe('Sketch the pole three times.')
+    expect(stripDoneWhen('Record verse two')).toBe('Record verse two')
+  })
+})

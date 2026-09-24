@@ -6,6 +6,10 @@ import {
   elapsedSeconds,
   partitionRunningShapes,
   closeoutDraft,
+  splitDoneWhen,
+  closeoutPrompt,
+  nextOffList,
+  SHORT_SESSION_SECONDS,
 } from './sessionRunOps'
 import type { SessionShape } from '../../stores/useSessionStore'
 
@@ -102,5 +106,60 @@ describe('the close-out draft is what you did', () => {
 
   it('is empty when nothing was ticked', () => {
     expect(closeoutDraft(shapes, new Set())).toBe('')
+  })
+})
+
+describe('splitDoneWhen', () => {
+  it('pulls the stopping point out from under the move', () => {
+    expect(splitDoneWhen('Loop bars 9-12 and program a kick. Done when it loops without wincing.'))
+      .toEqual({ move: 'Loop bars 9-12 and program a kick.', doneWhen: 'Done when it loops without wincing.' })
+  })
+
+  it('leaves a step without one alone', () => {
+    expect(splitDoneWhen('Record verse two')).toEqual({ move: 'Record verse two', doneWhen: null })
+  })
+
+  it('does not split on "done when" in the middle of a sentence', () => {
+    const text = 'Say what feels done when you play it back'
+    expect(splitDoneWhen(text)).toEqual({ move: text, doneWhen: null })
+  })
+})
+
+describe('closeoutPrompt', () => {
+  it('asks where you stopped and what is next after a real session', () => {
+    expect(closeoutPrompt(40 * 60, 1).question).toContain('what’s next')
+  })
+
+  it('asks what got in the way after a short session with nothing done', () => {
+    expect(closeoutPrompt(SHORT_SESSION_SECONDS - 1, 0).question).toBe('What got in the way?')
+  })
+
+  it('a short session that got something done is still a real one', () => {
+    expect(closeoutPrompt(5 * 60, 1).question).not.toBe('What got in the way?')
+  })
+})
+
+describe('closeoutDraft drops the stopping point', () => {
+  it('says what you did, not when it counted as done', () => {
+    const shapes = [shape('Sketch the pole three times. Done when three sketches exist.')]
+    expect(closeoutDraft(shapes, new Set([0]))).toBe('Did: Sketch the pole three times.')
+  })
+})
+
+describe('nextOffList', () => {
+  const s = (taskId: string): SessionShape => ({ text: taskId, source: 'shaped', partial: false, taskId })
+
+  it('offers the first open step this session did not include, in plan order', () => {
+    const tasks = [
+      { id: 'a', text: 'A', done: false, order: 0 },
+      { id: 'c', text: 'C', done: false, order: 2 },
+      { id: 'b', text: 'B', done: false, order: 1 },
+    ]
+    expect(nextOffList(tasks, [s('a')])).toBe('B')
+  })
+
+  it('skips finished steps and has nothing to offer when the list is spent', () => {
+    expect(nextOffList([{ id: 'a', text: 'A', done: true, order: 0 }], [])).toBeNull()
+    expect(nextOffList(undefined, [])).toBeNull()
   })
 })

@@ -52,18 +52,18 @@ vi.mock('./gemini-chat.js', () => ({
 import { generateText } from './gemini-chat.js'
 
 describe('itemCountForWindow', () => {
-  it('gives a short window a short list', () => {
-    expect(itemCountForWindow(20)).toBe(3)
+  it('gives a short window two things', () => {
+    expect(itemCountForWindow(20)).toBe(2)
   })
 
-  it('scales up with the window, capped at 6', () => {
-    expect(itemCountForWindow(60)).toBe(5)
-    expect(itemCountForWindow(120)).toBe(6)
-    expect(itemCountForWindow(600)).toBe(6)
+  it('never goes past three, however long the session (SPEC: never four)', () => {
+    expect(itemCountForWindow(60)).toBe(3)
+    expect(itemCountForWindow(120)).toBe(3)
+    expect(itemCountForWindow(600)).toBe(3)
   })
 
-  it('assumes a middling session when the window is unknown', () => {
-    expect(itemCountForWindow(null)).toBe(4)
+  it('assumes three when the window is unknown', () => {
+    expect(itemCountForWindow(null)).toBe(3)
   })
 })
 
@@ -349,8 +349,8 @@ describe('buildReshapePrompt', () => {
   })
 
   it('sizes the list to the window', () => {
-    expect(prompt()).toContain('Up to 5 items')
-    expect(prompt({ ...ctx, windowMinutes: 20 })).toContain('Up to 3 items')
+    expect(prompt()).toContain('Up to 3 items')
+    expect(prompt({ ...ctx, windowMinutes: 20 })).toContain('Up to 2 items')
     expect(prompt({ ...ctx, windowMinutes: 120 })).toContain('120 minutes')
   })
 
@@ -711,12 +711,12 @@ describe('shapeSession', () => {
     const result = await shapeSession(stubClient({ project: bigBacklog }), 'u1', 'p1', 20)
     // The UI renders this as "+N more on your list, not shown today", so
     // it counts open steps that didn't make TODAY'S PLAN -- 30 on the
-    // list, 3 planned into twenty minutes, 27 left. It used to be
+    // list, 2 planned into twenty minutes, 28 left. It used to be
     // `total - OPEN_TASK_LIMIT` (steps beyond the 24 the shaper even
     // looks at), which said 6 here and said nothing at all for any
     // project with fewer than 24 open steps, however much it left out.
-    expect(result.items).toHaveLength(3)
-    expect(result.truncatedCount).toBe(27)
+    expect(result.items).toHaveLength(2)
+    expect(result.truncatedCount).toBe(28)
   })
 
   it('throws on a reshape the model cannot serve, so the list on screen stays put', async () => {

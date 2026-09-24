@@ -30,6 +30,7 @@
 import { bumpEstimate, type EstimateMinutes } from './session-estimate.js'
 import { insertAfterDone, normalizeTaskOrder } from './task-order.js'
 import type { DebriefResult } from './debrief-matcher.js'
+import { stripDoneWhen } from './session-items.js'
 
 export interface TickedItem {
   text: string
@@ -120,9 +121,11 @@ export function reconcileCloseout(input: CloseoutInput): CloseoutResult {
   const markDoneById = (id: string) => {
     const idx = tasks.findIndex(t => t?.id === id && !t?.done)
     if (idx === -1) return
-    // A finished step has no "where I got to" any more.
+    // A finished step has no "where I got to" any more, and no stopping
+    // rule either -- it's the log of what was done now, not the plan.
     const { progress_note: _n, progress_at: _a, ...rest } = tasks[idx]
-    tasks[idx] = { ...rest, done: true, completed_at: endedAt.toISOString() }
+    const text = typeof rest.text === 'string' ? stripDoneWhen(rest.text) : rest.text
+    tasks[idx] = { ...rest, text, done: true, completed_at: endedAt.toISOString() }
     changed = true
     markedDone.push(String(tasks[idx].text))
   }
@@ -164,7 +167,7 @@ export function reconcileCloseout(input: CloseoutInput): CloseoutResult {
   for (const t of ticked) {
     if (!t.taskId || t.partial) continue
     if (t.taskId.startsWith('pending-')) {
-      createDoneTask(t.text, 'session', null)
+      createDoneTask(stripDoneWhen(t.text), 'session', null)
       continue
     }
     markDoneById(t.taskId)
