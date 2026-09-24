@@ -133,6 +133,39 @@ Every step names WHAT part of the work it's on and the MOVE you make on it.
 - If the evidence names no part of the work, the move alone is fine. Never invent a chapter, scene or theme to fill the gap.`
 
 /**
+ * How a creative step should sound. The failure isn't bad steps, it's
+ * project-manager steps: "Research reference tracks", "Define palette",
+ * "Source materials, sketch concepts". That's planning language, it reads
+ * like homework, and nobody with Ableton or a sketchbook open goes back
+ * to a phone to check it. A step that gets used is one move in the
+ * medium's own verbs, on a thing the project actually has, with a clear
+ * point where you can stop. Shared by the spine, the first cut and the
+ * session split.
+ */
+export const CREATIVE_MOVE_RULES = `Write every step the way you'd say it to someone with the work already open in front of them.
+- Use the verbs of the medium: play, loop, cut, sketch, paint, record, bounce, write, sand, glue, print. Not the verbs of a project manager.
+- Name the real thing it's done to, from the notes: the vocal chop, the second verse, the pole, the last bounce. Never "materials", "concepts", "assets", "references" or "ideas" as the object.
+- One move, not a phase. If it would take a whole afternoon to even start, it's a phase.
+BAD:  "Research reference tracks" / "Define the palette" / "Source materials and sketch concepts"
+      -- planning language. Reads like homework, and nobody at the easel goes back to a list for it.
+GOOD: "Play the last bounce once and say one sentence about what's wrong with it"
+GOOD: "Sketch the pole three times in pencil, ten minutes, no rubbing out"`
+
+/**
+ * The first move of a sitting is special: it's the one that has to get
+ * someone from "opened the app" to "working" in the first five minutes.
+ * So it's small, and it says when it's finished -- "done when" is what
+ * lets you stop without wondering whether you did enough.
+ */
+export const FIRST_MOVE_RULES = `The FIRST move is the one that gets them working in the next five minutes.
+- Under ten minutes. Smaller than feels useful. Starting is the hard part.
+- Ends with "Done when ..." and something they could check: it loops without wincing, three sketches exist, the paragraph is written. Never "until you're happy with it".
+- Keep the whole line under 110 characters.
+BAD:  "Work on the drop"  -- no move, no end.
+GOOD: "Loop bars 9-12 and program a kick under the vocal. Done when it loops without wincing."
+      (only if the notes mention bars 9-12 and the vocal -- never invent them)`
+
+/**
  * Shared turn-taking rules for back-and-forth chat prompts (the project
  * Guide, shaping conversations, session-brief openers). Every conversational
  * prompt was re-deriving its own slightly different version of these —

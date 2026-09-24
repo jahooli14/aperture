@@ -23,7 +23,7 @@
  */
 
 import { generateText } from './gemini-chat.js'
-import { PLAIN_ENGLISH_RULES, CLEAR_STEP_RULES } from './plain-english.js'
+import { PLAIN_ENGLISH_RULES, CLEAR_STEP_RULES, CREATIVE_MOVE_RULES, FIRST_MOVE_RULES } from './plain-english.js'
 import { filterGrounded, type Evidence } from './session-grounding.js'
 import { isAdminItem } from './session-items.js'
 import { ESTIMATE_MINUTES, nearestEstimate, type EstimateMinutes } from './session-estimate.js'
@@ -167,6 +167,8 @@ the closest value from EXACTLY this list: ${ESTIMATE_MINUTES.join(', ')}.
 ${PLAIN_ENGLISH_RULES}
 
 ${CLEAR_STEP_RULES}
+
+${CREATIVE_MOVE_RULES}
 
 Respond with JSON only:
 { "steps": [ { "text": "...", "evidence": ["e1"], "after": [], "estimated_minutes": 20 } ] }`
@@ -361,35 +363,41 @@ That's the whole of it. Anything not in it, you do not know.
 
 HOW TO DO THIS -- forwards, not backwards:
 There's no finish line yet, and none should be invented. Don't plan
-backwards from a "done" that doesn't exist. Instead give ${FIRST_CUT_STEPS}
-broad first moves: things that would genuinely get someone started today,
-which together would fill about an hour.
+backwards from a "done" that doesn't exist. In creative work you only
+know the next step once you've done the current one, so a long list
+written now is out of date by step two. Give ${FIRST_CUT_STEPS} moves: ONE
+precise first move, then two looser ones that show where it's heading.
 
-They should be coarse ON PURPOSE. The precise plan comes later, once
-they're actually in it and can see what the real next steps are — naming
-the wrong specifics now is worse than leaving them open.
+THE FIRST MOVE carries the weight. It's what they'll actually do today.
+- If the notes haven't settled what the project is really about yet,
+  the first move settles it by MAKING, not thinking. Find the fork in
+  the notes and make both sides quickly.
+    BAD:  "Decide whether the sculpture is about the pole or the wires"
+          -- a decision with no hands on anything.
+    GOOD: "Sketch the pole three times and the wires three times. Done when
+          you know which you'd rather draw again."
+- If it's already clear what it is, the first move is the smallest real
+  piece of the thing itself.
 
-WHAT EACH MOVE MUST BE:
-- A physical, concrete action against the work: open, sketch, record,
-  write, build, try, make, send, book.
+THE OTHER TWO are coarse ON PURPOSE. The precise plan comes later, once
+they're in it and can see what the real next steps are -- naming the
+wrong specifics now is worse than leaving them open.
+- A physical action against the work, in the medium's own verbs.
 - Broad enough to leave room. "Sketch a rough loop" not "sketch a four-bar
-  loop in C minor at 120bpm" — the second one invents specifics nobody
+  loop in C minor at 120bpm" -- the second one invents specifics nobody
   gave you.
-- Something that could plausibly happen in one sitting, today.
 - Broad is not the same as bundled. "Sketch a rough loop" is broad -- one
   open-ended job. "Remix the vocal, write a new riff, and write a
   distribution plan" isn't broad, it's three different jobs wearing one
-  sentence. Each of the ${FIRST_CUT_STEPS} moves is its own single job,
-  even a loosely-scoped one.
+  sentence.
 
 WHAT NONE OF THEM MAY BE:
-- Admin pretending to be building: research, plan, outline, decide, list,
-  consider, review, think about, brainstorm, explore.
+- Admin pretending to be building: research, source, plan, outline,
+  decide, define, list, consider, review, think about, brainstorm, explore.
 - Anything naming a tool, brand, format, instrument, person or place that
   does NOT appear verbatim above.
-- A finish line, a deadline, or a description of what "done" looks like —
-  that's not what's being asked for here.
-- More than one separately-schedulable job bundled into one move.
+- A finish line, a deadline, or a description of what "done" looks like
+  for the whole project -- that's not what's being asked for here.
 - Setup around the work instead of the work: at least two of the
   ${FIRST_CUT_STEPS} moves make a first piece of the thing itself.
 
@@ -404,8 +412,12 @@ ${PLAIN_ENGLISH_RULES}
 
 ${CLEAR_STEP_RULES}
 
+${CREATIVE_MOVE_RULES}
+
+${FIRST_MOVE_RULES}
+
 Respond with JSON only:
-{ "steps": [ { "text": "...", "evidence": ["e1"], "estimated_minutes": 15 } ] }`
+{ "steps": [ { "text": "...", "evidence": ["e1"], "estimated_minutes": 5 } ] }`
 }
 
 /**

@@ -59,7 +59,8 @@ import type { CoverageGrid } from '../src/types'
 import { deriveSessionShapes, needsMvsSeed, measuredMvs, type SlotInput, type SessionShape } from './_lib/session-shapes.js'
 import { shapeSession } from './_lib/session-shaper.js'
 import { shapeProjectFromDump } from './_lib/project-shaping.js'
-import { generateTaskSpine, generateFirstCutTasks, toStoredTasks } from './_lib/task-spine.js'
+import { generateTaskSpine, generateFirstCutTasks, toStoredTasks, buildEvidenceFromSaid } from './_lib/task-spine.js'
+import { stuckMove } from './_lib/session-moves.js'
 import { debriefSession, type DebriefOpenTask } from './_lib/debrief-matcher.js'
 import { normalizeTaskOrder } from './_lib/task-order.js'
 import { handleFixQueue } from './_lib/fix-queue/route.js'
@@ -89,7 +90,7 @@ const EXECUTION_SESSIONS_RESOURCES = new Set([
   'shape', 'shape-project', 'replan',
   'start', 'close', 'pending-closeout', 'log-retro', 'declare-live',
   'live-reask', 'different-thing-status', 'harvest', 'mirror', 'book',
-  'next-cycle',
+  'next-cycle', 'stuck',
 ])
 const EXECUTION_SPARKS_RESOURCES = new Set(['bake', 'today', 'respond', 'spark-followup', 'dismiss-spark', 'reroll-spark', 'retire-and-rebake', 'catch-up'])
 const EXECUTION_PROPOSALS_RESOURCES = new Set([
@@ -2387,6 +2388,43 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
   // actually took, then plans the next from that shape rather than from
   // scratch -- so a project that repeats gets better at itself instead of
   // being reinvented every time its list empties.
+  // "I'm stuck", mid-session: one move on the step they're on, never a
+  // new plan (session-moves.ts). Nothing is saved -- the move is
+  // scaffolding, and if it helps, the close-out will say so.
+  if (resource === 'stuck') {
+    if (req.method !== 'POST') return res.status(405).json({ error: 'POST required' })
+    const { project_id, step, progress_note, said } = req.body || {}
+    if (!project_id || typeof step !== 'string' || !step.trim()) {
+      return res.status(400).json({ error: 'project_id and step required' })
+    }
+    const { data: project, error: fetchErr } = await supabase
+      .from('projects')
+      .select('title, description, metadata, last_closeout_text')
+      .eq('id', project_id)
+      .eq('user_id', userId)
+      .single()
+    if (fetchErr || !project) return res.status(404).json({ error: 'project not found' })
+
+    const metadata = project.metadata ?? {}
+    const openSteps = (Array.isArray(metadata.tasks) ? metadata.tasks : [])
+      .filter((t: any) => t && !t.done && typeof t.text === 'string')
+      .map((t: any) => t.text as string)
+    const evidence = buildEvidenceFromSaid(
+      project.title,
+      typeof metadata.end_goal === 'string' ? metadata.end_goal : null,
+      [project.description, project.last_closeout_text, ...openSteps]
+        .filter((t): t is string => typeof t === 'string' && t.trim().length > 0),
+    )
+    const move = await stuckMove({
+      title: project.title,
+      step: step.trim(),
+      progressNote: typeof progress_note === 'string' && progress_note.trim() ? progress_note.trim() : null,
+      said: typeof said === 'string' && said.trim() ? said.trim() : null,
+      evidence,
+    })
+    return res.status(200).json({ move })
+  }
+
   if (resource === 'next-cycle') {
     if (req.method !== 'POST') return res.status(405).json({ error: 'POST required' })
     const { project_id, closeout } = req.body || {}

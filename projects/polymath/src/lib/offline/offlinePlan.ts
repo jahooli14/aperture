@@ -72,14 +72,11 @@ function selectByBudget<T extends { minutes: number }>(
   return selected
 }
 
-/** "3-6 depending on time" -- same ceiling as itemCountForWindow in
- *  session-shaper.ts. A ceiling, never a target to pad up to. */
+/** Same ceiling as itemCountForWindow in session-shaper.ts: 1-3, never
+ *  four. A ceiling, never a target to pad up to. */
 function itemCountForWindow(windowMinutes: number | null): number {
-  if (windowMinutes == null) return 4
-  if (windowMinutes <= 20) return 3
-  if (windowMinutes <= 45) return 4
-  if (windowMinutes <= 75) return 5
-  return 6
+  if (windowMinutes != null && windowMinutes <= 20) return 2
+  return 3
 }
 
 const OPEN_TASK_LIMIT = 24

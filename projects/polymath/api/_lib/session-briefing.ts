@@ -31,7 +31,7 @@
 
 import { generateText } from './gemini-chat.js'
 import { MODELS } from './models.js'
-import { PLAIN_ENGLISH_RULES, CLEAR_STEP_RULES } from './plain-english.js'
+import { PLAIN_ENGLISH_RULES, CLEAR_STEP_RULES, CREATIVE_MOVE_RULES } from './plain-english.js'
 import { filterGrounded, evidenceHaystack, type Evidence, type GroundedItem } from './session-grounding.js'
 import { sanitizeRawItems, dedupeSimilar } from './session-items.js'
 import { reasoningLicence, type Confidence } from './session-confidence.js'
@@ -152,6 +152,8 @@ zone" as setup: it has to be a physical thing with a physical result.
 ${PLAIN_ENGLISH_RULES}
 
 ${CLEAR_STEP_RULES}
+
+${CREATIVE_MOVE_RULES}
 
 Say the exit note is "got the uprights cut, need to glue them before the
 split gets worse" and [e4] is "already on the project: glue and clamp the

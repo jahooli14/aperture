@@ -36,11 +36,6 @@ vi.mock('./session-briefing.js', async (importOriginal) => ({
   ...(await importOriginal<typeof import('./session-briefing.js')>()),
   briefSession: vi.fn(async () => null),
 }))
-vi.mock('./session-spark.js', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('./session-spark.js')>()),
-  sparkForSession: vi.fn(async () => null),
-}))
-
 import { shapeSession } from './session-shaper.js'
 import { reconcileCloseout, parseTicked } from './session-closeout.js'
 import { readCycleState, cycleLabel, rollToNextCycle, lastCycleSteps } from './project-cycles.js'

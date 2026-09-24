@@ -19,6 +19,9 @@ export const ADMIN_VERBS = [
   'research', 'plan', 'outline', 'decide', 'list', 'consider', 'review',
   'think about', 'set up', 'organise', 'organize', 'brainstorm', 'explore',
   'reflect on', 'assess', 'evaluate', 'identify', 'define',
+  // "Source materials" is the classic project-manager opener: shopping
+  // dressed up as making.
+  'source',
 ]
 
 export function isAdminItem(text: string): boolean {
@@ -81,4 +84,14 @@ export function dedupeSimilar<T extends { text: string }>(items: T[], against: T
     out.push(item)
   }
   return out
+}
+
+/**
+ * A first move ends "Done when …" (plain-english.ts, FIRST_MOVE_RULES) --
+ * right for the move, wrong for the record of what you did. A ticked move
+ * becomes a done task, and the log should read "Sketched the pole three
+ * times", not carry the stopping rule along with it.
+ */
+export function stripDoneWhen(text: string): string {
+  return text.replace(/([.!?])\s+done when\b.*$/i, '$1').trim()
 }

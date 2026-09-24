@@ -74,7 +74,61 @@ export function partitionRunningShapes(shapes: SessionShape[]): {
 export function closeoutDraft(shapes: SessionShape[], ticked: Set<number>): string {
   const done = shapes
     .filter((sh, i) => ticked.has(i) && sh.source !== 'friction')
-    .map(sh => sh.text.trim().replace(/[.!?]+$/, ''))
+    .map(sh => splitDoneWhen(sh.text).move.trim().replace(/[.!?]+$/, ''))
     .filter(Boolean)
   return done.length > 0 ? `Did: ${done.join('. ')}.` : ''
+}
+
+/**
+ * A first move ends "Done when …" (plain-english.ts, FIRST_MOVE_RULES).
+ * On screen that's two things: the move, which is what you do, and the
+ * stopping point, which is quieter and sits under it. Text without one
+ * comes back whole.
+ */
+export function splitDoneWhen(text: string): { move: string; doneWhen: string | null } {
+  const m = text.match(/^(.*?[.!?])\s+(done when\b.*)$/i)
+  if (!m) return { move: text, doneWhen: null }
+  return { move: m[1].trim(), doneWhen: m[2].trim().replace(/^done when/i, 'Done when') }
+}
+
+/** Under this, with nothing ticked, the session didn't really get going. */
+export const SHORT_SESSION_SECONDS = 10 * 60
+
+/**
+ * SPEC.md, closing: normally "where'd you get to?", but after a short or
+ * abandoned session, "what got in the way?" -- a bad session is data about
+ * conditions, and the wrong question there gets no answer. Either way the
+ * breadcrumb asks for where you stopped and what's next, because that is
+ * the next session's opening move.
+ */
+export function closeoutPrompt(elapsedSec: number, tickedCount: number): {
+  question: string
+  placeholder: string
+} {
+  if (elapsedSec < SHORT_SESSION_SECONDS && tickedCount === 0) {
+    return {
+      question: 'What got in the way?',
+      placeholder: 'Got interrupted… couldn’t find the file… wasn’t feeling it…',
+    }
+  }
+  return {
+    question: 'Where did you stop, and what’s next?',
+    placeholder: 'Stopped at … Next … What’s bugging me …',
+  }
+}
+
+interface ListTask { id?: unknown; text?: unknown; done?: unknown; order?: unknown }
+
+/**
+ * The list ran out before the session did. Rather than an empty screen or
+ * a new plan, the next step already on the project -- the one this
+ * session didn't include -- offered quietly as a way to keep going.
+ */
+export function nextOffList(tasks: unknown, shapes: SessionShape[]): string | null {
+  if (!Array.isArray(tasks)) return null
+  const inSession = new Set(shapes.map(sh => sh.taskId).filter(Boolean))
+  const open = (tasks as ListTask[])
+    .filter(t => t && t.done !== true && typeof t.text === 'string' && typeof t.id === 'string' && !inSession.has(t.id))
+    .sort((a, b) => (typeof a.order === 'number' ? a.order : 0) - (typeof b.order === 'number' ? b.order : 0))
+  return open.length > 0 ? (open[0].text as string) : null
 }
