@@ -163,3 +163,14 @@ describe('nextOffList', () => {
     expect(nextOffList(undefined, [])).toBeNull()
   })
 })
+
+describe('moveKind', () => {
+  it('names the lines the app added, and leaves real steps as steps', async () => {
+    const { moveKind } = await import('./sessionRunOps')
+    expect(moveKind('pending-reentry-p1')).toBe('reentry')
+    expect(moveKind('pending-ready-t1')).toBe('prereq')
+    expect(moveKind('pending-123-0')).toBe('suggestion')
+    expect(moveKind(null)).toBe('suggestion')
+    expect(moveKind('t-1')).toBe('step')
+  })
+})

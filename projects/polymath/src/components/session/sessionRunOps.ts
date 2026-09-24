@@ -132,3 +132,57 @@ export function nextOffList(tasks: unknown, shapes: SessionShape[]): string | nu
     .sort((a, b) => (typeof a.order === 'number' ? a.order : 0) - (typeof b.order === 'number' ? b.order : 0))
   return open.length > 0 ? (open[0].text as string) : null
 }
+
+/**
+ * What kind of line the first move is, so it can be labelled for what it
+ * is rather than every line reading as "your next step". The server marks
+ * the two kinds it adds with a `pending-` id (session-shaper.ts).
+ */
+export type MoveKind = 'reentry' | 'prereq' | 'suggestion' | 'step'
+
+export function moveKind(taskId: string | null | undefined): MoveKind {
+  if (!taskId) return 'suggestion'
+  if (taskId.startsWith('pending-reentry')) return 'reentry'
+  if (taskId.startsWith('pending-ready')) return 'prereq'
+  if (taskId.startsWith('pending-')) return 'suggestion'
+  return 'step'
+}
+
+export const MOVE_LABEL: Record<MoveKind, string> = {
+  reentry: 'Way back in',
+  prereq: 'First, this',
+  suggestion: 'First move',
+  step: 'First move',
+}
+
+/**
+ * The quick "not this one" answers on the plan. Each is said to the
+ * reshape exactly as a person would say it, so it goes through the same
+ * grounded path as anything spoken -- it can reorder, split or drop, never
+ * invent.
+ */
+export const RESHAPE_ASKS = {
+  tooBig: 'The first one is too big for this sitting. Give me a smaller first piece of it.',
+  wrongThing: "The first one isn't what I want to do right now. Lead with a different step.",
+} as const
+
+/** Minimised is a choice about this session: coming back to home mid-hour
+ *  must not throw the full screen back over what you went there to do. */
+function minimisedKey(sessionId: string): string {
+  return `aperture-session-minimised:${sessionId}`
+}
+
+export function loadMinimised(sessionId: string | null | undefined): boolean {
+  if (!sessionId) return false
+  try { return sessionStorage.getItem(minimisedKey(sessionId)) === '1' } catch { return false }
+}
+
+export function saveMinimised(sessionId: string | null | undefined, minimised: boolean) {
+  if (!sessionId) return
+  try {
+    if (minimised) sessionStorage.setItem(minimisedKey(sessionId), '1')
+    else sessionStorage.removeItem(minimisedKey(sessionId))
+  } catch {
+    // Storage unavailable -- it just reopens full screen next mount.
+  }
+}

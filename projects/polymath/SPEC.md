@@ -215,6 +215,23 @@ it can't be done in the time available. Offer to book it instead.
   book, warm, first item ready.
 - If the block passes with no session logged, it is not mentioned. Ever.
 
+### The screens (`SessionContract.tsx` + `components/session/flow/`)
+
+Move, work, breadcrumb — four screens, and only the first lives in the home card:
+
+1. **The first move** (`MovePlan`) — the last close-out quoted back, then ONE move in a
+   large card with its "Done when", and at most two quieter lines behind it. "Too big" and
+   "Wrong thing" are one tap each and go through the same grounded reshape as anything
+   spoken. No planning countdown: deciding is allowed to take the ten seconds it takes.
+2. **Focus** (`FocusShell` + `WorkView`) — Go takes the whole screen, true black: the move
+   you're on, big, a Done button that brings in the next one, progress as dots, "I'm
+   stuck", Stop. Minimise steps out without stopping (remembered per session, so home
+   never throws it back over you).
+3. **The breadcrumb** (`Breadcrumb`) — where you stopped, what's next, what's bugging you.
+   What you ticked is shown, not typed into the note.
+4. **The hand-off** (`Handoff`) — what next time starts with, in large type, and what got
+   done.
+
 ### The list
 
 1–3 items (`itemCountForWindow`: two for twenty minutes, three otherwise). Never four —
