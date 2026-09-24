@@ -175,6 +175,18 @@ describe('buildFirstCutPrompt', () => {
     expect(prompt()).not.toContain(`${MIN_SPINE_STEPS}-${MAX_SPINE_STEPS} steps`)
   })
 
+  it('makes the first move small, in the medium, and say when it is done', () => {
+    const p = prompt()
+    expect(p).toContain('ONE\nprecise first move')
+    expect(p).toContain('Under ten minutes')
+    expect(p).toContain('Done when ...')
+    expect(p).toContain('Use the verbs of the medium')
+  })
+
+  it('settles an open fork by making both sides, not by deciding', () => {
+    expect(prompt()).toContain('settles it by MAKING, not thinking')
+  })
+
   it('tells the model to leave things coarse on purpose', () => {
     expect(prompt()).toContain('coarse ON PURPOSE')
   })

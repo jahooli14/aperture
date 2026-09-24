@@ -19,6 +19,9 @@ export const ADMIN_VERBS = [
   'research', 'plan', 'outline', 'decide', 'list', 'consider', 'review',
   'think about', 'set up', 'organise', 'organize', 'brainstorm', 'explore',
   'reflect on', 'assess', 'evaluate', 'identify', 'define',
+  // "Source materials" is the classic project-manager opener: shopping
+  // dressed up as making.
+  'source',
 ]
 
 export function isAdminItem(text: string): boolean {

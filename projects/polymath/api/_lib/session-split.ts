@@ -21,7 +21,7 @@
 
 import { generateText } from './gemini-chat.js'
 import { MODELS } from './models.js'
-import { PLAIN_ENGLISH_RULES, CLEAR_STEP_RULES } from './plain-english.js'
+import { PLAIN_ENGLISH_RULES, CLEAR_STEP_RULES, CREATIVE_MOVE_RULES, FIRST_MOVE_RULES } from './plain-english.js'
 import {
   evidenceHaystack, hasOnlyKnownSpecifics, extractSpecifics,
   type Evidence, type GroundedItem,
@@ -70,6 +70,8 @@ not from the top.
 - The last move ends at a real stopping point: something exists that
   didn't before, and picking up next time is obvious. Say what that is
   in "done_looks_like", one plain sentence.
+- The first move follows the FIRST MOVE rules below: under ten minutes,
+  ending "Done when ...". It's the one that gets them going.
 - Under-reach. Too small is fine; too big means stopping mid-thing.
 - No tools, gear, brands, model numbers, formats, settings, people or
   places unless they appear word for word above. If the notes never
@@ -80,10 +82,14 @@ ${PLAIN_ENGLISH_RULES}
 
 ${CLEAR_STEP_RULES}
 
+${CREATIVE_MOVE_RULES}
+
+${FIRST_MOVE_RULES}
+
 Say the step is "Design and cut the stencil" and they have 20 minutes:
   BAD:  "Set up your cutting mat and X-Acto knife under good light."
         -- a cutting mat, a knife brand and lighting: none of it was said.
-  GOOD: "Draw the outline of the design on the card, actual size."
+  GOOD: "Draw the outline on the card, actual size. Done when it's all on the card."
         "Cut the two biggest shapes out and stop there."
         done_looks_like: "The outline is drawn and the big shapes are cut."
 
@@ -91,7 +97,7 @@ Say the step is "Feed the rewrite comments to Claude" on a book, and the
 notes mention the comments are on the first three chapters:
   BAD:  "Paste the comments into Claude." -- only the tool, nothing about
         what changes in the book.
-  GOOD: "Read the comments on chapter one and mark the three that matter most."
+  GOOD: "Read the comments on chapter one and mark three. Done when three are marked."
         "Give those to Claude and rewrite chapter one's weakest page with its help."
         done_looks_like: "Chapter one has one page rewritten from the comments."
 

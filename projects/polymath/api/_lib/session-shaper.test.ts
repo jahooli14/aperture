@@ -72,6 +72,7 @@ describe('isAdminItem', () => {
     expect(isAdminItem('Research venues for the launch')).toBe(true)
     expect(isAdminItem('Decide on the running order')).toBe(true)
     expect(isAdminItem('Think about the ending')).toBe(true)
+    expect(isAdminItem('Source materials and sketch concepts')).toBe(true)
   })
 
   it('sees through bullet and number prefixes', () => {
