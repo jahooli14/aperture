@@ -49,7 +49,8 @@ export interface SplitResult {
 export function buildSplitPrompt(input: SplitInput): string {
   const { step, windowMinutes } = input
   return `Someone has ${windowMinutes} minutes on "${input.title}". The next step on their
-plan is bigger than that, so give them the first piece of it that fits.
+plan would take all of that or more, so give them the first piece of it
+that fits, as a few concrete moves.
 
 THE STEP: "${step.text}" (about ${step.minutes} minutes in one sitting)
 ${input.progressNote ? `WHERE THEY GOT TO LAST TIME: "${input.progressNote}"\n` : ''}
@@ -85,6 +86,14 @@ Say the step is "Design and cut the stencil" and they have 20 minutes:
   GOOD: "Draw the outline of the design on the card, actual size."
         "Cut the two biggest shapes out and stop there."
         done_looks_like: "The outline is drawn and the big shapes are cut."
+
+Say the step is "Feed the rewrite comments to Claude" on a book, and the
+notes mention the comments are on the first three chapters:
+  BAD:  "Paste the comments into Claude." -- only the tool, nothing about
+        what changes in the book.
+  GOOD: "Read the comments on chapter one and mark the three that matter most."
+        "Give those to Claude and rewrite chapter one's weakest page with its help."
+        done_looks_like: "Chapter one has one page rewritten from the comments."
 
 Respond with JSON only:
 {

@@ -578,6 +578,27 @@ describe('shapeSession', () => {
     expect(updates).toHaveLength(0)
   })
 
+  it('splits a step that would take the whole hour on its own, not only one bigger than it', async () => {
+    // The reported bug: a 60-minute step in a 60-minute window never
+    // split (strict \`>\`), so the whole hour was one vague line and the
+    // other steps sat behind it as "+2 more, not shown today".
+    vi.mocked(splitStep).mockClear()
+    const wholeHour = {
+      ...project,
+      metadata: {
+        end_goal: 'released',
+        tasks: [
+          { id: 't0', text: 'Feed directional rewrite comments to Claude AI', done: false, order: 0, estimated_minutes: 60, estimate_set: true },
+          { id: 't1', text: 'Rewrite chapter two', done: false, order: 1, estimated_minutes: 60, estimate_set: true },
+        ],
+      },
+    }
+    const { shapeSession } = await import('./session-shaper.js')
+    await shapeSession(stubClient({ project: wholeHour }), 'u1', 'p1', 60)
+    expect(splitStep).toHaveBeenCalledTimes(1)
+    expect(vi.mocked(splitStep).mock.calls[0][0].step.id).toBe('t0')
+  })
+
   it('splits a step checkReady flags as compound even when its (ladder-snapped) size ties the window', async () => {
     // A step judged "really more like 90 minutes" snaps to 60 on the
     // shared estimate ladder -- exactly tying a 60-minute window under

@@ -108,13 +108,29 @@ GOOD: "You keep coming back to limits as a creative tool. This project fits that
  *
  * A step you have to decode is worse than no step: it stops the hour
  * before it starts, which is the exact cost this app exists to remove.
+ *
+ * The second half is the balance between thematic and procedural. A step
+ * that is all procedure ("feed the rewrite comments to Claude") tells you
+ * how to work and not what you're making, so you sit down and still have
+ * to decide what the hour is about. A step that is all theme ("explore
+ * slowing down") has no move in it. Every step names both: the part of
+ * the work, in the user's words, and the thing you do to it.
  */
 export const CLEAR_STEP_RULES = `Every step has to be doable without decoding it.
 - Say what to physically DO. Someone who has never done this before should be able to follow it.
 - Craft shorthand is only allowed if that exact word appears in the evidence above, in their words. Otherwise say the long version.
 - No abbreviations the evidence doesn't use.
 BAD:  "Re-record verse two, don't comp yet." -- "comp" is studio shorthand and nothing above uses it.
-GOOD: "Record verse two three times through. Don't join the best bits together yet."`
+GOOD: "Record verse two three times through. Don't join the best bits together yet."
+
+Every step names WHAT part of the work it's on and the MOVE you make on it.
+- The what comes from the evidence, in their words: the chapter, the scene, the track, the argument, the idea it's about.
+- The move is the thing you physically do to it: write, rewrite, cut, record, send.
+- Only the move is a chore. It says how to work, not what gets made. BAD: "Feed the rewrite comments to the AI." -- which comments, on which part, to end up with what?
+- Only the what is a mood. It names a subject and no action. BAD: "Explore the theme of slowing down."
+- GOOD (if the notes mention the walking chapter and the editor's notes): "Rewrite the walking chapter's opening using the editor's notes on pace."
+- A tool or app is part of the how. Name it only if the evidence does, and never let it be the whole step.
+- If the evidence names no part of the work, the move alone is fine. Never invent a chapter, scene or theme to fill the gap.`
 
 /**
  * Shared turn-taking rules for back-and-forth chat prompts (the project
