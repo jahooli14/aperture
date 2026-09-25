@@ -449,13 +449,16 @@ export function TodaysAnswerCard({
 
   return (
     <>
+    {/* Wrapper carries the breathing glow: the card itself clips its
+        overflow, which would cut an outer glow off at the edge. */}
+    <div className="relative isolate rounded-2xl neon-breathe">
     <div
-      className="rounded-2xl p-5 flex flex-col overflow-hidden relative transition-all duration-700"
+      className="rounded-2xl p-5 flex flex-col overflow-hidden relative transition-all duration-700 neon-edge"
       style={{
         background: 'linear-gradient(155deg, rgba(var(--brand-primary-rgb),0.10) 0%, rgba(13,20,34,0.86) 55%)',
         backdropFilter: 'blur(32px) saturate(190%)',
         WebkitBackdropFilter: 'blur(32px) saturate(190%)',
-        border: `1px solid ${dormancyColor ?? 'rgba(var(--brand-primary-rgb),0.35)'}`,
+        border: `1px solid ${dormancyColor ?? 'rgba(var(--brand-primary-rgb),0.10)'}`,
         boxShadow: '0 0 42px rgba(var(--brand-primary-rgb),0.22), 0 12px 36px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.06)',
       }}
     >
@@ -571,12 +574,7 @@ export function TodaysAnswerCard({
         <div className="space-y-2" onClick={e => e.stopPropagation()}>
           <button
             onClick={() => handleStartSession(!!nextMove)}
-            className="w-full py-3 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all hover:brightness-110"
-            style={{
-              background: 'rgba(var(--brand-primary-rgb), 0.9)',
-              color: '#0b1220',
-              boxShadow: '0 6px 20px -6px rgba(var(--brand-primary-rgb), 0.5)',
-            }}
+            className="neon-button w-full py-3.5 rounded-xl font-semibold text-[15px] flex items-center justify-center gap-2"
           >
             <Play className="h-3.5 w-3.5 fill-current" />
             {nextMove ? 'Go' : fork ? 'Answer it' : 'Find the first move'}
@@ -619,6 +617,7 @@ export function TodaysAnswerCard({
           </>
         )}
       </div>
+    </div>
     </div>
     </>
   )

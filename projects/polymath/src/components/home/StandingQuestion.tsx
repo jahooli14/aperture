@@ -35,6 +35,12 @@ export function isStandingQuestion(spark: { type: string } | null | undefined): 
   return !!spark
 }
 
+/** Sentence-sized pieces for the staggered reveal. Keeps the punctuation
+ *  with its sentence; a question with no full stop is one piece. */
+function splitSentences(text: string): string[] {
+  return text.match(/[^.!?]+[.!?]+["”’)]*\s*|[^.!?]+$/g)?.map(t => t.trim()).filter(Boolean) ?? [text]
+}
+
 const quietActionStyle = { color: 'rgb(var(--brand-primary-rgb))', opacity: 0.85 }
 
 export function StandingQuestion() {
@@ -250,21 +256,17 @@ export function StandingQuestion() {
         {projectTitle ? `to mull · ${projectTitle}` : 'to mull'}
       </p>
 
-      {/* Deliberately the quietest, softest text on the card — this is the
-          thing you read on the way past, not the thing you act on, and it
-          has to recede under the project below it. Italic serif instead of
-          the UI sans and a roomier line height: a thought held loosely
-          rather than an instruction. Quiet by size and face, never by
-          fading — faded italic on haze was unreadable. */}
-      <p
-        className="text-[15px] leading-[1.6]"
-        style={{
-          color: 'var(--brand-text-secondary)',
-          fontFamily: 'var(--brand-font-serif)',
-          textWrap: 'pretty',
-        }}
-      >
-        {spark.text}
+      {/* The one ethereal thing on the page: italic, pale, a faint halo,
+          and each sentence surfaces out of a blur in turn (.mull-text /
+          .mull-line in theme.css). It settles sharp and still, so it's
+          dreamy on arrival and readable at rest. Keyed on the spark so a
+          new question arrives the same way. */}
+      <p key={spark.id} className="mull-text text-[15.5px] leading-[1.6]">
+        {splitSentences(spark.text).map((line, i) => (
+          <span key={i} className="mull-line" style={{ animationDelay: `${0.15 + i * 0.55}s` }}>
+            {line}{' '}
+          </span>
+        ))}
       </p>
 
       {/* Two quiet words, not two buttons. Answering is opt-in — the voice

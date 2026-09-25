@@ -57,8 +57,8 @@ export function ProjectMiniCard({
         WebkitBackdropFilter: 'blur(8px)',
       }
     : {
-        background: `linear-gradient(155deg, rgba(${theme.rgb},0.10) 0%, rgba(15,24,41,0.65) 60%)`,
-        border: `1px solid rgba(${theme.rgb},0.32)`,
+        background: `linear-gradient(155deg, rgba(${theme.rgb},0.12) 0%, rgba(13,20,34,0.84) 60%)`,
+        border: `1px solid rgba(${theme.rgb},0.10)`,
         boxShadow:
           `0 0 32px rgba(${theme.rgb},0.20),` +
           '0 8px 24px -10px rgba(0,0,0,0.55),' +
@@ -83,9 +83,10 @@ export function ProjectMiniCard({
       onKeyDown={e => {
         if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open() }
       }}
-      className="group relative w-full h-full text-left transition-all hover:-translate-y-0.5 active:scale-[0.99] overflow-hidden cursor-pointer"
+      className={`group relative w-full h-full text-left transition-all hover:-translate-y-0.5 active:scale-[0.99] overflow-hidden cursor-pointer ${isGhost ? '' : 'neon-edge'}`}
       style={{
         ...surface,
+        ['--neon-rgb' as string]: theme.rgb,
         borderRadius: '18px',
         padding: '14px',
         minHeight: '120px',
