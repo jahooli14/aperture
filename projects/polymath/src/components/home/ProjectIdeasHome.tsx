@@ -358,7 +358,7 @@ export function ProjectIdeasHome({ startExpanded = false, onClose }: { startExpa
         {loading && (
           <div className="flex items-center justify-center py-1">
             <span
-              className="text-[10px] uppercase tracking-[0.28em] italic opacity-50"
+              className="text-[11px] uppercase tracking-[0.14em] italic opacity-50"
               style={{ color: 'var(--brand-text-muted)' }}
             >
               checking your queue…
@@ -464,7 +464,7 @@ export function ProjectIdeasHome({ startExpanded = false, onClose }: { startExpa
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -4 }}
                   transition={{ duration: 0.5, ease: 'easeOut' }}
-                  className="absolute inset-0 text-[12px] uppercase tracking-[0.22em] italic"
+                  className="absolute inset-0 text-[12px] uppercase tracking-[0.14em] italic"
                   style={{ color: 'var(--brand-text-muted)' }}
                 >
                   {LOADING_STAGES[loadingStage]?.line ?? LOADING_STAGES[0].line}…
@@ -473,7 +473,7 @@ export function ProjectIdeasHome({ startExpanded = false, onClose }: { startExpa
             </div>
 
             <p
-              className="text-[10px] tracking-[0.16em] uppercase mt-1 opacity-50"
+              className="text-[11px] tracking-[0.1em] uppercase mt-1 opacity-50"
               style={{ color: 'var(--brand-text-muted)' }}
             >
               A few seconds.
@@ -541,14 +541,14 @@ export function ProjectIdeasHome({ startExpanded = false, onClose }: { startExpa
                     {glyph}
                   </span>
                   <span
-                    className="text-[10px] uppercase tracking-[0.3em] font-semibold flex-1 truncate"
+                    className="text-[11px] uppercase tracking-[0.14em] font-semibold flex-1 truncate"
                     style={{ color: `rgb(${accent})`, opacity: 0.85 }}
                   >
                     {visual.eyebrow}
                   </span>
                   {(active.status === 'saved' || active.status === 'rejected' || active.status === 'built') && (
                     <span
-                      className="text-[9px] tracking-[0.28em] uppercase font-medium px-2 py-1 rounded-full flex-shrink-0"
+                      className="text-[11px] tracking-[0.14em] uppercase font-medium px-2 py-1 rounded-full flex-shrink-0"
                       style={{
                         color: `rgb(${accent})`,
                         background: `rgba(${accent}, 0.1)`,
@@ -631,7 +631,7 @@ export function ProjectIdeasHome({ startExpanded = false, onClose }: { startExpa
                       first line and left the italic sentence wrapping around
                       it with a word stranded on the last line. */}
                   <span
-                    className="not-italic block mb-1 text-[10px] uppercase tracking-[0.26em] font-semibold opacity-70"
+                    className="not-italic block mb-1 text-[11px] uppercase tracking-[0.14em] font-semibold opacity-70"
                     style={{ color: 'var(--brand-text-muted)' }}
                   >
                     why now
@@ -651,7 +651,7 @@ export function ProjectIdeasHome({ startExpanded = false, onClose }: { startExpa
                   }}
                 >
                   <span
-                    className="block text-[10px] uppercase tracking-[0.3em] mb-2 font-semibold"
+                    className="block text-[11px] uppercase tracking-[0.14em] mb-2 font-semibold"
                     style={{ color: `rgb(${accent})` }}
                   >
                     your move
@@ -672,7 +672,7 @@ export function ProjectIdeasHome({ startExpanded = false, onClose }: { startExpa
                     <button
                       type="button"
                       onClick={() => setShowEvidence(s => !s)}
-                      className="text-[10px] tracking-[0.28em] uppercase opacity-50 hover:opacity-90 transition-opacity"
+                      className="text-[11px] tracking-[0.14em] uppercase opacity-50 hover:opacity-90 transition-opacity"
                       style={{ color: 'var(--brand-text-muted)' }}
                     >
                       {showEvidence
@@ -697,7 +697,7 @@ export function ProjectIdeasHome({ startExpanded = false, onClose }: { startExpa
                           className="text-[12.5px] leading-[1.55]"
                           style={{ color: 'var(--brand-text-muted)' }}
                         >
-                          <span className="block text-[9.5px] uppercase tracking-[0.24em] opacity-70 mb-0.5">
+                          <span className="block text-[11px] uppercase tracking-[0.14em] opacity-70 mb-0.5">
                             {KIND_LABEL[e.kind] ?? e.kind} · {e.label}{e.date ? ` · ${e.date}` : ''}
                           </span>
                           {e.excerpt && (

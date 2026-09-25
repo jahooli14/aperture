@@ -66,7 +66,7 @@ export function PinnedTaskList({
                 border: `1px solid ${isNextTask ? 'rgba(var(--brand-primary-rgb),0.3)' : 'rgba(255,255,255,0.08)'}`,
               }}
             >
-              <div className="flex-shrink-0 opacity-40 cursor-grab active:cursor-grabbing text-[var(--brand-text-secondary)]">
+              <div className="flex-shrink-0 opacity-70 cursor-grab active:cursor-grabbing text-[var(--brand-text-secondary)]">
                 <GripVertical className="h-4 w-4" />
               </div>
               <button

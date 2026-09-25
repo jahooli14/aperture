@@ -35,7 +35,13 @@ export function isStandingQuestion(spark: { type: string } | null | undefined): 
   return !!spark
 }
 
-const quietActionStyle = { color: 'var(--brand-text-secondary)', opacity: 0.45 }
+/** Sentence-sized pieces for the staggered reveal. Keeps the punctuation
+ *  with its sentence; a question with no full stop is one piece. */
+function splitSentences(text: string): string[] {
+  return text.match(/[^.!?]+[.!?]+["”’)]*\s*|[^.!?]+$/g)?.map(t => t.trim()).filter(Boolean) ?? [text]
+}
+
+const quietActionStyle = { color: 'rgb(var(--brand-primary-rgb))', opacity: 0.85 }
 
 export function StandingQuestion() {
   const [spark, setSpark] = useState<StandingQuestionSpark | null>(null)
@@ -199,28 +205,28 @@ export function StandingQuestion() {
     return (
       <div className="pb-3.5 mb-4">
         <p
-          className="text-[10px] font-medium uppercase tracking-[0.3em] mb-1.5"
-          style={{ color: 'var(--brand-text-secondary)', opacity: 0.32 }}
+          className="text-[11px] font-medium uppercase tracking-[0.14em] mb-1.5"
+          style={{ color: 'var(--brand-text-muted)' }}
         >
           to mull
         </p>
         <button
           className="text-[13px] italic transition-opacity hover:opacity-80 disabled:opacity-35"
-          style={{ color: 'var(--brand-text-secondary)', opacity: 0.5, fontFamily: 'var(--brand-font-serif)' }}
+          style={{ color: 'var(--brand-text-secondary)', opacity: 0.75, fontFamily: 'var(--brand-font-serif)' }}
           disabled={rerolling}
           onClick={() => reroll()}
         >
           {rerolling ? 'thinking…' : 'give me something to think about'}
         </button>
         {note && (
-          <p className="text-[11px] mt-1.5" style={{ color: 'var(--brand-text-secondary)', opacity: 0.4 }}>
+          <p className="text-[11px] mt-1.5" style={{ color: 'var(--brand-text-secondary)', opacity: 0.69 }}>
             {note}
           </p>
         )}
         {offerCreative && (
           <button
             className="text-[12px] mt-1.5 transition-opacity hover:opacity-90 disabled:opacity-40"
-            style={{ color: 'var(--brand-text-secondary)', opacity: 0.6, textDecoration: 'underline' }}
+            style={{ color: 'var(--brand-text-secondary)', opacity: 0.81, textDecoration: 'underline' }}
             disabled={rerolling}
             onClick={() => reroll(true)}
           >
@@ -234,7 +240,7 @@ export function StandingQuestion() {
   if (receipt) {
     return (
       <div className="pb-3 mb-4">
-        <p className="text-[12px]" style={{ color: 'var(--brand-text-secondary)', opacity: 0.6 }}>{receipt}</p>
+        <p className="text-[12px]" style={{ color: 'var(--brand-text-secondary)', opacity: 0.81 }}>{receipt}</p>
       </div>
     )
   }
@@ -244,27 +250,23 @@ export function StandingQuestion() {
   return (
     <div className="pb-3.5 mb-4">
       <p
-        className="text-[10px] font-medium uppercase tracking-[0.3em] mb-1.5"
-        style={{ color: 'var(--brand-text-secondary)', opacity: 0.32 }}
+        className="text-[11px] font-medium uppercase tracking-[0.14em] mb-1.5"
+        style={{ color: 'var(--brand-text-muted)' }}
       >
         {projectTitle ? `to mull · ${projectTitle}` : 'to mull'}
       </p>
 
-      {/* Deliberately the quietest, softest text on the card — this is the
-          thing you read on the way past, not the thing you act on, and it
-          has to recede under the project below it. Italic serif instead of
-          the UI sans, lower contrast, roomier line height: a thought held
-          loosely rather than an instruction. */}
-      <p
-        className="text-[14px] leading-[1.6] italic font-light"
-        style={{
-          color: 'var(--brand-text-secondary)',
-          opacity: 0.68,
-          fontFamily: 'var(--brand-font-serif)',
-          textWrap: 'pretty',
-        }}
-      >
-        {spark.text}
+      {/* The one ethereal thing on the page: italic, pale, a faint halo,
+          and each sentence surfaces out of a blur in turn (.mull-text /
+          .mull-line in theme.css). It settles sharp and still, so it's
+          dreamy on arrival and readable at rest. Keyed on the spark so a
+          new question arrives the same way. */}
+      <p key={spark.id} className="mull-text text-[15.5px] leading-[1.6]">
+        {splitSentences(spark.text).map((line, i) => (
+          <span key={i} className="mull-line" style={{ animationDelay: `${0.15 + i * 0.55}s` }}>
+            {line}{' '}
+          </span>
+        ))}
       </p>
 
       {/* Two quiet words, not two buttons. Answering is opt-in — the voice
@@ -279,7 +281,7 @@ export function StandingQuestion() {
           >
             answer it
           </button>
-          <span style={{ color: 'var(--brand-text-secondary)', opacity: 0.25 }}>·</span>
+          <span style={{ color: 'var(--brand-text-secondary)', opacity: 0.6 }}>·</span>
           <button
             className="text-[12px] transition-opacity hover:opacity-90 disabled:opacity-30"
             style={quietActionStyle}
@@ -290,7 +292,7 @@ export function StandingQuestion() {
           </button>
           {offerCreative && (
             <>
-              <span style={{ color: 'var(--brand-text-secondary)', opacity: 0.25 }}>·</span>
+              <span style={{ color: 'var(--brand-text-secondary)', opacity: 0.6 }}>·</span>
               <button
                 className="text-[12px] transition-opacity hover:opacity-90 disabled:opacity-30"
                 style={quietActionStyle}
@@ -305,7 +307,7 @@ export function StandingQuestion() {
       )}
 
       {note && (
-        <p className="text-[11px] mt-1.5" style={{ color: 'var(--brand-text-secondary)', opacity: 0.45 }}>
+        <p className="text-[11px] mt-1.5" style={{ color: 'var(--brand-text-secondary)', opacity: 0.72 }}>
           {note}
         </p>
       )}

@@ -146,7 +146,7 @@ export function FeedSearchSheet({ open, onOpenChange, onSubscribed }: FeedSearch
           className="space-y-4"
         >
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--brand-text-muted)] opacity-70 pointer-events-none" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--brand-text-muted)] opacity-85 pointer-events-none" />
             <input
               type="search"
               placeholder="Search — tldr, stratechery, design…"
@@ -205,7 +205,7 @@ export function FeedSearchSheet({ open, onOpenChange, onSubscribed }: FeedSearch
                 </p>
                 {presetGroups.map(([category, feeds]) => (
                   <div key={category} className="space-y-1.5">
-                    <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--brand-text-muted)] opacity-60 px-1">
+                    <p className="text-[11px] uppercase tracking-[0.14em] text-[var(--brand-text-muted)] opacity-80 px-1">
                       {category}
                     </p>
                     {feeds.map((f) => {
@@ -272,7 +272,7 @@ export function FeedSearchSheet({ open, onOpenChange, onSubscribed }: FeedSearch
                               onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
                             />
                           ) : (
-                            <Rss className="h-4 w-4 text-[var(--brand-text-muted)] opacity-60" />
+                            <Rss className="h-4 w-4 text-[var(--brand-text-muted)] opacity-80" />
                           )}
                         </div>
                         <div className="flex-1 min-w-0">
@@ -292,7 +292,7 @@ export function FeedSearchSheet({ open, onOpenChange, onSubscribed }: FeedSearch
                             </p>
                           )}
                           {(host || subscribers) && (
-                            <p className="text-[10px] text-[var(--brand-text-muted)] opacity-60 mt-1 truncate">
+                            <p className="text-[11px] text-[var(--brand-text-muted)] opacity-80 mt-1 truncate">
                               {host}
                               {host && subscribers && <span className="mx-1.5">·</span>}
                               {subscribers}

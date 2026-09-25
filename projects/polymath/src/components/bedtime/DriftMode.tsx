@@ -293,7 +293,7 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
               <Wind className="h-10 w-10 text-[var(--brand-text-secondary)]" />
             </div>
 
-            <h2 className="text-2xl font-serif font-medium mb-4 text-[var(--brand-text-secondary)]">
+            <h2 className="text-2xl font-display font-medium mb-4 text-[var(--brand-text-secondary)]">
               {mode === 'sleep' ? 'The Steel Ball' : 'The Reset Sphere'}
             </h2>
 
@@ -387,7 +387,7 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
               <p className="text-xs uppercase tracking-widest text-brand-primary/70 font-bold mb-4">
                 Now answer this
               </p>
-              <h1 className="text-2xl sm:text-3xl md:text-4xl font-serif text-[var(--brand-text-secondary)] leading-tight">
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-display text-[var(--brand-text-secondary)] leading-tight">
                 {currentPrompt.prompt}
               </h1>
             </div>
@@ -426,7 +426,7 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
               <div className="absolute inset-0 bg-brand-primary/20 blur-3xl rounded-full" />
               <div className="relative p-4 sm:p-6 rounded-2xl bg-[var(--glass-surface)] border border-white/10">
                 <Zap className="h-12 w-12 text-brand-text-secondary mx-auto mb-4" />
-                <h2 className="text-3xl font-serif text-[var(--brand-text-secondary)] mb-2">Session Complete</h2>
+                <h2 className="text-3xl font-display text-[var(--brand-text-secondary)] mb-2">Session Complete</h2>
                 <p className="text-[var(--brand-text-secondary)]">Your subconscious has been primed.</p>
               </div>
             </div>

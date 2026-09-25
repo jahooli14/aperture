@@ -79,7 +79,7 @@ function GraveyardSection({ projects, onNavigate, onRevive }: { projects: Projec
                     {project.title}
                   </h3>
                   {buriedDate && (
-                    <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--brand-text-muted)' }}>
+                    <p className="text-[11px] font-bold uppercase tracking-widest" style={{ color: 'var(--brand-text-muted)' }}>
                       Parked {buriedDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
                     </p>
                   )}
@@ -167,7 +167,7 @@ function CompletedProjectsTimeline({ projects, graveyardProjects, onNavigate, on
                       {project.title}
                     </h3>
                     {project.type && (
-                      <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-lg flex-shrink-0"
+                      <span className="text-[11px] font-black uppercase tracking-widest px-2 py-0.5 rounded-lg flex-shrink-0"
                         style={{ background: 'rgba(255,255,255,0.06)', color: 'var(--brand-text-secondary)' }}>
                         {project.type}
                       </span>
@@ -178,7 +178,7 @@ function CompletedProjectsTimeline({ projects, graveyardProjects, onNavigate, on
                       {project.description}
                     </p>
                   )}
-                  <div className="flex items-center gap-3 text-[10px] font-bold uppercase tracking-widest" style={{ color: 'rgba(var(--brand-primary-rgb), 0.6)' }}>
+                  <div className="flex items-center gap-3 text-[11px] font-bold uppercase tracking-widest" style={{ color: 'rgba(var(--brand-primary-rgb), 0.6)' }}>
                     <span>{duration}</span>
                     {completedDate && (
                       <>

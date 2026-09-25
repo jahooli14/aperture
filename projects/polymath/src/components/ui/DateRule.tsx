@@ -65,7 +65,7 @@ export function DateRule({
 
   return (
     <div
-      className={`flex items-center gap-3 text-[10px] uppercase tracking-[0.32em] font-semibold ${className}`}
+      className={`flex items-center gap-3 text-[11px] uppercase tracking-[0.14em] font-semibold ${className}`}
       style={{ color: 'rgba(var(--brand-primary-rgb), 0.7)' }}
     >
       {(ruleSide === 'left' || ruleSide === 'both') && Rule}

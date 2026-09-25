@@ -57,8 +57,8 @@ export function ProjectMiniCard({
         WebkitBackdropFilter: 'blur(8px)',
       }
     : {
-        background: `linear-gradient(155deg, rgba(${theme.rgb},0.10) 0%, rgba(15,24,41,0.65) 60%)`,
-        border: `1px solid rgba(${theme.rgb},0.32)`,
+        background: `linear-gradient(155deg, rgba(${theme.rgb},0.12) 0%, rgba(13,20,34,0.84) 60%)`,
+        border: `1px solid rgba(${theme.rgb},0.10)`,
         boxShadow:
           `0 0 32px rgba(${theme.rgb},0.20),` +
           '0 8px 24px -10px rgba(0,0,0,0.55),' +
@@ -83,9 +83,10 @@ export function ProjectMiniCard({
       onKeyDown={e => {
         if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open() }
       }}
-      className="group relative w-full h-full text-left transition-all hover:-translate-y-0.5 active:scale-[0.99] overflow-hidden cursor-pointer"
+      className={`group relative w-full h-full text-left transition-all hover:-translate-y-0.5 active:scale-[0.99] overflow-hidden cursor-pointer ${isGhost ? '' : 'neon-edge'}`}
       style={{
         ...surface,
+        ['--neon-rgb' as string]: theme.rgb,
         borderRadius: '18px',
         padding: '14px',
         minHeight: '120px',
@@ -112,8 +113,8 @@ export function ProjectMiniCard({
         {/* Mode framing sub-line — uppercase tracked caps, single tone. */}
         {meta && (
           <span
-            className="text-[9.5px] uppercase tracking-[0.24em] font-semibold mt-1"
-            style={{ color: 'rgba(var(--brand-primary-rgb), 0.6)' }}
+            className="text-[11px] uppercase tracking-[0.14em] font-semibold mt-1"
+            style={{ color: 'rgba(var(--brand-primary-rgb), 0.85)' }}
           >
             {meta}
           </span>
@@ -125,7 +126,7 @@ export function ProjectMiniCard({
         <div className="mt-auto flex items-center justify-between gap-2 pt-1">
           {primaryLabel ? (
             <span
-              className="text-[9px] uppercase tracking-[0.16em] font-semibold px-1.5 py-0.5 rounded-md truncate max-w-[60%]"
+              className="text-[11px] uppercase tracking-[0.1em] font-semibold px-1.5 py-0.5 rounded-md truncate max-w-[60%]"
               style={{
                 background: `rgba(${theme.rgb},0.12)`,
                 color: `rgba(${theme.rgb},0.9)`,

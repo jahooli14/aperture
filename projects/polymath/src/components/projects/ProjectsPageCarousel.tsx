@@ -252,7 +252,7 @@ function ProjectCard({ project, prominent = false }: { project: Project, promine
       ) : project.status === 'dormant' && project.metadata?.evolved_description ? (
         <div className="mb-3">
           <p className={`text-[var(--brand-text-primary)] italic aperture-body line-clamp-3 ${prominent ? 'text-[13px]' : 'text-xs'}`}>
-            <span className="not-italic font-bold uppercase tracking-widest text-[9px] mr-1.5" style={{ color: theme.textColor, opacity: 0.85 }}>now:</span>
+            <span className="not-italic font-bold uppercase tracking-widest text-[11px] mr-1.5" style={{ color: theme.textColor, opacity: 0.85 }}>now:</span>
             {project.metadata.evolved_description as string}
           </p>
         </div>
@@ -289,7 +289,7 @@ function ProjectCard({ project, prominent = false }: { project: Project, promine
 
         <div className="flex items-center gap-1.5 flex-shrink-0">
           {project.status === 'dormant' && (
-            <span className="flex items-center gap-0.5 text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-md"
+            <span className="flex items-center gap-0.5 text-[11px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-md"
               style={{ color: 'rgba(203,213,225,0.9)', background: 'rgba(148,163,184,0.12)', border: '1px solid rgba(148,163,184,0.25)' }}>
               <Snowflake className="h-2.5 w-2.5" />
             </span>
@@ -358,7 +358,7 @@ function ArchivesSpotlightCard({ project }: { project: Project }) {
       </div>
 
       <Link to={`/projects/${project.id}`} className="flex-1 min-w-0 hover:opacity-80 transition-opacity">
-        <p className="text-[9px] font-black uppercase tracking-[0.25em] mb-0.5" style={{ color: 'rgba(148,163,184,0.5)' }}>
+        <p className="text-[11px] font-black uppercase tracking-[0.14em] mb-0.5" style={{ color: 'rgba(148,163,184,0.5)' }}>
           From the archives · {daysBuried}d ago
         </p>
         <p className="text-sm font-bold text-[var(--brand-text-primary)] truncate">{project.title}</p>

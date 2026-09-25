@@ -144,7 +144,7 @@ export function ProjectListRow({
             </h4>
           </div>
           <span
-            className="text-[10px] font-semibold px-2 py-0.5 rounded-md whitespace-nowrap flex-shrink-0 uppercase tracking-wider"
+            className="text-[11px] font-semibold px-2 py-0.5 rounded-md whitespace-nowrap flex-shrink-0 uppercase tracking-wider"
             style={{
               backgroundColor: statusColors[project.status] || statusColors.active,
               color: 'var(--brand-text-secondary)'

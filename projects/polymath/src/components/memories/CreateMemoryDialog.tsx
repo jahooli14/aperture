@@ -93,8 +93,8 @@ function VoiceSeeds({
       <div className="flex items-center gap-1.5 mb-2">
         <span className="w-1 h-1 rounded-full opacity-30" style={{ background: 'var(--brand-primary)' }} />
         <span
-          className="text-[10px] font-medium tracking-widest uppercase"
-          style={{ color: 'var(--brand-text-secondary)', opacity: 0.3 }}
+          className="text-[11px] font-medium tracking-widest uppercase"
+          style={{ color: 'var(--brand-text-secondary)', opacity: 0.63 }}
         >
           Worth thinking about
         </span>
@@ -662,18 +662,18 @@ export function CreateMemoryDialog({
               {/* Spacer + ambient status */}
               <div className="flex-1 flex items-center justify-center gap-2">
                 {bodyFocused && wordCount > 0 && !isChecklistMode && (
-                  <span className="text-[10px] tabular-nums" style={{ color: 'var(--brand-text-secondary)', opacity: 0.4 }}>
+                  <span className="text-[11px] tabular-nums" style={{ color: 'var(--brand-text-secondary)', opacity: 0.69 }}>
                     {wordCount}w
                   </span>
                 )}
                 {isChecklistMode && (
-                  <span className="text-[10px]" style={{ color: 'var(--brand-text-secondary)', opacity: 0.3 }}>
+                  <span className="text-[11px]" style={{ color: 'var(--brand-text-secondary)', opacity: 0.63 }}>
                     {checklistItems.filter((i) => i.checked).length}/{checklistItems.filter((i) => i.text).length} done
                   </span>
                 )}
                 {hasContent && (
                   <span
-                    className="text-[10px] tracking-widest uppercase font-semibold"
+                    className="text-[11px] tracking-widest uppercase font-semibold"
                     style={{
                       color: isOnline ? 'rgba(var(--brand-primary-rgb), 0.6)' : 'rgba(255, 200, 80, 0.65)',
                       opacity: 0.7,
@@ -715,7 +715,7 @@ export function CreateMemoryDialog({
                 type="submit"
                 disabled={!hasContent}
                 aria-label="Done"
-                className="flex-shrink-0 px-3 h-9 rounded-full text-[12px] font-bold uppercase tracking-[0.15em] transition-all touch-manipulation disabled:opacity-30"
+                className="flex-shrink-0 px-3 h-9 rounded-full text-[12px] font-bold uppercase tracking-[0.1em] transition-all touch-manipulation disabled:opacity-30"
                 style={{
                   background: hasContent ? 'rgba(var(--brand-primary-rgb), 0.18)' : 'transparent',
                   color: hasContent ? 'rgb(var(--brand-primary-rgb))' : 'var(--brand-text-secondary)',

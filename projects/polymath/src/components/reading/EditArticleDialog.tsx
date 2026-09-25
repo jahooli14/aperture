@@ -134,7 +134,7 @@ export function EditArticleDialog({ article, open, onOpenChange }: EditArticleDi
               className="h-14 bg-[var(--glass-surface)] border-[var(--glass-surface-hover)] focus:border-brand-primary placeholder:text-[var(--brand-text-primary)]/20"
               autoComplete="off"
             />
-            <p className="text-[10px] text-[var(--brand-text-muted)]">Comma-separated tags</p>
+            <p className="text-[11px] text-[var(--brand-text-muted)]">Comma-separated tags</p>
           </div>
 
           <div className="space-y-2 pb-4">
@@ -146,7 +146,7 @@ export function EditArticleDialog({ article, open, onOpenChange }: EditArticleDi
               minHeight={112}
               scrollOnFocus
             />
-            <p className="text-[10px] text-[var(--brand-text-muted)]">Add your personal insights and highlights</p>
+            <p className="text-[11px] text-[var(--brand-text-muted)]">Add your personal insights and highlights</p>
           </div>
 
           <BottomSheetFooter>

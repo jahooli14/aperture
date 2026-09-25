@@ -99,7 +99,7 @@ export function ArticleVerdict({
       className="mt-16 pt-10 border-t border-white/[0.08] flex flex-col items-center text-center"
     >
       <span
-        className="text-[11px] uppercase tracking-[0.32em] font-semibold mb-3"
+        className="text-[11px] uppercase tracking-[0.14em] font-semibold mb-3"
         style={{ color: 'rgba(255,255,255,0.4)' }}
       >
         You reached the end
@@ -163,7 +163,7 @@ export function ResonanceBadge({ resonance }: { resonance: ArticleResonance | nu
   const good = resonance === 'good'
   return (
     <span
-      className="inline-flex items-center gap-1 text-[10px] uppercase tracking-[0.16em] font-semibold px-2 py-0.5 rounded-full"
+      className="inline-flex items-center gap-1 text-[11px] uppercase tracking-[0.1em] font-semibold px-2 py-0.5 rounded-full"
       style={{
         background: good ? 'rgba(var(--brand-primary-rgb), 0.14)' : 'rgba(255,255,255,0.05)',
         color: good ? 'rgb(var(--brand-primary-rgb))' : 'rgba(255,255,255,0.4)',

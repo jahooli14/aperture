@@ -71,8 +71,10 @@
   --hero-weight: 500;
 
   /* Eyebrow / metadata */
-  --eyebrow-tracking: 0.32em;
-  --eyebrow-color: rgba(var(--brand-primary-rgb), 0.7);
+  /* Was 0.32em at 10px — letters so far apart the eye reads them one at a
+     time. 0.12em keeps the caps feel and still reads as a word. */
+  --eyebrow-tracking: 0.12em;
+  --eyebrow-color: rgba(var(--brand-primary-rgb), 0.9);
   --eyebrow-rule-width: 40px;
 
   /* Section heading inside a page (groups cards). Must outrank card titles.
@@ -199,7 +201,7 @@
 /* Serif editorial title used at the top of most full-page surfaces. */
 
 .page-hero {
-  font-family: var(--brand-font-serif);
+  font-family: var(--brand-font-display);
   font-weight: var(--hero-weight);
   font-size: clamp(2rem, 6vw, 2.75rem);
   letter-spacing: var(--hero-letter-spacing);
@@ -208,7 +210,7 @@
 }
 
 .page-hero-sm {
-  font-family: var(--brand-font-serif);
+  font-family: var(--brand-font-display);
   font-weight: var(--hero-weight);
   font-size: clamp(1.75rem, 5vw, 2.4rem);
   letter-spacing: var(--hero-letter-spacing);
@@ -275,7 +277,8 @@
 .section-header .accent,
 .section-header span {
   color: rgb(var(--brand-primary-rgb));
-  text-shadow: 0 0 14px rgba(var(--brand-primary-rgb), 0.55), 0 0 4px rgba(var(--brand-primary-rgb), 0.35);
+  /* A soft halo, not a blur — a strong glow smears the letter edges. */
+  text-shadow: 0 0 18px rgba(var(--brand-primary-rgb), 0.3);
 }
 
 /* Card title inside a section. Always smaller than the section heading
@@ -314,7 +317,7 @@
   gap: 12px;
   margin-top: 12px;
   font-family: var(--brand-font-body);
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: var(--eyebrow-tracking);
@@ -407,7 +410,7 @@
 
 .meta-caps {
   font-family: var(--brand-font-body);
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: var(--eyebrow-tracking);
@@ -420,7 +423,6 @@
   font-size: 14px;
   line-height: 1.55;
   color: var(--brand-text-secondary);
-  opacity: 0.85;
 }
 
 /* ─── Atmospheric backgrounds ──────────────────────────────────── */

@@ -226,7 +226,7 @@ export function TaskList({ tasks, highlightedTasks = [], onUpdate, projectId }: 
               )}
 
               {/* Drag Handle */}
-              <div className="flex-shrink-0 opacity-40 cursor-grab active:cursor-grabbing text-[var(--brand-text-primary)]">
+              <div className="flex-shrink-0 opacity-70 cursor-grab active:cursor-grabbing text-[var(--brand-text-primary)]">
                 <GripVertical className="h-5 w-5" />
               </div>
 
@@ -276,7 +276,7 @@ export function TaskList({ tasks, highlightedTasks = [], onUpdate, projectId }: 
                           handleEstimateChange(task.id, task.estimated_minutes)
                         }}
                         className={cn(
-                          "text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-xl transition-colors",
+                          "text-[11px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-xl transition-colors",
                           task.estimate_set
                             ? "bg-[rgba(255,255,255,0.1)] text-[var(--brand-text-primary)]/70 hover:bg-white/20"
                             : "bg-transparent text-[var(--brand-text-primary)]/20 hover:bg-[rgba(255,255,255,0.06)]"
@@ -290,13 +290,13 @@ export function TaskList({ tasks, highlightedTasks = [], onUpdate, projectId }: 
                       </button>
 
                       {task.is_ai_suggested && (
-                        <span className="text-[9px] font-bold uppercase tracking-wider text-brand-primary opacity-70">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-brand-primary opacity-85">
                           AI Suggested
                         </span>
                       )}
 
                       {isHighlighted && (
-                        <span className="text-[10px] font-black uppercase tracking-widest text-[var(--brand-primary)]/50">
+                        <span className="text-[11px] font-black uppercase tracking-widest text-[var(--brand-primary)]/50">
                           Power Hour Priority
                         </span>
                       )}
@@ -308,7 +308,7 @@ export function TaskList({ tasks, highlightedTasks = [], onUpdate, projectId }: 
               {/* Delete Button */}
               <button
                 onClick={() => handleDeleteTask(task.id)}
-                className="flex-shrink-0 h-11 w-11 flex items-center justify-center rounded-xl opacity-40 hover:opacity-80 active:opacity-100 active:scale-90 active:bg-red-500/10 transition-all text-[var(--brand-text-primary)]"
+                className="flex-shrink-0 h-11 w-11 flex items-center justify-center rounded-xl opacity-70 hover:opacity-80 active:opacity-100 active:scale-90 active:bg-red-500/10 transition-all text-[var(--brand-text-primary)]"
                 aria-label="Delete task"
               >
                 <Trash2 className="h-4 w-4" />
@@ -383,7 +383,7 @@ export function TaskList({ tasks, highlightedTasks = [], onUpdate, projectId }: 
                         </span>
                       )}
                       {task.completed_at && (
-                        <span className="text-[9px] opacity-30 mt-0.5 block" style={{ color: 'var(--brand-text-muted)' }}>
+                        <span className="text-[11px] opacity-30 mt-0.5 block" style={{ color: 'var(--brand-text-muted)' }}>
                           Done {new Date(task.completed_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                         </span>
                       )}

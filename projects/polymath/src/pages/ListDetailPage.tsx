@@ -179,7 +179,7 @@ const CompletionCelebration = ({
                             </h3>
                             <p className="text-sm text-[var(--brand-text-primary)]/40 mb-6 font-mono truncate">{item.content}</p>
 
-                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--brand-text-primary)]/30 mb-3">
+                            <p className="text-[11px] font-black uppercase tracking-[0.14em] text-[var(--brand-text-primary)]/30 mb-3">
                                 How was it?
                             </p>
 
@@ -443,7 +443,7 @@ const QuoteCard = memo(({
                                 </button>
                                 <button
                                     onClick={handleCancelQuote}
-                                    className="px-3 py-1.5 rounded-xl text-xs text-[var(--brand-text-secondary)] opacity-60 hover:opacity-100 transition-all"
+                                    className="px-3 py-1.5 rounded-xl text-xs text-[var(--brand-text-secondary)] opacity-80 hover:opacity-100 transition-all"
                                     style={{ background: 'rgba(255,255,255,0.07)' }}
                                 >
                                     Cancel
@@ -542,7 +542,7 @@ const QuoteCard = memo(({
                     {!isEditingQuote && (
                         <button
                             onClick={(e) => { e.stopPropagation(); setIsEditingQuote(true) }}
-                            className="p-2.5 rounded-xl bg-zinc-900/50 backdrop-blur-sm border border-[var(--glass-surface-hover)] active:bg-[rgba(255,255,255,0.1)] text-brand-text-muted active:text-[var(--brand-text-primary)] opacity-50 transition-all active:scale-95"
+                            className="p-2.5 rounded-xl bg-zinc-900/50 backdrop-blur-sm border border-[var(--glass-surface-hover)] active:bg-[rgba(255,255,255,0.1)] text-brand-text-muted active:text-[var(--brand-text-primary)] opacity-75 transition-all active:scale-95"
                             aria-label="Edit quote"
                         >
                             <Pencil className="h-4 w-4" />
@@ -552,7 +552,7 @@ const QuoteCard = memo(({
                     {/* Copy button */}
                     <button
                         onClick={(e) => { e.stopPropagation(); onCopy(item.content) }}
-                        className="p-2.5 rounded-xl bg-zinc-900/50 backdrop-blur-sm border border-[var(--glass-surface-hover)] active:bg-[rgba(255,255,255,0.1)] text-brand-text-muted active:text-[var(--brand-text-primary)] opacity-50 transition-all active:scale-95"
+                        className="p-2.5 rounded-xl bg-zinc-900/50 backdrop-blur-sm border border-[var(--glass-surface-hover)] active:bg-[rgba(255,255,255,0.1)] text-brand-text-muted active:text-[var(--brand-text-primary)] opacity-75 transition-all active:scale-95"
                         aria-label="Copy quote"
                     >
                         <Copy className="h-4 w-4" />
@@ -561,7 +561,7 @@ const QuoteCard = memo(({
                     {/* Delete */}
                     <button
                         onClick={(e) => { e.stopPropagation(); onDelete(item.id, item.list_id) }}
-                        className="p-2.5 rounded-xl bg-zinc-900/50 backdrop-blur-sm border active:bg-brand-primary/20 active:border-red-500/40 text-brand-text-muted active:text-brand-text-secondary opacity-50 transition-all active:scale-95"
+                        className="p-2.5 rounded-xl bg-zinc-900/50 backdrop-blur-sm border active:bg-brand-primary/20 active:border-red-500/40 text-brand-text-muted active:text-brand-text-secondary opacity-75 transition-all active:scale-95"
                         style={{ borderColor: `rgba(${QUOTE_ACCENT_RGB}, 0.2)` }}
                         aria-label="Delete phrase"
                     >
@@ -758,7 +758,7 @@ const StandardItemCard = memo(({
                                 background: pillBg,
                                 border: `1px solid ${pillBorder}`,
                                 color: `rgb(${pillColor})`,
-                                fontSize: '10px',
+                                fontSize: '11px',
                                 fontWeight: 800,
                                 letterSpacing: '0.08em',
                                 textTransform: 'uppercase',
@@ -809,7 +809,7 @@ const StandardItemCard = memo(({
                             return cleanTags.length > 0 ? (
                                 <div className="flex flex-wrap gap-1">
                                     {cleanTags.map((tag: string) => (
-                                        <span key={tag} className="text-[10px] bg-brand-primary/25 border border-brand-primary/40 px-1.5 py-0.5 rounded-md text-brand-primary font-bold">
+                                        <span key={tag} className="text-[11px] bg-brand-primary/25 border border-brand-primary/40 px-1.5 py-0.5 rounded-md text-brand-primary font-bold">
                                             {tag}
                                         </span>
                                     ))}
@@ -849,7 +849,7 @@ const StandardItemCard = memo(({
                                 <button
                                     key={r.id}
                                     onClick={e => { e.stopPropagation(); onReact(item.id, active ? null : r.id) }}
-                                    className="flex items-center justify-center gap-1 h-7 min-w-[28px] px-2 rounded-full text-[10px] transition-all"
+                                    className="flex items-center justify-center gap-1 h-7 min-w-[28px] px-2 rounded-full text-[11px] transition-all"
                                     style={{
                                         background: active ? 'rgba(var(--brand-primary-rgb),0.15)' : 'rgba(0,0,0,0.4)',
                                         border: active ? '1px solid rgba(var(--brand-primary-rgb),0.35)' : '1px solid rgba(255,255,255,0.08)',
@@ -938,7 +938,7 @@ function SectionBlock({
                 style={{ color: isOver ? `rgb(${rgb})` : undefined }}
             >
                 <span className="text-[11px] font-black uppercase tracking-widest text-brand-text-muted">{label}</span>
-                <span className="text-[10px] font-bold text-zinc-600">{count}</span>
+                <span className="text-[11px] font-bold text-zinc-600">{count}</span>
                 <div className="flex-1 h-px bg-[var(--glass-surface)]" />
             </div>
             {children}
@@ -1194,7 +1194,7 @@ function ArticleListMode({ list, navigate }: ArticleListModeProps) {
             <div className="px-4 sm:px-6 lg:px-8 pb-4">
                 <header className="page-masthead">
                     <div className="page-masthead-text">
-                        <button onClick={() => navigate('/lists')} className="flex items-center gap-2 text-[11px] uppercase tracking-[0.15em] text-[var(--brand-text-muted)] hover:text-[var(--brand-text-secondary)] transition-colors mb-2">
+                        <button onClick={() => navigate('/lists')} className="flex items-center gap-2 text-[11px] uppercase tracking-[0.1em] text-[var(--brand-text-muted)] hover:text-[var(--brand-text-secondary)] transition-colors mb-2">
                             <ArrowLeft className="h-3.5 w-3.5" /> All lists
                         </button>
 
@@ -1202,7 +1202,7 @@ function ArticleListMode({ list, navigate }: ArticleListModeProps) {
                             <div className="flex items-center gap-2 px-3 py-1.5 rounded-full"
                                 style={{ backgroundColor: 'rgba(251,191,36,0.1)', boxShadow: 'inset 0 0 0 1px rgba(251,191,36,0.2)' }}>
                                 <BookOpen className="h-3.5 w-3.5" style={{ color: 'rgb(251,191,36)' }} />
-                                <span className="text-[9px] font-black uppercase tracking-widest" style={{ color: 'rgb(251,191,36)' }}>
+                                <span className="text-[11px] font-black uppercase tracking-widest" style={{ color: 'rgb(251,191,36)' }}>
                                     Short Reads
                                 </span>
                             </div>
@@ -1268,7 +1268,7 @@ function ArticleListMode({ list, navigate }: ArticleListModeProps) {
                     <div className="flex flex-col items-center justify-center py-40 text-zinc-600">
                         <BookOpen className="h-12 w-12 mb-4 opacity-20" />
                         <p className="text-brand-text-muted font-medium text-lg mb-1">Your queue is empty.</p>
-                        <p className="text-sm text-brand-text-muted opacity-60">Paste a URL above to start reading.</p>
+                        <p className="text-sm text-brand-text-muted opacity-80">Paste a URL above to start reading.</p>
                     </div>
                 ) : (
                     <div className="space-y-8">
@@ -1289,10 +1289,10 @@ function ArticleListMode({ list, navigate }: ArticleListModeProps) {
                         {feedArticles.length > 0 && (
                             <div>
                                 <div className="flex items-center gap-2 px-3 mb-2">
-                                    <span className="text-[10px] font-black uppercase tracking-widest text-brand-text-muted">
+                                    <span className="text-[11px] font-black uppercase tracking-widest text-brand-text-muted">
                                         From your feeds
                                     </span>
-                                    <span className="text-[11px] font-mono text-brand-text-muted opacity-60">
+                                    <span className="text-[11px] font-mono text-brand-text-muted opacity-80">
                                         {feedArticles.length}
                                     </span>
                                 </div>
@@ -1648,7 +1648,7 @@ export default function ListDetailPage() {
             <div className="px-4 sm:px-6 lg:px-8 pb-4">
                 <header className="page-masthead">
                     <div className="page-masthead-text">
-                        <button onClick={() => navigate('/lists')} className="flex items-center gap-2 text-[11px] uppercase tracking-[0.15em] text-[var(--brand-text-muted)] hover:text-[var(--brand-text-secondary)] transition-colors mb-2">
+                        <button onClick={() => navigate('/lists')} className="flex items-center gap-2 text-[11px] uppercase tracking-[0.1em] text-[var(--brand-text-muted)] hover:text-[var(--brand-text-secondary)] transition-colors mb-2">
                             <ArrowLeft className="h-3.5 w-3.5" /> All lists
                         </button>
 
@@ -1853,7 +1853,7 @@ export default function ListDetailPage() {
                             {searchQuery.trim() ? 'No matches.' : 'Add the first one.'}
                         </p>
                         {!searchQuery.trim() && (
-                            <p className="text-sm text-brand-text-muted opacity-60">{
+                            <p className="text-sm text-brand-text-muted opacity-80">{
                                 list.type === 'film' ? 'A film you want to watch.' :
                                 list.type === 'book' ? 'A book you\'re curious about.' :
                                 list.type === 'place' ? 'Anywhere you want to go.' :
@@ -2033,7 +2033,7 @@ export default function ListDetailPage() {
                             <p className="text-xs font-bold text-brand-text-muted uppercase tracking-widest mb-3">The list</p>
                             <div className="space-y-3">
                                 <div>
-                                    <label className="text-[10px] font-bold uppercase tracking-widest text-brand-text-muted mb-1 block">Title</label>
+                                    <label className="text-[11px] font-bold uppercase tracking-widest text-brand-text-muted mb-1 block">Title</label>
                                     <input
                                         type="text"
                                         defaultValue={list?.title || ''}
@@ -2049,7 +2049,7 @@ export default function ListDetailPage() {
                                     />
                                 </div>
                                 <div>
-                                    <label className="text-[10px] font-bold uppercase tracking-widest text-brand-text-muted mb-1 block">Description</label>
+                                    <label className="text-[11px] font-bold uppercase tracking-widest text-brand-text-muted mb-1 block">Description</label>
                                     <RichTextEditor
                                         value={list?.description || ''}
                                         onBlurSave={(md) => {
@@ -2098,7 +2098,7 @@ export default function ListDetailPage() {
                                 <div className="space-y-2">
                                     {(['pending', 'active', 'completed'] as const).map(key => (
                                         <div key={key} className="flex items-center gap-3">
-                                            <span className="text-[10px] font-bold uppercase tracking-widest text-brand-text-muted w-20 flex-shrink-0">
+                                            <span className="text-[11px] font-bold uppercase tracking-widest text-brand-text-muted w-20 flex-shrink-0">
                                                 {key === 'pending' ? 'Backlog' : key === 'active' ? 'In Progress' : 'Done'}
                                             </span>
                                             <input
@@ -2122,7 +2122,7 @@ export default function ListDetailPage() {
                                         </div>
                                     ))}
                                 </div>
-                                <p className="text-[10px] text-brand-text-muted mt-3 opacity-60">Tap a label to edit. Press Enter or tap away to save.</p>
+                                <p className="text-[11px] text-brand-text-muted mt-3 opacity-80">Tap a label to edit. Press Enter or tap away to save.</p>
                             </div>
                         )}
                     </div>

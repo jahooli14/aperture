@@ -264,7 +264,7 @@ export function ConnectionRevealOverlay({
                         initial={{ opacity: 0 }}
                         animate={{ opacity: isActive ? 1 : 0.3 }}
                         transition={{ delay: i * 0.1 }}
-                        className="text-[10px] font-medium mt-2 text-center leading-tight max-w-[80px] truncate"
+                        className="text-[11px] font-medium mt-2 text-center leading-tight max-w-[80px] truncate"
                         style={{ color: isActive ? 'var(--brand-text-secondary)' : 'var(--brand-text-muted)' }}
                         title={node.title}
                       >

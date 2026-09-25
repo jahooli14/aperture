@@ -475,7 +475,7 @@ function FixCard({ item, expanded, onToggle, actions }: {
               {/* Original thought */}
               {meta.original_thought && (
                 <div className="pt-3">
-                  <p className="text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--brand-text-muted)' }}>
+                  <p className="text-[11px] font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--brand-text-muted)' }}>
                     Original note
                   </p>
                   <p className="text-xs leading-relaxed" style={{ color: 'var(--brand-text-secondary)' }}>
@@ -487,7 +487,7 @@ function FixCard({ item, expanded, onToggle, actions }: {
               {/* Fix draft detail */}
               {draft && (
                 <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--brand-text-muted)' }}>
+                  <p className="text-[11px] font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--brand-text-muted)' }}>
                     Automation plan
                   </p>
                   <div className="space-y-2">
@@ -516,10 +516,10 @@ function FixCard({ item, expanded, onToggle, actions }: {
                     ))}
                   </div>
                   <div className="flex items-center justify-between mt-2">
-                    <span className="text-[10px]" style={{ color: 'var(--brand-text-muted)' }}>
+                    <span className="text-[11px]" style={{ color: 'var(--brand-text-muted)' }}>
                       Est. cost: {draft.estimated_cost}
                     </span>
-                    <span className="text-[10px]" style={{ color: 'var(--brand-text-muted)' }}>
+                    <span className="text-[11px]" style={{ color: 'var(--brand-text-muted)' }}>
                       Schedule: {draft.schedule.cron}
                     </span>
                   </div>
@@ -529,7 +529,7 @@ function FixCard({ item, expanded, onToggle, actions }: {
               {/* Requirements / not-ready warning */}
               {draft?.ready === false && draft?.requirements && draft.requirements.length > 0 && (
                 <div className="p-2.5 rounded-xl" style={{ backgroundColor: 'rgba(var(--brand-primary-rgb), 0.08)', border: '1px solid rgba(var(--brand-primary-rgb), 0.2)' }}>
-                  <p className="text-[10px] font-semibold uppercase tracking-wider mb-1.5" style={{ color: 'rgb(var(--brand-primary-rgb))' }}>
+                  <p className="text-[11px] font-semibold uppercase tracking-wider mb-1.5" style={{ color: 'rgb(var(--brand-primary-rgb))' }}>
                     Setup needed before this can run
                   </p>
                   {draft.requirements.map((req, i) => (
@@ -537,7 +537,7 @@ function FixCard({ item, expanded, onToggle, actions }: {
                       <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" style={{ color: 'rgb(var(--brand-primary-rgb))' }} />
                       <div>
                         <p className="text-xs font-medium" style={{ color: 'var(--brand-text-primary)' }}>{req.label}</p>
-                        <p className="text-[10px]" style={{ color: 'var(--brand-text-muted)' }}>{req.description}</p>
+                        <p className="text-[11px]" style={{ color: 'var(--brand-text-muted)' }}>{req.description}</p>
                       </div>
                     </div>
                   ))}
@@ -547,7 +547,7 @@ function FixCard({ item, expanded, onToggle, actions }: {
               {/* Fix hint for manual items */}
               {!draft && meta.fix_hint && (
                 <div className="pt-3">
-                  <p className="text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--brand-text-muted)' }}>
+                  <p className="text-[11px] font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--brand-text-muted)' }}>
                     Suggestion
                   </p>
                   <p className="text-xs" style={{ color: 'var(--brand-text-secondary)' }}>{meta.fix_hint}</p>

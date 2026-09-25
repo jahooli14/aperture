@@ -124,7 +124,7 @@ function ShelfRow({ project, position, onOpen, onUnpin, onDragEnd }: ShelfRowPro
           onClick={(e) => e.stopPropagation()}
         >
           <span
-            className="text-[10px] font-black tracking-widest mb-0.5 aperture-header"
+            className="text-[11px] font-black tracking-widest mb-0.5 aperture-header"
             style={{ color: theme.text }}
           >
             {position}
@@ -137,7 +137,7 @@ function ShelfRow({ project, position, onOpen, onUnpin, onDragEnd }: ShelfRowPro
           <h4 className="text-sm font-bold text-[var(--brand-text-primary)] leading-tight aperture-header line-clamp-1">
             {project.title}
           </h4>
-          <p className="text-[11px] text-[var(--brand-text-secondary)] opacity-60 mt-0.5">
+          <p className="text-[11px] text-[var(--brand-text-secondary)] opacity-80 mt-0.5">
             {formatRelativeTime(project.last_active || project.updated_at)}
           </p>
         </div>

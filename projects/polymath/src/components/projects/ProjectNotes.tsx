@@ -68,7 +68,7 @@ export function ProjectNotes({ projectId, notesDoc }: ProjectNotesProps) {
       <div className="flex items-center gap-2 mb-4">
         <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--brand-text-secondary)]">Notes</span>
         <div className="h-px flex-grow" style={{ background: 'rgba(255,255,255,0.1)' }} />
-        <span className="flex items-center gap-1.5 text-[10px] tracking-wide" style={{ color: 'var(--brand-text-secondary)', opacity: saveState === 'idle' ? 0 : 0.55, transition: 'opacity 0.25s' }}>
+        <span className="flex items-center gap-1.5 text-[11px] tracking-wide" style={{ color: 'var(--brand-text-secondary)', opacity: saveState === 'idle' ? 0 : 0.55, transition: 'opacity 0.25s' }}>
           {saveState === 'saving' ? <><Loader2 className="h-3 w-3 animate-spin" /> Saving</> : saveState === 'saved' ? <><Check className="h-3 w-3" /> Saved</> : null}
         </span>
       </div>

@@ -239,7 +239,7 @@ export function ProjectCard({ project, prominent = false }: { project: Project, 
                 boxShadow: `inset 0 0 0 1px rgba(${theme.rgb}, 0.2)`
               }}
             >
-              <p className="text-[10px] font-bold uppercase tracking-wider mb-1 opacity-70 aperture-header" style={{ color: theme.text }}>
+              <p className="text-[11px] font-bold uppercase tracking-wider mb-1 opacity-70 aperture-header" style={{ color: theme.text }}>
                 Next Step
               </p>
               <MarkdownRenderer
@@ -272,12 +272,12 @@ export function ProjectCard({ project, prominent = false }: { project: Project, 
                     }}
                   />
                 </div>
-                <span className="text-[10px] font-bold uppercase tracking-widest text-[var(--brand-text-muted)] aperture-header truncate">
+                <span className="text-[11px] font-bold uppercase tracking-widest text-[var(--brand-text-muted)] aperture-header truncate">
                   {completedTasks}/{totalTasks}
                 </span>
               </div>
             ) : (
-              <span className="text-[10px] font-bold uppercase tracking-widest text-[var(--brand-text-muted)] flex items-center gap-1 aperture-header truncate">
+              <span className="text-[11px] font-bold uppercase tracking-widest text-[var(--brand-text-muted)] flex items-center gap-1 aperture-header truncate">
                 <Clock className="h-3 w-3 flex-shrink-0" />
                 {new Date(project.last_active || project.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
               </span>
@@ -326,7 +326,7 @@ export function ProjectCard({ project, prominent = false }: { project: Project, 
                 <div className="px-5 pt-5 pb-4 flex items-start justify-between gap-3" style={{ borderBottom: `1px solid rgba(${theme.rgb}, 0.15)` }}>
                   <div>
                     {((project.metadata?.tags as string[] | undefined) ?? []).slice(0, 3).length > 0 && (
-                      <span className="text-[9px] font-semibold uppercase tracking-[0.3em] opacity-50" style={{ color: theme.text }}>
+                      <span className="text-[11px] font-semibold uppercase tracking-[0.14em] opacity-50" style={{ color: theme.text }}>
                         {((project.metadata?.tags as string[]).slice(0, 3)).join(' · ')}
                       </span>
                     )}

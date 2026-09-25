@@ -59,7 +59,7 @@ function BlockerField({ blocker, onSave }: { blocker?: string; onSave: (text: st
       <button
         onClick={() => setEditing(true)}
         className="w-full text-center text-[12px] py-1 transition-opacity hover:opacity-90"
-        style={{ color: 'var(--brand-text-secondary)', opacity: 0.45 }}
+        style={{ color: 'var(--brand-text-secondary)', opacity: 0.72 }}
       >
         or say what's pausing this
       </button>
@@ -103,7 +103,7 @@ function BlockerField({ blocker, onSave }: { blocker?: string; onSave: (text: st
             <button
               onClick={() => { setText(blocker ?? ''); setEditing(false) }}
               className="px-3 py-1.5 text-[11px] rounded-full hover:bg-white/[0.05] transition-colors italic"
-              style={{ fontFamily: 'var(--brand-font-body)', color: 'var(--brand-text-secondary)', opacity: 0.6 }}
+              style={{ fontFamily: 'var(--brand-font-body)', color: 'var(--brand-text-secondary)', opacity: 0.81 }}
             >
               Cancel
             </button>
@@ -643,7 +643,7 @@ export function ProjectDetailPage() {
           <div className="page-masthead-text">
           <button
             onClick={() => navigate('/projects')}
-            className="flex items-center gap-2 text-[11px] uppercase tracking-[0.15em] text-[var(--brand-text-muted)] hover:text-[var(--brand-text-secondary)] transition-colors"
+            className="flex items-center gap-2 text-[11px] uppercase tracking-[0.1em] text-[var(--brand-text-muted)] hover:text-[var(--brand-text-secondary)] transition-colors"
           >
             <ArrowLeft className="h-3.5 w-3.5" />
             Back
@@ -713,11 +713,11 @@ export function ProjectDetailPage() {
         {sparkedByMemories.length > 0 && (
           <div className="mb-3 space-y-1.5">
             <div className="flex items-center gap-1.5">
-              <Sprout className="h-3 w-3" style={{ color: 'var(--brand-text-secondary)', opacity: 0.4 }} />
-              <span className="text-[11px] font-medium tracking-wide lowercase" style={{ color: 'var(--brand-text-secondary)', opacity: 0.4 }}>sparked by</span>
+              <Sprout className="h-3 w-3" style={{ color: 'var(--brand-text-secondary)', opacity: 0.69 }} />
+              <span className="text-[11px] font-medium tracking-wide lowercase" style={{ color: 'var(--brand-text-secondary)', opacity: 0.69 }}>sparked by</span>
             </div>
             {sparkedByMemories.map(m => (
-              <p key={m.id} className="text-[13px] italic leading-relaxed line-clamp-2 pl-4" style={{ color: 'var(--brand-text-primary)', opacity: 0.6 }}>
+              <p key={m.id} className="text-[13px] italic leading-relaxed line-clamp-2 pl-4" style={{ color: 'var(--brand-text-primary)', opacity: 0.81 }}>
                 "{m.body || m.title}"
               </p>
             ))}
@@ -779,7 +779,7 @@ export function ProjectDetailPage() {
                 />
                 <span
                   className="text-[11px] font-semibold capitalize"
-                  style={{ color: 'var(--brand-text-secondary)', opacity: 0.6 }}
+                  style={{ color: 'var(--brand-text-secondary)', opacity: 0.81 }}
                 >
                   {parked ? 'Parked' : project.status}
                 </span>
@@ -817,7 +817,7 @@ export function ProjectDetailPage() {
             <span
               key={tag}
               className="text-[11px] font-medium px-2.5 py-1 rounded-lg"
-              style={{ color: 'var(--brand-text-secondary)', opacity: 0.55, background: 'rgba(255,255,255,0.04)' }}
+              style={{ color: 'var(--brand-text-secondary)', opacity: 0.78, background: 'rgba(255,255,255,0.04)' }}
             >
               {tag}
             </span>
@@ -897,7 +897,7 @@ export function ProjectDetailPage() {
                   boxShadow: flashTarget === 'goal' ? '0 0 24px rgba(var(--brand-primary-rgb),0.15)' : 'none',
                 }}
               >
-                <span className="text-[11px] font-medium tracking-wide mb-2 flex items-center gap-1.5 lowercase" style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.5 }}>
+                <span className="text-[11px] font-medium tracking-wide mb-2 flex items-center gap-1.5 lowercase" style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.75 }}>
                   <Target className="h-3 w-3" /> done when
                   {project.metadata?.end_goal_source === 'guide' && (
                     <span style={{ opacity: 0.7 }}>· via guide</span>
@@ -922,13 +922,13 @@ export function ProjectDetailPage() {
                         }}
                       />
                       <div className="flex gap-2 justify-end">
-                        <button onClick={(e) => { e.stopPropagation(); cancelEdit() }} className="px-3 py-1.5 text-[11px] font-medium rounded-lg hover:bg-white/[0.05] transition-colors" style={{ color: 'var(--brand-text-secondary)', opacity: 0.5 }}>Cancel</button>
+                        <button onClick={(e) => { e.stopPropagation(); cancelEdit() }} className="px-3 py-1.5 text-[11px] font-medium rounded-lg hover:bg-white/[0.05] transition-colors" style={{ color: 'var(--brand-text-secondary)', opacity: 0.75 }}>Cancel</button>
                         <button onClick={(e) => { e.stopPropagation(); saveGoal() }} className="px-3 py-1.5 text-[11px] font-medium rounded-lg transition-all" style={{ background: 'rgba(var(--brand-primary-rgb),0.1)', color: 'rgb(var(--brand-primary-rgb))' }}>Save</button>
                       </div>
                     </div>
                   ) : (
                     <div className="space-y-1.5">
-                      <p className="text-[15px] sm:text-base font-medium leading-relaxed italic font-serif text-center" style={{ color: 'var(--brand-text-primary)', opacity: 0.6 }}>
+                      <p className="text-[15px] sm:text-base font-medium leading-relaxed italic font-serif text-center" style={{ color: 'var(--brand-text-primary)', opacity: 0.81 }}>
                         {project.metadata?.end_goal}
                       </p>
                       {/* On a repeating project the finish line above is ONE
@@ -936,7 +936,7 @@ export function ProjectDetailPage() {
                           actually got. A number of real things made — never a
                           streak, and nothing to fall behind on. */}
                       {cycleCount && (
-                        <p className="text-[11px] uppercase tracking-wide text-center" style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.6 }}>
+                        <p className="text-[11px] uppercase tracking-wide text-center" style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.81 }}>
                           {cycleCount}
                         </p>
                       )}
@@ -975,7 +975,7 @@ export function ProjectDetailPage() {
                         {project.metadata.evolved_description as string}
                       </p>
                       {project.heat_reason && (
-                        <p className="mt-2 text-[12px] leading-relaxed" style={{ color: 'var(--brand-text-secondary)', opacity: 0.7 }}>
+                        <p className="mt-2 text-[12px] leading-relaxed" style={{ color: 'var(--brand-text-secondary)', opacity: 0.87 }}>
                           {project.heat_reason}
                         </p>
                       )}

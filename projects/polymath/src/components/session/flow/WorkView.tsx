@@ -60,7 +60,7 @@ export function WorkView({
           >
             {formatClock(clockSeconds)}
           </p>
-          <p className="text-[9px] uppercase tracking-[0.2em] mt-1" style={faint(0.4)}>
+          <p className="text-[11px] uppercase tracking-[0.14em] mt-1" style={faint(0.4)}>
             {timeUp ? 'over' : hasWindow ? 'left' : 'in'}
           </p>
         </div>
@@ -119,7 +119,7 @@ export function WorkView({
 
       {next && (
         <p className="text-[12.5px] leading-snug mb-4 truncate" style={faint(0.45)}>
-          <span className="uppercase tracking-[0.18em] text-[9.5px] mr-2">Then</span>
+          <span className="uppercase tracking-[0.1em] text-[11px] mr-2">Then</span>
           {splitDoneWhen(next.text).move}
         </p>
       )}

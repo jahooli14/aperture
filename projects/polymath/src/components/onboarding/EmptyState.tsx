@@ -28,10 +28,10 @@ export function EmptyState() {
         <h2 className="text-2xl font-bold mb-3" style={{ color: 'var(--brand-text-primary)' }}>
           Start by sharing a few thoughts
         </h2>
-        <p className="text-sm mb-2" style={{ color: 'var(--brand-text-secondary)', opacity: 0.6 }}>
+        <p className="text-sm mb-2" style={{ color: 'var(--brand-text-secondary)', opacity: 0.81 }}>
           Speak 5 thoughts to see your first patterns emerge.
         </p>
-        <p className="text-xs mb-8" style={{ color: 'var(--brand-text-secondary)', opacity: 0.35 }}>
+        <p className="text-xs mb-8" style={{ color: 'var(--brand-text-secondary)', opacity: 0.66 }}>
           30 seconds each — <BrandName size="sm" /> does the rest.
         </p>
 
@@ -58,7 +58,7 @@ export function EmptyState() {
               window.location.reload()
             }}
             className="inline-flex items-center justify-center gap-2 py-2.5 text-sm transition-opacity hover:opacity-80"
-            style={{ color: 'var(--brand-text-secondary)', opacity: 0.45 }}
+            style={{ color: 'var(--brand-text-secondary)', opacity: 0.72 }}
           >
             <Zap className="h-3.5 w-3.5" />
             Load demo instead

@@ -442,7 +442,7 @@ export function CreateProjectDialog({
                         type="button"
                         onClick={() => setPrefersText(true)}
                         className="flex items-center gap-1 text-[11px] mx-auto transition-all"
-                        style={{ color: 'var(--brand-text-secondary)', opacity: 0.4 }}
+                        style={{ color: 'var(--brand-text-secondary)', opacity: 0.69 }}
                       >
                         <Keyboard className="h-3 w-3" /> type instead
                       </button>
@@ -454,7 +454,7 @@ export function CreateProjectDialog({
                         onClick={() => setPrefersText(false)}
                         aria-label="Switch to voice"
                         className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 transition-opacity"
-                        style={{ color: 'var(--brand-text-secondary)', opacity: 0.45 }}
+                        style={{ color: 'var(--brand-text-secondary)', opacity: 0.72 }}
                       >
                         <Mic className="h-3.5 w-3.5" />
                       </button>
@@ -491,7 +491,7 @@ export function CreateProjectDialog({
                       type="button"
                       onClick={() => void shapeIt()}
                       className="mt-3 text-[12px] font-medium mx-auto block transition-all"
-                      style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.8 }}
+                      style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.9 }}
                     >
                       That's enough — plan it →
                     </button>
@@ -510,7 +510,7 @@ export function CreateProjectDialog({
                 className="flex flex-col items-center justify-center gap-3 py-14"
               >
                 <Loader2 className="h-5 w-5 animate-spin" style={{ color: 'rgb(var(--brand-primary-rgb))' }} />
-                <p className="text-[13px]" style={{ color: 'var(--brand-text-secondary)', opacity: 0.6 }}>
+                <p className="text-[13px]" style={{ color: 'var(--brand-text-secondary)', opacity: 0.81 }}>
                   Working out the first steps…
                 </p>
               </motion.div>
@@ -532,7 +532,7 @@ export function CreateProjectDialog({
                     type="button"
                     onClick={() => setMode('chat')}
                     className="flex items-center gap-1 text-[11px] mb-3 self-start transition-all"
-                    style={{ color: 'var(--brand-text-secondary)', opacity: 0.35 }}
+                    style={{ color: 'var(--brand-text-secondary)', opacity: 0.66 }}
                   >
                     <ArrowLeft className="h-3 w-3" /> say more
                   </button>
@@ -550,7 +550,7 @@ export function CreateProjectDialog({
                   />
 
                   {shaped?.summary && (
-                    <p className="mt-1.5 text-[14px] leading-snug" style={{ color: 'var(--brand-text-secondary)', opacity: 0.65 }}>
+                    <p className="mt-1.5 text-[14px] leading-snug" style={{ color: 'var(--brand-text-secondary)', opacity: 0.84 }}>
                       {shaped.summary}
                     </p>
                   )}
@@ -558,7 +558,7 @@ export function CreateProjectDialog({
                   {/* What done looks like, only when they said it. Shown as
                       a fact, not a field: it's already been captured. */}
                   {shaped?.end_goal && (
-                    <p className="mt-2 text-[13px] italic leading-snug" style={{ color: 'var(--brand-text-secondary)', opacity: 0.5 }}>
+                    <p className="mt-2 text-[13px] italic leading-snug" style={{ color: 'var(--brand-text-secondary)', opacity: 0.75 }}>
                       Done when: {shaped.end_goal}
                     </p>
                   )}
@@ -572,7 +572,7 @@ export function CreateProjectDialog({
                           style={{
                             background: 'rgba(var(--brand-primary-rgb),0.08)',
                             color: 'rgb(var(--brand-primary-rgb))',
-                            opacity: 0.75,
+                            opacity: 0.9,
                           }}
                         >
                           {tag}
@@ -585,14 +585,14 @@ export function CreateProjectDialog({
                       the plan, and the session takes them off the top. */}
                   <div className="mt-5 mb-4">
                     <div className="flex items-center justify-between mb-2">
-                      <p className="text-[11px] uppercase tracking-wide" style={{ color: 'var(--brand-text-secondary)', opacity: 0.4 }}>
+                      <p className="text-[11px] uppercase tracking-wide" style={{ color: 'var(--brand-text-secondary)', opacity: 0.69 }}>
                         {draftTasks.length > 0 ? 'The first steps, in order' : 'Steps'}
                       </p>
                       <button
                         type="button"
                         onClick={() => void shapeIt()}
                         className="text-[11px]"
-                        style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.7 }}
+                        style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.87 }}
                       >
                         redo
                       </button>
@@ -644,7 +644,7 @@ export function CreateProjectDialog({
                               style={{ color: 'var(--brand-text-secondary)' }}
                             />
                             {t.estimate_set && t.estimated_minutes && (
-                              <span className="text-[10px] flex-shrink-0" style={{ color: 'var(--brand-text-secondary)', opacity: 0.35 }}>
+                              <span className="text-[11px] flex-shrink-0" style={{ color: 'var(--brand-text-secondary)', opacity: 0.66 }}>
                                 {t.estimated_minutes}m
                               </span>
                             )}
@@ -662,7 +662,7 @@ export function CreateProjectDialog({
                           type="button"
                           onClick={addTask}
                           className="flex items-center gap-1.5 text-[11px] mt-1.5 pl-[26px]"
-                          style={{ color: 'var(--brand-text-secondary)', opacity: 0.4 }}
+                          style={{ color: 'var(--brand-text-secondary)', opacity: 0.69 }}
                         >
                           <Plus className="h-3 w-3" /> add a step
                         </button>

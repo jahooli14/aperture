@@ -91,7 +91,7 @@ function OutputTile({ item, onRemove }: { item: ProjectOutput; onRemove?: () => 
       type="button"
       aria-label={confirming ? 'Confirm remove' : 'Remove'}
       onClick={() => (confirming ? onRemove() : setConfirming(true))}
-      className="absolute top-1 right-1 rounded-full px-1.5 py-0.5 text-[10px] flex items-center gap-0.5"
+      className="absolute top-1 right-1 rounded-full px-1.5 py-0.5 text-[11px] flex items-center gap-0.5"
       style={{ background: 'rgba(0,0,0,0.55)', color: '#fff' }}
     >
       {confirming ? 'Remove' : <X className="h-3 w-3" />}
@@ -181,7 +181,7 @@ export function MadeWall({ projectId }: { projectId: string }) {
   return (
     <div className="space-y-3">
       {items.length > 0 && (
-        <span className="text-[11px] font-medium tracking-wide flex items-center gap-1.5 lowercase" style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.5 }}>
+        <span className="text-[11px] font-medium tracking-wide flex items-center gap-1.5 lowercase" style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.75 }}>
           <ImagePlus className="h-3 w-3" /> what you made · {items.length}
         </span>
       )}

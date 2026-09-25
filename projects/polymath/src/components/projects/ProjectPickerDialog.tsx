@@ -108,7 +108,7 @@ export function ProjectPickerDialog({
                                             {project.title}
                                         </h3>
                                         <div className="flex items-center gap-2 mt-0.5">
-                                            <span className={`text-[10px] uppercase tracking-wider font-medium px-1.5 py-0.5 rounded-xl ${project.status === 'active' ? 'bg-brand-primary/10 text-brand-primary' :
+                                            <span className={`text-[11px] uppercase tracking-wider font-medium px-1.5 py-0.5 rounded-xl ${project.status === 'active' ? 'bg-brand-primary/10 text-brand-primary' :
                                                     project.status === 'upcoming' ? 'bg-brand-primary/10 text-brand-primary' :
                                                         'bg-gray-500/10 text-[var(--brand-text-secondary)]'
                                                 }`}>

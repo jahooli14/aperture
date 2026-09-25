@@ -12,8 +12,9 @@
  *    elsewhere — it dilutes the hero.
  *
  * 2. EDITORIAL TYPE PAIR. Two fonts, two jobs:
- *      • --brand-font-serif (Playfair) for CONTENT — titles, body
- *        copy, quotes, project pitches, memories, reading.
+ *      • --brand-font-display (Playfair) for PAGE TITLES only (≥ 24px).
+ *      • --brand-font-serif (Literata) for CONTENT — questions, quotes,
+ *        next moves, memories, reading. Readable at body size.
  *      • --brand-font-header / --brand-font-body (Outfit / Inter) for
  *        UI CHROME — section headers, buttons, chips, metadata.
  *    Don't use serif for buttons or sans for body content.
@@ -61,24 +62,29 @@
     --project-default: rgb(var(--project-default-rgb));
 
     /* Text Standards */
-    --brand-text-primary: #ffffff;
-    --brand-text-secondary: #e5e7eb;
-    --brand-text-muted: #b4bac6;
+    --brand-text-primary: #f8fafc;
+    --brand-text-secondary: #dde3ec;
+    --brand-text-muted: #aab4c3;
 
     /* Accessible text hierarchy (WCAG AA against #0f1829) */
     --text-primary: rgba(255, 255, 255, 0.92);
-    --text-secondary: rgba(255, 255, 255, 0.65);
-    --text-tertiary: rgba(255, 255, 255, 0.45);
-    --text-muted: rgba(255, 255, 255, 0.28);
-    --text-disabled: rgba(255, 255, 255, 0.18);
+    --text-secondary: rgba(255, 255, 255, 0.74);
+    --text-tertiary: rgba(255, 255, 255, 0.6);
+    --text-muted: rgba(255, 255, 255, 0.5);
+    --text-disabled: rgba(255, 255, 255, 0.3);
 
     /* Font Standards */
     --brand-font-header: 'Outfit', 'Inter', sans-serif;
     --brand-font-body: 'Inter', -apple-system, sans-serif;
-    --brand-font-serif: 'Playfair Display', Georgia, 'Times New Roman', serif;
-    /* Long-form reading only (the article body in the reader). Playfair is
-       a display face and gets thin and tiring below ~24px; Literata is a
-       screen-reading face and stays solid at 19px on a dark background. */
+    /* Display serif — page titles and big numbers only (≥ 24px). Playfair's
+       hairlines are beautiful large and vanish at body size on a dark
+       screen, which is what made the app hard to read. */
+    --brand-font-display: 'Playfair Display', Georgia, 'Times New Roman', serif;
+    /* Content serif — questions, quotes, next moves, anything read at
+       14–20px. Literata was drawn for screens: even strokes, tall x-height,
+       an italic that stays legible. */
+    --brand-font-serif: 'Literata', Charter, 'Iowan Old Style', Georgia, serif;
+    /* Long-form reading (the article body in the reader). Same face. */
     --brand-font-reading: 'Literata', Charter, 'Iowan Old Style', Georgia, serif;
 
     /* ─── Page Color Identity System ─────────────────────────── */
@@ -122,7 +128,7 @@
        real depth. A subtle linear-gradient top highlight reads as light
        catching the upper edge of crystal. Multi-layer shadow + inset rim
        sells the floating-pane feel. */
-    --brand-glass-bg: rgba(var(--brand-bg-rgb), 0.55);
+    --brand-glass-bg: rgba(var(--brand-bg-rgb), 0.74);
     --brand-glass-blur: blur(28px) saturate(180%);
     --glass-highlight: linear-gradient(180deg, rgba(255,255,255,0.09) 0%, rgba(255,255,255,0.02) 30%, transparent 70%);
     --glass-edge:
@@ -207,9 +213,9 @@
 /* Use these to ensure WCAG AA contrast against dark surfaces  */
 
 .text-accessible-primary   { color: rgba(255, 255, 255, 0.92); }
-.text-accessible-secondary { color: rgba(255, 255, 255, 0.65); }
-.text-accessible-meta      { color: rgba(255, 255, 255, 0.45); }
-.text-accessible-muted     { color: rgba(255, 255, 255, 0.30); }
+.text-accessible-secondary { color: rgba(255, 255, 255, 0.74); }
+.text-accessible-meta      { color: rgba(255, 255, 255, 0.6); }
+.text-accessible-muted     { color: rgba(255, 255, 255, 0.5); }
 
 /* ─── Focus rings ─────────────────────────────────────────── */
 
@@ -433,7 +439,7 @@ h6 {
 /* for neon border glow and subtle tinted backgrounds          */
 
 [data-page] .glass-card {
-    border-color: rgba(var(--page-accent-rgb), 0.18);
+    border-color: rgba(var(--page-accent-rgb), 0.08);
     box-shadow:
         0 20px 60px -16px rgba(0, 0, 0, 0.55),
         0 4px 12px rgba(0, 0, 0, 0.18),
@@ -489,10 +495,9 @@ h6 {
     font-family: var(--brand-font-serif);
     font-style: italic;
     font-weight: 400;
-    color: rgba(255, 255, 255, 0.55);
+    color: rgba(255, 255, 255, 0.72);
     font-size: 1rem;
-    line-height: 1.5;
-    letter-spacing: 0.01em;
+    line-height: 1.55;
 }
 
 /* ─── Micro-interaction Utilities ────────────────────────── */
@@ -716,8 +721,8 @@ h6 {
     font-family: var(--brand-font-header);
     font-size: 12px;
     font-weight: 600;
-    letter-spacing: 0.18em;
-    color: rgba(var(--brand-primary-rgb), 0.78);
+    letter-spacing: 0.12em;
+    color: rgba(var(--brand-primary-rgb), 0.9);
     text-transform: uppercase;
     line-height: 1;
 }
@@ -732,3 +737,124 @@ h6 {
     );
 }
 
+
+/* ─── Neon glass, pushed ───────────────────────────────────────
+   Three pieces, all opt-in by class so nothing else shifts:
+
+   .neon-edge     — a gradient hairline border (bright cyan at the top
+                    left, fading round the card) drawn with a masked
+                    pseudo-element, so it looks like light catching an
+                    edge rather than a flat 1px outline.
+   .neon-breathe  — a glow layer behind the card that slowly swells and
+                    settles (9s). Animates opacity only, which the GPU
+                    does for free — no box-shadow repaint every frame.
+   .neon-button   — the one lit action: cyan gradient, inner shine,
+                    soft bloom.
+
+   Readability rule still holds: glass under text is ≥ 0.8 opaque. */
+
+.neon-edge { isolation: isolate; }
+/* Every glass card gets the lit edge too, so the app reads as one set. */
+.neon-edge::before,
+.glass-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(
+        150deg,
+        rgba(var(--neon-rgb, var(--brand-primary-rgb)), 0.85) 0%,
+        rgba(var(--neon-rgb, var(--brand-primary-rgb)), 0.25) 35%,
+        rgba(255, 255, 255, 0.06) 60%,
+        rgba(var(--neon-rgb, var(--brand-primary-rgb)), 0.3) 100%
+    );
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+    pointer-events: none;
+    z-index: 1;
+}
+
+.neon-breathe::after {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    box-shadow:
+        0 0 64px rgba(var(--neon-rgb, var(--brand-primary-rgb)), 0.32),
+        0 0 18px rgba(var(--neon-rgb, var(--brand-primary-rgb)), 0.18);
+    opacity: 0.45;
+    pointer-events: none;
+    z-index: -1;
+    animation: neon-breathe 9s ease-in-out infinite;
+}
+
+@keyframes neon-breathe {
+    0%, 100% { opacity: 0.45; }
+    50%      { opacity: 1; }
+}
+
+.neon-button {
+    position: relative;
+    overflow: hidden;
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.28) 0%, rgba(255, 255, 255, 0) 48%),
+        linear-gradient(135deg, rgb(var(--color-accent-light-rgb)) 0%, rgb(var(--brand-primary-rgb)) 45%, rgb(14, 165, 233) 100%);
+    color: #06121f;
+    box-shadow:
+        0 8px 28px -8px rgba(var(--brand-primary-rgb), 0.75),
+        0 0 0 1px rgba(255, 255, 255, 0.18) inset,
+        0 -1px 0 rgba(0, 0, 0, 0.15) inset;
+    transition: transform 0.15s ease, box-shadow 0.25s ease, filter 0.2s ease;
+}
+.neon-button:hover { filter: brightness(1.07); }
+.neon-button:active { transform: scale(0.985); }
+/* A slow sheen that crosses the button every few seconds — the only
+   moving thing on the card, so the eye finds the action. */
+.neon-button::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 40%;
+    left: -60%;
+    background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.35), transparent);
+    transform: skewX(-18deg);
+    animation: neon-sheen 7s ease-in-out infinite 2s;
+    pointer-events: none;
+}
+@keyframes neon-sheen {
+    0%, 70% { left: -60%; }
+    100%    { left: 130%; }
+}
+
+/* ─── The mull question ────────────────────────────────────────
+   The one piece of text allowed to be ethereal. Italic Literata (the
+   italic that stays legible), a pale cyan-white with a faint halo, and
+   each sentence surfaces out of a blur, one after another, like a
+   thought arriving. It ends sharp and still — ethereal on arrival,
+   readable at rest. */
+.mull-text {
+    font-family: var(--brand-font-serif);
+    font-style: italic;
+    color: rgb(218, 238, 250);
+    text-shadow: 0 0 22px rgba(var(--brand-primary-rgb), 0.28);
+    text-wrap: pretty;
+}
+.mull-line {
+    display: inline;
+    opacity: 0;
+    filter: blur(6px);
+    animation: mull-surface 1.6s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+@keyframes mull-surface {
+    from { opacity: 0; filter: blur(6px); }
+    to   { opacity: 1; filter: blur(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .neon-breathe::after,
+    .neon-button::after { animation: none; }
+    .mull-line { animation: none; opacity: 1; filter: none; }
+}

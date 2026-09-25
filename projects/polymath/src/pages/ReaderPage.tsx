@@ -586,7 +586,7 @@ export function ReaderPage() {
             {/* Source, centred — tells you where you are once the masthead
                 has scrolled away. */}
             <span
-              className="text-[11px] uppercase tracking-[0.22em] font-semibold truncate px-2 opacity-45"
+              className="text-[11px] uppercase tracking-[0.14em] font-semibold truncate px-2 opacity-45"
               style={{ maxWidth: '45%' }}
             >
               {article.source || article.author || ''}
@@ -657,7 +657,7 @@ export function ReaderPage() {
             {(article.source || article.author) && (
               <div className="flex items-center gap-3 mb-5">
                 <span
-                  className="text-[10px] uppercase tracking-[0.32em] font-semibold"
+                  className="text-[11px] uppercase tracking-[0.14em] font-semibold"
                   style={{ color: 'rgba(var(--brand-primary-rgb), 0.7)' }}
                 >
                   {article.source || article.author}
@@ -673,7 +673,7 @@ export function ReaderPage() {
             <h1
               className="mb-5"
               style={{
-                fontFamily: 'var(--brand-font-serif)',
+                fontFamily: 'var(--brand-font-display)',
                 fontSize: type.titleSize,
                 fontWeight: 600,
                 lineHeight: 1.12,
@@ -699,7 +699,7 @@ export function ReaderPage() {
               )}
               {article.read_time_minutes ? (
                 <span
-                  className="text-[10px] uppercase tracking-[0.32em] font-semibold flex items-center gap-1.5"
+                  className="text-[11px] uppercase tracking-[0.14em] font-semibold flex items-center gap-1.5"
                   style={{ color: 'rgba(255,255,255,0.4)' }}
                 >
                   <Clock className="h-3 w-3" /> {article.read_time_minutes} min
@@ -707,7 +707,7 @@ export function ReaderPage() {
               ) : null}
               {!isOfflineCached && caching && (
                 <span
-                  className="text-[10px] uppercase tracking-[0.28em] flex items-center gap-1.5 opacity-40"
+                  className="text-[11px] uppercase tracking-[0.14em] flex items-center gap-1.5 opacity-40"
                   title="Saving a copy so this works offline"
                 >
                   <Loader2 className="h-3 w-3 animate-spin" /> saving offline
@@ -817,7 +817,7 @@ export function ReaderPage() {
               </div>
               <button
                 className="text-[12px] mt-3 transition-opacity hover:opacity-90"
-                style={{ color: 'var(--brand-text-secondary)', opacity: 0.5 }}
+                style={{ color: 'var(--brand-text-secondary)', opacity: 0.75 }}
                 onClick={() => { setAskingVerdict(false); navigate(-1) }}
               >
                 skip

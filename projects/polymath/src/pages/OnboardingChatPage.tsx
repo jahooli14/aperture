@@ -686,7 +686,7 @@ export function OnboardingChatPage() {
             transition={{ delay: 0.3 }}
             className="mb-5"
             style={{
-              fontFamily: 'var(--brand-font-serif)',
+              fontFamily: 'var(--brand-font-display)',
               fontWeight: 500,
               fontSize: 'clamp(2.1rem, 6vw, 2.6rem)',
               lineHeight: 1.05,
@@ -741,8 +741,8 @@ export function OnboardingChatPage() {
             }}
           >
             <p
-              className="text-[10px] uppercase tracking-[0.22em] font-medium mb-4"
-              style={{ color: 'var(--brand-text-secondary)', opacity: 0.55 }}
+              className="text-[11px] uppercase tracking-[0.14em] font-medium mb-4"
+              style={{ color: 'var(--brand-text-secondary)', opacity: 0.78 }}
             >
               an example reveal
             </p>
@@ -845,7 +845,7 @@ export function OnboardingChatPage() {
             transition={{ delay: 0.35 }}
             className="mb-4"
             style={{
-              fontFamily: 'var(--brand-font-serif)',
+              fontFamily: 'var(--brand-font-display)',
               fontWeight: 500,
               fontSize: 'clamp(1.75rem, 5vw, 2.25rem)',
               lineHeight: 1.1,
@@ -998,7 +998,7 @@ export function OnboardingChatPage() {
           navigate('/')
         }}
         className="absolute top-6 right-6 text-xs transition-opacity hover:opacity-80"
-        style={{ color: 'var(--brand-text-secondary)', opacity: 0.35 }}
+        style={{ color: 'var(--brand-text-secondary)', opacity: 0.66 }}
       >
         Exit
       </button>
@@ -1045,16 +1045,16 @@ export function OnboardingChatPage() {
                       reporting an issue. */}
                   {diagnostics.length > 0 && (
                     <details className="w-full mt-2 text-left">
-                      <summary className="text-[10px] uppercase tracking-wide opacity-50 cursor-pointer">
+                      <summary className="text-[11px] uppercase tracking-wide opacity-50 cursor-pointer">
                         Diagnostic log (tap to expand)
                       </summary>
                       <pre
-                        className="text-[10px] leading-snug mt-2 p-2 rounded overflow-x-auto"
+                        className="text-[11px] leading-snug mt-2 p-2 rounded overflow-x-auto"
                         style={{
                           background: 'rgba(255,255,255,0.04)',
                           border: '1px solid rgba(255,255,255,0.08)',
                           color: 'var(--brand-text-secondary)',
-                          opacity: 0.7,
+                          opacity: 0.87,
                           maxHeight: '180px',
                           overflowY: 'auto',
                         }}
@@ -1083,7 +1083,7 @@ export function OnboardingChatPage() {
                         setTypingMode(true)
                       }}
                       className="px-4 py-2 text-sm hover:opacity-80 inline-flex items-center gap-1.5"
-                      style={{ color: 'var(--brand-text-secondary)', opacity: 0.6 }}
+                      style={{ color: 'var(--brand-text-secondary)', opacity: 0.81 }}
                     >
                       <Type className="h-3.5 w-3.5" />
                       Type instead
@@ -1112,7 +1112,7 @@ export function OnboardingChatPage() {
                 <button
                   onClick={() => liveRef.current?.sendUserText('skip')}
                   className="hover:opacity-80"
-                  style={{ color: 'var(--brand-text-secondary)', opacity: 0.5 }}
+                  style={{ color: 'var(--brand-text-secondary)', opacity: 0.75 }}
                 >
                   Skip this one
                 </button>
@@ -1147,7 +1147,7 @@ export function OnboardingChatPage() {
           <button
             onClick={() => setTypingMode(v => !v)}
             className="mt-4 inline-flex items-center gap-1.5 text-xs transition-opacity hover:opacity-80"
-            style={{ color: 'var(--brand-text-secondary)', opacity: 0.4 }}
+            style={{ color: 'var(--brand-text-secondary)', opacity: 0.69 }}
           >
             {typingMode ? (
               <>
@@ -1178,7 +1178,7 @@ export function OnboardingChatPage() {
                 <button
                   onClick={() => { setError(null); setTypingMode(true) }}
                   className="text-xs hover:opacity-80 inline-flex items-center gap-1.5"
-                  style={{ color: 'var(--brand-text-secondary)', opacity: 0.6 }}
+                  style={{ color: 'var(--brand-text-secondary)', opacity: 0.81 }}
                 >
                   <Type className="h-3 w-3" />
                   Type instead
@@ -1194,7 +1194,7 @@ export function OnboardingChatPage() {
       </div>
 
       {!typingMode && liveReady && (
-        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 text-[10px]" style={{ color: 'var(--brand-text-secondary)', opacity: 0.25 }}>
+        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 text-[11px]" style={{ color: 'var(--brand-text-secondary)', opacity: 0.6 }}>
           Say "skip" to move on
         </div>
       )}

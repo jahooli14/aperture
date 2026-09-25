@@ -115,7 +115,7 @@ function CatchUpRow() {
       style={{ background: 'var(--glass-surface)', borderColor: 'var(--glass-surface)' }}
     >
       <p className="text-sm font-semibold text-[var(--brand-text-primary)] mb-1">Catch the corpus up</p>
-      <p className="text-[12px] mb-3" style={{ color: 'var(--brand-text-secondary)', opacity: 0.7 }}>
+      <p className="text-[12px] mb-3" style={{ color: 'var(--brand-text-secondary)', opacity: 0.87 }}>
         Gives every older thought its embedding and attaches the fragments the
         daily job would take months to reach. Search and the questions on the
         home card both read these. Safe to run more than once; it only ever
@@ -136,14 +136,14 @@ function CatchUpRow() {
       </button>
 
       {(running || finished || embeddings > 0 || fragments > 0) && (
-        <p className="text-[12px] mt-2" style={{ color: 'var(--brand-text-secondary)', opacity: 0.75 }}>
+        <p className="text-[12px] mt-2" style={{ color: 'var(--brand-text-secondary)', opacity: 0.9 }}>
           {embeddings} embedded · {fragments} fragments attached
           {finished ? ' · done' : running ? ' · still going' : ''}
         </p>
       )}
 
       {failed && (
-        <p className="text-[12px] mt-2" style={{ color: 'var(--brand-text-secondary)', opacity: 0.75 }}>
+        <p className="text-[12px] mt-2" style={{ color: 'var(--brand-text-secondary)', opacity: 0.9 }}>
           {failed}
         </p>
       )}

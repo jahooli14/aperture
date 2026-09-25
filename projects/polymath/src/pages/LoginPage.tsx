@@ -142,7 +142,7 @@ export function LoginPage() {
               <p
                 className="text-2xl"
                 style={{
-                  fontFamily: 'var(--brand-font-serif)',
+                  fontFamily: 'var(--brand-font-display)',
                   fontWeight: 500,
                   color: 'var(--brand-text-primary)',
                   letterSpacing: '-0.018em',
@@ -161,7 +161,7 @@ export function LoginPage() {
               <h2
                 className="mb-3"
                 style={{
-                  fontFamily: 'var(--brand-font-serif)',
+                  fontFamily: 'var(--brand-font-display)',
                   fontWeight: 500,
                   fontSize: '2rem',
                   letterSpacing: '-0.022em',
@@ -184,7 +184,7 @@ export function LoginPage() {
                   placeholder="6-digit code"
                   value={otp}
                   onChange={e => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                  className="w-full px-5 py-4 rounded-2xl text-center text-xl tracking-[0.4em] outline-none transition-all min-h-[56px]"
+                  className="w-full px-5 py-4 rounded-2xl text-center text-xl tracking-[0.14em] outline-none transition-all min-h-[56px]"
                   style={{
                     background: 'rgba(255,255,255,0.04)',
                     color: 'var(--brand-text-primary)',
@@ -234,7 +234,7 @@ export function LoginPage() {
               <h2
                 className="mb-3"
                 style={{
-                  fontFamily: 'var(--brand-font-serif)',
+                  fontFamily: 'var(--brand-font-display)',
                   fontWeight: 500,
                   fontSize: '2.25rem',
                   letterSpacing: '-0.022em',
@@ -296,8 +296,8 @@ export function LoginPage() {
               <div className="flex items-center gap-3 mb-5">
                 <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.06)' }} />
                 <span
-                  className="text-[10px] uppercase tracking-[0.32em]"
-                  style={{ color: 'var(--brand-text-muted)', opacity: 0.55 }}
+                  className="text-[11px] uppercase tracking-[0.14em]"
+                  style={{ color: 'var(--brand-text-muted)', opacity: 0.78 }}
                 >
                   or
                 </span>

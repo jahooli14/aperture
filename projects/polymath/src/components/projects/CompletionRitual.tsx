@@ -85,7 +85,7 @@ export function CompletionRitual({ project, isOpen, onClose }: CompletionRitualP
             {!sparks && (
               <>
                 <div className="mb-5">
-                  <p className="text-[10px] font-black uppercase tracking-widest mb-2" style={{ color: 'rgb(var(--color-accent-light-rgb))' }}>
+                  <p className="text-[11px] font-black uppercase tracking-widest mb-2" style={{ color: 'rgb(var(--color-accent-light-rgb))' }}>
                     Finished · {project.title}
                   </p>
                   <h2 className="text-2xl font-black italic uppercase tracking-tight text-[var(--brand-text-primary)]">
@@ -172,7 +172,7 @@ export function CompletionRitual({ project, isOpen, onClose }: CompletionRitualP
                     <Check className="h-5 w-5" style={{ color: 'rgb(var(--color-accent-light-rgb))' }} />
                   </div>
                   <div>
-                    <p className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'rgb(var(--color-accent-light-rgb))' }}>
+                    <p className="text-[11px] font-black uppercase tracking-widest" style={{ color: 'rgb(var(--color-accent-light-rgb))' }}>
                       Retrospective saved
                     </p>
                     <h3 className="text-lg font-black italic uppercase tracking-tight text-[var(--brand-text-primary)]">

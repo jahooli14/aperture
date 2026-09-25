@@ -262,7 +262,7 @@ export function RevealSequence({ analysis, books, transcripts = [], groundingPhr
                   className="p-5 rounded-xl"
                   style={{ background: 'var(--brand-glass-bg)', backdropFilter: 'blur(12px)' }}
                 >
-                  <p className="text-xs font-medium mb-3 uppercase tracking-widest" style={{ color: 'var(--brand-text-secondary)', opacity: 0.5 }}>
+                  <p className="text-xs font-medium mb-3 uppercase tracking-widest" style={{ color: 'var(--brand-text-secondary)', opacity: 0.75 }}>
                     What keeps coming up
                   </p>
                   <div className="flex flex-wrap gap-2">
@@ -291,7 +291,7 @@ export function RevealSequence({ analysis, books, transcripts = [], groundingPhr
                   className="p-5 rounded-xl"
                   style={{ background: 'var(--brand-glass-bg)', backdropFilter: 'blur(12px)' }}
                 >
-                  <p className="text-xs font-medium mb-3 uppercase tracking-widest" style={{ color: 'var(--brand-text-secondary)', opacity: 0.5 }}>
+                  <p className="text-xs font-medium mb-3 uppercase tracking-widest" style={{ color: 'var(--brand-text-secondary)', opacity: 0.75 }}>
                     Your shelf
                   </p>
                   <div className="flex gap-3">
@@ -301,7 +301,7 @@ export function RevealSequence({ analysis, books, transcripts = [], groundingPhr
                           <img src={book.thumbnail} alt="" className="w-8 h-12 rounded object-cover flex-shrink-0" />
                         ) : (
                           <div className="w-8 h-12 rounded flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(var(--brand-primary-rgb),0.12)' }}>
-                            <Book className="h-4 w-4" style={{ color: 'var(--brand-primary)', opacity: 0.5 }} />
+                            <Book className="h-4 w-4" style={{ color: 'var(--brand-primary)', opacity: 0.75 }} />
                           </div>
                         )}
                         <div className="min-w-0">
@@ -322,7 +322,7 @@ export function RevealSequence({ analysis, books, transcripts = [], groundingPhr
                   className="p-5 rounded-xl"
                   style={{ background: 'var(--brand-glass-bg)', backdropFilter: 'blur(12px)' }}
                 >
-                  <p className="text-xs font-medium mb-3 uppercase tracking-widest" style={{ color: 'var(--brand-text-secondary)', opacity: 0.5 }}>
+                  <p className="text-xs font-medium mb-3 uppercase tracking-widest" style={{ color: 'var(--brand-text-secondary)', opacity: 0.75 }}>
                     What you bring
                   </p>
                   <div className="flex flex-wrap gap-2">
@@ -353,7 +353,7 @@ export function RevealSequence({ analysis, books, transcripts = [], groundingPhr
                   className="p-5 rounded-xl"
                   style={{ background: 'var(--brand-glass-bg)', backdropFilter: 'blur(12px)' }}
                 >
-                  <p className="text-xs font-medium mb-3 uppercase tracking-widest" style={{ color: 'var(--brand-text-secondary)', opacity: 0.5 }}>
+                  <p className="text-xs font-medium mb-3 uppercase tracking-widest" style={{ color: 'var(--brand-text-secondary)', opacity: 0.75 }}>
                     How you think
                   </p>
                   <div className="space-y-2">
@@ -365,7 +365,7 @@ export function RevealSequence({ analysis, books, transcripts = [], groundingPhr
                         transition={{ delay: 1.8 + i * 0.12 }}
                         className="flex items-start gap-2.5"
                       >
-                        <TrendingUp className="h-3.5 w-3.5 mt-1 flex-shrink-0" style={{ color: 'var(--brand-primary)', opacity: 0.7 }} />
+                        <TrendingUp className="h-3.5 w-3.5 mt-1 flex-shrink-0" style={{ color: 'var(--brand-primary)', opacity: 0.87 }} />
                         <span className="text-sm leading-relaxed" style={{ color: 'var(--brand-text-primary)', opacity: 0.9 }}>{pattern}</span>
                       </motion.div>
                     ))}
@@ -441,7 +441,7 @@ export function RevealSequence({ analysis, books, transcripts = [], groundingPhr
                 >
                   {suggestion.is_cross_domain && (
                     <span
-                      className="absolute -top-2 left-4 px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider inline-flex items-center gap-1"
+                      className="absolute -top-2 left-4 px-2 py-0.5 rounded-full text-[11px] font-semibold uppercase tracking-wider inline-flex items-center gap-1"
                       style={{
                         background: 'var(--brand-primary)',
                         color: 'var(--brand-text-primary)',
@@ -454,8 +454,8 @@ export function RevealSequence({ analysis, books, transcripts = [], groundingPhr
                   <p className="text-sm mb-3 leading-relaxed" style={{ color: 'var(--brand-text-secondary)' }}>{suggestion.description}</p>
 
                   <div className="p-3 rounded-lg mb-4 flex-1" style={{ background: 'rgba(var(--brand-primary-rgb),0.06)' }}>
-                    <p className="text-xs font-medium mb-1 uppercase tracking-wider" style={{ color: 'var(--brand-text-muted)', opacity: 0.7 }}>Why you?</p>
-                    <p className="text-xs leading-relaxed" style={{ color: 'var(--brand-text-secondary)', opacity: 0.8 }}>{suggestion.reasoning}</p>
+                    <p className="text-xs font-medium mb-1 uppercase tracking-wider" style={{ color: 'var(--brand-text-muted)', opacity: 0.87 }}>Why you?</p>
+                    <p className="text-xs leading-relaxed" style={{ color: 'var(--brand-text-secondary)', opacity: 0.9 }}>{suggestion.reasoning}</p>
                   </div>
 
                   <button
@@ -470,7 +470,7 @@ export function RevealSequence({ analysis, books, transcripts = [], groundingPhr
                   <button
                     onClick={() => handleNotQuiteRight(suggestion)}
                     className="w-full py-2 rounded-lg text-xs font-medium transition-all hover:opacity-80"
-                    style={{ color: 'var(--brand-text-secondary)', opacity: 0.5 }}
+                    style={{ color: 'var(--brand-text-secondary)', opacity: 0.75 }}
                   >
                     Not quite right
                   </button>
@@ -492,7 +492,7 @@ export function RevealSequence({ analysis, books, transcripts = [], groundingPhr
               <button
                 onClick={() => { if (isAuthenticated) setBeat('post-onboarding'); else navigate('/') }}
                 className="text-sm transition-opacity hover:opacity-80 inline-flex items-center gap-1.5"
-                style={{ color: 'var(--brand-text-secondary)', opacity: 0.5 }}
+                style={{ color: 'var(--brand-text-secondary)', opacity: 0.75 }}
               >
                 {isAuthenticated ? "I'll find my own" : 'Skip for now'}
                 <ArrowRight className="h-3.5 w-3.5" />
@@ -629,7 +629,7 @@ export function RevealSequence({ analysis, books, transcripts = [], groundingPhr
               <CheckCircle className="h-8 w-8" style={{ color: 'var(--brand-primary)' }} />
             </motion.div>
             <h2 className="text-xl font-bold mb-2" style={{ color: 'var(--brand-text-primary)' }}>Saved to your ideas</h2>
-            <p className="text-sm" style={{ color: 'var(--brand-text-secondary)', opacity: 0.6 }}>As you add more thoughts, I'll reshape this into something perfect for you.</p>
+            <p className="text-sm" style={{ color: 'var(--brand-text-secondary)', opacity: 0.81 }}>As you add more thoughts, I'll reshape this into something perfect for you.</p>
           </motion.div>
         )}
       </AnimatePresence>

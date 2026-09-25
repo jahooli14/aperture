@@ -337,7 +337,7 @@ const [bridges, setBridges] = useState<BridgeWithMemories[]>([])
                     <span className="text-xs font-medium" style={{ color: 'var(--brand-text-secondary)' }}>
                       Connected Thoughts
                     </span>
-                    <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(var(--brand-primary-rgb),0.1)', color: 'var(--brand-text-muted)' }}>
+                    <span className="text-[11px] px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(var(--brand-primary-rgb),0.1)', color: 'var(--brand-text-muted)' }}>
                       {bridges.length}
                     </span>
                   </div>
@@ -368,7 +368,7 @@ const [bridges, setBridges] = useState<BridgeWithMemories[]>([])
                             </p>
                           </div>
                           <span
-                            className="flex-shrink-0 px-1.5 py-0.5 rounded-md text-[10px] font-medium mt-0.5"
+                            className="flex-shrink-0 px-1.5 py-0.5 rounded-md text-[11px] font-medium mt-0.5"
                             style={{
                               background: 'rgba(148,163,184,0.08)',
                               border: '1px solid rgba(148,163,184,0.15)',

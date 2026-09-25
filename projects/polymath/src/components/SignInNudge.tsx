@@ -81,7 +81,7 @@ function ThoughtsVisual() {
         className="flex items-center gap-2 pl-9 pr-3"
       >
         <div className="w-px h-4" style={{ backgroundColor: 'var(--brand-primary)', opacity: 0.4 }} />
-        <span className="text-[10px] uppercase tracking-[0.18em]" style={{ color: 'var(--brand-primary)', opacity: 0.75 }}>
+        <span className="text-[11px] uppercase tracking-[0.1em]" style={{ color: 'var(--brand-primary)', opacity: 0.9 }}>
           threaded with
         </span>
       </motion.div>
@@ -103,7 +103,7 @@ function ThoughtsVisual() {
           <p className="text-xs leading-relaxed italic" style={{ color: 'var(--brand-text-primary)', opacity: 0.9 }}>
             "my grandfather had this workshop…"
           </p>
-          <span className="text-[10px] mt-1 block" style={{ color: 'var(--brand-text-muted)' }}>
+          <span className="text-[11px] mt-1 block" style={{ color: 'var(--brand-text-muted)' }}>
             from 3 days ago
           </span>
         </div>

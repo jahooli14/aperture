@@ -30,7 +30,7 @@ export function ArticleGistCard({ gist, loading }: ArticleGistCardProps) {
       aria-label="The gist"
     >
       <div
-        className="text-[10px] uppercase tracking-[0.32em] font-semibold mb-3.5"
+        className="text-[11px] uppercase tracking-[0.14em] font-semibold mb-3.5"
         style={{ color: 'rgba(var(--brand-primary-rgb), 0.75)' }}
       >
         The gist

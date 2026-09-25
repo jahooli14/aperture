@@ -615,7 +615,7 @@ function MemoriesPageInner() {
                     <div className="max-w-xs mx-auto space-y-4">
                       <div className="inline-flex items-center justify-center w-14 h-14 rounded-full"
                         style={{ background: 'rgba(var(--brand-primary-rgb),0.08)', border: '1px solid rgba(var(--brand-primary-rgb),0.2)' }}>
-                        <Search className="h-6 w-6 text-brand-primary opacity-50" />
+                        <Search className="h-6 w-6 text-brand-primary opacity-75" />
                       </div>
                       <h3 className="page-hero-sm mb-2">Nothing matches.</h3>
                       <p className="text-sm text-[var(--brand-text-muted)] leading-relaxed">
@@ -638,7 +638,7 @@ function MemoriesPageInner() {
                         <div className="absolute inset-0 rounded-full opacity-20 blur-2xl" style={{ background: 'radial-gradient(circle, var(--brand-primary), transparent)' }} />
                         <div className="relative flex items-center justify-center w-28 h-28 rounded-full"
                           style={{ background: 'radial-gradient(circle at 35% 35%, rgba(var(--brand-primary-rgb),0.15), rgba(var(--brand-primary-rgb),0.08))', border: '1px solid rgba(var(--brand-primary-rgb),0.2)' }}>
-                          <Brain className="h-10 w-10 text-brand-primary opacity-60" />
+                          <Brain className="h-10 w-10 text-brand-primary opacity-80" />
                         </div>
                       </div>
 
@@ -656,7 +656,7 @@ function MemoriesPageInner() {
                         ].map((prompt) => (
                           <div key={prompt} className="flex items-start gap-3 px-4 py-3 rounded-xl"
                             style={{ background: 'rgba(var(--brand-primary-rgb),0.05)', border: '1px solid rgba(var(--brand-primary-rgb),0.1)' }}>
-                            <span className="text-brand-primary opacity-50 mt-0.5 text-xs">-</span>
+                            <span className="text-brand-primary opacity-75 mt-0.5 text-xs">-</span>
                             <p className="text-sm text-[var(--brand-text-muted)] italic">{prompt}</p>
                           </div>
                         ))}
@@ -669,7 +669,7 @@ function MemoriesPageInner() {
                     <div className="max-w-xs mx-auto space-y-4">
                       <div className="inline-flex items-center justify-center w-14 h-14 rounded-full"
                         style={{ background: 'rgba(var(--brand-primary-rgb),0.08)', border: '1px solid rgba(var(--brand-primary-rgb),0.2)' }}>
-                        <Zap className="h-6 w-6 text-brand-primary opacity-50" />
+                        <Zap className="h-6 w-6 text-brand-primary opacity-75" />
                       </div>
                       <h3 className="page-hero-sm mb-2">All caught up.</h3>
                       <p className="text-sm text-[var(--brand-text-muted)] leading-relaxed">
@@ -763,7 +763,7 @@ function MemoriesPageInner() {
                           <p className="text-sm leading-relaxed mb-5" style={{ color: 'var(--brand-text-secondary)' }}>
                             Every thought gets tagged with one or two themes automatically. As you capture more, the themes group your thinking so you can spot what you keep coming back to.
                           </p>
-                          <p className="text-[11px] tracking-[0.18em] mb-2" style={{ color: 'rgba(var(--brand-primary-rgb), 0.7)' }}>
+                          <p className="text-[11px] tracking-[0.1em] mb-2" style={{ color: 'rgba(var(--brand-primary-rgb), 0.7)' }}>
                             the six themes
                           </p>
                           <div className="flex flex-wrap gap-2">
@@ -785,7 +785,7 @@ function MemoriesPageInner() {
                                 }}
                               >
                                 <span className="font-medium" style={{ color: 'rgb(var(--brand-primary-rgb))' }}>{t.name}</span>
-                                <span className="opacity-60 text-[10px]">{t.desc}</span>
+                                <span className="opacity-60 text-[11px]">{t.desc}</span>
                               </span>
                             ))}
                           </div>

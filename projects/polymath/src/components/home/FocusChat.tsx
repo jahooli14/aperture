@@ -167,7 +167,7 @@ export function FocusChat({ onEditMessage }: { onEditMessage: (content: string) 
           animate={{ opacity: 1 }}
           onClick={() => sendMessage("What else needs attention?")}
           className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl text-[12px] font-medium transition-colors hover:bg-white/[0.04]"
-          style={{ color: 'var(--brand-text-secondary)', opacity: 0.6, border: '1px dashed rgba(255,255,255,0.1)' }}
+          style={{ color: 'var(--brand-text-secondary)', opacity: 0.81, border: '1px dashed rgba(255,255,255,0.1)' }}
         >
           Keep going <ChevronRight className="h-3.5 w-3.5" />
         </motion.button>

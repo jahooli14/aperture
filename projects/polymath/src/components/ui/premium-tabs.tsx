@@ -34,7 +34,7 @@ export function PremiumTabs({ tabs, activeTab, onChange, className }: PremiumTab
             {tab.label}
             {tab.count !== undefined && Number(tab.count) > 0 && (
               <span
-                className="px-1.5 py-0.5 rounded-md text-[10px] font-black min-w-[20px] text-center"
+                className="px-1.5 py-0.5 rounded-md text-[11px] font-black min-w-[20px] text-center"
                 style={{
                   backgroundColor: isActive ? 'rgba(var(--brand-primary-rgb),0.2)' : 'var(--glass-surface)',
                   color: isActive ? 'rgb(var(--brand-primary-rgb))' : 'var(--brand-text-secondary)',

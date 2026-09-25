@@ -75,7 +75,7 @@ export function WelcomeModal({ open, onClose, onLoadDemo, onStartFresh }: Welcom
           <p className="text-lg max-w-xl mx-auto" style={{ color: "var(--brand-text-secondary)" }}>
             Talk through ideas. See where they lead.
           </p>
-          <p className="text-sm mt-2" style={{ color: 'var(--brand-text-secondary)', opacity: 0.55 }}>
+          <p className="text-sm mt-2" style={{ color: 'var(--brand-text-secondary)', opacity: 0.78 }}>
             5 questions. 30 seconds each. Or explore with demo data.
           </p>
         </div>

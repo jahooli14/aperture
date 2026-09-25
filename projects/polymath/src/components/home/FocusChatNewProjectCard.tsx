@@ -160,7 +160,7 @@ export function FocusChatNewProjectCard({ proposal, resolved, dismissed, onResol
           Start something new
         </p>
         <p className="text-[13px] leading-snug text-[var(--brand-text-primary)]">{proposal.title}</p>
-        <p className="text-[11px] leading-snug italic pt-0.5" style={{ color: 'var(--brand-text-muted)', opacity: 0.75 }}>
+        <p className="text-[11px] leading-snug italic pt-0.5" style={{ color: 'var(--brand-text-muted)', opacity: 0.9 }}>
           {proposal.reasoning || proposal.pitch}
         </p>
       </div>

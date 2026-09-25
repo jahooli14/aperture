@@ -200,7 +200,7 @@ export function RichTextEditor({
 
       {enableImages && editable && (
         <div className="flex items-center gap-3 mt-2.5 px-1">
-          <label className="flex items-center gap-1.5 text-[12px] cursor-pointer transition-opacity hover:opacity-100" style={{ color: 'var(--brand-text-secondary)', opacity: 0.55 }}>
+          <label className="flex items-center gap-1.5 text-[12px] cursor-pointer transition-opacity hover:opacity-100" style={{ color: 'var(--brand-text-secondary)', opacity: 0.78 }}>
             <input
               type="file"
               multiple
@@ -211,7 +211,7 @@ export function RichTextEditor({
             {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ImagePlus className="h-3.5 w-3.5" />}
             {uploading ? 'Uploading…' : 'Add image'}
           </label>
-          <span className="text-[11px]" style={{ color: 'var(--brand-text-muted)', opacity: 0.4 }}>or drag, paste, or select text to format</span>
+          <span className="text-[11px]" style={{ color: 'var(--brand-text-muted)', opacity: 0.69 }}>or drag, paste, or select text to format</span>
         </div>
       )}
     </div>

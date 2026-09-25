@@ -103,7 +103,7 @@ export function ReaderSettingsSheet({ open, prefs, onChange, onClose }: ReaderSe
 
               <div className="flex items-center justify-between px-6 pt-4 pb-1">
                 <span
-                  className="text-[11px] uppercase tracking-[0.32em] font-semibold"
+                  className="text-[11px] uppercase tracking-[0.14em] font-semibold"
                   style={{ color: 'rgba(255,255,255,0.4)' }}
                 >
                   Reading

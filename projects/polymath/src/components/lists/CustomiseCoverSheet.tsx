@@ -102,7 +102,7 @@ export function CustomiseCoverSheet({ list, isOpen, onClose }: Props) {
     <BottomSheet open={isOpen} onOpenChange={(open) => { if (!open) onClose() }}>
       <BottomSheetContent className="max-h-[85vh]">
               <div className="mb-5 pr-12 min-w-0">
-                  <p className="text-[10px] tracking-[0.2em] mb-1" style={{ color: 'rgba(var(--brand-primary-rgb), 0.7)' }}>
+                  <p className="text-[11px] tracking-[0.14em] mb-1" style={{ color: 'rgba(var(--brand-primary-rgb), 0.7)' }}>
                     customise cover
                   </p>
                   <h3 className="text-lg font-semibold text-[var(--brand-text-primary)] truncate">
@@ -154,7 +154,7 @@ export function CustomiseCoverSheet({ list, isOpen, onClose }: Props) {
               {tab === 'image' && (
                 <div className="space-y-4">
                   <div>
-                    <label className="text-[10px] tracking-[0.2em] mb-2 block" style={{ color: 'var(--brand-text-muted)' }}>
+                    <label className="text-[11px] tracking-[0.14em] mb-2 block" style={{ color: 'var(--brand-text-muted)' }}>
                       image url
                     </label>
                     <div className="relative">
@@ -174,7 +174,7 @@ export function CustomiseCoverSheet({ list, isOpen, onClose }: Props) {
 
                   {draftUrl.trim() && /^https?:\/\//.test(draftUrl.trim()) && (
                     <div>
-                      <p className="text-[10px] tracking-[0.2em] mb-2" style={{ color: 'var(--brand-text-muted)' }}>
+                      <p className="text-[11px] tracking-[0.14em] mb-2" style={{ color: 'var(--brand-text-muted)' }}>
                         preview
                       </p>
                       <div className="aspect-[3/4] w-32 rounded-xl overflow-hidden" style={{ boxShadow: 'inset 0 0 0 1px var(--glass-surface-hover)' }}>

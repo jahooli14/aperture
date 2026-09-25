@@ -124,7 +124,7 @@ export function VoiceInput({
   if (!isSupported) {
     return (
       <div className="p-6 text-center glass-card border-red-500/30 bg-brand-primary/10">
-        <Mic className="h-10 w-10 mx-auto mb-4 text-brand-text-secondary opacity-50" />
+        <Mic className="h-10 w-10 mx-auto mb-4 text-brand-text-secondary opacity-75" />
         <p className="text-brand-primary font-medium mb-1">Recording Unsupported</p>
         <p className="text-sm text-brand-primary/70">
           Your browser doesn't support voice recording. Try using Chrome, Firefox or a recent Safari.
@@ -182,7 +182,7 @@ export function VoiceInput({
               }}
             />
           </div>
-          <div className="mt-1.5 flex justify-between text-[11px] tabular-nums text-[var(--brand-text-secondary)] opacity-60">
+          <div className="mt-1.5 flex justify-between text-[11px] tabular-nums text-[var(--brand-text-secondary)] opacity-80">
             <span>0:00</span>
             <span>{fmtTime(maxDuration)}</span>
           </div>
@@ -199,7 +199,7 @@ export function VoiceInput({
           onClick={toggleRecording}
           aria-label="Tap to talk"
           className="p-1 transition-opacity hover:opacity-100"
-          style={{ color: 'var(--brand-text-secondary)', opacity: 0.65 }}
+          style={{ color: 'var(--brand-text-secondary)', opacity: 0.84 }}
         >
           <Mic className="h-4 w-4" />
         </button>
@@ -256,7 +256,7 @@ export function VoiceInput({
       {/* Recording failed (non-network) — the audio is kept; the button above
           becomes a one-tap retry. Explain in plain English. */}
       {error && !isProcessing && (
-        <p className="text-[13px] text-center text-[var(--brand-text-secondary)] opacity-80 leading-relaxed">
+        <p className="text-[13px] text-center text-[var(--brand-text-secondary)] opacity-90 leading-relaxed">
           {error}
         </p>
       )}
