@@ -8,7 +8,6 @@ import {
   closeoutDraft,
   splitDoneWhen,
   closeoutPrompt,
-  nextOffList,
   SHORT_SESSION_SECONDS,
 } from './sessionRunOps'
 import type { SessionShape } from '../../stores/useSessionStore'
@@ -146,20 +145,4 @@ describe('closeoutDraft drops the stopping point', () => {
   })
 })
 
-describe('nextOffList', () => {
-  const s = (taskId: string): SessionShape => ({ text: taskId, source: 'shaped', partial: false, taskId })
 
-  it('offers the first open step this session did not include, in plan order', () => {
-    const tasks = [
-      { id: 'a', text: 'A', done: false, order: 0 },
-      { id: 'c', text: 'C', done: false, order: 2 },
-      { id: 'b', text: 'B', done: false, order: 1 },
-    ]
-    expect(nextOffList(tasks, [s('a')])).toBe('B')
-  })
-
-  it('skips finished steps and has nothing to offer when the list is spent', () => {
-    expect(nextOffList([{ id: 'a', text: 'A', done: true, order: 0 }], [])).toBeNull()
-    expect(nextOffList(undefined, [])).toBeNull()
-  })
-})

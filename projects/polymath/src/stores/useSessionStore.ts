@@ -5,13 +5,12 @@
  * has actually been closed.
  *
  * Deliberately thin: network calls and timer bookkeeping only. The UI
- * (SessionContract.tsx) owns the two-minute opening flow and the voice
- * capture; this store just holds what's in flight.
+ * (SessionContract.tsx) owns the screens; this store holds what's in
+ * flight, including the project's one next move (api/_lib/next-move.ts).
  */
 
 import { create } from 'zustand'
 import { useProjectStore } from './useProjectStore'
-import { buildOfflinePlan } from '../lib/offline/offlinePlan'
 import { queueOperation } from '../lib/offlineQueue'
 import { useOfflineStore } from './useOfflineStore'
 import { isOnline } from '../lib/network'
@@ -34,33 +33,6 @@ export interface SessionShape {
 export interface FrictionLine {
   text: string
   minutes: number
-}
-
-/** The windows the card offers. Not a gate -- a control on the card. */
-export const WINDOW_PRESETS = [20, 60, 120] as const
-
-const WINDOW_KEY = 'aperture-window-minutes'
-
-/** Remembered for the browser session only: "how long have you got" is a
- *  fact about right now, not a preference, so it must not persist to
- *  tomorrow. */
-export function loadWindowMinutes(): number | null {
-  try {
-    const raw = sessionStorage.getItem(WINDOW_KEY)
-    const n = raw ? parseInt(raw, 10) : NaN
-    return Number.isFinite(n) && n > 0 ? n : null
-  } catch {
-    return null
-  }
-}
-
-export function saveWindowMinutes(minutes: number | null) {
-  try {
-    if (minutes == null) sessionStorage.removeItem(WINDOW_KEY)
-    else sessionStorage.setItem(WINDOW_KEY, String(minutes))
-  } catch {
-    // Storage unavailable -- the chips still work for this render.
-  }
 }
 
 export interface ActiveSession {
@@ -94,21 +66,6 @@ export interface PendingCloseout {
   projects: { title: string } | null
 }
 
-/** The two minutes of planning, in seconds. Long enough to reshape a list
- *  once or twice; short enough that shaping can't become the session. A
- *  flat two minutes taxes a genuinely short session hardest -- planning
- *  overhead that doesn't scale down with the window eats a much bigger
- *  share of 15 minutes than it does of an hour. */
-export const PLANNING_SECONDS = 120
-export const SHORT_PLANNING_SECONDS = 60
-export const SHORT_WINDOW_CUTOFF_MINUTES = 20
-
-export function planningSecondsFor(windowMinutes: number | null): number {
-  return windowMinutes != null && windowMinutes <= SHORT_WINDOW_CUTOFF_MINUTES
-    ? SHORT_PLANNING_SECONDS
-    : PLANNING_SECONDS
-}
-
 export interface PlanItem {
   text: string
   /** Where it came from ("already on the project", "part of: <step>").
@@ -128,80 +85,55 @@ export interface PlanItem {
   spark?: boolean
 }
 
-export type PlanSource = 'tasks' | 'split' | 'ai' | 'briefing' | 'derived' | 'offline'
+/** The one next move, as the server stores it (metadata.next_move). */
+export interface SessionMove {
+  text: string
+  kind: 'move' | 'fork'
+  from?: string
+  written_at?: string
+}
 
-export interface PlanDraft {
-  projectId: string
-  windowMinutes: number | null
-  items: PlanItem[]
-  /** What exists at the end of the sitting if the list lands. */
-  doneLooksLike: string | null
-  /** Set when the app couldn't fill the session from what it actually
-   *  knows. It asks rather than padding the list out with guesses. */
-  needsInput: string | null
-  /** Which gap the question is closing, so the answer gets filed as the
-   *  thing it is (a finish line, a next step, a slot) rather than as
-   *  another undifferentiated note. */
-  gapKind: string | null
-  slotName: string | null
-  /** 'tasks' — the project's own next steps, verbatim. 'split' — the next
-   *  step was bigger than the window, this is the first piece of it.
-   *  'ai' — reshaped on what the user said. 'briefing' — the project's own
-   *  steps, ordered and worded by your own exit note from last time.
-   *  'derived' — nothing to plan from, a placeholder rather than an
-   *  invention. 'offline' — the network
-   *  call failed; drawn client-side from the cached project's own next
-   *  steps, same as 'tasks' but with no reshape/split/top-up available. */
-  source: PlanSource
-  /** The physical setting-up this project needs before you can start,
-   *  when it has one. Its minutes are already subtracted from what the
-   *  session was planned against. */
-  friction: FrictionLine | null
-  /** Clearing away at the other end -- cleaning brushes, putting the gear
-   *  back. Shown last so the hour actually closes instead of overrunning. */
-  packdown: FrictionLine | null
-  /** How much of the real backlog wasn't even considered for this plan
-   *  (the 24-task ceiling), so it can be said rather than silently eaten. */
-  truncatedCount: number
-  /** Steps the app planned onto the project first, because its list was
-   *  empty -- said out loud, since it just rewrote the plan. */
-  planned: number
-  /** Set when the next step couldn't be started yet, so the plan changed:
-   *  a step moved up from further down, or a missing one written in
-   *  before it. Said out loud for the same reason. */
-  unblocked: { text: string; before: string; added: boolean } | null
-  /** Steps taken off the project for good on a reshape instruction --
-   *  deleted from the plan, not just left out of today's session. Said
-   *  out loud for the same reason `unblocked` is. */
-  removed: { text: string }[]
+export type MoveChange =
+  | { action: 'feedback'; reason: 'too_big' | 'wrong_thing'; text?: undefined }
+  | { action: 'say' | 'answer' | 'set'; text: string; reason?: undefined }
+
+export function readStoredMove(metadata: unknown): SessionMove | null {
+  const m = (metadata as { next_move?: Partial<SessionMove> } | null | undefined)?.next_move
+  if (!m || typeof m.text !== 'string' || !m.text.trim()) return null
+  return { text: m.text.trim(), kind: m.kind === 'fork' ? 'fork' : 'move', from: m.from, written_at: m.written_at }
+}
+
+/** Keep the cached project in step, so the card shows the new move at once
+ *  and a later offline start uses it. */
+function patchCachedMove(projectId: string, move: SessionMove) {
+  const store = useProjectStore.getState()
+  const project = store.allProjects.find(p => p.id === projectId)
+  if (!project) return
+  useProjectStore.setState({
+    allProjects: store.allProjects.map(p =>
+      p.id === projectId ? { ...p, metadata: { ...(p.metadata ?? {}), next_move: move } } : p),
+  })
 }
 
 interface SessionState {
-  /** How long you've got, this browser session. Lives in the store rather
-   *  than in the card's local state because three surfaces set it: the
-   *  chips on the answer card, and the Focus chat when it has already
-   *  asked. A card-local useState would silently ignore the other two. */
-  windowMinutes: number | null
-  setWindowMinutes: (minutes: number | null) => void
-
   active: ActiveSession | null
   starting: boolean
   closing: boolean
   pendingCloseout: PendingCloseout | null
   error: string | null
 
-  /** The plan being agreed right now, before the clock starts. */
-  plan: PlanDraft | null
-  shaping: boolean
-
-  shapePlan: (projectId: string, windowMinutes: number | null) => Promise<void>
-  reshapePlan: (instruction: string) => Promise<void>
-  clearPlan: () => void
+  /** The project's one next move, and which project it's for. */
+  move: SessionMove | null
+  moveFor: string | null
+  moveBusy: boolean
+  /** Shows the stored move at once (it's in the cached project), then
+   *  asks the server only if there isn't one. */
+  loadMove: (projectId: string) => Promise<void>
+  /** "Too big" / "wrong thing", their own words, a fork answer, or a move
+   *  they wrote themselves -- each comes back as a new move. */
+  reworkMove: (projectId: string, change: MoveChange) => Promise<void>
 
   startSession: (projectId: string, windowMinutes: number | null, source?: string, items?: PlanItem[], friction?: FrictionLine | null, packdown?: FrictionLine | null) => Promise<void>
-  /** Answers the app's "I don't know enough" question. Saves the answer to
-   *  the project so it's evidence next time, then re-shapes on it. */
-  answerPlanQuestion: (answer: string) => Promise<void>
   closeSession: (closeoutText: string, mvsSeedMinutes?: number, doneItems?: { text: string; taskId: string | null; partial?: boolean }[]) => Promise<CloseResult | null>
   checkPendingCloseout: () => Promise<void>
   closeoutForPending: (closeoutText: string) => Promise<void>
@@ -213,35 +145,6 @@ interface SessionState {
   /** "I'm stuck" on the step you're on: one move back into it, never a
    *  new plan. Null when nothing honest could be said. */
   askStuck: (projectId: string, step: string) => Promise<string | null>
-}
-
-interface ShapeResponse {
-  items: PlanItem[]
-  done_looks_like: string | null
-  source: PlanSource
-  needs_input: string | null
-  gap_kind: string | null
-  slot_name: string | null
-  friction: FrictionLine | null
-  packdown: FrictionLine | null
-  truncated_count: number
-  planned: number
-  unblocked: { text: string; before: string; added: boolean } | null
-  removed: { text: string }[]
-}
-
-function draftFrom(projectId: string, windowMinutes: number | null, data: ShapeResponse): PlanDraft {
-  return {
-    projectId, windowMinutes,
-    items: data.items,
-    doneLooksLike: data.done_looks_like ?? null,
-    source: data.source, needsInput: data.needs_input ?? null,
-    gapKind: data.gap_kind ?? null, slotName: data.slot_name ?? null,
-    friction: data.friction ?? null, packdown: data.packdown ?? null,
-    truncatedCount: data.truncated_count ?? 0,
-    planned: data.planned ?? 0, unblocked: data.unblocked ?? null,
-    removed: data.removed ?? [],
-  }
 }
 
 /** What actually happened to the task list at close -- the receipt shown
@@ -262,6 +165,8 @@ export interface CloseResult {
    *  ticked (project-cycles.ts). Not "the project is finished" — this one
    *  is, and the next hasn't started. Mutually exclusive with `finish`. */
   cycle: { n: number; label: string; unit: string; reason: string } | null
+  /** What next time starts with -- written from the note just left. */
+  nextMove: SessionMove | null
   /** Set when the close-out couldn't reach the server and was queued
    *  instead -- everything else here is a locally-synthesized best guess,
    *  since the real reconciliation (debrief matching, finish-line
@@ -299,91 +204,45 @@ function withBookends(
 }
 
 export const useSessionStore = create<SessionState>((set, get) => ({
-  windowMinutes: loadWindowMinutes(),
-  setWindowMinutes: (minutes) => {
-    saveWindowMinutes(minutes)
-    set({ windowMinutes: minutes })
-  },
-
   active: null,
-  plan: null,
-  shaping: false,
+  move: null,
+  moveFor: null,
+  moveBusy: false,
   starting: false,
   closing: false,
   pendingCloseout: null,
   error: null,
 
-  shapePlan: async (projectId, windowMinutes) => {
-    set({ shaping: true, error: null })
+  loadMove: async (projectId) => {
+    const cached = useProjectStore.getState().allProjects.find(p => p.id === projectId)
+    const stored = readStoredMove(cached?.metadata)
+    set({ move: stored, moveFor: projectId, error: null })
+    if (stored) return
+    set({ moveBusy: true })
     try {
-      const data = await postJson<ShapeResponse>(
-        '/api/utilities?resource=shape',
-        { project_id: projectId, window_minutes: windowMinutes }
+      const { move } = await postJson<{ move: SessionMove }>(
+        '/api/utilities?resource=move', { project_id: projectId, action: 'get' },
       )
-      set({ plan: draftFrom(projectId, windowMinutes, data), shaping: false })
+      if (get().moveFor === projectId) set({ move, moveBusy: false })
     } catch (e) {
-      // Raw transport errors ("Request failed: 404") are not something to
-      // read two minutes before you start. Log them, say the plain thing.
-      console.error('[session] shape failed:', e)
-      // The project is already sitting in the persisted store from an
-      // earlier fetch -- draw a real, honest plan from its own next steps
-      // rather than a bare error. Only falls through to the generic error
-      // if the project itself isn't cached, which shouldn't happen since
-      // you navigated to it.
-      const project = useProjectStore.getState().allProjects.find(p => p.id === projectId)
-      if (project) {
-        set({ plan: buildOfflinePlan(project, windowMinutes), error: null, shaping: false })
-      } else {
-        set({ shaping: false, error: 'Could not shape a list just now.' })
-      }
+      console.error('[session] could not get the next move:', e)
+      set({ moveBusy: false })
     }
   },
 
-  reshapePlan: async (instruction) => {
-    const plan = get().plan
-    if (!plan) return
-    set({ shaping: true, error: null })
+  reworkMove: async (projectId, change) => {
+    set({ moveBusy: true, error: null })
     try {
-      const data = await postJson<ShapeResponse>(
-        '/api/utilities?resource=shape',
-        {
-          project_id: plan.projectId,
-          window_minutes: plan.windowMinutes,
-          instruction,
-          current_items: plan.items.map(i => i.text),
-        }
+      const { move } = await postJson<{ move: SessionMove }>(
+        '/api/utilities?resource=move',
+        { project_id: projectId, action: change.action, reason: change.reason, text: change.text },
       )
-      set({ plan: draftFrom(plan.projectId, plan.windowMinutes, data), shaping: false })
+      set({ move, moveFor: projectId, moveBusy: false })
+      patchCachedMove(projectId, move)
     } catch (e) {
-      // Keep the list that's on screen -- a failed reshape must never
-      // leave the user staring at nothing two minutes before they start.
-      console.error('[session] reshape failed:', e)
-      set({ shaping: false, error: "Didn't catch that — the list is unchanged." })
+      console.error('[session] could not change the move:', e)
+      set({ moveBusy: false, error: 'Couldn’t change it just now — the move is as it was.' })
     }
-  },
-
-  clearPlan: () => set({ plan: null }),
-
-  // The answer to "I don't know enough about this yet" is worth more than
-  // this one session: it's saved as a fragment, so the project is better
-  // known next time and the app has to ask less often.
-  answerPlanQuestion: async (answer) => {
-    const plan = get().plan
-    if (!plan || !answer.trim()) return
-    set({ shaping: true, error: null })
-    try {
-      await postJson('/api/utilities?resource=shape', {
-        project_id: plan.projectId,
-        window_minutes: plan.windowMinutes,
-        remember: answer.trim(),
-        gap_kind: plan.gapKind,
-        slot_name: plan.slotName,
-      })
-    } catch (e) {
-      console.error('[session] could not save the answer:', e)
-    }
-    set({ shaping: false })
-    await get().shapePlan(plan.projectId, plan.windowMinutes)
   },
 
   startSession: async (projectId, windowMinutes, source = 'live', items, friction, packdown) => {
@@ -406,7 +265,6 @@ export const useSessionStore = create<SessionState>((set, get) => ({
           shapes,
           askMvsSeed: data.ask_mvs_seed,
         },
-        plan: null,
         starting: false,
       })
     } catch (e) {
@@ -443,7 +301,6 @@ export const useSessionStore = create<SessionState>((set, get) => ({
             started_at: startedAt,
           },
         },
-        plan: null,
         starting: false,
       })
     }
@@ -472,6 +329,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
               marked_done?: string[]; created?: string[]; next_added?: string[]
               progress_noted?: string[]; finish?: { reached: boolean; reason: string } | null
               cycle?: { n: number; label: string; unit: string; reason: string } | null
+              next_move?: SessionMove | null
             }>(
               '/api/utilities?resource=close',
               {
@@ -493,6 +351,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
               progressNoted: result.progress_noted ?? [],
               finish: result.finish ?? null,
               cycle: result.cycle ?? null,
+              nextMove: result.next_move ?? null,
             }
           }
         } catch (e) {
@@ -537,6 +396,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
         progressNoted: [],
         finish: null,
         cycle: null,
+        nextMove: null,
         pendingSync: true,
       }
     }
@@ -547,6 +407,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
         marked_done?: string[]; created?: string[]; next_added?: string[]
         progress_noted?: string[]; finish?: { reached: boolean; reason: string } | null
         cycle?: { n: number; label: string; unit: string; reason: string } | null
+        next_move?: SessionMove | null
       }>(
         '/api/utilities?resource=close',
         {
@@ -558,6 +419,10 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       )
       clearSessionNotification()
       set({ active: null, closing: false })
+      if (result.next_move) {
+        set({ move: result.next_move, moveFor: active.project_id })
+        patchCachedMove(active.project_id, result.next_move)
+      }
       return {
         moved: result.moved,
         duration_minutes: result.duration_minutes,
@@ -567,6 +432,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
         progressNoted: result.progress_noted ?? [],
         finish: result.finish ?? null,
         cycle: result.cycle ?? null,
+        nextMove: result.next_move ?? null,
       }
     } catch (e) {
       set({ closing: false, error: e instanceof Error ? e.message : 'Could not save the close-out.' })

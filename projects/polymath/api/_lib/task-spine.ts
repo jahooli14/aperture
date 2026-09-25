@@ -23,9 +23,9 @@
  */
 
 import { generateText } from './gemini-chat.js'
-import { PLAIN_ENGLISH_RULES, CLEAR_STEP_RULES, CREATIVE_MOVE_RULES, FIRST_MOVE_RULES } from './plain-english.js'
+import { PLAIN_ENGLISH_RULES, CLEAR_STEP_RULES, CREATIVE_MOVE_RULES } from './plain-english.js'
 import { filterGrounded, type Evidence } from './session-grounding.js'
-import { isAdminItem } from './session-items.js'
+import { isAdminItem, stripDoneWhen } from './session-items.js'
 import { ESTIMATE_MINUTES, nearestEstimate, type EstimateMinutes } from './session-estimate.js'
 import { orderSteps } from './task-order.js'
 import { MODELS } from './models.js'
@@ -33,13 +33,9 @@ import { MODELS } from './models.js'
 export const MIN_SPINE_STEPS = 4
 export const MAX_SPINE_STEPS = 8
 
-/**
- * The very first spine a project gets, at creation, is a different shape
- * from a replan: 3 broad moves that together are about an hour's work, not
- * 4-8 tight ones. A brand-new project doesn't have the texture yet to plan
- * tightly against, and pretending otherwise is how creation ends up
- * inventing detail nobody said. Loose now, precise once you're in it.
- */
+/** A project with no finish line gets this many broad first steps at
+ *  creation (project-shaping.ts) -- background for the move-writer, not a
+ *  plan to follow. */
 export const FIRST_CUT_STEPS = 3
 
 export interface SpineInput {
@@ -200,7 +196,10 @@ export function sanitizeSteps(
     const rawText = typeof entry === 'string' ? entry : entry?.text
     if (typeof rawText !== 'string') return
     const text = rawText.trim().replace(/^[-*•]\s*/, '').replace(/^\d+[.)]\s*/, '').trim()
-    if (!text || text.length > 140) return
+    // The length limit is on the move itself. A first move also carries
+    // "Done when …" (FIRST_MOVE_RULES), and counting that against the
+    // limit threw away exactly the steps the rule asks for.
+    if (!text || stripDoneWhen(text).length > 140 || text.length > 240) return
     if (isAdminItem(text)) return
     const key = text.toLowerCase().replace(/[^a-z0-9]/g, '')
     if (!key || seen.has(key)) return
@@ -303,7 +302,11 @@ export async function generateTaskSpine(input: SpineInput): Promise<SpineStep[]>
       // Low, like the session shaper: this is reading a stated goal and
       // working back from it, not inventing a project.
       temperature: 0.3,
-      maxTokens: 2000,
+      maxTokens: 3000,
+      // Uncapped, a thinking model can spend the whole output budget
+      // reasoning and hand back no JSON at all -- which reads as "nothing
+      // to plan". Same cap the split and readiness calls already use.
+      thinkingLevel: 'low',
     })
     const cleaned = sanitizeSteps(JSON.parse(response)?.steps)
     const { kept, rejected } = filterGrounded(cleaned, evidence, input.title)
@@ -316,137 +319,6 @@ export async function generateTaskSpine(input: SpineInput): Promise<SpineStep[]>
     return assembleSteps(cleaned, kept).slice(0, MAX_SPINE_STEPS)
   } catch (e) {
     console.error('[task-spine] generation failed:', e)
-    return []
-  }
-}
-
-/**
- * A brand-new project doesn't get a finish line -- an ongoing craft like
- * "producing music" or "DJing" has no "done" to plan backwards from, and
- * forcing one meant either inventing a fake one or rewriting it every time
- * the project moved on. What it does have, from the moment it's created, is
- * a description of what it actually is. That's what these plan FORWARD
- * from: not "what had to be true before done", but "what's a real first
- * move against this".
- */
-export interface FirstCutInput {
-  title: string
-  /** What the project actually is, in the user's words. The anchor —
-   *  with nothing here there is nothing to plan from. */
-  description: string
-  /** Anything else said while creating it -- conversation turns, a first
-   *  step they mentioned. Extra evidence, not required. */
-  said: string[]
-}
-
-export function buildFirstCutEvidence(title: string, description: string, said: string[]): Evidence[] {
-  const evidence: Evidence[] = []
-  let n = 0
-  const add = (label: string, text: string) => {
-    if (!text?.trim()) return
-    evidence.push({ id: `e${++n}`, label, text: text.trim() })
-  }
-  add('what this project is', description)
-  said.forEach(s => add('from what you said about it', s))
-  return evidence
-}
-
-export function buildFirstCutPrompt(input: FirstCutInput, evidence: Evidence[]): string {
-  return `"${input.title}" is a brand-new project, just started. Give it a first move.
-
-WHAT THIS PROJECT IS:
-${evidence.length
-  ? evidence.map(e => `[${e.id}] ${e.text}`).join('\n')
-  : '(nothing yet)'}
-
-That's the whole of it. Anything not in it, you do not know.
-
-HOW TO DO THIS -- forwards, not backwards:
-There's no finish line yet, and none should be invented. Don't plan
-backwards from a "done" that doesn't exist. In creative work you only
-know the next step once you've done the current one, so a long list
-written now is out of date by step two. Give ${FIRST_CUT_STEPS} moves: ONE
-precise first move, then two looser ones that show where it's heading.
-
-THE FIRST MOVE carries the weight. It's what they'll actually do today.
-- If the notes haven't settled what the project is really about yet,
-  the first move settles it by MAKING, not thinking. Find the fork in
-  the notes and make both sides quickly.
-    BAD:  "Decide whether the sculpture is about the pole or the wires"
-          -- a decision with no hands on anything.
-    GOOD: "Sketch the pole three times and the wires three times. Done when
-          you know which you'd rather draw again."
-- If it's already clear what it is, the first move is the smallest real
-  piece of the thing itself.
-
-THE OTHER TWO are coarse ON PURPOSE. The precise plan comes later, once
-they're in it and can see what the real next steps are -- naming the
-wrong specifics now is worse than leaving them open.
-- A physical action against the work, in the medium's own verbs.
-- Broad enough to leave room. "Sketch a rough loop" not "sketch a four-bar
-  loop in C minor at 120bpm" -- the second one invents specifics nobody
-  gave you.
-- Broad is not the same as bundled. "Sketch a rough loop" is broad -- one
-  open-ended job. "Remix the vocal, write a new riff, and write a
-  distribution plan" isn't broad, it's three different jobs wearing one
-  sentence.
-
-WHAT NONE OF THEM MAY BE:
-- Admin pretending to be building: research, source, plan, outline,
-  decide, define, list, consider, review, think about, brainstorm, explore.
-- Anything naming a tool, brand, format, instrument, person or place that
-  does NOT appear verbatim above.
-- A finish line, a deadline, or a description of what "done" looks like
-  for the whole project -- that's not what's being asked for here.
-- Setup around the work instead of the work: at least two of the
-  ${FIRST_CUT_STEPS} moves make a first piece of the thing itself.
-
-Give exactly ${FIRST_CUT_STEPS} moves, in the order they'd make sense to do.
-Cite the evidence id each one comes from; a move that names nothing beyond
-the project's own title needs no citation.
-
-For each, also guess how long it takes in one sitting. Pick the closest
-value from EXACTLY this list: ${ESTIMATE_MINUTES.join(', ')}.
-
-${PLAIN_ENGLISH_RULES}
-
-${CLEAR_STEP_RULES}
-
-${CREATIVE_MOVE_RULES}
-
-${FIRST_MOVE_RULES}
-
-Respond with JSON only:
-{ "steps": [ { "text": "...", "evidence": ["e1"], "estimated_minutes": 5 } ] }`
-}
-
-/**
- * Generates the first-cut list. Same honesty rule as the spine: nothing
- * beats an invented set of three, so a project with no description yet
- * gets an empty list back rather than three plausible-sounding guesses.
- */
-export async function generateFirstCutTasks(input: FirstCutInput): Promise<SpineStep[]> {
-  const evidence = buildFirstCutEvidence(input.title, input.description, input.said)
-  if (evidence.length === 0) return []
-
-  try {
-    const response = await generateText(buildFirstCutPrompt(input, evidence), {
-      model: MODELS.TASK_SPINE_CHAT,
-      responseFormat: 'json',
-      temperature: 0.4,
-      maxTokens: 800,
-    })
-    const cleaned = sanitizeSteps(JSON.parse(response)?.steps, FIRST_CUT_STEPS)
-    const { kept, rejected } = filterGrounded(cleaned, evidence, input.title)
-    if (rejected.length > 0) {
-      console.warn(
-        `[task-spine] dropped ${rejected.length} ungrounded first-cut step(s) for "${input.title}":`,
-        rejected.map(r => `"${r.text}" — ${r.reason}`),
-      )
-    }
-    return assembleSteps(cleaned, kept).slice(0, FIRST_CUT_STEPS)
-  } catch (e) {
-    console.error('[task-spine] first-cut generation failed:', e)
     return []
   }
 }

@@ -9,7 +9,6 @@ import { Check } from 'lucide-react'
 import { api } from '../../lib/apiClient'
 import { useProjectStore } from '../../stores/useProjectStore'
 import { useHomeAnswerStore } from '../../stores/useHomeAnswerStore'
-import { useSessionStore } from '../../stores/useSessionStore'
 import { useToast } from '../ui/toast'
 import { setChatHandoff } from '../../lib/chatHandoff'
 import { ConfirmButton, DismissButton, ResolvedBadge, DismissedRow, ProposalCard } from '../chat/ChatPrimitives'
@@ -34,7 +33,6 @@ export function FocusChatActionCard({ action, resolved, dismissed, blockedByPend
   const targetProject = useProjectStore(s => s.allProjects.find(p => p.id === action.projectId))
   const currentUpNextPosition = targetProject?.up_next_position ?? null
   const requestStart = useHomeAnswerStore(s => s.requestStart)
-  const setWindowMinutes = useSessionStore(s => s.setWindowMinutes)
   const { addToast } = useToast()
   const [applying, setApplying] = useState(false)
   const { label, verb } = describeAction(action.type)
@@ -67,8 +65,6 @@ export function FocusChatActionCard({ action, resolved, dismissed, blockedByPend
           // project and open the contract there. No plan generation, so
           // this is instant -- nothing to wait on.
           setChatHandoff(action.projectId, handoffSummary)
-          // The chat already asked how long you've got; don't ask twice.
-          if (action.minutesAvailable) setWindowMinutes(action.minutesAvailable)
           requestStart(action.projectId)
           break
         }

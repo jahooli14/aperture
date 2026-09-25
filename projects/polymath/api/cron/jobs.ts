@@ -353,21 +353,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
       }
 
-      // 9. Bake tomorrow's sessions for the projects most likely to be
-      // opened. The whole product is "an hour appears and the app is
-      // useful in two seconds" -- a spinner at that moment is the faffing
-      // this is meant to remove. Last in the daily bundle on purpose: it
-      // reads the task lists everything above may have just rewritten.
+      // 9. Tomorrow's first moves (next-move-store.ts). A move is normally
+      // written when a session ends; this covers the projects most likely
+      // to be opened that have none yet, or whose move has gone a month
+      // stale. The morning open should never wait on a model call.
       if (userId) {
         try {
-          console.log('[cron/jobs/daily] Baking next sessions...')
-          const { prebakeForUser } = await import('../_lib/session-prebake.js')
-          const bakeResult = await prebakeForUser(supabase, userId)
-          results.tasks.session_prebake = { success: true, ...bakeResult }
-          console.log(`[cron/jobs/daily] Baked ${bakeResult.baked}/${bakeResult.considered} session(s)`)
+          const { ensureMovesForUser } = await import('../_lib/next-move-store.js')
+          const moves = await ensureMovesForUser(supabase, userId)
+          results.tasks.next_moves = { success: true, ...moves }
+          console.log(`[cron/jobs/daily] Wrote ${moves.written}/${moves.considered} next move(s)`)
         } catch (error) {
-          console.error('[cron/jobs/daily] Session pre-bake failed:', error)
-          results.tasks.session_prebake = {
+          console.error('[cron/jobs/daily] Next moves failed:', error)
+          results.tasks.next_moves = {
             success: false,
             error: error instanceof Error ? error.message : 'Unknown error'
           }

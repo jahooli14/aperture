@@ -13,6 +13,7 @@ import { ProjectNotes } from '../components/projects/ProjectNotes'
 import { ProjectArc } from '../components/projects/ProjectArc'
 import { MadeWall } from '../components/projects/MadeWall'
 import { ProjectPath } from '../components/projects/ProjectPath'
+import { NextMovePanel } from '../components/projects/NextMovePanel'
 import type { Task } from '../components/projects/TaskList'
 import { InlineGuide } from '../components/projects/InlineGuide'
 import { Button } from '../components/ui/button'
@@ -30,7 +31,7 @@ import { useMemoryStore } from '../stores/useMemoryStore'
 import { isRetired, GRAVEYARD_STATUS } from '../utils/projectStatus'
 
 import { SubtleBackground } from '../components/SubtleBackground'
-import { api, ApiError } from '../lib/apiClient'
+import { ApiError } from '../lib/apiClient'
 
 /**
  * What paused this — a post-it, but only once there's something written on it.
@@ -144,38 +145,10 @@ export function ProjectDetailPage() {
   // this is true, FocusSession's floating sheet renders nothing (see
   // isOnThisProjectsPage there) so the pending session shows inline here
   // instead — same state, one place it's presented.
-  const windowMinutes = useSessionStore(s => s.windowMinutes)
   const activeSessionProjectId = useSessionStore(s => s.active?.project_id ?? null)
   const [sessionOpen, setSessionOpen] = useState(false)
-  const [replanning, setReplanning] = useState(false)
-
-  // A spine gets used up: tick everything off and the project has a goal,
-  // a history, and nothing to do next. Re-planning is the same backwards
-  // pass that built it, run again over everything learned since — and it
-  // keeps finished work, so it extends the plan rather than resetting it.
-  const handleReplan = async () => {
-    if (!project) return
-    setReplanning(true)
-    try {
-      const result = await api.post('utilities?resource=replan', { project_id: project.id }) as { added?: number }
-      await fetchProjects()
-      addToast({
-        title: result?.added ? `Planned ${result.added} more steps` : 'Nothing new to add',
-        description: result?.added
-          ? 'Working back from your finish line.'
-          : "Say more about where it's at and try again.",
-        variant: result?.added ? 'success' : 'default',
-      })
-    } catch (err) {
-      addToast({
-        title: "Couldn't re-plan that",
-        description: err instanceof Error ? err.message : 'Try again.',
-        variant: 'destructive',
-      })
-    } finally {
-      setReplanning(false)
-    }
-  }
+  // Go on the move IS the decision; "change it" opens without starting.
+  const [sessionAutoStart, setSessionAutoStart] = useState(false)
 
   // Reactive selection from store
   const project = useProjectStore(state => state.allProjects.find(p => p.id === id))
@@ -895,8 +868,8 @@ export function ProjectDetailPage() {
               {sessionOpen && (
                 <SessionContract
                   project={project}
-                  presetWindowMinutes={windowMinutes}
-                  onDone={() => { setSessionOpen(false); void fetchProjects() }}
+                  autoStart={sessionAutoStart}
+                  onDone={() => { setSessionOpen(false); setSessionAutoStart(false); void fetchProjects() }}
                   onFinish={() => handleStatusChange('completed')}
                 />
               )}
@@ -1020,7 +993,7 @@ export function ProjectDetailPage() {
                 </div>
               )}
 
-              {/* The Path */}
+              {/* The next move, what you've done, and the old list folded away */}
               <div
                 data-task-list
                 className="rounded-2xl transition-shadow duration-700"
@@ -1028,50 +1001,11 @@ export function ProjectDetailPage() {
                   boxShadow: flashTarget === 'tasks' ? '0 0 0 1px rgba(var(--brand-primary-rgb),0.4), 0 0 24px rgba(var(--brand-primary-rgb),0.15)' : 'none',
                 }}
               >
-                {/* The plan is spent — every step ticked, or there was
-                    never one. One statement, one action, one quiet way
-                    out: a finished LIST is not a finished PROJECT, so
-                    planning what's next leads and finishing is the quiet
-                    option underneath, never two buttons competing. */}
-                {(() => {
-                  const allTasks = project.metadata?.tasks || []
-                  const spent = allTasks.length === 0 || allTasks.every((t: any) => t?.done)
-                  if (!spent || project.status === 'completed' || project.status === 'graveyard') return null
-                  const everDid = allTasks.length > 0
-                  return (
-                    <div className="mb-5 space-y-2">
-                      {everDid && (
-                        <p className="text-[13px] text-center" style={{ color: 'var(--brand-text-secondary)', opacity: 0.55 }}>
-                          Everything on the list is done.
-                        </p>
-                      )}
-                      <button
-                        onClick={handleReplan}
-                        disabled={replanning}
-                        className="w-full py-3 rounded-2xl text-[12px] font-semibold uppercase tracking-widest transition-all active:scale-[0.99] disabled:opacity-50"
-                        style={{
-                          background: 'rgba(var(--brand-primary-rgb),0.10)',
-                          border: '1px solid rgba(var(--brand-primary-rgb),0.28)',
-                          color: 'rgb(var(--brand-primary-rgb))',
-                        }}
-                      >
-                        {replanning
-                          ? 'Working out what comes next…'
-                          : everDid ? 'Plan what comes next' : 'Plan the steps'}
-                      </button>
-                      {everDid && (
-                        <button
-                          onClick={() => handleStatusChange('completed')}
-                          className="w-full text-[12px] py-1"
-                          style={{ color: 'var(--brand-text-secondary)', opacity: 0.5 }}
-                        >
-                          or mark it finished
-                        </button>
-                      )}
-                    </div>
-                  )
-                })()}
-
+                <NextMovePanel
+                  project={project}
+                  onGo={() => { setSessionAutoStart(true); setSessionOpen(true) }}
+                  onChange={() => { setSessionAutoStart(false); setSessionOpen(true) }}
+                  oldList={
                 <ProjectPath
                   tasks={project.metadata?.tasks || []}
                   highlightedTasks={[]}
@@ -1089,6 +1023,8 @@ export function ProjectDetailPage() {
                       })
                     } catch (error) { console.error('[ProjectDetail] Update failed:', error) }
                   }}
+                />
+                  }
                 />
               </div>
 

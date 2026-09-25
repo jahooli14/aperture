@@ -272,7 +272,7 @@ export function AttentionSlot() {
   // During a session there is exactly one thing on screen. The budget is
   // for what the app says on OPEN — interrupting the hour it just helped
   // you start is the worst possible moment for any of it.
-  const sessionRunning = useSessionStore(s => s.active != null || s.plan != null)
+  const sessionRunning = useSessionStore(s => s.active != null)
   const [kind, setKind] = useState<SlotKind>(null)
   const [mirrorRows, setMirrorRows] = useState<MirrorRow[]>([])
   const [reask, setReask] = useState<ReaskSuggestion | null>(null)

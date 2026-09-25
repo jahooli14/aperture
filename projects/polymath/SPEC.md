@@ -78,7 +78,7 @@ utterance is free; the commitment is not.
 - `tags` — labels (existing mechanism)
 - `state` — live / on-deck / mull / harvested
 - `mvs_minutes` — minimum viable session (see seeding below)
-- `session_shapes[]` — derived, never authored (see below)
+- `next_move` — the one next move, written from the last session's note (see below)
 - `slots[]` — named gaps: sound, venue, first track, material, deadline, collaborator.
   **An empty slot is what dormancy actually is.**
 - `last_stopped_at` — your own words from the end of the last session
@@ -94,7 +94,7 @@ references and no deadline behaves differently from the reverse.
 **Joint** — something you've said more than once that applies across projects.
 *"Contrast between clean and raw."* Corpus-derived, quoted, never invented.
 
-**Session** — a contract: window, list, timer, close-out. Append-only.
+**Session** — one move, a timer counting up, a close-out note. Append-only.
 
 ### Stalled (defined, because composites gate on it)
 
@@ -105,77 +105,56 @@ empty slot. Time alone isn't stall — a finished-shaped project sitting quietly
 
 ## The session
 
-### Opening (target: two minutes)
+### Opening (target: instant)
 
-1. **Re-entry first.** Play back `last_stopped_at` — your own words. Fastest warm-up
-   there is, and the reason a cold project costs double.
-2. **One guess, not a menu.** *"DJing. You wanted the transition out of track two."*
-3. **Ask the one thing it can't know:** how long have you got.
-4. You talk at it for ten seconds. It adjusts.
-5. **Contract:** *55 minutes. Here's what done looks like.* Its obligation is not to
-   exceed the window; yours is to start.
+The move was written when the last session ended, so opening costs nothing:
+
+1. **The move is already on the card.** One move, in the medium's own verbs, with its
+   "Done when" — written from your own note last time. Your note sits under it.
+2. **Go.** No "how long have you got": one move needs no sizing, and the clock counts up.
+3. **Or "not this".** "Too big" and "wrong thing" are one tap each; your own words work
+   too. A new move is written, and the answer is kept (`move_feedback`), so the next
+   move is written to your size and a turned-down move is never offered again.
 
 ### First run — session one has no history
 
 `WHY.md` sets the rule: **pay the user back in the session they captured in, or fail.**
-The session contract must clear that bar on day one, with no `last_stopped_at`, no
-shapes and no spark.
+A project with nothing done yet has no note to write a move from, so it opens on what
+it does have: its description and the notes it was made from.
 
-So session one is a declaration session:
-1. *"What do you want to be working on?"* — voice. That sets the live project.
-2. *"What do you want out of it?"* — voice.
-3. *"How long have you got?"*
+- **When nothing is decided**, and the notes hold a real fork, it opens on the fork as a
+  question — *"Is it about the pole, or about the wires?"* — because a decision beats a
+  step when nothing's decided. You answer in a sentence; the answer is kept as a note
+  and writes the first move.
+- Otherwise it opens on the smallest real piece of the thing itself.
 
-The payoff is immediate and is the same mechanism as every later session:
-**it turns what you just said into 1–3 items with a finish line inside your window.**
-Decomposition is the value, not history. History makes it faster, not real.
+### Where the move comes from (`next-move.ts`)
 
-### Where session shapes come from (derived, never authored)
+**Written at the end of the last session, not the start of this one.** In creative work
+you only know the next step once you've done the current one, so a list written up
+front is out of date by item two. The project keeps ONE move (`metadata.next_move`),
+rewritten by one call at close-out from, freshest first: the note just left, what was
+ticked, the move you'd been given, earlier notes, what's been done, what the project
+is, and — as background only — the old step list. If the note says what's next, that
+IS the move. If something's bugging you, the move can go straight at it.
 
-You never write a to-do list. One planning model, three altitudes, and a session is
-only ever the bottom one:
-
-1. **What done looks like** — in the user's words, and **never asked for**. Plenty of
-   real projects are ongoing (DJing, a sketchbook habit) and have no "done"; asking
-   makes people invent one and then rewrite it forever. It is kept when volunteered
-   and used to plan backwards; when it's absent the steps are planned *forwards* from
-   what the project is and where it got to. Its absence is never a gate, a warning,
-   or an empty field on a card.
-2. **The steps** — the spine (`task-spine.ts`), planned backwards from the finish line
-   when there is one and forwards from the description when there isn't,
-   each declaring what it comes `after`. A topological sort enforces that, so "peel the
-   stencil off" can never sit above "cut the stencil". Every stored task carries an
-   explicit `order` (`task-order.ts`); what a close-out says comes *next* goes to the
-   front of the open list, never the end.
-3. **The session** (`session-shaper.ts`) — the re-entry line, then the next open steps
-   in plan order, as many as fit the window, then one line saying what "done today"
-   looks like. Two things can change that, and both change the PLAN, not just the
-   session:
-   - **The next step can't be started yet** (`session-ready.ts`). Ordered doesn't mean
-     complete: a spine is a handful of steps for a whole project, so a real
-     prerequisite can simply never have been written down. One check asks whether the
-     top step is startable. If the missing thing is already further down the list it
-     moves up; if it isn't on the list at all it's written in front of the step it
-     blocks. Either way the session says so out loud — never a silent reshuffle.
-   - **The next step is bigger than the window**, so one call splits *that step* into
-     the first piece of it that fits (`session-split.ts`), and the pieces cite it.
-
-   Nothing else is ever generated for a session: no filler, no spares, no bench. Saying
-   what's wrong with the list reshapes it by voice, and every line the reshape returns
-   must cite a real step or the words just spoken.
-
-   The prerequisite check is the one place the app writes to the plan on the user's
-   behalf mid-flow, so its gates are the strictest in the codebase: admin verbs
-   rejected outright, restatements of the step rejected, a citation *required* (unlike
-   a session item, a prerequisite always asserts something), no invented specifics, and
-   anything failing any gate is treated as "ready". A missed prerequisite costs one
-   awkward session; an invented one rewrites the plan and reads as the app not knowing
-   the project.
-
-An empty list gets *planned* — the same pass that built it, run again over everything
-learned since — not padded with session-sized invention. Only when there is genuinely
-nothing to plan from does it ask, and it asks for the first real thing
-(`session-gap.ts`), never for a finish line.
+- **Three openings.** *new* (nothing done: maybe a fork), *going* (the move comes out of
+  the last note), *returning* (a month or more away: meet the work again first — play,
+  read or look at the last thing that exists, and say one sentence about it).
+- **Grounded like everything else**: no admin verbs, nothing named that the evidence
+  doesn't name, not a move already turned down. A move that fails falls back to the
+  note's own "next", then the old list's next step, then the plainest honest move
+  there is: go and look at the last thing you made. Never nothing.
+- **Instant, always.** Written at close (in parallel with the debrief, so the close
+  waits for one call, not two), and nightly for the few projects most likely to be
+  opened that have none or whose move has gone a month stale (`ensureMovesForUser`).
+- **Tasks are a log, not a plan.** A ticked move lands in `metadata.tasks` as done work,
+  its "Done when" stripped. The old step list (`task-spine.ts`, still written at
+  creation and for a repeating project's next cycle) stays folded away on the project
+  page and is read by the move-writer as where it was heading, never shown as orders.
+- **The finish line**, when you gave one, is judged by the same call: only a *reached*
+  verdict is said out loud (a "not yet" after every session is a nag); every verdict
+  that changes is kept on the arc (`project-milestones.ts`).
 
 ### Making a project (one call)
 
@@ -215,42 +194,28 @@ it can't be done in the time available. Offer to book it instead.
   book, warm, first item ready.
 - If the block passes with no session logged, it is not mentioned. Ever.
 
-### The list
+### The screens (`SessionContract.tsx` + `components/session/flow/`)
 
-1–3 items (`itemCountForWindow`: two for twenty minutes, three otherwise). Never four —
-four is a chore list. The backlog stays out of sight: no "+N more" line, no receipt under
-a step that's just the next one on the list, no footer restating what the list is. Nothing
-from outside the project either — the "while you're in there" punt from the week's reading
-is gone. The first item is deliberately small; it
-exists to get you moving, not to be accurate. Proposed, then shaped by voice.
-
-Steps are written as **moves, not tasks** (`CREATIVE_MOVE_RULES`, `FIRST_MOVE_RULES` in
-`plain-english.ts`): the medium's own verbs (play, cut, sketch, bounce), a real named
-thing from the notes, and a first move under ten minutes that ends "Done when …".
-Project-manager language — "research reference tracks", "define the palette", "source
-materials" — reads like homework and never gets opened mid-work. A brand-new project
-whose notes haven't settled what it's about gets a fork settled by *making* both sides,
-never a "decide" step.
-
-**After a month away** (`session-moves.ts`, `REENTRY_AFTER_DAYS`, counted from the last
-session, not the last capture) the plan's top step is cold. The session opens on one
-re-entry move instead — play, read or look at the last thing that exists, say one
-sentence about it — carried as a `pending-` item, never written to the plan.
+1. **The move** (`MoveCard`, and the home card itself) — the move, its "Done when",
+   your last note under it. Go, or "not this". A fork shows as a question to answer.
+2. **Focus** (`FocusShell` + `WorkView`) — Go takes the whole screen, true black: the
+   move, big, a Done button, "I'm stuck", Stop. The clock counts up. Minimise steps out
+   without stopping (remembered per session, so home never throws it back over you).
+3. **The breadcrumb** (`Breadcrumb`) — where you stopped, what's next, what's bugging you.
+4. **The hand-off** (`Handoff`) — "next time starts with…", the move just written from
+   that note, correctable right there in a sentence while it's fresh.
 
 ### The timer
 
-- Counts **up** by default. Counts down only when you named a hard stop.
+- Counts **up**. There's nothing to size, so nothing to count down to.
 - Never interrupts, never nags, no progress bar.
 - Stopping is one tap and is always fine.
-- **Stopping points are visible, never pushed.** The move you're on shows its "Done when".
-  When the list is all ticked the Stop button becomes the obvious next thing, with the next
-  step already on the project offered once underneath for anyone who wants to keep going;
-  when the window runs out it reads "Time's up — stop here". Neither interrupts.
-- **"I'm stuck"** sits under the list: one move on the step you're on — smaller,
-  sideways, or a constraint. Never a new plan, never saved (`resource=stuck`).
-- **On Android the step you're on sits in a persistent, silent notification** for the
-  whole session, because once the work is open you won't go back to the app to check.
-  Cleared the moment the session ends.
+- **The stopping point is visible, never pushed.** The move shows its "Done when". Once
+  it's done: "keep going while it's flowing", and Stop becomes the obvious button.
+- **"I'm stuck"** sits under the move: one move on it — smaller, sideways, or a
+  constraint. Never a new plan, never saved (`resource=stuck`).
+- **On Android the move sits in a persistent, silent notification** with Done and I'm
+  stuck buttons, so the phone can stay face-down. Cleared the moment the session ends.
 
 ### Closing — the highest-value input in the system
 
@@ -261,22 +226,12 @@ Timer stops → one question → thirty seconds of voice.
 - After a short or abandoned session: *"What got in the way?"* — a bad session is data
   about conditions, and the wrong question there gets no answer.
 
-It sets `last_stopped_at`, feeds the corpus, and makes the next session a two-minute start.
+It sets `last_stopped_at`, feeds the corpus, and **writes the next move** — so the next
+session starts instantly, from your own words.
 
-The debrief (`debrief-matcher.ts`) sorts what was said into four things, each cited or
-dropped: a step finished, something finished that wasn't on the list, what comes next,
-and **part way** — a step worked on but not finished, with where it got to. That last
-one lives on the task (`progress_note`) and is the re-entry line for that step next
-time, so a session never restarts a step from the top. Ticking every piece of a split
-step finishes it; ticking some of them is progress, recorded as such.
-
-When the last open step is ticked and the user has stated a finish line, one capped
-call reads it against what has actually been made (`finish-line.ts`) and the receipt
-says which it is: *that's the finish line* → one action, mark it finished; or *plan's
-done, project isn't* → the next session starts by planning the rest. With no stated
-finish line the receipt just says the list is clear. "All tasks ticked" is never
-assumed to mean done, and the project page leads with *plan what comes next*, with
-*mark it finished* as the quiet second option.
+The debrief (`debrief-matcher.ts`) still sorts what was said against any open steps on
+the old list: finished, finished-but-unlisted, and **part way** (`progress_note`). What
+comes *next* no longer goes onto a list — it goes into the move.
 
 **Never say "incomplete."** 22 minutes with item one done is a good session. The framing
 decides whether the app gets opened next week.
@@ -559,8 +514,9 @@ MVS is measured from.
 Work needed:
 - Add `sessions` and `sparkResponses` tables to the Dexie schema.
 - Add session ops to `QueuedOperation['type']`.
-- Cache tomorrow's spark and the live project's shapes on every sync, so a cold offline
-  open still has a warm project and a spark.
+- Cache tomorrow's spark on every sync. The next move needs no extra caching: it lives
+  on the project (`metadata.next_move`), so a cold offline open already has it, and Go
+  starts a local session that syncs later.
 
 **Conflicts don't exist by design.** Sessions and captures are append-only, so offline
 work merges without resolution. Keep it that way.
@@ -582,7 +538,7 @@ work merges without resolution. Keep it that way.
 - Ask the user to justify a gap.
 - Score a raw capture, or show confidence numbers on capture.
 - Show a graveyard, or a count of anything that isn't hours.
-- Propose work without a visible finish line inside the stated window.
+- Propose a move without a visible "Done when".
 - Argue with a stated preference.
 
 **Under-reach when unsure.** Too small is recoverable — you keep going and feel ahead.

@@ -60,15 +60,15 @@ import {
 import { DEFAULT_IDEA_BRIEF } from './_lib/project-ideas/default-prompt.js'
 import type { CoverageGrid } from '../src/types'
 import { deriveSessionShapes, needsMvsSeed, measuredMvs, type SlotInput, type SessionShape } from './_lib/session-shapes.js'
-import { shapeSession } from './_lib/session-shaper.js'
 import { shapeProjectFromDump } from './_lib/project-shaping.js'
-import { generateTaskSpine, generateFirstCutTasks, toStoredTasks, buildEvidenceFromSaid } from './_lib/task-spine.js'
+import { generateTaskSpine, toStoredTasks, buildEvidenceFromSaid } from './_lib/task-spine.js'
 import { stuckMove } from './_lib/session-moves.js'
+import { writeNextMove, addFeedback, type NextMove } from './_lib/next-move.js'
+import { loadMoveContext, saveMove } from './_lib/next-move-store.js'
 import { debriefSession, type DebriefOpenTask } from './_lib/debrief-matcher.js'
 import { normalizeTaskOrder } from './_lib/task-order.js'
 import { handleFixQueue } from './_lib/fix-queue/route.js'
 import { reconcileCloseout, parseTicked } from './_lib/session-closeout.js'
-import { judgeFinishLine } from './_lib/finish-line.js'
 import { readCycleState, cycleLabel, rollToNextCycle, lastCycleSteps } from './_lib/project-cycles.js'
 import { appendMilestone, readMilestones } from './_lib/project-milestones.js'
 import { bakeMull, SHELF_LIFE_HOURS } from './_lib/mull-generator.js'
@@ -92,10 +92,10 @@ function getCronUserId(req: VercelRequest): string | null {
 }
 
 const EXECUTION_SESSIONS_RESOURCES = new Set([
-  'shape', 'shape-project', 'replan',
+  'shape-project',
   'start', 'close', 'pending-closeout', 'log-retro', 'declare-live',
   'live-reask', 'different-thing-status', 'harvest', 'mirror', 'book',
-  'next-cycle', 'stuck',
+  'next-cycle', 'stuck', 'move',
 ])
 const EXECUTION_SPARKS_RESOURCES = new Set(['bake', 'today', 'respond', 'spark-followup', 'dismiss-spark', 'reroll-spark', 'retire-and-rebake', 'catch-up'])
 const EXECUTION_PROPOSALS_RESOURCES = new Set([
@@ -1828,171 +1828,6 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
     }
   }
 
-  // ─── REPLAN (the spine again, on a project that already exists) ─────
-  // Same engine as creation. A spine that's been ticked out, or one made
-  // before the goal was written, needs redoing rather than patching by
-  // hand -- and it must extend what's already agreed, not silently bin it.
-  if (resource === 'replan') {
-    if (req.method !== 'POST') return res.status(405).json({ error: 'POST required' })
-    const { project_id } = req.body || {}
-    if (!project_id) return res.status(400).json({ error: 'project_id required' })
-
-    try {
-      const { data: project, error: projErr } = await supabase
-        .from('projects')
-        .select('title, description, metadata, last_closeout_text')
-        .eq('id', project_id).eq('user_id', userId).single()
-      if (projErr || !project) return res.status(404).json({ error: 'project not found' })
-
-      const { data: fragmentRows } = await supabase
-        .from('fragments')
-        .select('text')
-        .eq('project_id', project_id).eq('user_id', userId)
-        .order('created_at', { ascending: false }).limit(10)
-
-      const metadata = project.metadata ?? {}
-      const conversation: any[] = Array.isArray(metadata.conversation) ? metadata.conversation : []
-      const said = [
-        project.description,
-        project.last_closeout_text,
-        ...conversation.filter(t => t?.role === 'user' && typeof t.content === 'string').map(t => t.content),
-        ...(fragmentRows || []).map(f => f.text),
-      ].filter((t): t is string => typeof t === 'string' && t.trim().length > 0)
-
-      const existingTasks: any[] = Array.isArray(metadata.tasks) ? metadata.tasks : []
-      // Backwards from the finish line when the user gave one; forwards
-      // from what the project is and where it got to when they didn't.
-      // A project with no "done" is not a project that can't be planned.
-      const steps = metadata.end_goal
-        ? await generateTaskSpine({
-            title: project.title,
-            endGoal: metadata.end_goal,
-            said,
-            existingSteps: existingTasks.filter(t => !t?.done).map(t => t?.text).filter(Boolean),
-          })
-        : await generateFirstCutTasks({
-            title: project.title,
-            description: project.description || '',
-            said,
-          })
-
-      if (steps.length === 0) {
-        return res.status(200).json({ tasks: existingTasks, added: 0 })
-      }
-
-      // Finished work stays on the record: a re-plan replaces what's still
-      // to do, never the history of what's been done.
-      const doneTasks = existingTasks.filter(t => t?.done)
-      const nextTasks = normalizeTaskOrder([...doneTasks, ...toStoredTasks(steps, new Date(), doneTasks.length)])
-      await supabase.from('projects')
-        .update({ metadata: { ...metadata, tasks: nextTasks, is_shaped: true } })
-        .eq('id', project_id).eq('user_id', userId)
-
-      return res.status(200).json({ tasks: nextTasks, added: steps.length })
-    } catch (e) {
-      const message = e instanceof Error ? e.message : 'Could not re-plan that project.'
-      console.error('[utilities/replan] failed:', message)
-      return res.status(500).json({ error: message })
-    }
-  }
-
-  // ─── SHAPE (the two minutes of planning) ────────────────────────────
-  // No session row yet -- this is what you're agreeing to before the
-  // clock starts. Called once on arrival, then again for each "no, more
-  // like this" the user says at it.
-  if (resource === 'shape') {
-    if (req.method !== 'POST') return res.status(405).json({ error: 'POST required' })
-    const { project_id, window_minutes, instruction, current_items, remember } = req.body || {}
-    if (!project_id) return res.status(400).json({ error: 'project_id required' })
-
-    try {
-      // "remember" is the user answering the app's own "I don't know
-      // enough about this yet". Storing it as a fragment is the point:
-      // the app had to ask because the corpus was thin, so the answer has
-      // to make the corpus less thin, not just unblock this one session.
-      if (typeof remember === 'string' && remember.trim()) {
-        // Route the answer by what was asked. Filing every answer as a
-        // generic note meant the app kept re-asking the same question:
-        // the project's shape never actually improved, so the gap that
-        // triggered the question was still there next session.
-        const answer = remember.trim()
-        const gapKind = typeof req.body?.gap_kind === 'string' ? req.body.gap_kind : null
-        const slotName = typeof req.body?.slot_name === 'string' ? req.body.slot_name : null
-
-        const { data: proj } = await supabase
-          .from('projects')
-          .select('metadata, slots')
-          .eq('id', project_id).eq('user_id', userId).single()
-        const metadata = proj?.metadata ?? {}
-
-        if (gapKind === 'end_goal') {
-          await supabase.from('projects').update({
-            metadata: { ...metadata, end_goal: answer, end_goal_source: 'guide' },
-          }).eq('id', project_id).eq('user_id', userId)
-        } else if (gapKind === 'first_step' || gapKind === 'next_step') {
-          const tasks = Array.isArray(metadata.tasks) ? metadata.tasks : []
-          await supabase.from('projects').update({
-            metadata: {
-              ...metadata,
-              tasks: [...tasks, {
-                id: `t-${Date.now()}`,
-                text: answer,
-                done: false,
-                created_at: new Date().toISOString(),
-              }],
-            },
-          }).eq('id', project_id).eq('user_id', userId)
-        } else if (gapKind === 'slot' && slotName) {
-          const slots = Array.isArray(proj?.slots) ? proj.slots : []
-          await supabase.from('projects').update({
-            slots: slots.map((sl: any) => (sl?.name === slotName ? { ...sl, filled: true } : sl)),
-          }).eq('id', project_id).eq('user_id', userId)
-        }
-
-        // Always keep the verbatim answer too: the routed field is the
-        // structure, the fragment is what they actually said, and the
-        // shaper cites the words rather than the field.
-        const { error: fragErr } = await supabase.from('fragments').insert({
-          user_id: userId,
-          project_id,
-          role: gapKind === 'slot' ? 'material' : 'reference',
-          ...(gapKind === 'slot' && slotName ? { fills_slot: slotName } : {}),
-          text: answer,
-        })
-        if (fragErr) console.error('[utilities/sessions] could not save the answer:', fragErr)
-        return res.status(200).json({ ok: true })
-      }
-
-      const result = await shapeSession(
-        supabase,
-        userId,
-        project_id,
-        typeof window_minutes === 'number' ? window_minutes : null,
-        typeof instruction === 'string' ? instruction : null,
-        Array.isArray(current_items) ? current_items.filter((x: unknown) => typeof x === 'string') : undefined,
-      )
-      return res.status(200).json({
-        items: result.items,
-        done_looks_like: result.doneLooksLike,
-        source: result.source,
-        needs_input: result.needsInput,
-        gap_kind: result.gap?.kind ?? null,
-        slot_name: result.gap?.slotName ?? null,
-        confidence: result.confidence,
-        friction: result.friction,
-        packdown: result.packdown,
-        truncated_count: result.truncatedCount,
-        planned: result.planned,
-        unblocked: result.unblocked,
-        removed: result.removed,
-      })
-    } catch (e) {
-      const message = e instanceof Error ? e.message : 'Could not shape the session.'
-      console.error('[utilities/sessions] shape failed:', message)
-      return res.status(500).json({ error: message })
-    }
-  }
-
   if (resource === 'start') {
     if (req.method !== 'POST') return res.status(405).json({ error: 'POST required' })
     const { project_id, window_minutes, source, started_at } = req.body || {}
@@ -2153,19 +1988,27 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
     const currentMetadata = projRow?.metadata ?? {}
     const storedTasks: any[] = Array.isArray(currentMetadata?.tasks) ? currentMetadata.tasks : []
 
-    // The voice debrief is the one model call in the reconciliation, so it
-    // resolves here and goes in as plain data. It reads the WHOLE open
-    // list, not just what was on screen -- people regularly do something
-    // unplanned mid-session and it should still land as real progress.
-    const debrief = text
-      ? await debriefSession(
-          text,
-          storedTasks
-            .filter(t => !t.done && typeof t.id === 'string' && typeof t.text === 'string')
-            .map(t => ({ id: t.id, text: t.text }) as DebriefOpenTask),
-          projRow?.title || 'this project',
-        )
-      : null
+    // Two model calls, side by side: the debrief sorts what was said
+    // against the open list, and the move-writer turns the note into the
+    // NEXT move (next-move.ts). Neither needs the other, so the close costs
+    // one call's worth of waiting, not two.
+    const openForDebrief = storedTasks
+      .filter(t => !t.done && typeof t.id === 'string' && typeof t.text === 'string')
+      .map(t => ({ id: t.id, text: t.text }) as DebriefOpenTask)
+    const moveCtx = await loadMoveContext(supabase, userId, session.project_id, {
+      note: text || null,
+      did: ticked.map(t => t.text),
+      daysAway: 0,
+    })
+    // A session just happened, so this is never a project with nothing
+    // done -- even if nothing was ticked, it gets a move, not a question.
+    if (moveCtx) moveCtx.input.stage = 'going'
+    const [debrief, written] = await Promise.all([
+      text && openForDebrief.length > 0
+        ? debriefSession(text, openForDebrief, projRow?.title || 'this project')
+        : Promise.resolve(null),
+      moveCtx ? writeNextMove(moveCtx.input, 'closeout') : Promise.resolve(null),
+    ])
 
     const outcome = reconcileCloseout({
       tasks: storedTasks,
@@ -2174,14 +2017,20 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
       endedAt,
       windowMinutes: typeof session.window_minutes === 'number' ? session.window_minutes : null,
       durationMinutes,
-      debrief,
+      // What comes next goes into the move, not onto a list nobody reads.
+      debrief: debrief ? { ...debrief, next: [] } : null,
     })
     const tasks = outcome.tasks
-    const tasksChanged = outcome.changed
     const markedDoneTexts = outcome.markedDone
     const createdTexts = outcome.created
-    const nextAddedTexts = outcome.nextAdded
     const progressNoted = outcome.progressNoted
+
+    // The model fell back to the plainest move there is, but the note
+    // itself named what's next: that beats "go and look at it".
+    let nextMove = written?.move ?? null
+    if (nextMove?.from === 'fallback' && debrief?.next?.[0]) {
+      nextMove = { ...nextMove, text: debrief.next[0] }
+    }
 
     const { error: updateErr } = await supabase
       .from('sessions')
@@ -2200,23 +2049,39 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
       return res.status(500).json({ error: updateErr.message })
     }
 
-    // Re-entry playback for next time, and MVS seeding/recompute.
-    const projectUpdate: Record<string, unknown> = {}
-    if (tasksChanged) projectUpdate.metadata = { ...currentMetadata, tasks }
+    // The finish line, when they gave one, read by the same call that wrote
+    // the move. Only a REACHED line is said out loud: "not yet" after every
+    // session is a nag. It's still kept on the arc (project-milestones.ts),
+    // where "still needs the last verse" is exactly the right thing to read.
+    const verdict = written?.finish ?? null
+    const doneTaskTexts = normalizeTaskOrder(tasks).filter(t => t?.done && typeof t.text === 'string').map(t => t.text)
+    const cycleState = readCycleState(currentMetadata)
+    let finish: { reached: boolean; reason: string } | null = null
+    let cycle: { n: number; label: string; unit: string; reason: string } | null = null
+    if (verdict?.reached && cycleState) {
+      const n = cycleState.done + 1
+      cycle = { n, label: cycleLabel(cycleState.unit, n), unit: cycleState.unit, reason: verdict.reason }
+    } else if (verdict?.reached) {
+      finish = verdict
+    }
+    const lastCheckpoint = readMilestones(currentMetadata).slice(-1)[0]
+    const milestones = verdict && !cycleState && (verdict.reached || lastCheckpoint?.reason !== verdict.reason)
+      ? appendMilestone(currentMetadata, verdict, doneTaskTexts, endedAt)
+      : null
 
-    // Working on a project is the strongest possible signal that it's
-    // alive, so it has to move `last_active` -- that is the field every
-    // recency and dormancy display actually reads (byRecency, the "1mo
-    // ago" line on a mini card, the shaper's own dormancyDays). It was
-    // never being set here, so an hour's work left the project still
-    // reading as untouched since whenever it was last edited by hand, and
-    // the home card would say "LONG QUIET" the morning after a session.
-    //
-    // The timestamps are also no longer gated on there being close-out
-    // text: a session that ran and was closed with nothing to say still
-    // ran. Only the text itself depends on there being text.
-    projectUpdate.last_active = endedAt.toISOString()
-    projectUpdate.last_session_ended_at = endedAt.toISOString()
+    // One write for the project: the log, the next move, the arc, the
+    // re-entry line and the recency stamps. `last_active` too -- working on
+    // it is the strongest sign a project is alive.
+    const projectUpdate: Record<string, unknown> = {
+      metadata: {
+        ...currentMetadata,
+        tasks,
+        ...(nextMove ? { next_move: nextMove } : {}),
+        ...(milestones ? { milestones } : {}),
+      },
+      last_active: endedAt.toISOString(),
+      last_session_ended_at: endedAt.toISOString(),
+    }
     if (text) projectUpdate.last_closeout_text = text
 
     if (typeof mvs_seed_minutes === 'number' && mvs_seed_minutes > 0) {
@@ -2235,90 +2100,22 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
       if (measured != null) projectUpdate.mvs_minutes = measured
     }
 
-    if (Object.keys(projectUpdate).length > 0) {
-      const { error: projErr } = await supabase
-        .from('projects')
-        .update(projectUpdate)
-        .eq('id', session.project_id)
-        .eq('user_id', userId)
-      if (projErr) console.warn('[utilities/sessions] project re-entry update failed (non-fatal):', projErr.message)
-    }
+    const { error: projErr } = await supabase
+      .from('projects')
+      .update(projectUpdate)
+      .eq('id', session.project_id)
+      .eq('user_id', userId)
+    if (projErr) console.warn('[utilities/sessions] project update after close failed:', projErr.message)
 
-    // The last open step just got ticked. "All tasks done" and "the finish
-    // line is reached" are different things -- one cheap call reads the
-    // finish line against what's actually been made and says which, so
-    // the receipt can offer one honest action instead of a guess.
-    let finish: { reached: boolean; reason: string } | null = null
-    const openLeft = outcome.openLeft
-    const endGoal = typeof currentMetadata?.end_goal === 'string' ? currentMetadata.end_goal.trim() : ''
-    const doneTaskTexts = normalizeTaskOrder(tasks).filter(t => t?.done && typeof t.text === 'string').map(t => t.text)
-    if (tasksChanged && openLeft === 0 && markedDoneTexts.length > 0) {
-      if (endGoal) {
-        const { data: closeoutRows } = await supabase
-          .from('sessions')
-          .select('closeout_text')
-          .eq('project_id', session.project_id)
-          .eq('user_id', userId)
-          .not('closeout_text', 'is', null)
-          .order('ended_at', { ascending: false })
-          .limit(6)
-        finish = await judgeFinishLine({
-          title: projRow?.title || 'this project',
-          endGoal,
-          doneTasks: doneTaskTexts,
-          closeouts: (closeoutRows || []).map(r => r.closeout_text as string).filter(Boolean),
-        })
-      } else {
-        // No stated finish line, so there is nothing to judge against --
-        // but the list emptying is still worth saying, as a fact. The
-        // next session plans the next steps either way.
-        finish = { reached: false, reason: "That's everything on the list." }
-      }
-    }
-
-    // On a project whose finish line repeats, reaching it doesn't complete
-    // anything -- it completes THIS ONE. So the verdict is re-read as a
-    // cycle landing: "Mix 5 done", and an offer to line the next one up,
-    // rather than "mark it finished", which would be the wrong question
-    // forever. The finish verdict itself is dropped, because leaving both
-    // on screen would put two competing endings in one receipt.
-    const cycleState = readCycleState(currentMetadata)
-    let cycle: { n: number; label: string; unit: string; reason: string } | null = null
-    if (cycleState && finish?.reached) {
-      const n = cycleState.done + 1
-      cycle = { n, label: cycleLabel(cycleState.unit, n), unit: cycleState.unit, reason: finish.reason }
-      finish = null
-    }
-
-    // The arc -- every checkpoint a non-repeating project has been
-    // through, kept rather than shown once and thrown away
-    // (project-milestones.ts). Skipped for a repeating project, which
-    // already gets the same idea via cycle.history above. A second small
-    // write because the task-list update already fired earlier in this
-    // handler (before this verdict existed) -- rare enough (only when the
-    // list empties) that a second round trip is the simple, correct
-    // choice over threading milestones through the earlier write.
-    if (finish && !cycleState) {
-      const milestones = appendMilestone(currentMetadata, finish, doneTaskTexts, endedAt)
-      const { error: milestoneErr } = await supabase
-        .from('projects')
-        .update({ metadata: { ...currentMetadata, tasks, milestones } })
-        .eq('id', session.project_id)
-        .eq('user_id', userId)
-      if (milestoneErr) console.warn('[utilities/sessions] could not save the arc checkpoint:', milestoneErr.message)
-    }
-
-    // A brief receipt of what actually happened to the task list -- shown
-    // for a beat before "Logged." rather than a silent rewrite the user
-    // only discovers weeks later.
     return res.status(200).json({
       ok: true,
       duration_minutes: durationMinutes,
       moved,
       marked_done: [...new Set(markedDoneTexts)],
       created: [...new Set(createdTexts)],
-      next_added: nextAddedTexts,
+      next_added: [],
       progress_noted: progressNoted,
+      next_move: nextMove,
       finish,
       cycle,
     })
@@ -2414,6 +2211,63 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
   // actually took, then plans the next from that shape rather than from
   // scratch -- so a project that repeats gets better at itself instead of
   // being reinvented every time its list empties.
+  // The one next move (next-move.ts). Normally already written at the end
+  // of the last session, so `get` is a read; it's only written here when
+  // there's none yet (a new project, or one from before moves existed).
+  //   get      -- the move, writing one if there isn't one
+  //   feedback -- "too big" / "wrong thing": remembered, and a new move
+  //   say      -- their own words about what's off: a new move
+  //   answer   -- the answer to a fork: saved as a note, then the move
+  //   set      -- they wrote the move themselves
+  if (resource === 'move') {
+    if (req.method !== 'POST') return res.status(405).json({ error: 'POST required' })
+    const { project_id, action = 'get', reason, text } = req.body || {}
+    if (!project_id) return res.status(400).json({ error: 'project_id required' })
+    const said = typeof text === 'string' && text.trim() ? text.trim() : null
+
+    if (action === 'set') {
+      if (!said) return res.status(400).json({ error: 'text required' })
+      const move: NextMove = { text: said, kind: 'move', from: 'user', written_at: new Date().toISOString() }
+      await saveMove(supabase, userId, project_id, move)
+      return res.status(200).json({ move })
+    }
+
+    if (action === 'answer' && said) {
+      // The answer is theirs and it's about the project, so it's kept the
+      // same way the planner's own questions always kept answers.
+      const { error: fragErr } = await supabase.from('fragments').insert({
+        user_id: userId, project_id, text: said, role: 'constraint',
+      })
+      if (fragErr) console.warn('[utilities/move] could not keep the answer as a note:', fragErr.message)
+    }
+
+    const ctx = await loadMoveContext(supabase, userId, project_id)
+    if (!ctx) return res.status(404).json({ error: 'project not found' })
+    if (action === 'get' && ctx.current) return res.status(200).json({ move: ctx.current })
+
+    let feedback = ctx.input.feedback
+    if (action === 'feedback') {
+      if (reason !== 'too_big' && reason !== 'wrong_thing') return res.status(400).json({ error: 'reason must be too_big or wrong_thing' })
+      if (ctx.current?.kind === 'move') feedback = addFeedback(feedback, reason, ctx.current.text)
+      ctx.input.feedback = feedback
+      ctx.input.said = reason === 'too_big'
+        ? 'That one is too big to start on right now. Something smaller.'
+        : "That one isn't what I want to do right now. Something else."
+    } else if (action === 'say') {
+      if (!said) return res.status(400).json({ error: 'text required' })
+      ctx.input.said = said
+    } else if (action === 'answer') {
+      if (!said) return res.status(400).json({ error: 'text required' })
+      ctx.input.said = said
+      ctx.input.answering = ctx.current?.kind === 'fork' ? ctx.current.text : null
+    }
+
+    const from = action === 'get' ? 'start' : action === 'answer' ? 'answer' : 'reshape'
+    const { move } = await writeNextMove(ctx.input, from)
+    await saveMove(supabase, userId, project_id, move, action === 'feedback' ? feedback : undefined)
+    return res.status(200).json({ move })
+  }
+
   // "I'm stuck", mid-session: one move on the step they're on, never a
   // new plan (session-moves.ts). Nothing is saved -- the move is
   // scaffolding, and if it helps, the close-out will say so.

@@ -94,6 +94,8 @@ export function splitDoneWhen(text: string): { move: string; doneWhen: string | 
 /** Under this, with nothing ticked, the session didn't really get going. */
 export const SHORT_SESSION_SECONDS = 10 * 60
 
+
+
 /**
  * SPEC.md, closing: normally "where'd you get to?", but after a short or
  * abandoned session, "what got in the way?" -- a bad session is data about
@@ -117,18 +119,23 @@ export function closeoutPrompt(elapsedSec: number, tickedCount: number): {
   }
 }
 
-interface ListTask { id?: unknown; text?: unknown; done?: unknown; order?: unknown }
+/** Minimised is a choice about this session: coming back to home mid-hour
+ *  must not throw the full screen back over what you went there to do. */
+function minimisedKey(sessionId: string): string {
+  return `aperture-session-minimised:${sessionId}`
+}
 
-/**
- * The list ran out before the session did. Rather than an empty screen or
- * a new plan, the next step already on the project -- the one this
- * session didn't include -- offered quietly as a way to keep going.
- */
-export function nextOffList(tasks: unknown, shapes: SessionShape[]): string | null {
-  if (!Array.isArray(tasks)) return null
-  const inSession = new Set(shapes.map(sh => sh.taskId).filter(Boolean))
-  const open = (tasks as ListTask[])
-    .filter(t => t && t.done !== true && typeof t.text === 'string' && typeof t.id === 'string' && !inSession.has(t.id))
-    .sort((a, b) => (typeof a.order === 'number' ? a.order : 0) - (typeof b.order === 'number' ? b.order : 0))
-  return open.length > 0 ? (open[0].text as string) : null
+export function loadMinimised(sessionId: string | null | undefined): boolean {
+  if (!sessionId) return false
+  try { return sessionStorage.getItem(minimisedKey(sessionId)) === '1' } catch { return false }
+}
+
+export function saveMinimised(sessionId: string | null | undefined, minimised: boolean) {
+  if (!sessionId) return
+  try {
+    if (minimised) sessionStorage.setItem(minimisedKey(sessionId), '1')
+    else sessionStorage.removeItem(minimisedKey(sessionId))
+  } catch {
+    // Storage unavailable -- it just reopens full screen next mount.
+  }
 }

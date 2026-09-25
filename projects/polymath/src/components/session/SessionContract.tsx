@@ -1,92 +1,49 @@
 /**
- * SessionContract — the execution session, per SPEC.md.
+ * SessionContract — the execution session, per SPEC.md. Move, work,
+ * breadcrumb.
  *
- * Four phases, in order, in one box:
- *   1. window   — how long have you got. A real gate: the list can't be
- *                 sized until it knows. Skipped when the card above
- *                 already collected it.
- *   2. planning — the two minutes. One first move to get going, then at
- *                 most two more (SPEC: never four), reshaped by saying
- *                 what's wrong with it. A
- *                 2:00 countdown starts the moment you first touch it, so
- *                 shaping is always done but can never become the session.
- *                 At 0:00 it flips itself into the work.
- *   3. running  — the clock counts the window down and the agreed list is
- *                 on screen the whole time, ticked off as you go. Never a
- *                 timer with nothing under it.
- *   4. closeout — where you stopped and what's next, spoken: the next
- *                 session's opening move. Ticked items pre-fill it so
- *                 there's something to say even at the end of a bad hour.
+ *   1. move      — the one next move, already written when you stopped
+ *                  last time (api/_lib/next-move.ts), so it's here at once.
+ *                  "Too big" / "wrong thing" / your own words write a new
+ *                  one. A brand-new project may get a question instead.
+ *   2. running   — the whole screen (FocusShell): the move, a Done button,
+ *                  "I'm stuck", Stop. The clock counts up; nothing to size.
+ *                  Minimise to step out without stopping.
+ *   3. closeout  — the breadcrumb: where you stopped, what's next, what's
+ *                  bugging you. The server turns it into the next move.
+ *   4. receipt   — the hand-off: "next time starts with…", correctable
+ *                  right there while it's fresh.
  *
- * Voice throughout — the window, the reshape and the close-out are all
- * speakable, per "you never write a to-do list."
+ * Why this shape: in creative work the next step comes out of the last
+ * one, so the move is written at the end of a session, not the start of
+ * the next. The two moments that need help are starting and stopping
+ * well; everything in between gets out of the way.
  *
- * Styling follows theme.css's real tokens (--brand-primary-rgb,
- * --brand-text-secondary, --glass-border-bold) rather than ad hoc CSS
- * variables, matching TodaysAnswerCard's "Start session" button exactly.
+ * The screens are in ./flow; this file owns the state and the store calls.
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Clock, Square, ArrowUp, Check, Keyboard, Mic, Wrench, Flag, Plus } from 'lucide-react'
-import { VoiceInput } from '../VoiceInput'
-import { StuckMove } from './StuckMove'
-import { useSessionStore, WINDOW_PRESETS, planningSecondsFor, type CloseResult } from '../../stores/useSessionStore'
+import { AnimatePresence } from 'framer-motion'
+import { useSessionStore, type CloseResult } from '../../stores/useSessionStore'
 import { useVoicePreference } from '../../stores/useVoicePreference'
 import { useProjectStore } from '../../stores/useProjectStore'
 import { useOnlineStatus } from '../../hooks/useOnlineStatus'
+import { useSessionNotification, SESSION_ACTION_EVENT, type SessionAction } from '../../hooks/useSessionNotification'
 import { haptic } from '../../utils/haptics'
-import { useSessionNotification } from '../../hooks/useSessionNotification'
 import {
-  loadTicks,
-  saveTicks,
-  elapsedSeconds,
-  partitionRunningShapes,
-  closeoutDraft,
-  splitDoneWhen,
-  closeoutPrompt,
-  nextOffList,
+  loadTicks, saveTicks, elapsedSeconds, partitionRunningShapes,
+  closeoutDraft, closeoutPrompt, splitDoneWhen,
+  loadMinimised, saveMinimised,
 } from './sessionRunOps'
+import { MoveCard } from './flow/MoveCard'
+import { FocusShell } from './flow/FocusShell'
+import { WorkView } from './flow/WorkView'
+import { Breadcrumb } from './flow/Breadcrumb'
+import { Handoff } from './flow/Handoff'
+import { accent, faint, formatClock } from './flow/ui'
 import type { Project } from '../../types'
-import { MadeStrip } from '../projects/MadeWall'
 
-function formatClock(seconds: number): string {
-  const abs = Math.abs(seconds)
-  const m = Math.floor(abs / 60)
-  const s = abs % 60
-  return `${seconds < 0 ? '+' : ''}${m}:${s.toString().padStart(2, '0')}`
-}
-
-const secondaryTextStyle = { color: 'var(--brand-text-secondary)', opacity: 0.7 }
-const borderStyle = { borderColor: 'var(--glass-border-bold)' }
-/**
- * Panels that report something (a cycle finished, the finish line reached)
- * sit in neutral glass, not tinted accent. The accent is spent on the step
- * you're on and the button you press — when every panel is also blue,
- * nothing on the page is emphasised and the whole thing just reads blue.
- */
-const notePanelStyle = {
-  background: 'var(--glass-surface)',
-  border: '1px solid var(--glass-border-bold)',
-}
-const noteLabelStyle = { color: 'var(--brand-text-secondary)', opacity: 0.75 }
-const primaryButtonStyle = {
-  background: 'rgba(var(--brand-primary-rgb), 0.12)',
-  border: '1px solid rgba(var(--brand-primary-rgb), 0.32)',
-  color: 'rgb(var(--brand-primary-rgb))',
-}
-
-function ReEntry({ project }: { project: Project }) {
-  // Nothing to play back is nothing to say. "First session on this one"
-  // was also wrong for any project whose sessions ended without a note.
-  if (!project.last_closeout_text) return null
-  return (
-    <p className="text-sm italic" style={secondaryTextStyle}>
-      "{project.last_closeout_text}"
-    </p>
-  )
-}
-
-export type Phase = 'window' | 'planning' | 'running' | 'closeout' | 'receipt' | 'done'
+export type Phase = 'move' | 'running' | 'closeout' | 'receipt'
 
 export function SessionContract({
   project,
@@ -94,154 +51,92 @@ export function SessionContract({
   onFinish,
   source = 'live',
   surface = 'card',
-  presetWindowMinutes = null,
+  autoStart = false,
   onPhaseChange,
 }: {
   project: Project
   onDone: () => void
-  /** The receipt says the finish line is reached and the user agrees.
+  /** The hand-off says the finish line is reached and the user agrees.
    *  The default marks the project completed; a page with its own
    *  completion ritual passes its handler instead. */
   onFinish?: () => void | Promise<void>
   /** 'different-thing' for the monthly quota session -- doesn't touch the
-   *  live-project declaration, just tags the logged session so the mirror
-   *  and the quota check (different-thing.ts) can find it. */
+   *  live-project declaration, just tags the logged session. */
   source?: 'live' | 'different-thing'
-  /** 'card' draws its own glass surface (standalone /session route).
-   *  'bare' lets the parent own the surface -- used on home so the session
-   *  keeps the answer box's hero gradient instead of visibly demoting
-   *  itself to a flat panel at the moment you commit to working. */
+  /** 'card' draws its own glass surface (standalone /session route);
+   *  'bare' lets the parent own it (the home answer box). */
   surface?: 'card' | 'bare'
-  /** A window the parent already collected (the time chips on home). The
-   *  window is a gate on the plan -- it just doesn't have to be asked
-   *  twice when the card above already asked it. */
-  presetWindowMinutes?: number | null
-  /** Lets a 'bare' parent know which phase this is in, so it can swap its
-   *  own chrome (e.g. to true black once a session is actually running)
-   *  without this component reaching outside itself to do it. */
+  /** Go straight into the session with the stored move -- the card's own
+   *  Go button already was the decision. */
+  autoStart?: boolean
+  /** Lets a 'bare' parent swap its own chrome by phase. */
   onPhaseChange?: (phase: Phase) => void
 }) {
-  // In 'bare' mode the parent supplies padding and background.
   const shell = (extra: string) => (surface === 'bare' ? extra : `glass-card p-6 ${extra}`)
   const {
-    active, plan, shaping, starting, closing, error,
-    shapePlan, reshapePlan, clearPlan, startSession, closeSession,
-    answerPlanQuestion,
+    active, move, moveFor, moveBusy, starting, closing, error,
+    loadMove, reworkMove, startSession, closeSession,
   } = useSessionStore()
+  const { isOnline: online } = useOnlineStatus()
+  const prefersText = useVoicePreference(s => s.prefersText)
+  const setPrefersText = useVoicePreference(s => s.setPrefersText)
 
-  // A session already running on this project when we mount is one we're
-  // rejoining, not one to plan again -- the store keeps it, only this
-  // component's phase was lost. Without this, coming back to home mid-hour
-  // showed a fresh "Start session" card while the page below stayed
-  // hidden, and starting again opened a second session on the same
-  // project.
+  // Rejoining a session already running on this project, not planning a
+  // second one on top of it.
   const resuming = active != null && active.project_id === project.id
 
-  const [phase, setPhase] = useState<Phase>(
-    resuming ? 'running' : presetWindowMinutes != null ? 'planning' : 'window'
-  )
+  const [phase, setPhase] = useState<Phase>(resuming ? 'running' : 'move')
   useEffect(() => { onPhaseChange?.(phase) }, [phase, onPhaseChange])
-  const [windowMinutes, setWindowMinutes] = useState<number | null>(
-    (resuming ? active?.window_minutes ?? null : null) ?? presetWindowMinutes
-  )
-  const [planLeft, setPlanLeft] = useState<number | null>(null)
-  // The clock reads off the session's own started_at rather than counting
-  // its own ticks. A phone that locks mid-session suspends timers -- an
-  // hour of actual work came back reading four minutes, on exactly the
-  // screen the whole product is about not losing the hour.
+  // Only a session started before moves existed carries a window.
+  const windowMinutes = resuming ? active?.window_minutes ?? null : null
+  // The focus screen can be stepped out of (to capture a thought, say)
+  // without stopping. The session keeps running; the card shows a bar.
+  const [focusOpen, setFocusOpenState] = useState(() => !(resuming && loadMinimised(active?.id)))
+  const setFocusOpen = (open: boolean) => {
+    setFocusOpenState(open)
+    saveMinimised(useSessionStore.getState().active?.id, !open)
+  }
   const [nowMs, setNowMs] = useState(() => Date.now())
   const [ticked, setTicked] = useState<Set<number>>(() =>
     resuming && active ? loadTicks(active.id) : new Set()
   )
-  const [steer, setSteer] = useState('')
-  // Owned focus tint for the steer field, since inline `style.border`
-  // always wins over a Tailwind `focus:` class on the same property.
-  const [steerFocused, setSteerFocused] = useState(false)
-  const [closeoutText, setCloseoutText] = useState('')
-  const [mvsSeedMinutes, setMvsSeedMinutes] = useState<number | null>(null)
+  const [note, setNote] = useState('')
+  const [mvsSeed, setMvsSeed] = useState<number | null>(null)
   const [closeResult, setCloseResult] = useState<CloseResult | null>(null)
-  // Whether the mic is actually capturing right now -- a countdown or an
-  // auto-advance must never fire mid-sentence, and "there's unsent text"
-  // isn't the only shape "busy" can take.
-  const [recording, setRecording] = useState(false)
+  const [savedNote, setSavedNote] = useState('')
+  const [busy, setBusy] = useState(false)
 
-  // Voice by default, listening automatically on your turn; typing is what
-  // you opt into. Shared across creation, planning and the debrief so the
-  // choice is made once, not re-fought every phase.
-  const prefersText = useVoicePreference(s => s.prefersText)
-  const setPrefersText = useVoicePreference(s => s.setPrefersText)
-  const voiceTurn = !prefersText
-  const { isOnline: online } = useOnlineStatus()
-
-  // ─── The plan ──────────────────────────────────────────────────────
-  // Fetched once per (project, window). A reshape replaces it in place.
-  const shapedFor = useRef<string | null>(null)
+  // ── The move: stored, so this is usually instant ──────────────────
   useEffect(() => {
-    if (phase !== 'planning') return
-    const key = `${project.id}:${windowMinutes}`
-    if (shapedFor.current === key) return
-    shapedFor.current = key
-    void shapePlan(project.id, windowMinutes)
-  }, [phase, project.id, windowMinutes, shapePlan])
+    if (!resuming) void loadMove(project.id)
+    // Once per project; a resumed session already has its move.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [project.id])
+  const moveHere = moveFor === project.id ? move : null
 
-  const beginWork = useCallback(async () => {
-    const items = plan?.items?.length ? plan.items : undefined
-    await startSession(project.id, windowMinutes, source, items, plan?.friction ?? null, plan?.packdown ?? null)
-    // startSession can fail outright (covers both a real error and the rare
-    // case where even the offline local-session fallback didn't run) --
-    // only advance once there's actually something to run.
+  const go = useCallback(async () => {
+    haptic.medium()
+    const items = moveHere?.kind === 'move' ? [{ text: moveHere.text, source: null, taskId: null }] : undefined
+    await startSession(project.id, null, source, items)
     if (useSessionStore.getState().active) {
       setNowMs(Date.now())
       setTicked(new Set())
+      setFocusOpen(true)
       setPhase('running')
     }
-  }, [plan, project.id, windowMinutes, source, startSession])
+  }, [moveHere, project.id, source, startSession])
 
-  // The planning clock runs from the moment there's a list to react to.
-  //
-  // The first cut started it on your first interaction, which was wrong in
-  // exactly the way that matters: a clock that starts on a condition you
-  // can't see isn't a ritual, it's a trap. Reading the list and deciding
-  // it's fine IS the planning — so it counts, and you can see it counting.
-  //
-  // It pauses while a reshape is in flight, there's unsent text in the
-  // box, or the mic is actually recording: the cap exists to stop
-  // dithering, not to cut off a sentence that isn't finished yet. Also
-  // paused while the app is the one asking. Flipping into a session
-  // because the two minutes ran out on a question you were still answering
-  // would be the app talking over itself.
-  const planBusy = shaping || steer.trim().length > 0 || !!plan?.needsInput || recording
-  // A plan that came straight from the task list, verbatim, with no model
-  // call has nothing to "shape" -- the two-minute ritual exists to cover a
-  // model call in flight and a list worth double-checking, neither of
-  // which applies here. Reviewing it at your own pace beats a countdown
-  // pressuring you through a list you didn't even need the AI for. Same
-  // reasoning covers 'offline': no model call happened, and reshape is
-  // disabled anyway with no connection to run it on.
-  const skipTimer = plan?.source === 'tasks' || plan?.source === 'offline'
-  // The clock is time to react to the list, so it can't start before the
-  // list is on the screen. A plan object exists a beat before it has
-  // anything in it, and a shape that came back empty has none at all --
-  // in both cases the countdown was already running against something the
-  // user could not yet see, and at 0:00 it flips itself into a session
-  // they never got an outline for.
-  const outlineShown = !!plan && plan.projectId === project.id && plan.items.length > 0
+  // The card's Go button already was the decision: don't ask it twice.
+  const autoStarted = useRef(false)
   useEffect(() => {
-    if (phase !== 'planning' || skipTimer) return
-    if (!outlineShown) return
-    if (planLeft == null) { setPlanLeft(planningSecondsFor(windowMinutes)); return }
-    if (planBusy) return
-    if (planLeft <= 0) { void beginWork(); return }
-    const t = window.setTimeout(() => setPlanLeft(v => (v == null ? null : v - 1)), 1000)
-    return () => window.clearTimeout(t)
-  }, [phase, outlineShown, planLeft, planBusy, beginWork, skipTimer, windowMinutes])
+    if (!autoStart || autoStarted.current || resuming || phase !== 'move') return
+    if (moveHere?.kind !== 'move') return
+    autoStarted.current = true
+    void go()
+  }, [autoStart, resuming, phase, moveHere, go])
 
-  // ─── The session clock ─────────────────────────────────────────────
-  // A ticking wall clock, not an accumulator: the interval only nudges a
-  // re-render, and the number on screen is always (now - started_at). It
-  // re-reads the moment the tab comes back too, so unlocking the phone
-  // shows the real time left rather than the time the browser felt like
-  // counting.
+  // ── The clock: wall time, never an accumulator ────────────────────
+  // A locked phone suspends timers; (now - started_at) never lies.
   useEffect(() => {
     if (phase !== 'running') return
     const tick = () => setNowMs(Date.now())
@@ -255,8 +150,7 @@ export function SessionContract({
     }
   }, [phase])
 
-  // Ticks belong to the session id, restored when we rejoin one and saved
-  // as they change so leaving the page never costs them.
+  // ── Ticks belong to the session id and survive a remount ─────────
   const activeSessionId = active?.id ?? null
   const restoredTicksFor = useRef<string | null>(resuming ? activeSessionId : null)
   useEffect(() => {
@@ -268,880 +162,187 @@ export function SessionContract({
     if (activeSessionId) saveTicks(activeSessionId, ticked)
   }, [activeSessionId, ticked])
 
-  const handlePickWindow = (minutes: number) => {
+  const toggle = (i: number) => {
     haptic.light()
-    setWindowMinutes(minutes)
-    setPhase('planning')
+    setTicked(prev => {
+      const next = new Set(prev)
+      if (next.has(i)) next.delete(i); else next.add(i)
+      return next
+    })
   }
 
-  // One input, two jobs, decided by which conversation is open: when the
-  // app has asked a question, what you say is the answer to it (and gets
-  // remembered); otherwise it's a complaint about the list.
-  const sendToPlan = (text: string) => {
-    const clean = text.trim()
-    if (!clean || shaping) return
-    if (plan?.needsInput) void answerPlanQuestion(clean)
-    else void reshapePlan(clean)
-  }
+  // ── Derived session state (above every early return: hooks) ───────
+  const shapes = active?.shapes ?? []
+  const { workIndexes } = partitionRunningShapes(shapes)
+  const elapsedSec = active ? elapsedSeconds(active.started_at, nowMs) : 0
+  const remaining = windowMinutes != null ? windowMinutes * 60 - elapsedSec : elapsedSec
+  const timeUp = windowMinutes != null && remaining < 0
+  const currentIndex = workIndexes.find(i => !ticked.has(i)) ?? -1
+  const isRunning = phase === 'running' && active != null
+  useSessionNotification(isRunning, project.title, currentIndex >= 0 ? shapes[currentIndex].text : null)
 
-  const submitSteer = () => {
-    if (!steer.trim() || shaping) return
-    const text = steer
-    setSteer('')
-    sendToPlan(text)
-  }
+  // The notification's buttons: Done ticks the move you're on, I'm stuck
+  // opens the session and asks for a way back in.
+  const [stuckSignal, setStuckSignal] = useState(0)
+  useEffect(() => {
+    if (!isRunning) return
+    const onAction = (e: Event) => {
+      const action = (e as CustomEvent<SessionAction>).detail
+      if (action === 'done' && currentIndex >= 0) toggle(currentIndex)
+      if (action === 'stuck') {
+        setFocusOpen(true)
+        setStuckSignal(n => n + 1)
+      }
+    }
+    window.addEventListener(SESSION_ACTION_EVENT, onAction)
+    return () => window.removeEventListener(SESSION_ACTION_EVENT, onAction)
+  }, [isRunning, currentIndex])
 
-  const handleStop = () => {
-    // A ticked list is the honest first draft of a close-out, so the box
-    // is never empty at the exact moment attention is lowest.
-    // Items already end in a full stop, so trim before joining — "from the
-    // top.. Bounce the vocal." reads like a typo in your own words.
-    const draft = closeoutDraft(active?.shapes ?? [], ticked)
-    if (draft) setCloseoutText(draft)
+  const ask = closeoutPrompt(elapsedSec, ticked.size)
+  const did = shapes.filter((sh, i) => ticked.has(i) && sh.source !== 'friction').map(sh => sh.text)
+
+  const stop = () => {
+    haptic.medium()
     setPhase('closeout')
   }
 
-  const handleSubmitCloseout = async () => {
-    // The ticks go to the server, not just into the close-out text: a
-    // ticked item that matches an open task marks it done, which is what
-    // makes "what's already finished" real evidence next time. Friction
-    // lines never carry a real taskId, so ticking one is inert server-side
-    // — it just can't accidentally become a task.
-    const doneItems = (active?.shapes ?? [])
+  const saveNote = async () => {
+    const doneItems = shapes
       .filter((_, i) => ticked.has(i))
-      .map(sh => ({ text: sh.text, taskId: sh.taskId ?? null, partial: sh.partial }))
-    const result = await closeSession(closeoutText, mvsSeedMinutes ?? undefined, doneItems)
+      .map(sh => ({ text: splitDoneWhen(sh.text).move, taskId: sh.taskId ?? null, partial: sh.partial }))
+    // No note is fine -- what you ticked still stands as the record, so the
+    // next session never opens on nothing.
+    const text = note.trim() || closeoutDraft(shapes, ticked)
+    const result = await closeSession(text, mvsSeed ?? undefined, doneItems)
     if (!result) return
-    // No real reconciliation ran yet -- there's nothing honest to show in
-    // a receipt (the debrief matching, the finish-line judgement, all of
-    // it is server-side and hasn't happened). Say so plainly and stop here.
-    if (result.pendingSync) {
-      setCloseResult(result)
-      setPhase('done')
-      return
-    }
-    // A brief receipt of what the task list just did, rather than a silent
-    // rewrite discovered weeks later -- skipped only when there's genuinely
-    // nothing to show (an empty close-out with nothing ticked).
-    if (
-      result.markedDone.length > 0 || result.created.length > 0 || result.nextAdded.length > 0 ||
-      result.progressNoted.length > 0 || result.finish || result.cycle
-    ) {
-      setCloseResult(result)
-      setPhase('receipt')
-    } else {
-      setPhase('done')
-    }
+    setSavedNote(note.trim())
+    setCloseResult(result)
+    setPhase('receipt')
   }
 
-  const [rollingCycle, setRollingCycle] = useState(false)
-  const handleNextCycle = async () => {
+  const finishUp = () => {
+    setFocusOpen(true)
+    onDone()
+  }
+
+  const nextCycle = async () => {
     haptic.medium()
-    setRollingCycle(true)
+    setBusy(true)
     await useSessionStore.getState().startNextCycle(project.id)
-    setRollingCycle(false)
-    setPhase('done')
+    setBusy(false)
+    finishUp()
   }
 
-  const handleFinish = async () => {
+  const markFinished = async () => {
     haptic.medium()
     if (onFinish) await onFinish()
     else await useProjectStore.getState().updateProject(project.id, { status: 'completed' })
-    setPhase('done')
+    finishUp()
   }
 
-  // The step you're on, in the notification shade while the session runs
-  // -- computed up here because hooks can't sit below the early returns.
-  const isRunning = phase === 'running' && active != null
-  const runningStep = (() => {
-    if (!isRunning || !active) return null
-    const { workIndexes } = partitionRunningShapes(active.shapes)
-    const i = workIndexes.find(idx => !ticked.has(idx))
-    return i != null ? active.shapes[i].text : null
-  })()
-  useSessionNotification(isRunning, project.title, runningStep)
-
-  const closeoutAsk = closeoutPrompt(
-    active ? elapsedSeconds(active.started_at, nowMs) : 0,
-    ticked.size,
-  )
-
-  // ─── done ──────────────────────────────────────────────────────────
-  if (phase === 'done') {
+  // ── Focus mode: running, breadcrumb, hand-off ─────────────────────
+  if ((phase === 'running' && active) || phase === 'closeout' || (phase === 'receipt' && closeResult)) {
+    const bar = (
+      <MinimisedBar
+        title={project.title}
+        clock={formatClock(remaining)}
+        timeUp={timeUp}
+        onOpen={() => setFocusOpen(true)}
+        className={shell('')}
+      />
+    )
     return (
-      <div className={shell('text-center space-y-3')}>
-        <p className="text-base">
-          {closeResult?.pendingSync ? 'Logged — will finish syncing once you’re back online.' : 'Logged.'}
-        </p>
-        <button className="text-sm underline" style={{ color: 'rgb(var(--brand-primary-rgb))' }} onClick={onDone}>
-          Close
-        </button>
-      </div>
+      <>
+        {!focusOpen && phase === 'running' ? bar : <div className={shell('')}><p className="text-sm" style={faint(0.5)}>Session in progress…</p></div>}
+        <AnimatePresence>
+          {(focusOpen || phase !== 'running') && (
+            <FocusShell>
+              {phase === 'running' && active ? (
+                <WorkView
+                  projectId={project.id}
+                  title={project.title}
+                  shapes={shapes}
+                  workIndexes={workIndexes}
+                  ticked={ticked}
+                  clockSeconds={remaining}
+                  hasWindow={windowMinutes != null}
+                  timeUp={timeUp}
+                  online={online}
+                  stuckSignal={stuckSignal}
+                  onToggle={toggle}
+                  onStop={stop}
+                  onMinimise={() => setFocusOpen(false)}
+                />
+              ) : phase === 'closeout' ? (
+                <Breadcrumb
+                  question={ask.question}
+                  placeholder={ask.placeholder}
+                  showPrompts={ask.question !== 'What got in the way?'}
+                  did={did}
+                  text={note}
+                  onText={updater => setNote(prev => updater(prev))}
+                  voice={!prefersText}
+                  onVoice={on => setPrefersText(!on)}
+                  askMvsSeed={!!active?.askMvsSeed}
+                  mvsSeed={mvsSeed}
+                  onMvsSeed={setMvsSeed}
+                  saving={closing}
+                  error={error}
+                  onSave={() => { void saveNote() }}
+                  onBack={() => { haptic.light(); setPhase('running') }}
+                />
+              ) : closeResult ? (
+                <Handoff
+                  result={closeResult}
+                  nextMove={moveHere ?? closeResult.nextMove}
+                  onSetMove={(text: string) => { void reworkMove(project.id, { action: 'set', text }) }}
+                  note={savedNote}
+                  minutes={closeResult.duration_minutes}
+                  busy={busy}
+                  onClose={finishUp}
+                  onFinish={() => { void markFinished() }}
+                  onNextCycle={() => { void nextCycle() }}
+                />
+              ) : null}
+            </FocusShell>
+          )}
+        </AnimatePresence>
+      </>
     )
   }
 
-  // ─── receipt ───────────────────────────────────────────────────────
-  // A rewrite of the project's own record deserves a beat where you can
-  // see what happened, not just a silent "Logged." — the debrief matches
-  // free speech against the whole task list, and the one place that could
-  // go wrong unnoticed is exactly here.
-  if (phase === 'receipt' && closeResult) {
-    return (
-      <div className={shell('space-y-4')}>
-        <p className="text-base">Here's what changed.</p>
-        <div className="space-y-3">
-          {(closeResult.markedDone.length > 0 || closeResult.created.length > 0) && (
-            <div>
-              <p className="text-[11px] uppercase tracking-wide mb-1" style={{ ...secondaryTextStyle, opacity: 0.5 }}>Marked done</p>
-              <ul className="space-y-1">
-                {[...closeResult.markedDone, ...closeResult.created].map((t, i) => (
-                  <li key={i} className="text-sm flex items-start gap-2">
-                    <Check size={14} className="mt-0.5 flex-shrink-0" style={{ color: 'rgb(var(--brand-primary-rgb))' }} />
-                    <span>{t}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-          {closeResult.progressNoted.length > 0 && (
-            <div>
-              <p className="text-[11px] uppercase tracking-wide mb-1" style={{ ...secondaryTextStyle, opacity: 0.5 }}>Where you got to</p>
-              <ul className="space-y-1">
-                {closeResult.progressNoted.map((t, i) => (
-                  <li key={i} className="text-sm" style={secondaryTextStyle}>{t}</li>
-                ))}
-              </ul>
-            </div>
-          )}
-          {closeResult.nextAdded.length > 0 && (
-            <div>
-              <p className="text-[11px] uppercase tracking-wide mb-1" style={{ ...secondaryTextStyle, opacity: 0.5 }}>Up next</p>
-              <ul className="space-y-1">
-                {closeResult.nextAdded.map((t, i) => (
-                  <li key={i} className="text-sm" style={secondaryTextStyle}>{t}</li>
-                ))}
-              </ul>
-            </div>
-          )}
-          {/* A repeating project just landed one. Not "is this finished?"
-              -- it is, and the next one hasn't started. The count is a
-              real number of real things made, never a streak: there is
-              no cadence here to fall behind on. */}
-          {closeResult.cycle && (
-            <div
-              className="rounded-xl px-3.5 py-3 space-y-1"
-              style={notePanelStyle}
-            >
-              <p className="text-[11px] uppercase tracking-wide flex items-center gap-1.5" style={noteLabelStyle}>
-                <Flag size={11} /> {closeResult.cycle.label} done
-              </p>
-              <p className="text-sm leading-snug">{closeResult.cycle.reason}</p>
-            </div>
-          )}
-
-          {/* The last step just got ticked. A fact, then one action: the
-              finish line is reached and this can be marked finished, or
-              it isn't and the next session plans what's left. Never a
-              question beside two competing buttons. */}
-          {closeResult.finish && (
-            <div
-              className="rounded-xl px-3.5 py-3 space-y-1"
-              style={notePanelStyle}
-            >
-              <p className="text-[11px] uppercase tracking-wide flex items-center gap-1.5" style={noteLabelStyle}>
-                <Flag size={11} /> {closeResult.finish.reached ? 'That’s the finish line' : 'Plan’s done, project isn’t'}
-              </p>
-              <p className="text-sm leading-snug">{closeResult.finish.reason}</p>
-              {!closeResult.finish.reached && (
-                <p className="text-[11px]" style={{ ...secondaryTextStyle, opacity: 0.5 }}>
-                  Next session starts by planning the rest.
-                </p>
-              )}
-            </div>
-          )}
-        </div>
-        {closeResult.cycle ? (
-          <div className="space-y-2">
-            <button
-              className="w-full py-2.5 rounded-lg text-sm font-semibold disabled:opacity-50"
-              style={primaryButtonStyle}
-              disabled={rollingCycle}
-              onClick={() => { void handleNextCycle() }}
-            >
-              {rollingCycle ? 'Lining it up…' : 'Line up the next one'}
-            </button>
-            <button
-              className="w-full text-xs"
-              style={{ ...secondaryTextStyle, opacity: 0.5 }}
-              onClick={() => setPhase('done')}
-            >
-              Leave it for now
-            </button>
-          </div>
-        ) : closeResult.finish?.reached ? (
-          <div className="space-y-2">
-            <button
-              className="w-full py-2.5 rounded-lg text-sm font-semibold"
-              style={primaryButtonStyle}
-              onClick={() => { void handleFinish() }}
-            >
-              Mark it finished
-            </button>
-            <button
-              className="w-full text-xs"
-              style={{ ...secondaryTextStyle, opacity: 0.5 }}
-              onClick={() => setPhase('done')}
-            >
-              Not yet
-            </button>
-          </div>
-        ) : (
-          <button
-            className="w-full py-2 rounded-lg text-sm font-medium"
-            style={primaryButtonStyle}
-            onClick={() => setPhase('done')}
-          >
-            Good
-          </button>
-        )}
-      </div>
-    )
-  }
-
-  // ─── closeout ──────────────────────────────────────────────────────
-  if (phase === 'closeout') {
-    return (
-      <div className={shell('space-y-4')}>
-        <p className="text-base">{closeoutAsk.question}</p>
-        {active?.askMvsSeed && (
-          <div className="space-y-1">
-            <p className="text-sm" style={secondaryTextStyle}>
-              How long do you usually need to get going on this?
-            </p>
-            <div className="flex gap-2">
-              {[10, 20, 40].map(m => (
-                <button
-                  key={m}
-                  className="px-3 py-1 rounded-full text-sm border"
-                  style={mvsSeedMinutes === m ? primaryButtonStyle : borderStyle}
-                  onClick={() => setMvsSeedMinutes(m)}
-                >
-                  {m}m
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-        {voiceTurn ? (
-          <div className="space-y-2">
-            <VoiceInput
-              onTranscript={t => setCloseoutText(c => (c ? `${c} ${t}` : t))}
-              autoStart
-              autoSubmit={false}
-              maxDuration={45}
-            />
-            <button
-              type="button"
-              onClick={() => setPrefersText(true)}
-              className="flex items-center gap-1 text-[11px] mx-auto transition-all"
-              style={{ color: 'var(--brand-text-secondary)', opacity: 0.4 }}
-            >
-              <Keyboard className="h-3 w-3" /> type instead
-            </button>
-          </div>
-        ) : (
-          <button
-            type="button"
-            onClick={() => setPrefersText(false)}
-            aria-label="Switch to voice"
-            className="flex items-center gap-1.5 text-[11px]"
-            style={{ color: 'var(--brand-text-secondary)', opacity: 0.45 }}
-          >
-            <Mic className="h-3 w-3" /> use voice instead
-          </button>
-        )}
-        <textarea
-          value={closeoutText}
-          onChange={e => setCloseoutText(e.target.value)}
-          placeholder={closeoutAsk.placeholder}
-          rows={3}
-          className="w-full rounded-xl px-3 py-2 text-sm bg-transparent border resize-none outline-none"
-          style={{ ...borderStyle, color: 'var(--brand-text-primary)' }}
-        />
-        {/* The thing itself, not just the words about it. Offline sessions
-            have no server id yet, so their photos land on the project
-            without a session. */}
-        <MadeStrip projectId={project.id} sessionId={active?.offline ? null : active?.id} />
-        <button
-          className="w-full py-2 rounded-lg text-sm font-medium disabled:opacity-50"
-          style={primaryButtonStyle}
-          disabled={closing}
-          onClick={handleSubmitCloseout}
-        >
-          {closing ? 'Saving…' : closeoutText ? 'Done' : 'Skip — nothing to report'}
-        </button>
-        {/* Stop is a full-width button you tap with the phone in one hand,
-            and it used to end the session outright with no way back. The
-            clock reads off started_at, so going back picks up the real
-            time remaining rather than resuming from where it froze. */}
-        <button
-          className="w-full text-xs"
-          style={{ ...secondaryTextStyle, opacity: 0.5 }}
-          onClick={() => { haptic.light(); setPhase('running') }}
-        >
-          Not done yet — back to it
-        </button>
-        {error && <p className="text-xs text-red-400">{error}</p>}
-      </div>
-    )
-  }
-
-  // ─── running ───────────────────────────────────────────────────────
-  if (phase === 'running' && active) {
-    const elapsedSec = elapsedSeconds(active.started_at, nowMs)
-    const remaining = windowMinutes != null ? windowMinutes * 60 - elapsedSec : elapsedSec
-    // Sessions no longer get a week-spark (session-shaper.ts), but one
-    // started before that change may still carry it: kept apart, never
-    // promoted to "Right now".
-    const shapes = active.shapes
-    const { workIndexes, sparkIndex } = partitionRunningShapes(shapes)
-    // The one thing you're actually meant to be doing right now --
-    // everything after it is later, not now.
-    const currentIndex = workIndexes.find(i => !ticked.has(i)) ?? -1
-    const currentPos = workIndexes.indexOf(currentIndex)
-    const allDone = currentIndex < 0 && workIndexes.length > 0
-    const timeUp = windowMinutes != null && remaining < 0
-    const keepGoing = allDone && !timeUp ? nextOffList(project.metadata?.tasks, shapes) : null
-    const toggle = (i: number) => {
-      haptic.light()
-      setTicked(prev => {
-        const next = new Set(prev)
-        if (next.has(i)) next.delete(i); else next.add(i)
-        return next
-      })
-    }
-    return (
-      <div className={shell('space-y-4')}>
-        <div className="flex items-center justify-between">
-          <span className="text-sm" style={secondaryTextStyle}>{project.title}</span>
-          <span
-            className="flex items-center gap-1 text-lg tabular-nums"
-            style={remaining < 0 ? { color: 'rgba(245,158,11,0.9)' } : undefined}
-          >
-            <Clock size={16} />
-            {formatClock(remaining)}
-          </span>
-        </div>
-
-        {/* The list is on screen for the whole session. A timer with
-            nothing under it is just pressure. */}
-        <ul className="space-y-1">
-          {workIndexes.map((i, pos) => {
-            const shape = shapes[i]
-            const done = ticked.has(i)
-            const isCurrent = i === currentIndex
-            // Two labels, not a re-layout: the one thing you're doing this
-            // minute, then everything that isn't yet. Ticking promotes the
-            // next item into "Right now" on its own.
-            const label = isCurrent ? 'Right now' : pos === currentPos + 1 ? 'Then' : null
-            return (
-              <li key={i}>
-                {label && (
-                  <p
-                    className="text-[10px] uppercase tracking-[0.14em] mt-3 mb-1 first:mt-0"
-                    style={{
-                      color: 'var(--brand-text-secondary)',
-                      opacity: isCurrent ? 0.85 : 0.4,
-                    }}
-                  >
-                    {label}
-                  </p>
-                )}
-                <button
-                  onClick={() => toggle(i)}
-                  className="w-full flex items-start gap-2.5 text-left py-2.5 px-3 -mx-3 rounded-lg transition-colors hover:bg-white/[0.04]"
-                  // The step you're on is emphasised by weight and a lifted
-                  // surface, not by colour. A blue wash behind the one line
-                  // you're meant to be reading fought the text on a black
-                  // screen, which is the opposite of what emphasis is for.
-                  style={isCurrent ? {
-                    background: 'rgba(255,255,255,0.05)',
-                    boxShadow: 'inset 2px 0 0 rgba(255,255,255,0.28)',
-                  } : undefined}
-                >
-                  <span
-                    className="mt-0.5 h-4 w-4 rounded-[5px] flex-shrink-0 flex items-center justify-center border"
-                    style={done
-                      ? { background: 'rgba(var(--brand-primary-rgb),0.9)', borderColor: 'rgba(var(--brand-primary-rgb),0.9)' }
-                      : { borderColor: isCurrent ? 'rgba(255,255,255,0.45)' : 'var(--glass-border-bold)' }}
-                  >
-                    {done && <Check size={11} strokeWidth={3} style={{ color: '#0b1220' }} />}
-                  </span>
-                  <span
-                    className="text-sm leading-snug flex-1"
-                    style={done
-                      ? { ...secondaryTextStyle, textDecoration: 'line-through', opacity: 0.45 }
-                      : isCurrent ? { fontWeight: 600 } : { ...secondaryTextStyle, opacity: 0.55 }}
-                  >
-                    {splitDoneWhen(shape.text).move}
-                    {shape.partial && (
-                      <span className="text-xs" style={secondaryTextStyle}> — you'll pick up the rest next time</span>
-                    )}
-                    {isCurrent && !done && splitDoneWhen(shape.text).doneWhen && (
-                      <span className="block text-xs font-normal mt-1" style={{ ...secondaryTextStyle, opacity: 0.6 }}>
-                        {splitDoneWhen(shape.text).doneWhen}
-                      </span>
-                    )}
-                  </span>
-                  {shape.source === 'friction' && (
-                    <Wrench size={12} className="mt-0.5 flex-shrink-0" style={{ ...secondaryTextStyle, opacity: 0.4 }} />
-                  )}
-                </button>
-              </li>
-            )
-          })}
-        </ul>
-
-        {/* The one thing from the week, still set apart and still labelled
-            as what it is. It was agreed to in planning as a punt you can
-            ignore; nothing about starting makes it a task you owe. */}
-        {sparkIndex >= 0 && (
-          <button
-            onClick={() => toggle(sparkIndex)}
-            className="w-full text-left rounded-xl px-3.5 py-3 flex items-start gap-2.5"
-            style={{
-              background: 'rgba(var(--brand-primary-rgb),0.05)',
-              border: '1px dashed rgba(var(--brand-primary-rgb),0.28)',
-            }}
-          >
-            <span
-              className="mt-0.5 h-4 w-4 rounded-[5px] flex-shrink-0 flex items-center justify-center border"
-              style={ticked.has(sparkIndex)
-                ? { background: 'rgba(var(--brand-primary-rgb),0.9)', borderColor: 'rgba(var(--brand-primary-rgb),0.9)' }
-                : { borderColor: 'var(--glass-border-bold)' }}
-            >
-              {ticked.has(sparkIndex) && <Check size={11} strokeWidth={3} style={{ color: '#0b1220' }} />}
-            </span>
-            <span className="flex-1 min-w-0">
-              <span
-                className="text-sm leading-snug block"
-                style={ticked.has(sparkIndex) ? { textDecoration: 'line-through', opacity: 0.45 } : undefined}
-              >
-                {shapes[sparkIndex].text}
-              </span>
-              <span className="text-[10.5px] leading-tight block mt-0.5" style={{ ...secondaryTextStyle, opacity: 0.5 }}>
-                while you're in there — only if you fancy it
-              </span>
-            </span>
-          </button>
-        )}
-
-        {/* The list ran out before the session did. Not a new plan and not
-            an empty screen: the next step already on the project, offered
-            once, quietly. Ignoring it and stopping is just as fine. */}
-        {currentIndex < 0 && keepGoing && (
-          <p className="text-sm leading-snug" style={secondaryTextStyle}>
-            <span className="text-[10px] uppercase tracking-[0.14em] block mb-1" style={{ opacity: 0.6 }}>
-              All done. If you want to keep going
-            </span>
-            {splitDoneWhen(keepGoing).move}
-          </p>
-        )}
-
-        <StuckMove
-          projectId={project.id}
-          step={currentIndex >= 0 ? shapes[currentIndex].text : null}
-          online={online}
-        />
-
-        {/* The stopping point. Time running out never interrupts -- the
-            button just becomes the obvious next thing, so stopping well is
-            one tap rather than a decision. */}
-        <button
-          className="w-full py-2 rounded-lg border text-sm flex items-center justify-center gap-2"
-          style={timeUp || allDone ? { ...primaryButtonStyle, borderColor: 'transparent' } : borderStyle}
-          onClick={handleStop}
-        >
-          <Square size={14} /> {timeUp ? 'Time’s up — stop here' : allDone ? 'Stop here' : 'Stop'}
-        </button>
-      </div>
-    )
-  }
-
-  // ─── planning ──────────────────────────────────────────────────────
-  // Two minutes, spent deciding, visibly. The layout has one job: make it
-  // obvious what you can change and how, without becoming a form.
-  //
-  //   where you left off — your own words, the re-entry line
-  //   the plan           — the next steps, in order, numbered
-  //   done today         — what exists at the end if it lands
-  //   say what's off     — one input; voice reshapes the list
-  //   Start              — the only filled button on screen
-  //
-  // No per-row controls. An earlier cut let you tap a row to swap it for
-  // a spare, which put a later step above the one it depends on. The
-  // order IS the plan; the one way to change it is to say so.
-  if (phase === 'planning') {
-    const items = plan?.projectId === project.id ? plan.items : []
-    const steps = items
-    const needsInput = plan?.projectId === project.id ? plan.needsInput : null
-    const reEntry = project.last_closeout_text?.trim() || null
-    const elapsedFrac = planLeft == null ? 0 : 1 - planLeft / planningSecondsFor(windowMinutes)
-    const windowLabel = windowMinutes ? (windowMinutes < 60 ? `${windowMinutes} minutes` : `${windowMinutes / 60}h`) : 'today'
-
-    return (
-      <div className={shell('space-y-4')}>
-        {/* The clock is the frame, not an ornament: a bar that drains, so
-            the two minutes are felt peripherally rather than watched. A
-            plan that's already the task list verbatim has nothing to
-            shape, so there's no clock at all -- just review at your own
-            pace and go. */}
-        <div className="space-y-2">
-          <div className="flex items-baseline justify-between gap-3">
-            <span className="text-sm font-medium">{project.title}</span>
-            <span className="text-xs tabular-nums flex items-center gap-1.5" style={secondaryTextStyle}>
-              {planLeft != null && !skipTimer && (
-                <>
-                  {/* Three distinct states, said plainly. "shaping" for all
-                      of them was a lie in two of the three cases — nothing
-                      is being shaped while you're mid-sentence. */}
-                  <span style={planBusy ? { opacity: 0.45 } : undefined}>
-                    {shaping
-                      ? 'redoing the list…'
-                      : plan?.needsInput
-                        ? 'over to you'
-                        : planBusy
-                          ? 'paused'
-                          : `${formatClock(planLeft)} to shape`}
-                  </span>
-                  <span style={{ opacity: 0.3 }}>·</span>
-                </>
-              )}
-              <span>{windowMinutes ? `${windowMinutes < 60 ? `${windowMinutes}m` : `${windowMinutes / 60}h`} session` : 'session'}</span>
-            </span>
-          </div>
-          {!skipTimer && (
-            <div className="h-0.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.07)' }}>
-              <div
-                className="h-full rounded-full transition-[width] duration-1000 ease-linear"
-                style={{
-                  width: `${Math.min(elapsedFrac, 1) * 100}%`,
-                  background: 'rgba(var(--brand-primary-rgb),0.55)',
-                }}
-              />
-            </div>
-          )}
-        </div>
-
-        {/* Re-entry first (SPEC.md): your own words from the end of last
-            time. The fastest warm-up there is, and the reason a cold
-            project costs double. */}
-        {reEntry && !needsInput && (
-          <p className="text-sm italic leading-snug" style={{ ...secondaryTextStyle, opacity: 0.6 }}>
-            “{reEntry}”
-          </p>
-        )}
-
-        {/* The plan just changed: the step you were due couldn't be
-            started until something else was done. Said plainly, because
-            it rewrote the list -- never a silent reshuffle. */}
-        {plan?.unblocked && (
-          <p className="text-[12.5px] leading-snug" style={secondaryTextStyle}>
-            {plan.unblocked.added ? 'Added a step that had to come first' : 'Moved a step up'} — “{plan.unblocked.before}” needs “{plan.unblocked.text}” done before it.
-          </p>
-        )}
-
-        {/* A step just got taken off the project for good, not just off
-            today's list -- said plainly for the same reason `unblocked`
-            is: this rewrote the permanent plan. */}
-        {plan?.removed && plan.removed.length > 0 && (
-          <p className="text-[12.5px] leading-snug" style={secondaryTextStyle}>
-            Taken off the project — {plan.removed.map(r => `“${r.text}”`).join(', ')}.
-          </p>
-        )}
-
-        {/* The setup step, when this project genuinely has one -- shown
-            above the real tasks since it comes first, but visually
-            distinct so it doesn't read as one of them. */}
-        {plan?.friction && (
-          <div className="flex items-center gap-2 text-sm" style={secondaryTextStyle}>
-            <Wrench size={13} className="flex-shrink-0" style={{ opacity: 0.5 }} />
-            <span>{plan.friction.text}</span>
-            <span className="text-xs flex-shrink-0" style={{ opacity: 0.5 }}>{plan.friction.minutes}m</span>
-          </div>
-        )}
-
-        {shaping && items.length === 0 ? (
-          <p className="text-sm" style={secondaryTextStyle}>Working out what to do…</p>
-        ) : items.length === 0 ? (
-          // One message, not two. The red error line below is suppressed in
-          // this state -- saying "couldn't shape a list" and "could not
-          // shape a list just now" one above the other reads as two
-          // separate things going wrong.
-          <div className="space-y-2">
-            <p className="text-sm" style={secondaryTextStyle}>
-              Couldn't shape a list. Start anyway and say what you did at the end.
-            </p>
-            <button
-              className="text-xs underline"
-              style={{ color: 'rgb(var(--brand-primary-rgb))' }}
-              onClick={() => { void shapePlan(project.id, windowMinutes) }}
-            >
-              Try again
-            </button>
-          </div>
-        ) : (
-          <ol className="space-y-0.5" style={shaping ? { opacity: 0.45 } : undefined}>
-            {steps.map((item, i) => {
-              // Not a step you wrote: a missing prerequisite session-ready
-              // found, or a top-up suggestion (session-topup.ts) proposed
-              // when the real backlog ran out. Neither is on the project --
-              // both only become a real step if actually ticked off
-              // (session-closeout.ts) -- so both get the same "proposed,
-              // not yours yet" mark instead of a plain number, wherever
-              // they land in the order. A real step keeps its plain
-              // number; that's the whole difference this is for.
-              const proposed = !item.taskId || item.taskId.startsWith('pending-')
-              return (
-                <li key={`${i}-${item.text}`} className="flex items-start gap-2.5 py-2">
-                  {proposed ? (
-                    <span
-                      className="mt-0.5 h-4 w-4 rounded-full flex items-center justify-center flex-shrink-0 border border-dashed"
-                      style={{ borderColor: 'rgba(var(--brand-primary-rgb),0.5)' }}
-                      title="Not on your list yet — only if you do it"
-                    >
-                      <Plus size={9} strokeWidth={2.5} style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.8 }} />
-                    </span>
-                  ) : (
-                    <span
-                      className="mt-0.5 text-[11px] tabular-nums font-semibold flex-shrink-0 w-4"
-                      style={{ color: 'rgba(var(--brand-primary-rgb),0.8)' }}
-                    >
-                      {i + 1}
-                    </span>
-                  )}
-                  <span className="flex-1 min-w-0">
-                    {/* The first move is the one that matters: it's what gets
-                        you from opened-the-app to working. It carries the
-                        weight and its stopping point; the rest are quieter,
-                        because by the time you reach them they'll have
-                        changed anyway. */}
-                    <span
-                      className="text-sm leading-snug block"
-                      style={i === 0 ? { fontWeight: 600 } : { opacity: proposed ? 0.75 : 0.7 }}
-                    >
-                      {splitDoneWhen(item.text).move}
-                    </span>
-                    {i === 0 && splitDoneWhen(item.text).doneWhen && (
-                      <span className="text-xs leading-snug block mt-0.5" style={{ ...secondaryTextStyle, opacity: 0.65 }}>
-                        {splitDoneWhen(item.text).doneWhen}
-                      </span>
-                    )}
-                    {/* The receipt. Every line either points at the step it
-                        is (or is a piece of), or says nothing that needs a
-                        source. Seeing which is which at a glance is the
-                        difference between a list you can act on and one you
-                        have to fact-check first. */}
-                    {item.source && item.source !== 'already on the project' && !item.source.startsWith('part of:') && (
-                      <span
-                        className="text-[10.5px] leading-tight block mt-0.5"
-                        style={{
-                          color: proposed ? 'rgb(var(--brand-primary-rgb))' : 'var(--brand-text-secondary)',
-                          opacity: proposed ? 0.6 : 0.45,
-                        }}
-                      >
-                        {item.source}
-                      </span>
-                    )}
-                  </span>
-                </li>
-              )
-            })}
-          </ol>
-        )}
-
-        {/* Clearing away is part of the hour, so it's on screen as part of
-            the hour rather than remembered at the end of it. */}
-        {plan?.packdown && (
-          <div className="flex items-center gap-2 text-sm" style={secondaryTextStyle}>
-            <Wrench size={13} className="flex-shrink-0" style={{ opacity: 0.5 }} />
-            <span>Then, to finish: {plan.packdown.text}</span>
-            <span className="text-xs flex-shrink-0" style={{ opacity: 0.5 }}>{plan.packdown.minutes}m</span>
-          </div>
-        )}
-
-        {/* What exists at the end of the hour if the list lands -- the
-            contract's other half. "Its obligation is not to exceed the
-            window; yours is to start." Only when it says something the
-            list doesn't: for a plan that's the list verbatim it just
-            restated the last line. */}
-        {plan?.doneLooksLike && items.length > 0 && !needsInput && plan.source !== 'tasks' && (
-          <p className="text-sm leading-snug" style={{ ...secondaryTextStyle, opacity: 0.75 }}>
-            <span className="text-[10.5px] uppercase tracking-wide mr-1.5" style={{ opacity: 0.6 }}>done today</span>
-            {plan.doneLooksLike}
-          </p>
-        )}
-
-        {/* The app ran out of things it actually knows. It says so and asks,
-            rather than filling the gap with plausible invention -- one made
-            up line costs the whole list its credibility, because you then
-            have to check every other line yourself. The answer is saved to
-            the project, so it has to ask less next time. */}
-        {needsInput ? (
-          <div
-            className="rounded-xl px-3.5 py-3 space-y-1"
-            style={{
-              background: 'rgba(var(--brand-primary-rgb),0.06)',
-              border: '1px solid rgba(var(--brand-primary-rgb),0.20)',
-            }}
-          >
-            <p className="text-sm leading-snug">{needsInput}</p>
-            <p className="text-[11px]" style={{ ...secondaryTextStyle, opacity: 0.5 }}>
-              I'll only suggest things you've actually told me about.
-            </p>
-          </div>
-        ) : items.length > 0 && (plan?.source === 'offline' || plan?.source === 'derived' || plan?.source === 'split') ? (
-          // Said only when it changes how to read the list. "The next steps
-          // on your list, in order" told you what you were already looking at.
-          <p className="text-xs" style={{ ...secondaryTextStyle, opacity: 0.45 }}>
-            {plan?.source === 'offline'
-              ? 'Planned from your list — offline, so it’s not reshaped. Reconnect to make changes.'
-              : plan?.source === 'derived'
-                ? 'Offline list — built from your last close-out, not shaped.'
-                : `The next step, cut to fit ${windowLabel}.`}
-          </p>
-        ) : null}
-
-
-        {/* Voice by default, listening the moment there's a list to react
-            to; typing is what you opt into. Remounted on every new list
-            (the key) so it starts listening again each time it's your
-            turn, rather than only once at the very first render. Offline,
-            reshape has nowhere to go -- a disabled placeholder beats a
-            mic or a submit that fails pointlessly. */}
-        {!online ? (
-          <div
-            className="flex items-center gap-2 rounded-xl px-3 py-1.5 border opacity-50"
-            style={borderStyle}
-          >
-            <input
-              disabled
-              placeholder="Reconnect to reshape the list"
-              className="flex-1 bg-transparent text-sm outline-none py-1.5"
-              style={{ color: 'var(--brand-text-primary)' }}
-            />
-          </div>
-        ) : voiceTurn ? (
-          <div className="space-y-1.5">
-            <VoiceInput
-              key={items.map(i => i.text).join('|')}
-              onTranscript={t => { void sendToPlan(t) }}
-              onRecordingChange={setRecording}
-              autoStart={outlineShown}
-              autoSubmit
-              maxDuration={30}
-            />
-            <button
-              type="button"
-              onClick={() => setPrefersText(true)}
-              className="flex items-center gap-1 text-[11px] mx-auto transition-all"
-              style={{ color: 'var(--brand-text-secondary)', opacity: 0.4 }}
-            >
-              <Keyboard className="h-3 w-3" /> type instead
-            </button>
-          </div>
-        ) : (
-          <div
-            className="flex items-center gap-2 rounded-xl px-3 py-1.5 border"
-            style={{
-              borderColor: steerFocused ? 'rgba(var(--brand-primary-rgb),0.32)' : 'var(--glass-border-bold)',
-              boxShadow: steerFocused ? '0 0 0 3px rgba(var(--brand-primary-rgb),0.10)' : 'none',
-              transition: 'border-color 0.15s ease, box-shadow 0.15s ease',
-            }}
-          >
-            <button
-              type="button"
-              onClick={() => setPrefersText(false)}
-              aria-label="Switch to voice"
-              className="flex-shrink-0 p-1"
-              style={{ color: 'var(--brand-text-secondary)', opacity: 0.45 }}
-            >
-              <Mic size={16} />
-            </button>
-            <input
-              value={steer}
-              onChange={e => setSteer(e.target.value)}
-              onFocus={() => setSteerFocused(true)}
-              onBlur={() => setSteerFocused(false)}
-              onKeyDown={e => { if (e.key === 'Enter') submitSteer() }}
-              placeholder={needsInput ? 'Tell it what you\u2019re doing\u2026' : 'Too much for an hour\u2026'}
-              disabled={shaping}
-              className="flex-1 bg-transparent text-sm outline-none disabled:opacity-50 py-1.5"
-              style={{ color: 'var(--brand-text-primary)' }}
-            />
-            <button onClick={submitSteer} disabled={shaping || !steer.trim()} className="disabled:opacity-30 p-1 flex-shrink-0">
-              <ArrowUp size={16} style={{ color: 'rgb(var(--brand-primary-rgb))' }} />
-            </button>
-          </div>
-        )}
-
-        <div className="space-y-2 pt-0.5">
-          <button
-            className="w-full py-2.5 rounded-lg text-sm font-semibold disabled:opacity-50"
-            style={primaryButtonStyle}
-            disabled={starting || shaping}
-            onClick={() => { haptic.medium(); void beginWork() }}
-          >
-            {starting
-              ? 'Starting…'
-              : steps.length === 0
-                ? 'Start anyway'
-                : `Start \u2014 ${steps.length} thing${steps.length === 1 ? '' : 's'}`}
-          </button>
-          <button
-            className="w-full text-xs"
-            style={{ ...secondaryTextStyle, opacity: 0.5 }}
-            onClick={() => { clearPlan(); onDone() }}
-          >
-            Not now
-          </button>
-        </div>
-
-        {error && items.length > 0 && <p className="text-xs text-red-400">{error}</p>}
-      </div>
-    )
-  }
-
-  // ─── window ────────────────────────────────────────────────────────
-  // A gate, deliberately: the list is sized to the window, so there is
-  // nothing to show until it's answered.
+  // ── Before: the move ──────────────────────────────────────────────
   return (
-    <div className={shell('space-y-4')}>
-      <p className="text-base font-medium">{project.title}</p>
-      <ReEntry project={project} />
-      <div className="space-y-2">
-        <p className="text-sm" style={secondaryTextStyle}>How long have you got?</p>
-        <div className="flex gap-2">
-          {WINDOW_PRESETS.map(m => (
-            <button
-              key={m}
-              className="px-4 py-2 rounded-full text-sm border"
-              style={borderStyle}
-              onClick={() => handlePickWindow(m)}
-            >
-              {m < 60 ? `${m}m` : `${m / 60}h`}
-            </button>
-          ))}
-        </div>
-        <VoiceInput
-          onTranscript={text => {
-            const minutes = parseInt(text.replace(/\D/g, ''), 10)
-            if (!Number.isNaN(minutes) && minutes > 0) handlePickWindow(minutes)
-          }}
-          maxDuration={10}
-        />
-      </div>
-      {error && <p className="text-xs text-red-400">{error}</p>}
+    <div className={shell('')}>
+      <MoveCard
+        title={project.title}
+        lastNote={project.last_closeout_text?.trim() || null}
+        move={moveHere}
+        busy={moveBusy}
+        starting={starting}
+        online={online}
+        error={error}
+        onGo={() => { void go() }}
+        onChange={change => { void reworkMove(project.id, change) }}
+        onNotNow={onDone}
+      />
     </div>
+  )
+}
+
+function MinimisedBar({ title, clock, timeUp, onOpen, className }: {
+  title: string; clock: string; timeUp: boolean; onOpen: () => void; className: string
+}) {
+  return (
+    <button onClick={onOpen} className={`${className} w-full flex items-center justify-between gap-3 text-left`}>
+      <span className="min-w-0">
+        <span className="block text-[10px] uppercase tracking-[0.2em]" style={faint(0.5)}>Session running</span>
+        <span className="block text-[15px] font-semibold truncate">{title}</span>
+      </span>
+      <span className="flex items-center gap-3 flex-shrink-0">
+        <span className="tabular-nums text-[15px]" style={{ color: timeUp ? 'rgba(245,158,11,0.95)' : undefined }}>{clock}</span>
+        <span className="text-[12px] font-semibold" style={{ color: accent }}>Back to it</span>
+      </span>
+    </button>
   )
 }
