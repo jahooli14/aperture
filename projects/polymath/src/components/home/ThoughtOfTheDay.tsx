@@ -104,7 +104,7 @@ export function ThoughtOfTheDay() {
               style={{ background: 'linear-gradient(to right, rgba(var(--brand-primary-rgb),0.5), transparent)' }}
             />
             <span
-              className="text-[10px] uppercase tracking-[0.32em] font-semibold"
+              className="text-[11px] uppercase tracking-[0.14em] font-semibold"
               style={{ color: 'rgba(var(--brand-primary-rgb),0.7)' }}
             >
               {new Date(card.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}

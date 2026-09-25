@@ -45,7 +45,7 @@ export function NextMovePanel({ project, onGo, onChange, oldList }: {
             border: '1px solid rgba(var(--brand-primary-rgb),0.28)',
           }}
         >
-          <p className="text-[10px] font-bold uppercase tracking-[0.24em]" style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.85 }}>
+          <p className="text-[11px] font-bold uppercase tracking-[0.14em]" style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.85 }}>
             {fork ? 'First, decide' : 'Next move'}
           </p>
           {move || fork ? (
@@ -53,12 +53,12 @@ export function NextMovePanel({ project, onGo, onChange, oldList }: {
               {move ? move.move : fork}
             </p>
           ) : (
-            <p className="text-[14px]" style={{ color: 'var(--brand-text-secondary)', opacity: 0.7 }}>
+            <p className="text-[14px]" style={{ color: 'var(--brand-text-secondary)', opacity: 0.87 }}>
               No move yet. One gets written when you start.
             </p>
           )}
           {move?.doneWhen && (
-            <p className="flex items-start gap-2 text-[13px] leading-snug" style={{ color: 'var(--brand-text-secondary)', opacity: 0.75 }}>
+            <p className="flex items-start gap-2 text-[13px] leading-snug" style={{ color: 'var(--brand-text-secondary)', opacity: 0.9 }}>
               <Flag size={13} className="mt-0.5 flex-shrink-0" style={{ color: 'rgba(var(--brand-primary-rgb),0.8)' }} />
               {move.doneWhen}
             </p>
@@ -72,7 +72,7 @@ export function NextMovePanel({ project, onGo, onChange, oldList }: {
             {move ? 'Go' : fork ? 'Answer it' : 'Find the first move'}
           </button>
           {move && (
-            <button onClick={onChange} className="w-full text-[11.5px]" style={{ color: 'var(--brand-text-secondary)', opacity: 0.5 }}>
+            <button onClick={onChange} className="w-full text-[11.5px]" style={{ color: 'var(--brand-text-secondary)', opacity: 0.75 }}>
               Not this — change it
             </button>
           )}
@@ -81,22 +81,22 @@ export function NextMovePanel({ project, onGo, onChange, oldList }: {
 
       {done.length > 0 && (
         <div className="space-y-2">
-          <p className="text-[11px] font-medium tracking-wide lowercase" style={{ color: 'var(--brand-text-secondary)', opacity: 0.55 }}>
+          <p className="text-[11px] font-medium tracking-wide lowercase" style={{ color: 'var(--brand-text-secondary)', opacity: 0.78 }}>
             what you’ve done
           </p>
           {(showAll ? done : done.slice(0, LOG_PREVIEW)).map((t, i) => (
             <div key={i} className="flex items-start gap-2.5 text-[14px] leading-snug">
-              <Check size={14} className="mt-0.5 flex-shrink-0" style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.8 }} />
+              <Check size={14} className="mt-0.5 flex-shrink-0" style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.9 }} />
               <span className="flex-1" style={{ color: 'var(--brand-text-secondary)' }}>{splitDoneWhen(t.text).move}</span>
               {t.completed_at && (
-                <span className="text-[11px] flex-shrink-0 tabular-nums" style={{ color: 'var(--brand-text-secondary)', opacity: 0.4 }}>
+                <span className="text-[11px] flex-shrink-0 tabular-nums" style={{ color: 'var(--brand-text-secondary)', opacity: 0.69 }}>
                   {new Date(t.completed_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
                 </span>
               )}
             </div>
           ))}
           {done.length > LOG_PREVIEW && (
-            <button onClick={() => setShowAll(v => !v)} className="text-[12px]" style={{ color: 'var(--brand-text-secondary)', opacity: 0.5 }}>
+            <button onClick={() => setShowAll(v => !v)} className="text-[12px]" style={{ color: 'var(--brand-text-secondary)', opacity: 0.75 }}>
               {showAll ? 'Show less' : `Show all ${done.length}`}
             </button>
           )}
@@ -110,7 +110,7 @@ export function NextMovePanel({ project, onGo, onChange, oldList }: {
           <button
             onClick={() => setShowOld(v => !v)}
             className="flex items-center gap-1.5 text-[12px]"
-            style={{ color: 'var(--brand-text-secondary)', opacity: 0.5 }}
+            style={{ color: 'var(--brand-text-secondary)', opacity: 0.75 }}
           >
             <ChevronDown size={13} style={{ transform: showOld ? 'rotate(180deg)' : undefined }} />
             The old list ({open} left)

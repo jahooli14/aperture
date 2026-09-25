@@ -57,7 +57,7 @@ export function StuckMove({ projectId, step, online, askSignal = 0 }: Props) {
         className="rounded-xl px-3.5 py-3 space-y-1.5"
         style={{ background: 'var(--glass-surface)', border: '1px solid var(--glass-border-bold)' }}
       >
-        <p className="text-[10px] uppercase tracking-[0.14em]" style={{ color: 'var(--brand-text-secondary)', opacity: 0.6 }}>
+        <p className="text-[11px] uppercase tracking-[0.14em]" style={{ color: 'var(--brand-text-secondary)', opacity: 0.81 }}>
           Try this
         </p>
         <p className="text-sm leading-snug">{move}</p>
@@ -65,7 +65,7 @@ export function StuckMove({ projectId, step, online, askSignal = 0 }: Props) {
           onClick={ask}
           disabled={busy}
           className="text-xs disabled:opacity-40"
-          style={{ color: 'var(--brand-text-secondary)', opacity: 0.6 }}
+          style={{ color: 'var(--brand-text-secondary)', opacity: 0.81 }}
         >
           {busy ? 'Thinking…' : 'Something else'}
         </button>
@@ -78,7 +78,7 @@ export function StuckMove({ projectId, step, online, askSignal = 0 }: Props) {
       onClick={ask}
       disabled={busy}
       className="flex items-center gap-1.5 text-xs mx-auto disabled:opacity-40"
-      style={{ color: 'var(--brand-text-secondary)', opacity: 0.6 }}
+      style={{ color: 'var(--brand-text-secondary)', opacity: 0.81 }}
     >
       <LifeBuoy size={12} />
       {busy ? 'Finding a way in…' : empty ? 'Nothing useful to suggest — tap to try again' : "I'm stuck"}

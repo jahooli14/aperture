@@ -124,7 +124,7 @@ export function RegenerateRow({ onRegenerate }: { onRegenerate: () => void }) {
     <button
       onClick={onRegenerate}
       className="flex items-center gap-1.5 px-1 py-1 rounded-lg transition-colors hover:bg-white/[0.05] text-[11px] font-medium"
-      style={{ color: 'var(--brand-text-secondary)', opacity: 0.45 }}
+      style={{ color: 'var(--brand-text-secondary)', opacity: 0.72 }}
     >
       <RotateCcw className="h-3 w-3" /> Ask again
     </button>

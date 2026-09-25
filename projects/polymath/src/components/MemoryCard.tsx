@@ -317,7 +317,7 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
                   competed with the thought's own words for attention on a
                   card whose body is 12px. */}
               <span
-                className="inline-flex items-center gap-1 text-[10px] font-medium"
+                className="inline-flex items-center gap-1 text-[11px] font-medium"
                 style={{ color: 'var(--brand-text-muted)' }}
               >
                 <ListIcon className="w-2.5 h-2.5" />
@@ -333,7 +333,7 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
         {memory.source_reference?.type === 'spark' && memory.source_reference.title && (
           <div className="px-3.5 pt-1.5">
             <span
-              className="inline-flex items-start gap-1 text-[10px] font-medium italic"
+              className="inline-flex items-start gap-1 text-[11px] font-medium italic"
               style={{ color: 'var(--brand-text-muted)' }}
             >
               <HelpCircle className="w-2.5 h-2.5 flex-shrink-0 mt-0.5" />

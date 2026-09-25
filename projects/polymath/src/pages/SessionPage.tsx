@@ -62,7 +62,7 @@ function DeferredCloseoutPrompt() {
         </button>
         <button
           className="w-full text-[12px] py-1.5 transition-opacity hover:opacity-90"
-          style={{ color: 'var(--brand-text-secondary)', opacity: 0.5 }}
+          style={{ color: 'var(--brand-text-secondary)', opacity: 0.75 }}
           onClick={dismissPendingCloseout}
         >
           or skip it

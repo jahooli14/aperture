@@ -151,7 +151,7 @@ export function BookshelfStep({ onComplete, onSkip, prepopulated }: BookshelfSte
       <button
         onClick={onSkip}
         className="absolute top-6 right-6 text-xs transition-opacity hover:opacity-80"
-        style={{ color: 'var(--brand-text-secondary)', opacity: 0.35 }}
+        style={{ color: 'var(--brand-text-secondary)', opacity: 0.66 }}
       >
         Skip
       </button>
@@ -166,7 +166,7 @@ export function BookshelfStep({ onComplete, onSkip, prepopulated }: BookshelfSte
         {selectedBooks.length > 0 && (
           <p
             className="text-xs font-medium mb-6 uppercase tracking-widest text-center"
-            style={{ color: 'var(--brand-text-secondary)', opacity: 0.4 }}
+            style={{ color: 'var(--brand-text-secondary)', opacity: 0.69 }}
           >
             {selectedBooks.length} picked
           </p>
@@ -218,7 +218,7 @@ export function BookshelfStep({ onComplete, onSkip, prepopulated }: BookshelfSte
                         className="w-full h-full flex items-center justify-center"
                         style={{ background: 'rgba(var(--brand-primary-rgb),0.12)' }}
                       >
-                        <Book className="h-8 w-8" style={{ color: 'var(--brand-primary)', opacity: 0.5 }} />
+                        <Book className="h-8 w-8" style={{ color: 'var(--brand-primary)', opacity: 0.75 }} />
                       </div>
                     )}
                     {/* Title overlay */}
@@ -229,7 +229,7 @@ export function BookshelfStep({ onComplete, onSkip, prepopulated }: BookshelfSte
                       <p className="text-xs font-medium leading-tight line-clamp-2" style={{ color: 'var(--brand-text-primary)' }}>
                         {book.title}
                       </p>
-                      <p className="text-[10px] mt-0.5 line-clamp-1" style={{ color: 'rgba(255,255,255,0.6)' }}>
+                      <p className="text-[11px] mt-0.5 line-clamp-1" style={{ color: 'rgba(255,255,255,0.6)' }}>
                         {book.author}
                       </p>
                     </div>
@@ -246,7 +246,7 @@ export function BookshelfStep({ onComplete, onSkip, prepopulated }: BookshelfSte
                   <div className="w-full h-full flex items-center justify-center">
                     <Book
                       className="h-6 w-6"
-                      style={{ color: 'var(--brand-text-secondary)', opacity: 0.15 }}
+                      style={{ color: 'var(--brand-text-secondary)', opacity: 0.54 }}
                     />
                   </div>
                 )}
@@ -264,7 +264,7 @@ export function BookshelfStep({ onComplete, onSkip, prepopulated }: BookshelfSte
           >
             <Search
               className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4"
-              style={{ color: 'var(--brand-text-secondary)', opacity: 0.4 }}
+              style={{ color: 'var(--brand-text-secondary)', opacity: 0.69 }}
             />
             <input
               ref={inputRef}
@@ -322,14 +322,14 @@ export function BookshelfStep({ onComplete, onSkip, prepopulated }: BookshelfSte
                       className="w-8 h-12 rounded flex items-center justify-center flex-shrink-0"
                       style={{ background: 'rgba(var(--brand-primary-rgb),0.12)' }}
                     >
-                      <Book className="h-4 w-4" style={{ color: 'var(--brand-primary)', opacity: 0.5 }} />
+                      <Book className="h-4 w-4" style={{ color: 'var(--brand-primary)', opacity: 0.75 }} />
                     </div>
                   )}
                   <div className="min-w-0">
                     <p className="text-sm font-medium truncate" style={{ color: 'var(--brand-text-primary)' }}>
                       {book.title}
                     </p>
-                    <p className="text-xs truncate" style={{ color: 'var(--brand-text-secondary)', opacity: 0.6 }}>
+                    <p className="text-xs truncate" style={{ color: 'var(--brand-text-secondary)', opacity: 0.81 }}>
                       {book.author}
                     </p>
                   </div>

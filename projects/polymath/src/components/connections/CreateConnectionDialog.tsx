@@ -420,7 +420,7 @@ function ItemCard({
         </div>
         <LinkIcon className="h-4 w-4 flex-shrink-0 mt-1 transition-colors" style={{
           color: 'var(--brand-text-muted)',
-          opacity: 0.5
+          opacity: 0.75
         }} />
       </div>
     </motion.button>

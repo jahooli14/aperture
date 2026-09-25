@@ -342,7 +342,7 @@ export function EditMemoryDialog({ memory, open, onOpenChange, onMemoryUpdated }
                     className="relative rounded-xl overflow-hidden aspect-square border border-dashed border-white/20"
                   >
                     <img src={previewUrls[index]} alt="New upload" className="w-full h-full object-cover opacity-80" />
-                    <span className="absolute bottom-2 left-2 bg-black/50 text-[var(--brand-text-primary)] text-[10px] px-1.5 py-0.5 rounded-full">New</span>
+                    <span className="absolute bottom-2 left-2 bg-black/50 text-[var(--brand-text-primary)] text-[11px] px-1.5 py-0.5 rounded-full">New</span>
                     <button
                       type="button"
                       onClick={() => removeNewFile(index)}

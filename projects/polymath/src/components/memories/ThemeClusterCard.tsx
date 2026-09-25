@@ -40,7 +40,7 @@ export const ThemeClusterCard = React.memo(function ThemeClusterCard({ cluster, 
         </h3>
 
         {/* Thought Count */}
-        <p className="text-[10px] font-bold uppercase tracking-widest mb-3" style={{ color: "var(--brand-text-muted)" }}>
+        <p className="text-[11px] font-bold uppercase tracking-widest mb-3" style={{ color: "var(--brand-text-muted)" }}>
           {cluster.memory_count} {cluster.memory_count === 1 ? 'thought' : 'thoughts'}
         </p>
 
@@ -49,7 +49,7 @@ export const ThemeClusterCard = React.memo(function ThemeClusterCard({ cluster, 
           {cluster.sample_keywords.slice(0, 3).map((keyword, i) => (
             <span
               key={i}
-              className="text-[10px] px-2 py-0.5 rounded-lg font-black uppercase tracking-wide"
+              className="text-[11px] px-2 py-0.5 rounded-lg font-black uppercase tracking-wide"
               style={{
                 background: 'rgba(var(--brand-primary-rgb),0.1)',
                 color: "var(--brand-text-secondary)",
@@ -60,7 +60,7 @@ export const ThemeClusterCard = React.memo(function ThemeClusterCard({ cluster, 
             </span>
           ))}
           {cluster.sample_keywords.length > 3 && (
-            <span className="text-[10px] px-2 py-0.5 rounded-lg font-bold" style={{
+            <span className="text-[11px] px-2 py-0.5 rounded-lg font-bold" style={{
               color: 'var(--brand-text-muted)',
               background: 'var(--glass-surface)',
               border: '1.5px solid rgba(255,255,255,0.1)',
@@ -87,7 +87,7 @@ export const ThemeClusterCard = React.memo(function ThemeClusterCard({ cluster, 
             background: 'rgba(var(--brand-primary-rgb), 0.1)',
             border: '1px solid rgba(var(--brand-primary-rgb), 0.25)',
             color: 'rgb(var(--color-accent-light-rgb))',
-            fontSize: '10px',
+            fontSize: '11px',
             fontWeight: 900,
             letterSpacing: '0.1em',
             textTransform: 'uppercase',

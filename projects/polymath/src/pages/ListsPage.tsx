@@ -328,7 +328,7 @@ function ListsPageInner() {
 
                     {/* Example collections grid */}
                     <div>
-                        <p className="text-[9px] font-black uppercase tracking-[0.25em] text-zinc-600 mb-4 text-center">
+                        <p className="text-[11px] font-black uppercase tracking-[0.14em] text-zinc-600 mb-4 text-center">
                             Some ideas to get you started
                         </p>
                         <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(min(160px, 100%), 1fr))' }}>
@@ -360,10 +360,10 @@ function ListsPageInner() {
                                         </div>
                                         {/* Text overlay */}
                                         <div className="absolute inset-0 p-3 flex flex-col justify-end">
-                                            <p className="text-[8px] font-black uppercase tracking-wider mb-0.5"
+                                            <p className="text-[11px] font-black uppercase tracking-wider mb-0.5"
                                                 style={{ color: `rgb(${rgb})` }}>{example.type}</p>
                                             <h4 className="text-xs font-black text-[var(--brand-text-primary)] uppercase tracking-tight leading-tight">{example.label}</h4>
-                                            <p className="text-[8px] text-[var(--brand-text-primary)]/30 mt-0.5">{example.desc}</p>
+                                            <p className="text-[11px] text-[var(--brand-text-primary)]/30 mt-0.5">{example.desc}</p>
                                         </div>
                                     </button>
                                 )
@@ -407,7 +407,7 @@ function ListsPageInner() {
                                     />
                                 ) : quoteCover ? (
                                     <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-zinc-950 via-zinc-900 to-black p-1">
-                                        <p className="text-[var(--brand-text-primary)]/60 text-[8px] font-light text-center line-clamp-4" style={{ fontFamily: 'var(--brand-font-body)' }}>
+                                        <p className="text-[var(--brand-text-primary)]/60 text-[11px] font-light text-center line-clamp-4" style={{ fontFamily: 'var(--brand-font-body)' }}>
                                             {quoteCover}
                                         </p>
                                     </div>
@@ -430,7 +430,7 @@ function ListsPageInner() {
                                             style={{ backgroundColor: `rgb(${rgb})` }} />
                                     )}
                                 </div>
-                                <p className="text-[10px] font-medium text-[var(--brand-text-primary)]/40 uppercase tracking-widest">
+                                <p className="text-[11px] font-medium text-[var(--brand-text-primary)]/40 uppercase tracking-widest">
                                     {list.item_count || 0} items
                                 </p>
                             </div>
@@ -557,7 +557,7 @@ function ListsPageInner() {
                                 <div className="flex items-start justify-between gap-1.5">
                                     <div className="flex items-center gap-1 px-1.5 py-1 rounded-lg bg-black/70 backdrop-blur-sm" style={{ border: `1px solid rgba(${rgb}, 0.4)` }}>
                                         <ListIcon type={list.type} className="h-3 w-3" style={{ color: `rgb(${rgb})` }} />
-                                        <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--brand-text-primary)]">
+                                        <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--brand-text-primary)]">
                                             {list.type}
                                         </span>
                                     </div>
@@ -614,7 +614,7 @@ function ListsPageInner() {
 
             {/* Long press hint - only show when there are lists and not reordering */}
             {lists.length > 0 && !isReordering && (
-                <p className="text-center text-[11px] pb-4" style={{ color: 'var(--brand-text-muted)', opacity: 0.45 }}>
+                <p className="text-center text-[11px] pb-4" style={{ color: 'var(--brand-text-muted)', opacity: 0.72 }}>
                     Hold a card for options.
                 </p>
             )}
@@ -657,7 +657,7 @@ function ListsPageInner() {
                                 <div className="w-10 h-1 rounded-full bg-white/15" />
                             </div>
                             <div className="px-5 pt-3 pb-8">
-                                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] mb-1"
+                                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] mb-1"
                                     style={{ color: `rgb(${ListColor(actionSheetList.type)})` }}>
                                     {actionSheetList.type}
                                 </p>

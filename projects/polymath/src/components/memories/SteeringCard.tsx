@@ -104,7 +104,7 @@ export function SteeringCard() {
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-center gap-2 mb-2">
                 <span
-                  className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold tracking-wide uppercase ${config.color} ${config.bg}`}
+                  className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold tracking-wide uppercase ${config.color} ${config.bg}`}
                 >
                   {config.icon}
                   {config.label}

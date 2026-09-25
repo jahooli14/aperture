@@ -148,10 +148,10 @@ export function FocusChatActionCard({ action, resolved, dismissed, blockedByPend
           {action.projectTitle}
         </button>
         {action.reasoning && (
-          <p className="text-[11px] leading-snug italic pt-0.5" style={{ color: 'var(--brand-text-muted)', opacity: 0.75 }}>{action.reasoning}</p>
+          <p className="text-[11px] leading-snug italic pt-0.5" style={{ color: 'var(--brand-text-muted)', opacity: 0.9 }}>{action.reasoning}</p>
         )}
         {isBlocked && (
-          <p className="text-[11px] leading-snug pt-0.5" style={{ color: 'var(--brand-text-muted)', opacity: 0.6 }}>Fix the next step above first</p>
+          <p className="text-[11px] leading-snug pt-0.5" style={{ color: 'var(--brand-text-muted)', opacity: 0.81 }}>Fix the next step above first</p>
         )}
       </div>
       {resolved ? (

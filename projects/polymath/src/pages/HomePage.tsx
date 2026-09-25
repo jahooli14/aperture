@@ -351,7 +351,7 @@ export function HomePage() {
             <div className="pt-10 pb-2 flex justify-center">
               <button
                 onClick={() => navigate('/settings')}
-                className="flex items-center gap-2 text-[11px] uppercase tracking-[0.2em] opacity-40 hover:opacity-80 transition-opacity press-spring"
+                className="flex items-center gap-2 text-[11px] uppercase tracking-[0.14em] opacity-40 hover:opacity-80 transition-opacity press-spring"
                 style={{ color: 'var(--brand-text-muted)' }}
               >
                 <Settings className="h-3.5 w-3.5" />

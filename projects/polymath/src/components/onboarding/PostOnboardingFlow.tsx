@@ -231,7 +231,7 @@ export function PostOnboardingFlow({ analysis, sparkedSuggestion, transcripts = 
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.8 }}
               className="text-sm mb-10"
-              style={{ color: 'var(--brand-text-secondary)', opacity: 0.6 }}
+              style={{ color: 'var(--brand-text-secondary)', opacity: 0.81 }}
             >
               Now let's do something with it.
             </motion.p>
@@ -257,7 +257,7 @@ export function PostOnboardingFlow({ analysis, sparkedSuggestion, transcripts = 
               <button
                 onClick={handleSkipToHome}
                 className="text-sm transition-opacity hover:opacity-80 inline-flex items-center gap-1.5 mt-2"
-                style={{ color: 'var(--brand-text-secondary)', opacity: 0.4 }}
+                style={{ color: 'var(--brand-text-secondary)', opacity: 0.69 }}
               >
                 I'll explore first
               </button>
@@ -280,7 +280,7 @@ export function PostOnboardingFlow({ analysis, sparkedSuggestion, transcripts = 
               transition={{ delay: 0.3 }}
               className="text-center mb-4"
             >
-              <p className="text-xs font-medium uppercase tracking-widest" style={{ color: 'var(--brand-text-muted)', opacity: 0.6 }}>
+              <p className="text-xs font-medium uppercase tracking-widest" style={{ color: 'var(--brand-text-muted)', opacity: 0.81 }}>
                 Your first project
               </p>
             </motion.div>
@@ -443,10 +443,10 @@ export function PostOnboardingFlow({ analysis, sparkedSuggestion, transcripts = 
                   className="mb-6"
                 >
                   <motion.p
-                    className="text-xs font-bold uppercase tracking-[0.2em] mb-3"
+                    className="text-xs font-bold uppercase tracking-[0.14em] mb-3"
                     style={{ color: `rgb(${projectColor})`, opacity: 0.7 }}
-                    initial={{ opacity: 0, letterSpacing: '0.5em' }}
-                    animate={{ opacity: 0.7, letterSpacing: '0.2em' }}
+                    initial={{ opacity: 0, letterSpacing: '0.14em' }}
+                    animate={{ opacity: 0.7, letterSpacing: '0.14em' }}
                     transition={{ duration: 0.8, delay: 0.2 }}
                   >
                     {createdProject.type || 'Project'}
@@ -491,7 +491,7 @@ export function PostOnboardingFlow({ analysis, sparkedSuggestion, transcripts = 
                     />
 
                     <motion.p
-                      className="text-[10px] font-bold uppercase tracking-[0.15em] mb-3 ml-3"
+                      className="text-[11px] font-bold uppercase tracking-[0.1em] mb-3 ml-3"
                       style={{ color: `rgb(${projectColor})`, opacity: 0.6 }}
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 0.6 }}
@@ -552,7 +552,7 @@ export function PostOnboardingFlow({ analysis, sparkedSuggestion, transcripts = 
                     transition={{ delay: 0.15, duration: 0.4 }}
                   >
                     <p
-                      className="text-[10px] font-bold uppercase tracking-widest mb-1.5"
+                      className="text-[11px] font-bold uppercase tracking-widest mb-1.5"
                       style={{ color: `rgb(${projectColor})`, opacity: 0.6 }}
                     >
                       First step
@@ -597,7 +597,7 @@ export function PostOnboardingFlow({ analysis, sparkedSuggestion, transcripts = 
                     animate={{ opacity: 1 }}
                     transition={{ delay: 0.5 }}
                     className="text-xs"
-                    style={{ color: 'var(--brand-text-secondary)', opacity: 0.35 }}
+                    style={{ color: 'var(--brand-text-secondary)', opacity: 0.66 }}
                   >
                     Day 1 of your Aperture journey
                   </motion.p>

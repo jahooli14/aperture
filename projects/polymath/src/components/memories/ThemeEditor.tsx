@@ -88,7 +88,7 @@ export function ThemeEditor({ memoryId, initialThemes, onChange }: ThemeEditorPr
 
   return (
     <div className="mb-5">
-      <p className="text-[10px] font-semibold tracking-[0.18em] mb-2"
+      <p className="text-[11px] font-semibold tracking-[0.1em] mb-2"
         style={{ color: 'rgba(var(--brand-primary-rgb), 0.7)' }}>
         themes
       </p>
@@ -175,7 +175,7 @@ export function ThemeEditor({ memoryId, initialThemes, onChange }: ThemeEditorPr
                     style={{ color: 'var(--brand-text-secondary)' }}
                   >
                     <span>{s.theme}</span>
-                    <span className="opacity-40 text-[10px]">{s.count}</span>
+                    <span className="opacity-40 text-[11px]">{s.count}</span>
                   </button>
                 ))}
               </div>

@@ -336,7 +336,7 @@ function MinimisedBar({ title, clock, timeUp, onOpen, className }: {
   return (
     <button onClick={onOpen} className={`${className} w-full flex items-center justify-between gap-3 text-left`}>
       <span className="min-w-0">
-        <span className="block text-[10px] uppercase tracking-[0.2em]" style={faint(0.5)}>Session running</span>
+        <span className="block text-[11px] uppercase tracking-[0.14em]" style={faint(0.5)}>Session running</span>
         <span className="block text-[15px] font-semibold truncate">{title}</span>
       </span>
       <span className="flex items-center gap-3 flex-shrink-0">

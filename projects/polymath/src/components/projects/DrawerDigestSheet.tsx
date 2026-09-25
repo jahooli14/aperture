@@ -100,7 +100,7 @@ export function DrawerDigestSheet() {
       >
         <ArrowRight className="h-4 w-4 flex-shrink-0" style={{ color: 'rgb(var(--brand-primary-rgb))' }} />
         <div className="flex-1 min-w-0">
-          <p className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'rgb(var(--brand-primary-rgb))' }}>
+          <p className="text-[11px] font-black uppercase tracking-widest" style={{ color: 'rgb(var(--brand-primary-rgb))' }}>
             Weekly drawer digest
           </p>
           <p className="text-xs text-[var(--brand-text-primary)] leading-snug">
@@ -162,7 +162,7 @@ export function DrawerDigestSheet() {
                       }}
                     >
                       <div className="flex items-center gap-2 mb-2 flex-wrap">
-                        <span className="px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-widest"
+                        <span className="px-2 py-0.5 rounded-md text-[11px] font-black uppercase tracking-widest"
                           style={{ background: 'rgba(var(--brand-primary-rgb),0.2)', color: 'rgb(var(--color-accent-light-rgb))' }}>
                           {mode.label}
                         </span>
@@ -205,7 +205,7 @@ export function DrawerDigestSheet() {
 
               <button
                 onClick={dismiss}
-                className="mt-5 text-[10px] font-bold uppercase tracking-widest text-[var(--brand-text-muted)] hover:text-[var(--brand-text-primary)] transition-colors"
+                className="mt-5 text-[11px] font-bold uppercase tracking-widest text-[var(--brand-text-muted)] hover:text-[var(--brand-text-primary)] transition-colors"
               >
                 Dismiss digest
               </button>

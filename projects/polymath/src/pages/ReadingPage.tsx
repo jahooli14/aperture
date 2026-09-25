@@ -910,7 +910,7 @@ export function ReadingPage() {
                         variant: 'default',
                       })
                     }}
-                    className="text-[10px] font-black uppercase tracking-wide px-3 py-1 rounded-lg transition-colors"
+                    className="text-[11px] font-black uppercase tracking-wide px-3 py-1 rounded-lg transition-colors"
                     style={{ color: "var(--brand-primary)" }}
                   >
                     Cancel
@@ -946,7 +946,7 @@ export function ReadingPage() {
                   <span className="text-[11px] font-black uppercase tracking-widest" style={{ color: "var(--brand-primary)" }}>
                     Continue Reading
                   </span>
-                  <span className="text-[10px] font-black px-1.5 py-0.5 rounded-lg" style={{ background: 'rgba(var(--brand-primary-rgb),0.15)', color: "var(--brand-text-secondary)" }}>
+                  <span className="text-[11px] font-black px-1.5 py-0.5 rounded-lg" style={{ background: 'rgba(var(--brand-primary-rgb),0.15)', color: "var(--brand-text-secondary)" }}>
                     {continueReadingArticles.length}
                   </span>
                 </div>
@@ -999,7 +999,7 @@ export function ReadingPage() {
                    activeTab === 'good' ? 'The ones you kept' :
                    'Queue'}
                 </h2>
-                <div className="px-2 py-0.5 rounded-lg bg-[var(--glass-surface)] border border-white/5 text-[10px] font-bold text-brand-primary">
+                <div className="px-2 py-0.5 rounded-lg bg-[var(--glass-surface)] border border-white/5 text-[11px] font-bold text-brand-primary">
                   {getTabCount(activeTab)}
                 </div>
               </div>
@@ -1022,7 +1022,7 @@ export function ReadingPage() {
                   </button>
                   <button
                     onClick={() => navigate('/rss')}
-                    className="px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wide transition-all flex items-center gap-1.5"
+                    className="px-3 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-wide transition-all flex items-center gap-1.5"
                     style={{
                       color: "var(--brand-text-secondary)",
                       border: '1px solid rgba(255,255,255,0.15)',
@@ -1122,7 +1122,7 @@ export function ReadingPage() {
                         activeTab === 'queue' ? (
                           <div className="flex flex-wrap justify-center gap-2">
                             {['essays', 'research', 'long reads', 'tutorials', 'news'].map(example => (
-                              <span key={example} className="px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wide" style={{ background: 'var(--brand-glass-bg)', border: '1.5px solid var(--glass-surface-hover)', boxShadow: '0 2px 8px rgba(0,0,0,0.5)', color: "var(--brand-text-secondary)" }}>
+                              <span key={example} className="px-2 py-1 rounded-lg text-[11px] font-bold uppercase tracking-wide" style={{ background: 'var(--brand-glass-bg)', border: '1.5px solid var(--glass-surface-hover)', boxShadow: '0 2px 8px rgba(0,0,0,0.5)', color: "var(--brand-text-secondary)" }}>
                                 {example}
                               </span>
                             ))}

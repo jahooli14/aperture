@@ -198,7 +198,7 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
               </h3>
             )}
             {is_rotting && (
-              <span className="text-[10px] px-2 py-0.5 rounded-lg font-black uppercase tracking-wide ml-2 align-middle" style={{ background: 'rgba(239,68,68,0.18)', color: "var(--brand-text-secondary)" }}>Rotting</span>
+              <span className="text-[11px] px-2 py-0.5 rounded-lg font-black uppercase tracking-wide ml-2 align-middle" style={{ background: 'rgba(239,68,68,0.18)', color: "var(--brand-text-secondary)" }}>Rotting</span>
             )}
             {/* The end-of-article verdict, visible from the list — this is
                 what decides whether the piece counts towards project ideas,
@@ -271,10 +271,10 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
         {progress > 0 && (
           <div className="mt-2">
             <div className="flex items-center justify-between mb-1">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-brand-text-muted">
+              <span className="text-[11px] font-bold uppercase tracking-widest text-brand-text-muted">
                 {progress >= 95 ? 'Finished' : 'Reading'}
               </span>
-              <span className="text-[10px] font-mono text-brand-text-muted">
+              <span className="text-[11px] font-mono text-brand-text-muted">
                 {Math.round(progress)}%
               </span>
             </div>

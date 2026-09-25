@@ -152,14 +152,14 @@ export function ProjectCompletionModal({ project, sparkedByMemories, isOpen, onC
                       >
                         <div className="flex items-center gap-2 mb-2">
                           <Sprout className="h-3.5 w-3.5" style={{ color: 'rgb(var(--color-accent-light-rgb))' }} />
-                          <span className="text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: 'rgb(var(--color-accent-light-rgb))' }}>
+                          <span className="text-[11px] font-black uppercase tracking-[0.14em]" style={{ color: 'rgb(var(--color-accent-light-rgb))' }}>
                             This started as a thought
                           </span>
                         </div>
                         <p className="text-sm italic leading-relaxed line-clamp-3" style={{ color: 'var(--brand-text-primary)' }}>
                           "{firstSpark.body || firstSpark.title}"
                         </p>
-                        <p className="text-[10px] mt-1 opacity-50" style={{ color: 'var(--brand-text-muted)' }}>
+                        <p className="text-[11px] mt-1 opacity-50" style={{ color: 'var(--brand-text-muted)' }}>
                           {new Date(firstSpark.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
                         </p>
                       </div>

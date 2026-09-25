@@ -85,7 +85,7 @@ export function QuickAddSheet({ list, isOpen, onClose, listRgb }: QuickAddSheetP
                             {/* Header */}
                             <div className="flex items-center justify-between mb-5">
                                 <div>
-                                    <p className="text-[9px] font-semibold uppercase tracking-[0.2em] mb-0.5"
+                                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] mb-0.5"
                                         style={{ color: `rgb(${listRgb})` }}>
                                         adding to
                                     </p>

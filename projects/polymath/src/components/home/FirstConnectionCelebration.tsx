@@ -72,7 +72,7 @@ export function FirstConnectionCelebration() {
               onClick={handleDismiss}
               aria-label="Dismiss"
               className="absolute top-3 right-3 h-6 w-6 rounded-full flex items-center justify-center transition-colors hover:bg-[rgba(255,255,255,0.1)]"
-              style={{ color: 'var(--brand-text-secondary)', opacity: 0.4 }}
+              style={{ color: 'var(--brand-text-secondary)', opacity: 0.69 }}
             >
               <X className="h-3.5 w-3.5" />
             </button>
@@ -108,7 +108,7 @@ export function FirstConnectionCelebration() {
                   animate={{ opacity: 1 }}
                   transition={{ delay: 0.5 }}
                   className="text-xs leading-relaxed"
-                  style={{ color: 'var(--brand-text-secondary)', opacity: 0.8 }}
+                  style={{ color: 'var(--brand-text-secondary)', opacity: 0.9 }}
                 >
                   {bridgeInsight
                     ? bridgeInsight

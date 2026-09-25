@@ -87,7 +87,7 @@ export function FocusChatTaskOpCard({ taskOp, resolved, dismissed, onResolve, on
         <p className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--brand-text-secondary)' }}>{label} · {taskOp.projectTitle}</p>
         <p className="text-[13px] leading-snug text-[var(--brand-text-primary)]">{preview}</p>
         {taskOp.op.reasoning && (
-          <p className="text-[11px] leading-snug italic pt-0.5" style={{ color: 'var(--brand-text-muted)', opacity: 0.75 }}>{taskOp.op.reasoning}</p>
+          <p className="text-[11px] leading-snug italic pt-0.5" style={{ color: 'var(--brand-text-muted)', opacity: 0.9 }}>{taskOp.op.reasoning}</p>
         )}
       </div>
       {resolved ? (

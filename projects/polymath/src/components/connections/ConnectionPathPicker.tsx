@@ -191,7 +191,7 @@ export function ConnectionPathPicker({ sourceId, sourceType, open, onClose, onSe
                 {!query.trim() && (
                   <div className="px-5 py-2 flex items-center gap-2">
                     <Layers className="w-3 h-3 text-brand-primary" />
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-brand-primary">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-brand-primary">
                       {suggestions.length > 0 ? 'Suggested connections' : 'Your items'}
                     </span>
                   </div>
@@ -229,7 +229,7 @@ export function ConnectionPathPicker({ sourceId, sourceType, open, onClose, onSe
                       </div>
 
                       {item.similarity && (
-                        <span className="flex-shrink-0 text-[10px] font-bold text-brand-primary px-2 py-0.5 rounded-full bg-brand-primary/10">
+                        <span className="flex-shrink-0 text-[11px] font-bold text-brand-primary px-2 py-0.5 rounded-full bg-brand-primary/10">
                           {Math.round(item.similarity * 100)}%
                         </span>
                       )}

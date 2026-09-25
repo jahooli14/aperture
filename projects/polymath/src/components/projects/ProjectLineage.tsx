@@ -64,7 +64,7 @@ export function ProjectLineage({ project }: ProjectLineageProps) {
       <button
         onClick={() => setOpen(o => !o)}
         className="flex items-center gap-2 text-xs transition-opacity hover:opacity-80"
-        style={{ color: 'var(--brand-text-secondary)', opacity: 0.5 }}
+        style={{ color: 'var(--brand-text-secondary)', opacity: 0.75 }}
       >
         <History className="h-3.5 w-3.5" />
         {versions.length} version{versions.length !== 1 ? 's' : ''} saved
@@ -87,14 +87,14 @@ export function ProjectLineage({ project }: ProjectLineageProps) {
                     <p className="text-xs font-medium truncate" style={{ color: 'var(--brand-text-primary)' }}>
                       {version.title}
                     </p>
-                    <p className="text-[10px]" style={{ color: 'var(--brand-text-secondary)', opacity: 0.4 }}>
+                    <p className="text-[11px]" style={{ color: 'var(--brand-text-secondary)', opacity: 0.69 }}>
                       {i === 0 ? 'Original' : `Reshape ${i}`} · {formatVersionDate(version.created_at)}
                     </p>
                   </div>
                   <button
                     onClick={() => handleRevert(version)}
                     disabled={!!reverting}
-                    className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-medium transition-all hover:bg-[var(--glass-surface)] disabled:opacity-40"
+                    className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-medium transition-all hover:bg-[var(--glass-surface)] disabled:opacity-40"
                     style={{ color: 'var(--brand-primary)', border: '1px solid rgba(var(--brand-primary-rgb),0.2)' }}
                   >
                     {reverting === version.version_id ? (

@@ -77,7 +77,7 @@ function FavouriteCard({ item, onClick }: { item: FavouriteItem; onClick: () => 
                     style={{ textShadow: '0 1px 4px rgba(0,0,0,0.95), 0 0 12px rgba(0,0,0,0.8)' }}>
                     {item.content}
                 </h3>
-                <p className="text-[10px] uppercase tracking-widest mb-1.5 truncate font-semibold"
+                <p className="text-[11px] uppercase tracking-widest mb-1.5 truncate font-semibold"
                     style={{ color: 'rgba(255,255,255,0.7)', textShadow: '0 1px 3px rgba(0,0,0,0.9)' }}>
                     {item.list.title}
                 </p>
@@ -197,7 +197,7 @@ export default function FavouritesPage() {
                 <div className="page-masthead-text">
                 <button
                     onClick={() => navigate('/lists')}
-                    className="flex items-center gap-2 text-[11px] uppercase tracking-[0.15em] text-[var(--brand-text-muted)] hover:text-[var(--brand-text-secondary)] transition-colors mb-2"
+                    className="flex items-center gap-2 text-[11px] uppercase tracking-[0.1em] text-[var(--brand-text-muted)] hover:text-[var(--brand-text-secondary)] transition-colors mb-2"
                 >
                     <ArrowLeft className="h-3.5 w-3.5" />
                     Back to Collections
@@ -213,7 +213,7 @@ export default function FavouritesPage() {
                     >
                         <Star className="h-3.5 w-3.5" style={{ color: 'rgb(var(--brand-primary-rgb))' }} />
                         <span
-                            className="text-[9px] font-black uppercase tracking-widest"
+                            className="text-[11px] font-black uppercase tracking-widest"
                             style={{ color: 'rgb(var(--brand-primary-rgb))' }}
                         >
                             Favourites
@@ -254,7 +254,7 @@ export default function FavouritesPage() {
                         <p className="text-brand-text-muted font-medium text-lg mb-1">
                             No favourites yet.
                         </p>
-                        <p className="text-sm text-brand-text-muted opacity-60 max-w-sm">
+                        <p className="text-sm text-brand-text-muted opacity-80 max-w-sm">
                             Rate items four stars or higher in any collection and they'll show up here.
                         </p>
                     </div>
@@ -266,7 +266,7 @@ export default function FavouritesPage() {
                                     <span className="text-[11px] font-black uppercase tracking-widest text-brand-text-muted">
                                         {label}
                                     </span>
-                                    <span className="text-[10px] font-bold text-zinc-600">{groupItems.length}</span>
+                                    <span className="text-[11px] font-bold text-zinc-600">{groupItems.length}</span>
                                     <div className="flex-1 h-px bg-[var(--glass-surface)]" />
                                 </div>
                                 <MasonryGroup

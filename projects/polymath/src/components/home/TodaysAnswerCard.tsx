@@ -307,14 +307,14 @@ export function TodaysAnswerCard({
       <div
         className="rounded-2xl p-5 relative"
         style={{
-          background: 'linear-gradient(155deg, rgba(var(--brand-primary-rgb),0.10) 0%, rgba(15,24,41,0.65) 60%)',
+          background: 'linear-gradient(155deg, rgba(var(--brand-primary-rgb),0.10) 0%, rgba(13,20,34,0.86) 55%)',
           backdropFilter: 'blur(32px) saturate(190%)',
           WebkitBackdropFilter: 'blur(32px) saturate(190%)',
           border: '1px solid rgba(var(--brand-primary-rgb),0.35)',
           boxShadow: '0 0 42px rgba(var(--brand-primary-rgb),0.22), 0 12px 36px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.06)',
         }}
       >
-        <span className="text-[10px] font-bold uppercase tracking-[0.28em]" style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.7 }}>today's answer</span>
+        <span className="text-[11px] font-bold uppercase tracking-[0.14em]" style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.87 }}>today's answer</span>
         <p className="mt-3 text-[17px] leading-[1.4]" style={{ color: 'var(--brand-text-secondary)', fontFamily: 'var(--brand-font-serif)' }}>{openingLine}</p>
         {!engaged ? (
           <SteerRow onOpen={openSteer} nudge={nudge.text} />
@@ -416,7 +416,7 @@ export function TodaysAnswerCard({
           background: '#000',
           border: '1px solid rgba(255,255,255,0.08)',
         } : {
-          background: 'linear-gradient(155deg, rgba(var(--brand-primary-rgb),0.10) 0%, rgba(15,24,41,0.65) 60%)',
+          background: 'linear-gradient(155deg, rgba(var(--brand-primary-rgb),0.10) 0%, rgba(13,20,34,0.86) 55%)',
           backdropFilter: 'blur(32px) saturate(190%)',
           WebkitBackdropFilter: 'blur(32px) saturate(190%)',
           border: '1px solid rgba(var(--brand-primary-rgb),0.35)',
@@ -452,7 +452,7 @@ export function TodaysAnswerCard({
     <div
       className="rounded-2xl p-5 flex flex-col overflow-hidden relative transition-all duration-700"
       style={{
-        background: 'linear-gradient(155deg, rgba(var(--brand-primary-rgb),0.10) 0%, rgba(15,24,41,0.65) 60%)',
+        background: 'linear-gradient(155deg, rgba(var(--brand-primary-rgb),0.10) 0%, rgba(13,20,34,0.86) 55%)',
         backdropFilter: 'blur(32px) saturate(190%)',
         WebkitBackdropFilter: 'blur(32px) saturate(190%)',
         border: `1px solid ${dormancyColor ?? 'rgba(var(--brand-primary-rgb),0.35)'}`,
@@ -493,13 +493,13 @@ export function TodaysAnswerCard({
         <div className="flex items-start justify-between gap-2 mb-1 mt-1">
           <h3
             className="card-title-lg line-clamp-2 flex-1"
-            style={{ fontWeight: 700, textShadow: '0 0 20px rgba(var(--brand-primary-rgb),0.28)' }}
+            style={{ fontWeight: 700, fontSize: '1.3125rem' }}
           >
             {focusProject.title}
           </h3>
           {dormancyLabel && (
             <span
-              className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full flex-shrink-0 mt-0.5"
+              className="text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full flex-shrink-0 mt-0.5"
               style={{
                 color: dormancyBadgeColor ?? undefined,
                 border: `1px solid rgba(245,158,11,0.4)`,
@@ -512,10 +512,9 @@ export function TodaysAnswerCard({
           )}
         </div>
         <span
-          className="text-[10px] uppercase tracking-[0.28em] font-bold mb-3 inline-block"
+          className="text-[11px] uppercase tracking-[0.14em] font-bold mb-3 inline-block"
           style={{
             color: dormancyBadgeColor ?? 'rgb(var(--brand-primary-rgb))',
-            textShadow: dormancyBadgeColor ? undefined : '0 0 12px rgba(var(--brand-primary-rgb),0.5)',
           }}
         >
           {formatRelativeTime(focusProject.last_active || focusProject.updated_at)}
@@ -526,8 +525,8 @@ export function TodaysAnswerCard({
             weight is what made the page read as a stack of outlined
             boxes; fill alone separates it from the card behind it. */}
         {nextMove ? (
-          <div className="p-3.5 rounded-xl mb-4" style={{ background: 'rgba(255,255,255,0.045)' }}>
-            <p className="text-[10px] font-bold uppercase tracking-[0.28em] mb-1.5" style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.8 }}>
+          <div className="p-3.5 rounded-xl mb-4" style={{ background: 'rgba(255,255,255,0.055)' }}>
+            <p className="text-[11px] font-bold uppercase tracking-[0.14em] mb-1.5" style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.9 }}>
               next move
             </p>
             <p
@@ -537,29 +536,29 @@ export function TodaysAnswerCard({
               {nextMove.move}
             </p>
             {nextMove.doneWhen && (
-              <p className="text-[12.5px] mt-1.5" style={{ color: 'var(--brand-text-secondary)', opacity: 0.65 }}>{nextMove.doneWhen}</p>
+              <p className="text-[12.5px] mt-1.5" style={{ color: 'var(--brand-text-secondary)', opacity: 0.84 }}>{nextMove.doneWhen}</p>
             )}
             {reEntry && (
-              <p className="text-[12px] mt-2.5 italic line-clamp-2" style={{ color: 'var(--brand-text-secondary)', opacity: 0.5 }}>
+              <p className="text-[12px] mt-2.5 italic line-clamp-2" style={{ color: 'var(--brand-text-secondary)', opacity: 0.75 }}>
                 You stopped with “{reEntry}”
               </p>
             )}
           </div>
         ) : fork ? (
-          <div className="p-3.5 rounded-xl mb-4" style={{ background: 'rgba(255,255,255,0.045)' }}>
-            <p className="text-[10px] font-bold uppercase tracking-[0.28em] mb-1.5" style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.8 }}>
+          <div className="p-3.5 rounded-xl mb-4" style={{ background: 'rgba(255,255,255,0.055)' }}>
+            <p className="text-[11px] font-bold uppercase tracking-[0.14em] mb-1.5" style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.9 }}>
               first, decide
             </p>
             <p className="text-[19px] leading-[1.3]" style={{ fontFamily: 'var(--brand-font-serif)' }}>{fork}</p>
           </div>
         ) : reEntry ? (
-          <div className="p-3 rounded-xl mb-4" style={{ background: 'rgba(255,255,255,0.045)' }}>
-            <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-[var(--brand-text-secondary)] opacity-40 mb-1">
+          <div className="p-3 rounded-xl mb-4" style={{ background: 'rgba(255,255,255,0.055)' }}>
+            <p className="text-[11px] font-bold uppercase tracking-[0.14em] mb-1.5" style={{ color: 'var(--brand-text-muted)' }}>
               where you left off
             </p>
             <p
-              className="text-[17px] leading-[1.4] mb-1 italic"
-              style={{ color: 'var(--brand-text-secondary)', fontFamily: 'var(--brand-font-serif)' }}
+              className="text-[17px] leading-[1.5] italic"
+              style={{ color: 'var(--brand-text-primary)', fontFamily: 'var(--brand-font-serif)' }}
             >
               “{reEntry}”
             </p>
@@ -586,7 +585,7 @@ export function TodaysAnswerCard({
             <button
               onClick={() => handleStartSession(false)}
               className="w-full text-[11.5px] py-0.5"
-              style={{ color: 'var(--brand-text-secondary)', opacity: 0.5 }}
+              style={{ color: 'var(--brand-text-secondary)', opacity: 0.75 }}
             >
               Not this — change it
             </button>
@@ -647,8 +646,8 @@ function SteerRow({ onOpen, nudge }: { onOpen: () => void; nudge: string | null 
           }}
         >
           <span
-            className="block text-[10px] uppercase tracking-[0.2em] mb-1.5"
-            style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.55 }}
+            className="block text-[11px] uppercase tracking-[0.14em] mb-1.5"
+            style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.78 }}
           >
             a month on the same things
           </span>
@@ -672,10 +671,10 @@ function SteerRow({ onOpen, nudge }: { onOpen: () => void; nudge: string | null 
             boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.07), 0 0 24px -10px rgba(var(--brand-primary-rgb),0.4)',
           }}
         >
-          <span className="flex-1 text-[15px]" style={{ color: 'var(--brand-text-secondary)', opacity: 0.5 }}>
+          <span className="flex-1 text-[15px]" style={{ color: 'var(--brand-text-secondary)', opacity: 0.75 }}>
             {STEER_PROMPT}
           </span>
-          <ArrowUp className="h-4 w-4 flex-shrink-0" strokeWidth={2.5} style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.5 }} />
+          <ArrowUp className="h-4 w-4 flex-shrink-0" strokeWidth={2.5} style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.75 }} />
         </button>
       )}
     </div>
@@ -731,7 +730,7 @@ function SteerPanel({
       style={{ borderTop: '1px solid rgba(255,255,255,0.09)' }}
     >
       <div className="flex items-center justify-between mb-3">
-        <span className="text-[10px] font-bold uppercase tracking-[0.28em]" style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.7 }}>
+        <span className="text-[11px] font-bold uppercase tracking-[0.14em]" style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.87 }}>
           {hasThread ? 'focus' : 'projects worth starting'}
         </span>
         <div className="flex items-center gap-3">
@@ -739,9 +738,9 @@ function SteerPanel({
               ends it, so "or steer it" can open back to fresh chips
               instead of the same conversation for the rest of the visit. */}
           {hasThread && (
-            <button onClick={onStartOver} className="text-[11px] font-medium" style={{ color: 'var(--brand-text-secondary)', opacity: 0.4 }}>Start over</button>
+            <button onClick={onStartOver} className="text-[11px] font-medium" style={{ color: 'var(--brand-text-secondary)', opacity: 0.69 }}>Start over</button>
           )}
-          <button onClick={onClose} className="text-[11px] font-medium" style={{ color: 'var(--brand-text-secondary)', opacity: 0.4 }}>Close</button>
+          <button onClick={onClose} className="text-[11px] font-medium" style={{ color: 'var(--brand-text-secondary)', opacity: 0.69 }}>Close</button>
         </div>
       </div>
 
@@ -756,11 +755,11 @@ function SteerPanel({
       ) : (
         <>
           {chipsLoading && (
-            <p className="text-xs mb-3" style={{ color: 'var(--brand-text-secondary)', opacity: 0.4 }}>Reading your captures…</p>
+            <p className="text-xs mb-3" style={{ color: 'var(--brand-text-secondary)', opacity: 0.69 }}>Reading your captures…</p>
           )}
 
           {!chipsLoading && chipsLoaded && chips.length === 0 && (
-            <p className="text-xs mb-3" style={{ color: 'var(--brand-text-secondary)', opacity: 0.4 }}>Nothing waiting yet — say what you're after below.</p>
+            <p className="text-xs mb-3" style={{ color: 'var(--brand-text-secondary)', opacity: 0.69 }}>Nothing waiting yet — say what you're after below.</p>
           )}
 
           <AnimatePresence initial={false}>
@@ -790,7 +789,7 @@ function SteerPanel({
 
       <div className="mt-4">
         {!hasThread && (
-          <span className="block mb-2 text-[13px] font-medium" style={{ color: 'var(--brand-text-secondary)', opacity: 0.4 }}>or steer it</span>
+          <span className="block mb-2 text-[13px] font-medium" style={{ color: 'var(--brand-text-secondary)', opacity: 0.69 }}>or steer it</span>
         )}
         <div className="flex items-center gap-2">
           <input
@@ -840,7 +839,7 @@ function SteerPanel({
           <button
             onClick={onToggleDeck}
             className="text-[11px] font-medium"
-            style={{ color: 'var(--brand-text-secondary)', opacity: 0.4 }}
+            style={{ color: 'var(--brand-text-secondary)', opacity: 0.69 }}
           >
             {showDeck ? 'hide the full deck' : 'or browse the full deck →'}
           </button>

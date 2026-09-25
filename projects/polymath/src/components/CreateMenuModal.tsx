@@ -66,7 +66,7 @@ export function CreateMenuModal({ isOpen, onClose, onAction }: CreateMenuModalPr
                                     What are you adding?
                                 </h2>
                                 <span
-                                    className="text-[10px] uppercase tracking-[0.32em] font-semibold mt-1.5 inline-block"
+                                    className="text-[11px] uppercase tracking-[0.14em] font-semibold mt-1.5 inline-block"
                                     style={{ color: 'rgba(var(--brand-primary-rgb),0.7)' }}
                                 >
                                     pick one

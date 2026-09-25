@@ -38,7 +38,7 @@ export const CompactArticleRow = React.memo(function CompactArticleRow({ article
       onClick={onClick}
       className="group flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-colors hover:bg-white/[0.03]"
     >
-      <Rss className="h-3.5 w-3.5 flex-shrink-0 text-[var(--brand-text-muted)] opacity-50" />
+      <Rss className="h-3.5 w-3.5 flex-shrink-0 text-[var(--brand-text-muted)] opacity-75" />
       <div className="flex-1 min-w-0">
         <p className="text-[13px] leading-snug text-[var(--brand-text-secondary)] truncate">
           {article.title || article.url}
@@ -50,7 +50,7 @@ export const CompactArticleRow = React.memo(function CompactArticleRow({ article
       <button
         onClick={(e) => { e.stopPropagation(); haptic.light(); updateArticleStatus(article.id, 'archived') }}
         aria-label="Archive"
-        className="h-7 w-7 rounded-md flex items-center justify-center text-[var(--brand-text-muted)] opacity-40 hover:opacity-100 hover:bg-white/[0.06] transition-all flex-shrink-0"
+        className="h-7 w-7 rounded-md flex items-center justify-center text-[var(--brand-text-muted)] opacity-70 hover:opacity-100 hover:bg-white/[0.06] transition-all flex-shrink-0"
       >
         <Archive className="h-3.5 w-3.5" />
       </button>

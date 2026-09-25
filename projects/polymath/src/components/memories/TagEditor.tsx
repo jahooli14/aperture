@@ -179,7 +179,7 @@ export function TagEditor({ memoryId, initialTags, onChange }: TagEditorProps) {
                   style={{ color: 'var(--brand-text-secondary)' }}
                 >
                   <span>{s.tag}</span>
-                  <span className="opacity-40 text-[10px]">{s.count}</span>
+                  <span className="opacity-40 text-[11px]">{s.count}</span>
                 </button>
               ))}
             </div>

@@ -35,7 +35,7 @@ export function isStandingQuestion(spark: { type: string } | null | undefined): 
   return !!spark
 }
 
-const quietActionStyle = { color: 'var(--brand-text-secondary)', opacity: 0.45 }
+const quietActionStyle = { color: 'rgb(var(--brand-primary-rgb))', opacity: 0.85 }
 
 export function StandingQuestion() {
   const [spark, setSpark] = useState<StandingQuestionSpark | null>(null)
@@ -199,28 +199,28 @@ export function StandingQuestion() {
     return (
       <div className="pb-3.5 mb-4">
         <p
-          className="text-[10px] font-medium uppercase tracking-[0.3em] mb-1.5"
-          style={{ color: 'var(--brand-text-secondary)', opacity: 0.32 }}
+          className="text-[11px] font-medium uppercase tracking-[0.14em] mb-1.5"
+          style={{ color: 'var(--brand-text-muted)' }}
         >
           to mull
         </p>
         <button
           className="text-[13px] italic transition-opacity hover:opacity-80 disabled:opacity-35"
-          style={{ color: 'var(--brand-text-secondary)', opacity: 0.5, fontFamily: 'var(--brand-font-serif)' }}
+          style={{ color: 'var(--brand-text-secondary)', opacity: 0.75, fontFamily: 'var(--brand-font-serif)' }}
           disabled={rerolling}
           onClick={() => reroll()}
         >
           {rerolling ? 'thinking…' : 'give me something to think about'}
         </button>
         {note && (
-          <p className="text-[11px] mt-1.5" style={{ color: 'var(--brand-text-secondary)', opacity: 0.4 }}>
+          <p className="text-[11px] mt-1.5" style={{ color: 'var(--brand-text-secondary)', opacity: 0.69 }}>
             {note}
           </p>
         )}
         {offerCreative && (
           <button
             className="text-[12px] mt-1.5 transition-opacity hover:opacity-90 disabled:opacity-40"
-            style={{ color: 'var(--brand-text-secondary)', opacity: 0.6, textDecoration: 'underline' }}
+            style={{ color: 'var(--brand-text-secondary)', opacity: 0.81, textDecoration: 'underline' }}
             disabled={rerolling}
             onClick={() => reroll(true)}
           >
@@ -234,7 +234,7 @@ export function StandingQuestion() {
   if (receipt) {
     return (
       <div className="pb-3 mb-4">
-        <p className="text-[12px]" style={{ color: 'var(--brand-text-secondary)', opacity: 0.6 }}>{receipt}</p>
+        <p className="text-[12px]" style={{ color: 'var(--brand-text-secondary)', opacity: 0.81 }}>{receipt}</p>
       </div>
     )
   }
@@ -244,8 +244,8 @@ export function StandingQuestion() {
   return (
     <div className="pb-3.5 mb-4">
       <p
-        className="text-[10px] font-medium uppercase tracking-[0.3em] mb-1.5"
-        style={{ color: 'var(--brand-text-secondary)', opacity: 0.32 }}
+        className="text-[11px] font-medium uppercase tracking-[0.14em] mb-1.5"
+        style={{ color: 'var(--brand-text-muted)' }}
       >
         {projectTitle ? `to mull · ${projectTitle}` : 'to mull'}
       </p>
@@ -253,13 +253,13 @@ export function StandingQuestion() {
       {/* Deliberately the quietest, softest text on the card — this is the
           thing you read on the way past, not the thing you act on, and it
           has to recede under the project below it. Italic serif instead of
-          the UI sans, lower contrast, roomier line height: a thought held
-          loosely rather than an instruction. */}
+          the UI sans and a roomier line height: a thought held loosely
+          rather than an instruction. Quiet by size and face, never by
+          fading — faded italic on haze was unreadable. */}
       <p
-        className="text-[14px] leading-[1.6] italic font-light"
+        className="text-[15px] leading-[1.6]"
         style={{
           color: 'var(--brand-text-secondary)',
-          opacity: 0.68,
           fontFamily: 'var(--brand-font-serif)',
           textWrap: 'pretty',
         }}
@@ -279,7 +279,7 @@ export function StandingQuestion() {
           >
             answer it
           </button>
-          <span style={{ color: 'var(--brand-text-secondary)', opacity: 0.25 }}>·</span>
+          <span style={{ color: 'var(--brand-text-secondary)', opacity: 0.6 }}>·</span>
           <button
             className="text-[12px] transition-opacity hover:opacity-90 disabled:opacity-30"
             style={quietActionStyle}
@@ -290,7 +290,7 @@ export function StandingQuestion() {
           </button>
           {offerCreative && (
             <>
-              <span style={{ color: 'var(--brand-text-secondary)', opacity: 0.25 }}>·</span>
+              <span style={{ color: 'var(--brand-text-secondary)', opacity: 0.6 }}>·</span>
               <button
                 className="text-[12px] transition-opacity hover:opacity-90 disabled:opacity-30"
                 style={quietActionStyle}
@@ -305,7 +305,7 @@ export function StandingQuestion() {
       )}
 
       {note && (
-        <p className="text-[11px] mt-1.5" style={{ color: 'var(--brand-text-secondary)', opacity: 0.45 }}>
+        <p className="text-[11px] mt-1.5" style={{ color: 'var(--brand-text-secondary)', opacity: 0.72 }}>
           {note}
         </p>
       )}

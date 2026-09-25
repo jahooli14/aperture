@@ -219,11 +219,11 @@ export function ConnectionsList({ itemType, itemId, itemTitle, onConnectionDelet
                   {/* Content */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-0.5">
-                      <span className="text-[10px] font-bold uppercase tracking-wider opacity-60" style={{ color: "var(--brand-text-muted)" }}>
+                      <span className="text-[11px] font-bold uppercase tracking-wider opacity-60" style={{ color: "var(--brand-text-muted)" }}>
                         {item.type}
                       </span>
                       {isAI && (
-                        <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-brand-primary/10 text-brand-primary text-[10px] font-medium">
+                        <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-brand-primary/10 text-brand-primary text-[11px] font-medium">
                           <Zap className="h-2.5 w-2.5" />
                           Auto
                         </div>

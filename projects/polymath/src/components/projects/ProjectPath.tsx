@@ -343,7 +343,7 @@ export function ProjectPath({ tasks, highlightedTasks = [], onUpdate, projectId 
                                   {task.progress_note && (
                                     <p
                                       className="text-[11px] leading-snug mt-0.5 italic"
-                                      style={{ color: 'var(--brand-text-secondary)', opacity: 0.5 }}
+                                      style={{ color: 'var(--brand-text-secondary)', opacity: 0.75 }}
                                     >
                                       {task.progress_note}
                                     </p>
@@ -352,7 +352,7 @@ export function ProjectPath({ tasks, highlightedTasks = [], onUpdate, projectId 
                                     <button
                                       onClick={(e) => { e.stopPropagation(); handleEstimateChange(task.id, task.estimated_minutes) }}
                                       className={cn(
-                                        "text-[10px] font-medium px-1.5 py-0.5 rounded-md transition-all hover:bg-white/[0.04] flex items-center gap-1",
+                                        "text-[11px] font-medium px-1.5 py-0.5 rounded-md transition-all hover:bg-white/[0.04] flex items-center gap-1",
                                         task.estimate_set ? "opacity-60 hover:opacity-90" : "opacity-35 hover:opacity-70"
                                       )}
                                       style={{ color: 'var(--brand-text-secondary)' }}
@@ -362,10 +362,10 @@ export function ProjectPath({ tasks, highlightedTasks = [], onUpdate, projectId 
                                       <span>{task.estimate_set ? `${task.estimated_minutes}m` : 'Estimate'}</span>
                                     </button>
                                     {task.is_ai_suggested && (
-                                      <span className="text-[9px] font-medium uppercase tracking-wider" style={{ color: 'var(--brand-text-muted)', opacity: 0.35 }}>suggested</span>
+                                      <span className="text-[11px] font-medium uppercase tracking-wider" style={{ color: 'var(--brand-text-muted)', opacity: 0.66 }}>suggested</span>
                                     )}
                                     {isHighlighted && (
-                                      <span className="text-[9px] font-semibold uppercase tracking-wider" style={{ color: `rgb(${phase.accent})`, opacity: 0.5 }}>focus</span>
+                                      <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: `rgb(${phase.accent})`, opacity: 0.5 }}>focus</span>
                                     )}
                                   </div>
                                 </>
@@ -387,7 +387,7 @@ export function ProjectPath({ tasks, highlightedTasks = [], onUpdate, projectId 
 
                       {/* Completed count */}
                       {completed.length > 0 && (
-                        <p className="text-[10px] font-medium px-3 pt-1" style={{ color: `rgb(${phase.accent})`, opacity: 0.25 }}>
+                        <p className="text-[11px] font-medium px-3 pt-1" style={{ color: `rgb(${phase.accent})`, opacity: 0.25 }}>
                           {completed.length} done
                         </p>
                       )}
@@ -422,7 +422,7 @@ export function ProjectPath({ tasks, highlightedTasks = [], onUpdate, projectId 
                         <button
                           onClick={() => { setAddingInPhase(phase.key); setNewTaskText('') }}
                           className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-medium transition-colors w-full rounded-lg hover:bg-white/[0.02]"
-                          style={{ color: 'var(--brand-text-secondary)', opacity: 0.2 }}
+                          style={{ color: 'var(--brand-text-secondary)', opacity: 0.57 }}
                         >
                           <Plus className="h-3 w-3" /> Add
                         </button>
@@ -430,7 +430,7 @@ export function ProjectPath({ tasks, highlightedTasks = [], onUpdate, projectId 
 
                       {/* Empty phase prompt */}
                       {incomplete.length === 0 && completed.length === 0 && isActive && (
-                        <p className="text-[12px] px-3 py-2" style={{ color: 'var(--brand-text-secondary)', opacity: 0.2 }}>
+                        <p className="text-[12px] px-3 py-2" style={{ color: 'var(--brand-text-secondary)', opacity: 0.57 }}>
                           {phase.emptyPrompt}
                         </p>
                       )}
@@ -451,10 +451,10 @@ export function ProjectPath({ tasks, highlightedTasks = [], onUpdate, projectId 
             className="w-full flex items-center gap-2 px-4 py-2 rounded-xl hover:bg-white/[0.02] transition-colors text-left"
           >
             {showBuilt
-              ? <ChevronDown className="h-3 w-3" style={{ color: 'var(--brand-text-secondary)', opacity: 0.15 }} />
-              : <ChevronRight className="h-3 w-3" style={{ color: 'var(--brand-text-secondary)', opacity: 0.15 }} />
+              ? <ChevronDown className="h-3 w-3" style={{ color: 'var(--brand-text-secondary)', opacity: 0.54 }} />
+              : <ChevronRight className="h-3 w-3" style={{ color: 'var(--brand-text-secondary)', opacity: 0.54 }} />
             }
-            <span className="text-[11px] font-medium" style={{ color: 'var(--brand-text-secondary)', opacity: 0.2 }}>
+            <span className="text-[11px] font-medium" style={{ color: 'var(--brand-text-secondary)', opacity: 0.57 }}>
               {allCompleted.length} thing{allCompleted.length !== 1 ? 's' : ''} done
             </span>
           </button>
@@ -480,11 +480,11 @@ export function ProjectPath({ tasks, highlightedTasks = [], onUpdate, projectId 
                         >
                           <Check className="h-2.5 w-2.5" style={{ color: `rgb(${phase.accent})`, opacity: 0.7 }} />
                         </button>
-                        <span className="text-[12px] leading-snug" style={{ color: 'var(--brand-text-secondary)', opacity: 0.3 }}>
+                        <span className="text-[12px] leading-snug" style={{ color: 'var(--brand-text-secondary)', opacity: 0.63 }}>
                           {task.text}
                         </span>
                         {task.completed_at && (
-                          <span className="text-[9px] ml-auto flex-shrink-0" style={{ color: 'var(--brand-text-secondary)', opacity: 0.12 }}>
+                          <span className="text-[11px] ml-auto flex-shrink-0" style={{ color: 'var(--brand-text-secondary)', opacity: 0.52 }}>
                             {new Date(task.completed_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                           </span>
                         )}
@@ -501,8 +501,8 @@ export function ProjectPath({ tasks, highlightedTasks = [], onUpdate, projectId 
       {/* Empty State */}
       {!hasAnyTasks && (
         <div className="text-center py-10">
-          <p className="text-[14px]" style={{ color: 'var(--brand-text-secondary)', opacity: 0.3 }}>No tasks yet</p>
-          <p className="text-[12px] mt-1" style={{ color: 'var(--brand-text-secondary)', opacity: 0.18 }}>Break it into phases — start small, build up, wrap clean.</p>
+          <p className="text-[14px]" style={{ color: 'var(--brand-text-secondary)', opacity: 0.63 }}>No tasks yet</p>
+          <p className="text-[12px] mt-1" style={{ color: 'var(--brand-text-secondary)', opacity: 0.56 }}>Break it into phases — start small, build up, wrap clean.</p>
         </div>
       )}
       {confirmDialog}

@@ -38,7 +38,7 @@ export function SuggestedPrompts() {
 
   return (
     <div className="mb-6">
-      <h3 className="text-sm font-bold uppercase tracking-widest mb-3 flex items-center gap-2" style={{ color: 'var(--brand-text-primary)', opacity: 0.7 }}>
+      <h3 className="text-sm font-bold uppercase tracking-widest mb-3 flex items-center gap-2" style={{ color: 'var(--brand-text-primary)', opacity: 0.87 }}>
         <Lightbulb className="h-4 w-4" />
         Tell us more
       </h3>
@@ -58,7 +58,7 @@ export function SuggestedPrompts() {
               <div className="flex-1">
                 <h4 className="font-semibold text-sm" style={{ color: 'var(--brand-text-primary)' }}>{prompt.prompt_text}</h4>
                 {prompt.prompt_description && (
-                  <p className="text-xs mt-1" style={{ color: 'var(--brand-text-secondary)', opacity: 0.7 }}>{prompt.prompt_description}</p>
+                  <p className="text-xs mt-1" style={{ color: 'var(--brand-text-secondary)', opacity: 0.87 }}>{prompt.prompt_description}</p>
                 )}
               </div>
             </div>
@@ -67,7 +67,7 @@ export function SuggestedPrompts() {
               <button
                 onClick={() => handleDismiss(prompt.id)}
                 className="flex items-center gap-1 px-3 py-1.5 text-xs rounded-lg transition-colors"
-                style={{ color: 'var(--brand-text-secondary)', opacity: 0.5 }}
+                style={{ color: 'var(--brand-text-secondary)', opacity: 0.75 }}
               >
                 <X className="h-3 w-3" />
                 Skip

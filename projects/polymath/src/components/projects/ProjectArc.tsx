@@ -46,7 +46,7 @@ export function ProjectArc({ milestones, targetDate }: ProjectArcProps) {
 
   return (
     <div className="space-y-3">
-      <span className="text-[11px] font-medium tracking-wide flex items-center gap-1.5 lowercase" style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.5 }}>
+      <span className="text-[11px] font-medium tracking-wide flex items-center gap-1.5 lowercase" style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.75 }}>
         <Flag className="h-3 w-3" /> the arc
       </span>
 
@@ -61,7 +61,7 @@ export function ProjectArc({ milestones, targetDate }: ProjectArcProps) {
           {shown.map(m => (
             <li key={m.n} className="flex items-start gap-2.5">
               {m.reached ? (
-                <CheckCircle2 className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.8 }} />
+                <CheckCircle2 className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.9 }} />
               ) : (
                 <Circle className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" style={{ ...secondaryTextStyle, opacity: 0.35 }} />
               )}
@@ -69,7 +69,7 @@ export function ProjectArc({ milestones, targetDate }: ProjectArcProps) {
                 <p className="text-[13px] leading-snug" style={{ color: 'var(--brand-text-primary)', opacity: 0.85 }}>
                   {m.reason}
                 </p>
-                <p className="text-[10.5px]" style={{ ...secondaryTextStyle, opacity: 0.45 }}>
+                <p className="text-[11px]" style={{ ...secondaryTextStyle, opacity: 0.45 }}>
                   {shortDate(m.at)}{m.steps.length > 0 ? ` · ${m.steps.length} step${m.steps.length === 1 ? '' : 's'}` : ''}
                 </p>
               </div>

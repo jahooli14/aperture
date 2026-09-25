@@ -90,7 +90,7 @@ export function FeedsPage() {
             <div className="page-masthead-text">
               <button
                 onClick={() => navigate(-1)}
-                className="flex items-center gap-2 text-[11px] uppercase tracking-[0.15em] text-[var(--brand-text-muted)] hover:text-[var(--brand-text-secondary)] transition-colors mb-2"
+                className="flex items-center gap-2 text-[11px] uppercase tracking-[0.1em] text-[var(--brand-text-muted)] hover:text-[var(--brand-text-secondary)] transition-colors mb-2"
               >
                 <ArrowLeft className="h-3.5 w-3.5" />
                 Back
@@ -133,7 +133,7 @@ export function FeedsPage() {
 
           {!loading && feeds.length === 0 && (
             <div className="text-center py-16 px-4">
-              <Rss className="h-10 w-10 mx-auto text-[var(--brand-text-muted)] opacity-40 mb-4" />
+              <Rss className="h-10 w-10 mx-auto text-[var(--brand-text-muted)] opacity-70 mb-4" />
               <h3 className="page-hero-sm mb-2">No feeds yet.</h3>
               <p className="text-sm text-[var(--brand-text-muted)] leading-relaxed mb-6">
                 Subscribe to a few sources and they'll show up in <em>now consuming</em> on the home.
@@ -176,7 +176,7 @@ export function FeedsPage() {
                           {feed.description}
                         </p>
                       )}
-                      <p className="text-[10px] text-[var(--brand-text-muted)] opacity-60 mt-1 truncate">
+                      <p className="text-[11px] text-[var(--brand-text-muted)] opacity-80 mt-1 truncate">
                         Last synced {lastFetched}
                       </p>
                     </div>

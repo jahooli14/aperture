@@ -46,11 +46,11 @@ export function KeepGoingEmpty({
         minHeight: '180px',
       }}
     >
-      <Zap className="h-8 w-8 text-[var(--brand-primary)] opacity-30 mb-3" />
-      <p className="text-sm font-medium text-[var(--brand-text-secondary)] opacity-60">{message ?? 'No active projects yet'}</p>
+      <Zap className="h-8 w-8 text-[var(--brand-primary)] opacity-65 mb-3" />
+      <p className="text-sm font-medium text-[var(--brand-text-secondary)] opacity-80">{message ?? 'No active projects yet'}</p>
       <button
         onClick={handleAction}
-        className="mt-3 text-xs text-[var(--brand-primary)] opacity-70 hover:opacity-100 transition-opacity underline"
+        className="mt-3 text-xs text-[var(--brand-primary)] opacity-85 hover:opacity-100 transition-opacity underline"
       >
         {actionLabel ?? 'Open projects'}
       </button>

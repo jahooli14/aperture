@@ -112,8 +112,8 @@ export function ProjectMiniCard({
         {/* Mode framing sub-line — uppercase tracked caps, single tone. */}
         {meta && (
           <span
-            className="text-[9.5px] uppercase tracking-[0.24em] font-semibold mt-1"
-            style={{ color: 'rgba(var(--brand-primary-rgb), 0.6)' }}
+            className="text-[11px] uppercase tracking-[0.14em] font-semibold mt-1"
+            style={{ color: 'rgba(var(--brand-primary-rgb), 0.85)' }}
           >
             {meta}
           </span>
@@ -125,7 +125,7 @@ export function ProjectMiniCard({
         <div className="mt-auto flex items-center justify-between gap-2 pt-1">
           {primaryLabel ? (
             <span
-              className="text-[9px] uppercase tracking-[0.16em] font-semibold px-1.5 py-0.5 rounded-md truncate max-w-[60%]"
+              className="text-[11px] uppercase tracking-[0.1em] font-semibold px-1.5 py-0.5 rounded-md truncate max-w-[60%]"
               style={{
                 background: `rgba(${theme.rgb},0.12)`,
                 color: `rgba(${theme.rgb},0.9)`,

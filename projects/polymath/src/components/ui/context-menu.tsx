@@ -80,8 +80,8 @@ export function ContextMenu({ items, isOpen, onClose, title }: ContextMenuProps)
             {title && (
               <div className="px-5 pt-3 pb-3">
                 <p
-                  className="text-[9px] font-black uppercase tracking-[0.2em] mb-1"
-                  style={{ color: 'var(--brand-text-muted)', opacity: 0.6 }}
+                  className="text-[11px] font-black uppercase tracking-[0.14em] mb-1"
+                  style={{ color: 'var(--brand-text-muted)', opacity: 0.81 }}
                 >
                   Actions
                 </p>

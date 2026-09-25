@@ -74,7 +74,10 @@
     width: 100%;
     font-weight: 400;
     line-height: 1.6;
-    letter-spacing: var(--premium-tracking-normal);
+    /* Normal tracking: negative tracking at 13–16px crowds Inter on a
+       dark background. Tighten headings, not body copy. */
+    letter-spacing: normal;
+    text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     /* Momentum scrolling for iOS */

@@ -647,7 +647,7 @@ export function InlineGuide({
     <div className="glass-card-strong rounded-2xl p-5 sm:p-6">
       {/* Header */}
       <div className="flex items-center gap-2 mb-4">
-        <span className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.75 }}>
+        <span className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.9 }}>
           Guide
         </span>
         <div className="h-px flex-grow" style={{ background: 'rgba(255,255,255,0.1)' }} />
@@ -675,7 +675,7 @@ export function InlineGuide({
                 {msg.kind === 'guide' ? (
                   <div className="space-y-3">
                     {msg.leadNote && (
-                      <p className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.55 }}>
+                      <p className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.78 }}>
                         {msg.leadNote}
                       </p>
                     )}
@@ -689,8 +689,8 @@ export function InlineGuide({
                         {msg.echoes.map((echo, j) => (
                           <span
                             key={j}
-                            className="text-[10px] px-2 py-0.5 rounded-lg"
-                            style={{ background: 'rgba(255,255,255,0.03)', color: 'var(--brand-text-secondary)', opacity: 0.35, border: '1px solid rgba(255,255,255,0.04)' }}
+                            className="text-[11px] px-2 py-0.5 rounded-lg"
+                            style={{ background: 'rgba(255,255,255,0.03)', color: 'var(--brand-text-secondary)', opacity: 0.66, border: '1px solid rgba(255,255,255,0.04)' }}
                             title={echo.snippet}
                           >
                             {echo.title}
@@ -721,7 +721,7 @@ export function InlineGuide({
                                   {preview}
                                 </p>
                                 {op.reasoning && (
-                                  <p className="text-[11px] leading-snug italic pt-0.5" style={{ color: 'var(--brand-text-muted)', opacity: 0.75 }}>
+                                  <p className="text-[11px] leading-snug italic pt-0.5" style={{ color: 'var(--brand-text-muted)', opacity: 0.9 }}>
                                     {op.reasoning}
                                   </p>
                                 )}
@@ -752,16 +752,16 @@ export function InlineGuide({
                         }}
                       >
                         <div className="flex items-center gap-2">
-                          <Target className="h-3.5 w-3.5" style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.7 }} />
-                          <p className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.65 }}>
+                          <Target className="h-3.5 w-3.5" style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.87 }} />
+                          <p className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.84 }}>
                             Update finish line
                           </p>
                         </div>
-                        <p className="text-[13px] italic leading-snug font-serif" style={{ color: 'var(--brand-text-primary)', opacity: 0.75 }}>
+                        <p className="text-[13px] italic leading-snug font-serif" style={{ color: 'var(--brand-text-primary)', opacity: 0.9 }}>
                           "{msg.pendingGoal.newGoal}"
                         </p>
                         {msg.pendingGoal.reasoning && (
-                          <p className="text-[11px] leading-snug" style={{ color: 'var(--brand-text-muted)', opacity: 0.7 }}>
+                          <p className="text-[11px] leading-snug" style={{ color: 'var(--brand-text-muted)', opacity: 0.87 }}>
                             {msg.pendingGoal.reasoning}
                           </p>
                         )}
@@ -787,16 +787,16 @@ export function InlineGuide({
                         style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}
                       >
                         <div className="flex items-center gap-2">
-                          <FileText className="h-3.5 w-3.5" style={{ color: 'var(--brand-text-secondary)', opacity: 0.7 }} />
-                          <p className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--brand-text-secondary)', opacity: 0.65 }}>
+                          <FileText className="h-3.5 w-3.5" style={{ color: 'var(--brand-text-secondary)', opacity: 0.87 }} />
+                          <p className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: 'var(--brand-text-secondary)', opacity: 0.84 }}>
                             Add to notes
                           </p>
                         </div>
-                        <p className="text-[13px] leading-snug whitespace-pre-wrap" style={{ color: 'var(--brand-text-primary)', opacity: 0.8 }}>
+                        <p className="text-[13px] leading-snug whitespace-pre-wrap" style={{ color: 'var(--brand-text-primary)', opacity: 0.9 }}>
                           {msg.pendingNote.text}
                         </p>
                         {msg.pendingNote.reasoning && (
-                          <p className="text-[11px] leading-snug italic" style={{ color: 'var(--brand-text-muted)', opacity: 0.7 }}>
+                          <p className="text-[11px] leading-snug italic" style={{ color: 'var(--brand-text-muted)', opacity: 0.87 }}>
                             {msg.pendingNote.reasoning}
                           </p>
                         )}
@@ -851,7 +851,7 @@ export function InlineGuide({
                             <button
                               onClick={() => dismissAll(i)}
                               className="min-h-[44px] px-4 rounded-lg transition-colors hover:bg-white/[0.05] text-[13px] font-medium"
-                              style={{ color: 'var(--brand-text-secondary)', opacity: 0.6 }}
+                              style={{ color: 'var(--brand-text-secondary)', opacity: 0.81 }}
                             >
                               Not now
                             </button>
@@ -897,7 +897,7 @@ export function InlineGuide({
                             <button
                               onClick={() => msg.suggestedTasks?.forEach(handleAddTask)}
                               className="flex items-center gap-1 px-2.5 py-1 rounded-lg transition-all text-[11px] font-medium"
-                              style={{ background: 'rgba(var(--brand-primary-rgb),0.08)', color: 'rgb(var(--brand-primary-rgb))', opacity: 0.8 }}
+                              style={{ background: 'rgba(var(--brand-primary-rgb),0.08)', color: 'rgb(var(--brand-primary-rgb))', opacity: 0.9 }}
                             >
                               <Plus className="h-3 w-3" /> Add all
                             </button>
@@ -911,7 +911,7 @@ export function InlineGuide({
                               className="flex items-center gap-3 px-3 py-2.5 rounded-xl"
                               style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.04)' }}
                             >
-                              <p className="text-[13px] leading-snug flex-1" style={{ color: 'var(--brand-text-primary)', opacity: 0.6 }}>
+                              <p className="text-[13px] leading-snug flex-1" style={{ color: 'var(--brand-text-primary)', opacity: 0.81 }}>
                                 {task.text}
                               </p>
                               <button

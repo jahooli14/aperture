@@ -12,8 +12,9 @@
  *    elsewhere — it dilutes the hero.
  *
  * 2. EDITORIAL TYPE PAIR. Two fonts, two jobs:
- *      • --brand-font-serif (Playfair) for CONTENT — titles, body
- *        copy, quotes, project pitches, memories, reading.
+ *      • --brand-font-display (Playfair) for PAGE TITLES only (≥ 24px).
+ *      • --brand-font-serif (Literata) for CONTENT — questions, quotes,
+ *        next moves, memories, reading. Readable at body size.
  *      • --brand-font-header / --brand-font-body (Outfit / Inter) for
  *        UI CHROME — section headers, buttons, chips, metadata.
  *    Don't use serif for buttons or sans for body content.
@@ -61,24 +62,29 @@
     --project-default: rgb(var(--project-default-rgb));
 
     /* Text Standards */
-    --brand-text-primary: #ffffff;
-    --brand-text-secondary: #e5e7eb;
-    --brand-text-muted: #b4bac6;
+    --brand-text-primary: #f8fafc;
+    --brand-text-secondary: #dde3ec;
+    --brand-text-muted: #aab4c3;
 
     /* Accessible text hierarchy (WCAG AA against #0f1829) */
     --text-primary: rgba(255, 255, 255, 0.92);
-    --text-secondary: rgba(255, 255, 255, 0.65);
-    --text-tertiary: rgba(255, 255, 255, 0.45);
-    --text-muted: rgba(255, 255, 255, 0.28);
-    --text-disabled: rgba(255, 255, 255, 0.18);
+    --text-secondary: rgba(255, 255, 255, 0.74);
+    --text-tertiary: rgba(255, 255, 255, 0.6);
+    --text-muted: rgba(255, 255, 255, 0.5);
+    --text-disabled: rgba(255, 255, 255, 0.3);
 
     /* Font Standards */
     --brand-font-header: 'Outfit', 'Inter', sans-serif;
     --brand-font-body: 'Inter', -apple-system, sans-serif;
-    --brand-font-serif: 'Playfair Display', Georgia, 'Times New Roman', serif;
-    /* Long-form reading only (the article body in the reader). Playfair is
-       a display face and gets thin and tiring below ~24px; Literata is a
-       screen-reading face and stays solid at 19px on a dark background. */
+    /* Display serif — page titles and big numbers only (≥ 24px). Playfair's
+       hairlines are beautiful large and vanish at body size on a dark
+       screen, which is what made the app hard to read. */
+    --brand-font-display: 'Playfair Display', Georgia, 'Times New Roman', serif;
+    /* Content serif — questions, quotes, next moves, anything read at
+       14–20px. Literata was drawn for screens: even strokes, tall x-height,
+       an italic that stays legible. */
+    --brand-font-serif: 'Literata', Charter, 'Iowan Old Style', Georgia, serif;
+    /* Long-form reading (the article body in the reader). Same face. */
     --brand-font-reading: 'Literata', Charter, 'Iowan Old Style', Georgia, serif;
 
     /* ─── Page Color Identity System ─────────────────────────── */
@@ -207,9 +213,9 @@
 /* Use these to ensure WCAG AA contrast against dark surfaces  */
 
 .text-accessible-primary   { color: rgba(255, 255, 255, 0.92); }
-.text-accessible-secondary { color: rgba(255, 255, 255, 0.65); }
-.text-accessible-meta      { color: rgba(255, 255, 255, 0.45); }
-.text-accessible-muted     { color: rgba(255, 255, 255, 0.30); }
+.text-accessible-secondary { color: rgba(255, 255, 255, 0.74); }
+.text-accessible-meta      { color: rgba(255, 255, 255, 0.6); }
+.text-accessible-muted     { color: rgba(255, 255, 255, 0.5); }
 
 /* ─── Focus rings ─────────────────────────────────────────── */
 
@@ -489,10 +495,9 @@ h6 {
     font-family: var(--brand-font-serif);
     font-style: italic;
     font-weight: 400;
-    color: rgba(255, 255, 255, 0.55);
+    color: rgba(255, 255, 255, 0.72);
     font-size: 1rem;
-    line-height: 1.5;
-    letter-spacing: 0.01em;
+    line-height: 1.55;
 }
 
 /* ─── Micro-interaction Utilities ────────────────────────── */
@@ -716,8 +721,8 @@ h6 {
     font-family: var(--brand-font-header);
     font-size: 12px;
     font-weight: 600;
-    letter-spacing: 0.18em;
-    color: rgba(var(--brand-primary-rgb), 0.78);
+    letter-spacing: 0.12em;
+    color: rgba(var(--brand-primary-rgb), 0.9);
     text-transform: uppercase;
     line-height: 1;
 }
