@@ -11,7 +11,7 @@
  * ongoing conversation.
  */
 
-import { useState, useRef, useEffect, useCallback, type ReactNode } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { ArrowUp, Plus, Check, Target, Trash2, Pencil, RotateCcw, FileText, ArrowDownUp } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { supabase } from '../../lib/supabase'
@@ -108,10 +108,6 @@ interface InlineGuideProps {
    *  scroll to and flash the card it changed — makes the connection
    *  between the conversation and the artifact visible. */
   onApplied?: (kind: 'goal' | 'tasks' | 'note') => void
-  /** Renders inside this same card, below the input, behind a hairline
-   *  divider — the "Start session" trigger, so the guide and the session
-   *  it leads into read as one arc instead of two stacked cards. */
-  footer?: ReactNode
 }
 
 
@@ -123,7 +119,6 @@ export function InlineGuide({
   onUpdateGoal,
   onAppendNote,
   onApplied,
-  footer,
 }: InlineGuideProps) {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
@@ -981,14 +976,6 @@ export function InlineGuide({
           >
             <ArrowUp className="h-4 w-4" strokeWidth={2.5} />
           </button>
-        </div>
-      )}
-
-      {/* Footer — the "Start session" trigger, sharing this card rather
-          than sitting in a separate one below it. */}
-      {footer && !briefLoading && (
-        <div className="mt-4 pt-4" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-          {footer}
         </div>
       )}
     </div>
