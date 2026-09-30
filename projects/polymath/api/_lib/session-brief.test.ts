@@ -4,6 +4,7 @@ import {
   detectSessionBriefMomentum,
   buildSessionBriefPrompt,
   parseSessionBriefResponse,
+  moveHeadline,
   type SessionBriefPromptInput,
 } from './session-brief.js'
 
@@ -173,5 +174,51 @@ describe('parseSessionBriefResponse', () => {
       { firstIncompleteTaskText: 'Reread act 3', title: 'Going Analogue' },
     )
     expect(result.greeting).toBe('Ready to pick up where you left off.')
+  })
+
+  // Live, Sept 2026: every step ticked, a move on the card below -- and the
+  // Guide opened with "The task list is clear" and asked "What's the last
+  // thing on this list you'd want out of the way?"
+  describe('when a next move is already written', () => {
+    const withMove: SessionBriefPromptInput = {
+      ...baseInput,
+      phase: 'closing',
+      completedTasks: 4,
+      totalTasks: 4,
+      progressPercent: 100,
+      incompleteTasks: [],
+      nextMove: {
+        text: 'Paste the first section of text into Claude AI along with your comments and hit send. Done when Claude AI starts generating the rewrite in plain English.',
+        kind: 'move',
+      },
+      lastNote: 'Fed the rewrite comments in. Next is the first section.',
+    }
+
+    it('talks about the move and the note, not the list', () => {
+      const p = buildSessionBriefPrompt(withMove)
+      expect(p).toContain('THE NEXT MOVE, ALREADY ON THE CARD BELOW YOU: "Paste the first section of text into Claude AI along with your comments and hit send."')
+      expect(p).toContain('WHERE THEY LEFT OFF (their own note): "Fed the rewrite comments in.')
+      expect(p).toContain('never call it clear')
+      expect(p).not.toContain('HOME STRETCH')
+      expect(p).not.toContain("What's the last thing on this list")
+      expect(p).not.toContain('PROGRESS: 4/4')
+    })
+
+    it('treats an open fork as the question to ask', () => {
+      const p = buildSessionBriefPrompt({ ...withMove, nextMove: { text: 'The pole, or the wires?', kind: 'fork' } })
+      expect(p).toContain('OPEN QUESTION ON THE CARD BELOW YOU: "The pole, or the wires?"')
+    })
+
+    it('falls back to the list when no move exists', () => {
+      const p = buildSessionBriefPrompt({ ...withMove, nextMove: null, incompleteTasks: [{ text: 'x' }], totalTasks: 5 })
+      expect(p).toContain('HOME STRETCH')
+    })
+  })
+})
+
+describe('moveHeadline', () => {
+  it('drops the "Done when" tail the card already shows', () => {
+    expect(moveHeadline('Sand the edge. Done when it is smooth.')).toBe('Sand the edge.')
+    expect(moveHeadline('Sand the edge.')).toBe('Sand the edge.')
   })
 })

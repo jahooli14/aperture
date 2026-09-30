@@ -51,6 +51,7 @@ import {
   detectSessionBriefPhase,
   detectSessionBriefMomentum,
   buildSessionBriefPrompt,
+  moveHeadline,
   parseSessionBriefResponse,
   SESSION_BRIEF_PHASE_LABELS,
   type SessionBrief,
@@ -63,7 +64,7 @@ import { deriveSessionShapes, needsMvsSeed, measuredMvs, type SlotInput, type Se
 import { shapeProjectFromDump } from './_lib/project-shaping.js'
 import { generateTaskSpine, toStoredTasks, buildEvidenceFromSaid } from './_lib/task-spine.js'
 import { stuckMove } from './_lib/session-moves.js'
-import { writeNextMove, addFeedback, type NextMove } from './_lib/next-move.js'
+import { writeNextMove, addFeedback, readMove, type NextMove } from './_lib/next-move.js'
 import { loadMoveContext, saveMove } from './_lib/next-move-store.js'
 import { debriefSession, type DebriefOpenTask } from './_lib/debrief-matcher.js'
 import { normalizeTaskOrder } from './_lib/task-order.js'
@@ -1195,6 +1196,10 @@ async function handleSessionBrief(req: VercelRequest, res: VercelResponse) {
     ? { reason: latestMilestone.reason }
     : null
 
+  // The move on the card below the Guide -- the Guide has to know it, or
+  // it talks about an empty list while the card shows the real next step.
+  const move = readMove(project.metadata)
+
   const prompt = buildSessionBriefPrompt({
     title: project.title,
     description: project.description,
@@ -1210,11 +1215,13 @@ async function handleSessionBrief(req: VercelRequest, res: VercelResponse) {
     recentCompletionTexts,
     recentCaptures,
     lastCheckpoint,
+    nextMove: move ? { text: move.text, kind: move.kind } : null,
+    lastNote: project.last_closeout_text ?? null,
   })
 
   const aiRaw = await generateText(prompt, { temperature: 0.75, maxTokens: 200, responseFormat: 'json' })
   const { greeting, focusSuggestion, proactiveQuestion } = parseSessionBriefResponse(aiRaw, {
-    firstIncompleteTaskText: incompleteTasks[0]?.text || null,
+    firstIncompleteTaskText: move ? moveHeadline(move.text) : incompleteTasks[0]?.text || null,
     title: project.title,
   })
 
