@@ -5,7 +5,8 @@
  * GET    /api/stories?id=X                -> one story, its writers and its stats
  * POST   /api/stories                     -> create one
  * PATCH  /api/stories?id=X                -> rename / re-blurb / change turn mode (owner)
- * POST   /api/stories?id=X&resource=skip  -> nudge past whoever's stalling
+ * POST   /api/stories?id=X&resource=skip  -> move past whoever's stalling
+ * POST   /api/stories?id=X&resource=nudge -> tap whoever's up on the shoulder
  */
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { getSupabaseClient } from './_lib/supabase.js'
@@ -15,6 +16,8 @@ import { ensureProfile, loadProfiles, loadStory } from './_lib/stories.js'
 import { canWrite, nextInRotation, whoseTurn, type TurnMode } from './_lib/turns.js'
 import { summarise, type StatLine } from './_lib/stats.js'
 import { computeStreak, streakHoursLeft } from './_lib/streaks.js'
+import { nudgeAllowed, nudgeRecipients } from './_lib/nudge.js'
+import { nudgeTurn } from './_lib/nudge-turn.js'
 
 const TURN_MODES: TurnMode[] = ['rotation', 'open']
 
@@ -31,6 +34,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method === 'GET') return listStories(res, supabase, userId)
     if (req.method === 'POST' && resource === 'skip' && storyId) {
       return skipTurn(res, supabase, userId, storyId)
+    }
+    if (req.method === 'POST' && resource === 'nudge' && storyId) {
+      return nudgeTurn(res, supabase, userId, storyId)
     }
     if (req.method === 'POST') return createStory(req, res, supabase, userId)
     if (req.method === 'PATCH' && storyId) return updateStory(req, res, supabase, userId, storyId)
@@ -128,6 +134,21 @@ async function getStory(res: VercelResponse, supabase: Client, userId: string, s
 
   const names = await loadProfiles(supabase, loaded.members.map((m) => m.user_id))
   const last = (lines ?? [])[(lines ?? []).length - 1] ?? null
+  const turn = {
+    mode: loaded.story.turn_mode,
+    members: loaded.members,
+    nextAuthorId: loaded.story.next_author_id,
+    lastAuthorId: last?.author_id ?? null,
+    userId,
+  }
+  const canNudge =
+    loaded.story.status === 'active' &&
+    nudgeRecipients(turn).length > 0 &&
+    nudgeAllowed({
+      lastLineAt: last?.created_at ?? null,
+      lastNudgeAt: loaded.story.last_nudge_at,
+      now: new Date().toISOString(),
+    })
 
   return res.status(200).json({
     story: loaded.story,
@@ -138,13 +159,8 @@ async function getStory(res: VercelResponse, supabase: Client, userId: string, s
       members: loaded.members,
       nextAuthorId: loaded.story.next_author_id,
     }),
-    can_write: canWrite({
-      mode: loaded.story.turn_mode,
-      members: loaded.members,
-      nextAuthorId: loaded.story.next_author_id,
-      lastAuthorId: last?.author_id ?? null,
-      userId,
-    }),
+    can_write: canWrite(turn),
+    can_nudge: canNudge,
   })
 }
 

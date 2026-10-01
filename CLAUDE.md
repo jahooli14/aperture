@@ -324,6 +324,12 @@ other feature is downstream of that working.
   `QUIET_PERIOD_DAYS` (4) rest. Stamped whether or not a push lands, so someone
   with notifications off isn't retried daily. The `relay.stale_turns` view
   answers "whose turn, how stale" in one place; solo stories are excluded.
+- **A nudge by hand** (`api/_lib/nudge.ts`, pure + unit-tested; `stories?resource=nudge`).
+  When it's someone else's turn, a "Nudge {name}" link sits under the composer
+  and sends them one push. In an open story only the last writer gets it, and
+  it reaches everyone else. Once per turn, then once a day if the turn sits.
+  It stamps the same `last_nudge_at` as the cron, so the two never double up,
+  and it respects a member's muted `notify`.
 - **Nothing written is lost.** A send that fails offline is queued in this
   browser (`lib/outbox.ts`) and retried on `online`; drafts save as you type,
   per story, and you can write when it *isn't* your turn — ideas don't wait for

@@ -39,6 +39,9 @@ export const api = {
   skipTurn: (id: string) =>
     request<{ whose_turn: string | null }>(`/api/stories?id=${id}&resource=skip`, { method: 'POST' }),
 
+  nudge: (id: string) =>
+    request<{ nudged: number; sent: number }>(`/api/stories?id=${id}&resource=nudge`, { method: 'POST' }),
+
   listLines: (storyId: string) => request<{ lines: Line[]; total: number }>(`/api/lines?story=${storyId}`),
 
   addLine: (storyId: string, body: string, chapterTitle?: string) =>
