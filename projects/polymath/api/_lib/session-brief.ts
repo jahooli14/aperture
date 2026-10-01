@@ -131,6 +131,30 @@ export interface SessionBriefPromptInput {
    *  the finish line has actually been reached (nothing left to catch up
    *  on). */
   lastCheckpoint: { reason: string } | null
+  /** The one move on the card below the Guide (next-move.ts), written from
+   *  the last close-out note. When it exists it IS the plan -- the task
+   *  list is only a log of done moves now, so a greeting built from the
+   *  list alone says "the list is clear" right above a move it never saw. */
+  nextMove?: { text: string; kind: 'move' | 'fork' } | null
+  /** The note they left when they last stopped. */
+  lastNote?: string | null
+}
+
+/** The move without its "Done when …" tail -- the card shows that part. */
+export function moveHeadline(text: string): string {
+  const i = text.search(/\s+Done when\b/i)
+  return (i > 0 ? text.slice(0, i) : text).trim()
+}
+
+function moveSummary(nextMove: SessionBriefPromptInput['nextMove'], lastNote: string | null | undefined): string {
+  const lines: string[] = []
+  if (lastNote?.trim()) lines.push(`WHERE THEY LEFT OFF (their own note): "${lastNote.trim().slice(0, 600)}"`)
+  if (nextMove) {
+    lines.push(nextMove.kind === 'fork'
+      ? `OPEN QUESTION ON THE CARD BELOW YOU: "${nextMove.text}"`
+      : `THE NEXT MOVE, ALREADY ON THE CARD BELOW YOU: "${moveHeadline(nextMove.text)}"`)
+  }
+  return lines.join('\n')
 }
 
 function taskSummary(incompleteTasks: { text: string; task_type?: string }[]): string {
@@ -176,8 +200,20 @@ export function buildSessionBriefPrompt(input: SessionBriefPromptInput): string 
   } = input
   const hasGoal = !!endGoal
   const hasTasks = totalTasks > 0
+  const nextMove = input.nextMove ?? null
 
-  const stateInstructions = !hasTasks
+  // A move on the card is the plan. Talk about it, not about the list --
+  // otherwise the Guide says "the list is clear" above a move it never saw.
+  const stateInstructions = nextMove
+    ? `THE NEXT STEP IS ALREADY DECIDED — it's on the card below you. The done-steps list is a log, not a plan; never call it clear, empty or finished.
+- greeting: One line on where they left off, from their note if there is one${daysSinceActive >= 14 ? ` (it's been ${daysSinceActive} days — say so plainly)` : ''}. Then point at the move by name as the thing to do now.
+- focusSuggestion: The move itself, in a few words.
+- proactiveQuestion: ${nextMove.kind === 'fork'
+        ? 'The open question on the card, in your own words.'
+        : 'ONE short practical question about doing the move right now — e.g. "Is the first section ready to paste, or does it need a trim first?" Not about the list, not about how close the whole project is.'}
+The last checkpoint is already shown on the page. Use it only if it changes the move, and never repeat it word for word.
+`
+    : !hasTasks
     ? `NOTHING ON THE LIST YET.
 - greeting: Say that plainly in one line, and name what this project is, so the next line has something to hang off.
 - focusSuggestion: Name the single most obvious first move, from what they've said about it.
@@ -212,9 +248,10 @@ ${endGoal ? `DONE LOOKS LIKE: ${endGoal}` : 'DONE: not stated — may be an ongo
 PHASE: ${phase} (${SESSION_BRIEF_PHASE_LABELS[phase]})
 MOMENTUM: ${momentum}
 DAYS SINCE LAST VISIT: ${daysSinceActive}
-PROGRESS: ${completedTasks}/${totalTasks} tasks (${progressPercent}%)
+${nextMove ? `DONE SO FAR: ${completedTasks} steps` : `PROGRESS: ${completedTasks}/${totalTasks} tasks (${progressPercent}%)`}
 
-${taskSummary(incompleteTasks)}
+${moveSummary(nextMove, input.lastNote)}
+${nextMove ? '' : taskSummary(incompleteTasks)}
 ${completionSummary(recentCompletionTexts)}
 ${capturesSummary(recentCaptures)}
 ${checkpointSummary(lastCheckpoint)}

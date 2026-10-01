@@ -5,7 +5,7 @@
 
 import { useEffect, useState, useRef, useMemo, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Loader2, MoreVertical, Check, X, GripVertical, Play, Target, Star, Sprout, ArrowLeft } from 'lucide-react'
+import { Loader2, MoreVertical, Check, X, GripVertical, Target, Star, Sprout, ArrowLeft } from 'lucide-react'
 import { useProjectStore } from '../stores/useProjectStore'
 import { useSessionStore } from '../stores/useSessionStore'
 import { SessionContract } from '../components/session/SessionContract'
@@ -829,11 +829,10 @@ export function ProjectDetailPage() {
       <div className="max-w-2xl mx-auto px-5 sm:px-6 space-y-8">
               {/* Guide — primary surface. This is what a project's mid-life
                   view is for: keep the chat that scopes/frames/edits front
-                  and center, not just at project creation. "Start session"
-                  renders as this card's own footer (below) rather than as a
-                  second card underneath it, so the catch-up and the session
-                  it leads into read as one arc instead of two stacked
-                  pieces of UI with a gap between them. */}
+                  and center, not just at project creation. It has no start
+                  button of its own: "Go" on the next move card below is the
+                  one way into a session, so there aren't two buttons that
+                  do the same thing. */}
               {!sessionOpen && project && (
                 <InlineGuide
                   project={project}
@@ -843,19 +842,6 @@ export function ProjectDetailPage() {
                   onUpdateGoal={handleChatUpdateGoal}
                   onAppendNote={handleChatAppendNote}
                   onApplied={handleGuideApplied}
-                  footer={
-                    <button
-                      onClick={() => { setSessionOpen(true) }}
-                      className="w-full py-3 rounded-xl text-[12px] font-semibold uppercase tracking-widest flex items-center justify-center gap-2 transition-all active:scale-[0.99]"
-                      style={{
-                        background: 'rgba(var(--brand-primary-rgb),0.10)',
-                        border: '1px solid rgba(var(--brand-primary-rgb),0.28)',
-                        color: 'rgb(var(--brand-primary-rgb))',
-                      }}
-                    >
-                      <Play className="h-3.5 w-3.5 fill-current" /> Start session
-                    </button>
-                  }
                 />
               )}
 
