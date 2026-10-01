@@ -28,6 +28,7 @@ export interface Story {
   created_at: string
   updated_at: string
   last_line_at: string | null
+  last_nudge_at?: string | null
 }
 
 export interface Line {
@@ -82,6 +83,8 @@ export interface StoryDetail {
   stats: StoryStats
   whose_turn: string | null
   can_write: boolean
+  /** Whether a nudge from you would reach someone and isn't too soon. */
+  can_nudge: boolean
 }
 
 export interface IndexEntry {

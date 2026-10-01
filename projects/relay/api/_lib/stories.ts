@@ -14,6 +14,7 @@ export interface StoryRow {
   created_at: string
   updated_at: string
   last_line_at: string | null
+  last_nudge_at: string | null
 }
 
 export interface MemberRow {

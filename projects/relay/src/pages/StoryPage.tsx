@@ -9,6 +9,7 @@ import { InviteSheet } from '../components/InviteSheet'
 import { StoryStats } from '../components/StoryStats'
 import { IndexSheet } from '../components/IndexSheet'
 import { StoryToolbar } from '../components/StoryToolbar'
+import { TurnActions } from '../components/TurnActions'
 import { queueLine } from '../lib/outbox'
 import { useOutbox, useReadPosition, useTimezoneSync } from '../lib/story-hooks'
 import type { IndexEntry, Line, StoryDetail } from '../lib/types'
@@ -237,17 +238,14 @@ export default function StoryPage() {
             previousLine={lastLine ? { body: lastLine.body, display_name: lastLine.display_name } : null}
             onSubmit={addLine}
           />
-          {!can_write && story.turn_mode === 'rotation' && (
-            <button
-              className="mx-auto mb-3 block text-xs text-faint underline hover:text-ink"
-              onClick={async () => {
-                await api.skipTurn(story.id).catch(() => {})
-                void load()
-              }}
-            >
-              They're away — skip their turn
-            </button>
-          )}
+          <TurnActions
+            storyId={story.id}
+            canWrite={can_write}
+            canNudge={detail.can_nudge}
+            canSkip={!can_write && story.turn_mode === 'rotation'}
+            waitingOn={waitingOn}
+            onChanged={load}
+          />
         </div>
       </div>
 
