@@ -99,6 +99,39 @@ Each step ships alone and leaves the app working.
 
 ---
 
+## 4b. Two targets, two channels
+
+The app has two jobs, and they pull in opposite directions:
+
+| | Make more (creativity) | Think new things (original thought) |
+|---|---|---|
+| What blocks it | Re-entry cost. Two-hour sessions that never happen. | Recombining what you already think. Taking the first answer. Hearing only yourself. |
+| Shape of the work | Narrow: one project, one move | Wide: everything, wandering |
+| When it happens | The scarce hour | Walks, bed, reading — unlimited |
+| App surface | The move | The question |
+| Honest measure | Hours, things made | Things you said that you'd never said before |
+
+SPEC.md already has two channels (execution / mull). These ARE the two targets. Keep them apart in time — never ask the hour to wander, never ask the walk to converge — and join them at one point only: **an original thought counts when it becomes a move.** Otherwise mulling becomes the product.
+
+**The rule for target two: the app asks, you think.** If the app has the idea, it isn't your original thought. Test for every feature: *who had the idea?*
+- Fails: the idea cards (READ / CROSSOVER) — the model proposes projects. Morphs and mash-ups when they hand you the answer. The Guide inventing "literary agents".
+- Passes: the question, the follow-up, the close-out prompt, bedtime.
+
+This settles decision 2 below: the idea cards go.
+
+**What would actually drive original thought**
+1. **Measure it, privately.** Today the question's success is "did you answer". Better: did your answer say something new — far from your nearest past capture in the vector space, and not a restatement of the question. Feed the new ones to the drafter as examples of what works. Never show the number (the only number on screen stays hours).
+2. **Push past the first answer.** The first answer is the common one. Add a third follow-up reason beside `correction` and `next_step`: `push` — "that's the obvious answer; what's the one you'd be embarrassed to say?" Still two turns, never more.
+3. **Let something in from outside.** Everything recombines your own corpus — SPEC calls this the closed loop. Some questions should collide your words with something you haven't said or read: the weekly outside find, an unread list item, or the Idea Engine's frontier ideas (today an island that never touches your thoughts).
+4. **Give it a night.** Bedtime is a second question generator with its own four types, scoring and feedback loop. Make bedtime *the same question* (or its banked sibling) instead: sleep on it, answer it in the morning note. One generator, and incubation built in.
+5. **Show your own originals back.** Thought of the day picks a random resurfaced note. Make it the most original thing you've said — a note far from everything else in the corpus. That gives it a real job and keeps it (decision 3).
+
+**What drives making (target one)** — mostly already built: one move, Go, close-out. One addition: the close-out's *"what's bugging you"* is the best seed for a question, since friction during making is where new thoughts start. Have the drafter weight it first.
+
+**The loop between them:** making produces friction → friction seeds a question → the answer is a new thought → the new thought becomes a move → making.
+
+---
+
 ## 5. Decisions only you can make
 
 1. **Guide: merge into the move, or delete it?** Merge keeps "talk to your project" but on the right engine. Delete is simpler — the move card already has "not this" and a say-box. *I'd merge.*
