@@ -19,6 +19,7 @@ import { generateEmbedding, cosineSimilarity } from './_lib/gemini-embeddings.js
 import { generateText } from './_lib/gemini-chat.js'
 import { PLAIN_ENGLISH_RULES, CHAT_TURN_RULES } from './_lib/plain-english.js'
 import { handlePortfolioChat } from './_lib/portfolio-chat.js'
+import { seededShapingReply } from './_lib/shaping-seeds.js'
 
 const supabase = createClient(
   process.env.VITE_SUPABASE_URL || '',
@@ -28,6 +29,8 @@ const supabase = createClient(
 interface ConversationMessage {
   role: 'user' | 'model'
   content: string
+  /** Versions of the idea this turn offered, so a later turn doesn't repeat them. */
+  offers?: string[]
 }
 
 interface EchoItem {
@@ -43,7 +46,19 @@ interface LakeResults {
   all: EchoItem[]
 }
 
-async function searchKnowledgeLake(text: string, userId: string, excludeProjectId?: string): Promise<LakeResults> {
+/** Close to the best match, not merely above a floor. Every note scores
+ *  0.55-0.66 against anything in this vector space, so a floor admits the
+ *  lot and the top six are near-random; the gap to the winner is what
+ *  discriminates (see fragments.ts). */
+const TIGHT_BAND = 0.06
+const TIGHT_MAX = 3
+function tighten<T extends { score: number }>(sorted: T[]): T[] {
+  if (sorted.length === 0) return sorted
+  const best = sorted[0].score
+  return sorted.filter(i => i.score >= best - TIGHT_BAND).slice(0, TIGHT_MAX)
+}
+
+async function searchKnowledgeLake(text: string, userId: string, excludeProjectId?: string, tight = false): Promise<LakeResults> {
   let embedding: number[]
   try {
     embedding = await generateEmbedding(text)
@@ -72,7 +87,13 @@ async function searchKnowledgeLake(text: string, userId: string, excludeProjectI
       .not('embedding', 'is', null),
   ])
 
-  const memories: EchoItem[] = (memoriesRes.data || [])
+  // Ranked best-first, then cut: to the best few within a band of the winner
+  // when `tight`, else to the old fixed counts.
+  const pick = <T extends { score: number }>(ranked: T[], max: number): T[] =>
+    tight ? tighten(ranked) : ranked.slice(0, max)
+  const strip = ({ title, snippet, type }: EchoItem & { score: number }): EchoItem => ({ title, snippet, type })
+
+  const memories: EchoItem[] = pick((memoriesRes.data || [])
     .map(m => ({
       title: m.title || (m.body || '').slice(0, 60),
       snippet: (m.body || '').slice(0, 120),
@@ -80,11 +101,9 @@ async function searchKnowledgeLake(text: string, userId: string, excludeProjectI
       type: 'memory' as const,
     }))
     .filter(m => m.score > 0.38)
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 6)
-    .map(({ title, snippet, type }) => ({ title, snippet, type }))
+    .sort((a, b) => b.score - a.score), 6).map(strip)
 
-  const articles: EchoItem[] = (articlesRes.data || [])
+  const articles: EchoItem[] = pick((articlesRes.data || [])
     .map(a => ({
       title: a.title || 'Untitled',
       snippet: (a.excerpt || '').slice(0, 120),
@@ -92,11 +111,9 @@ async function searchKnowledgeLake(text: string, userId: string, excludeProjectI
       type: 'article' as const,
     }))
     .filter(a => a.score > 0.38)
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 3)
-    .map(({ title, snippet, type }) => ({ title, snippet, type }))
+    .sort((a, b) => b.score - a.score), 3).map(strip)
 
-  const projects: EchoItem[] = (projectsRes.data || [])
+  const projects: EchoItem[] = pick((projectsRes.data || [])
     .filter(p => !excludeProjectId || p.id !== excludeProjectId)
     .map(p => ({
       title: p.title || 'Untitled',
@@ -105,9 +122,7 @@ async function searchKnowledgeLake(text: string, userId: string, excludeProjectI
       type: 'project' as const,
     }))
     .filter(p => p.score > 0.45)
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 4)
-    .map(({ title, snippet, type }) => ({ title, snippet, type }))
+    .sort((a, b) => b.score - a.score), 4).map(strip)
 
   return { memories, articles, projects, all: [...memories, ...articles, ...projects] }
 }
@@ -138,10 +153,27 @@ function buildContextBlock(results: LakeResults): string {
 async function handleShaping(
   body: { message: string; history?: ConversationMessage[]; projectTitle?: string; projectDescription?: string },
   userId: string
-): Promise<{ reply: string; echoes: EchoItem[]; readyToExtract: boolean }> {
+): Promise<{ reply: string; echoes: EchoItem[]; offers: string[]; readyToExtract: boolean }> {
   const { message, history = [], projectTitle, projectDescription } = body
+  const userTurns = history.filter(m => m.role === 'user').length + 1
 
-  const lakeResults = await searchKnowledgeLake(message, userId)
+  // First choice: built from things only they have, each cited and checked
+  // (shaping-seeds.ts). Anything wrong with it and the plain chat below
+  // answers instead -- a garnish never costs the turn.
+  if (userTurns <= 2) {
+    const trace: string[] = []
+    const seeded = await seededShapingReply(supabase, userId, {
+      message, history, userTurnNumber: userTurns,
+      context: projectTitle ? `They are shaping this idea: "${projectTitle}"${projectDescription ? ` -- ${projectDescription}` : ''}` : '',
+    }, trace)
+    if (trace.length) console.log('[Brainstorm/shaping]', trace.join(' | '))
+    if (seeded) return { reply: seeded.reply, echoes: [], offers: seeded.offers, readyToExtract: seeded.readyToExtract }
+  }
+
+  // Everything they've said so far, not just the last line: one short
+  // message is a poor query for what the whole idea is about.
+  const lakeQuery = [...history.filter(m => m.role === 'user').map(m => m.content), message].join('\n')
+  const lakeResults = await searchKnowledgeLake(lakeQuery, userId, undefined, true)
   const contextBlock = buildContextBlock(lakeResults)
 
   const priorTurns = history
@@ -158,8 +190,6 @@ async function handleShaping(
   // made every new project a six-question interview. The plan only needs
   // two things, and a third when it's there: what they're making, what
   // done looks like, and what's already in hand.
-  const userTurns = history.filter(m => m.role === 'user').length + 1
-
   const prompt = `Someone is telling you about a creative project they want to start. Help them say
 it clearly enough to plan from. You're a friend who's paying attention, not an
 interviewer.
@@ -223,6 +253,7 @@ Return JSON only:
       // ("Oscar's Developing Brain as He Sleeps" under a wooden toy) and
       // only ever looked like proof of recall.
       echoes: [],
+      offers: [],
       // Three turns is the interview budget. After that the shape is
       // extracted from whatever was said, and the one gap the extraction
       // finds gets asked on the commit screen instead of here.
@@ -234,6 +265,7 @@ Return JSON only:
     return {
       reply: "Lost my train of thought there — say that again?",
       echoes: [],
+      offers: [],
       readyToExtract: false,
     }
   }

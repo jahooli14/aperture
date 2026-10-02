@@ -42,7 +42,9 @@ import type { ChatTurn } from '../../types'
 interface ConversationMessage {
   role: 'user' | 'model'
   content: string
-  echoes?: EchoItem[]
+  /** Versions of the idea this turn offered, as tappable replies. Each is
+   *  built from things in their own notes (api/_lib/shaping-seeds.ts). */
+  offers?: string[]
 }
 
 interface DraftTask {
@@ -51,12 +53,6 @@ interface DraftTask {
   estimated_minutes?: number
   estimate_set?: boolean
   source?: string | null
-}
-
-interface EchoItem {
-  title: string
-  type: 'memory' | 'article' | 'project'
-  snippet: string
 }
 
 interface ShapedProject {
@@ -126,6 +122,9 @@ export function CreateProjectDialog({
   const [title, setTitle] = useState('')
   const [draftTasks, setDraftTasks] = useState<DraftTask[]>([])
   const [dragId, setDragId] = useState<string | null>(null)
+  // The plan opens on its first step only. A whole list shown up front reads
+  // as the work, and takes over from the idea; the rest is a tap away.
+  const [showAll, setShowAll] = useState(false)
 
   // Everything the user has said, which is the project brief.
   const saidByUser = () => history.filter(m => m.role === 'user').map(m => m.content.trim()).filter(Boolean)
@@ -146,6 +145,7 @@ export function CreateProjectDialog({
       setShaped(data)
       setTitle(data.title || initialTitle || '')
       setDraftTasks(data.tasks || [])
+      setShowAll(false)
       setMode('commit')
     } catch (err) {
       console.warn('[CreateProjectDialog] shaping failed:', err)
@@ -188,6 +188,7 @@ export function CreateProjectDialog({
     setShaped(null)
     setTitle('')
     setDraftTasks([])
+    setShowAll(false)
     setSaving(false)
     shapedPrefillRef.current = false
   }
@@ -217,7 +218,7 @@ export function CreateProjectDialog({
         body: JSON.stringify({
           step: 'shaping',
           message,
-          history: history.map(m => ({ role: m.role, content: m.content })),
+          history: history.map(m => ({ role: m.role, content: m.content, ...(m.offers?.length ? { offers: m.offers } : {}) })),
         }),
       })
       const data = await res.json()
@@ -226,11 +227,11 @@ export function CreateProjectDialog({
       // assistant has just said it has what it needs is a step that only
       // ever means "yes".
       if (data.readyToExtract) {
-        setHistory([...newHistory, { role: 'model', content: data.reply, echoes: data.echoes || [] }])
+        setHistory([...newHistory, { role: 'model', content: data.reply }])
         await shapeIt()
         return
       }
-      setHistory([...newHistory, { role: 'model', content: data.reply, echoes: data.echoes || [] }])
+      setHistory([...newHistory, { role: 'model', content: data.reply, offers: data.offers || [] }])
     } catch {
       setHistory([...newHistory, { role: 'model', content: "Couldn't reach the server — try again." }])
     } finally {
@@ -368,7 +369,7 @@ export function CreateProjectDialog({
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -8 }}
                 transition={{ duration: 0.18 }}
-                className="flex flex-col"
+                className="flex flex-col pb-[4.5rem]"
                 style={{ minHeight: '260px', maxHeight: '70vh' }}
               >
                 <div
@@ -383,23 +384,39 @@ export function CreateProjectDialog({
                           <p className="text-[15px] leading-relaxed text-[var(--brand-text-secondary)]">
                             {msg.content}
                           </p>
-                          {msg.echoes && msg.echoes.length > 0 && (
-                            <div className="flex flex-wrap gap-1.5 mt-2.5">
-                              {msg.echoes.map((echo, j) => (
-                                <span
-                                  key={j}
-                                  className="text-[11px] px-2 py-1 rounded-full text-[var(--brand-text-muted)]"
-                                  style={{
-                                    background: 'rgba(255,255,255,0.06)',
-                                    border: '1px solid rgba(255,255,255,0.1)',
-                                  }}
-                                  title={echo.snippet}
-                                >
-                                  {echo.title}
-                                </span>
-                              ))}
-                            </div>
-                          )}
+                          {/* Tappable replies, only on the newest turn. Built from
+                              their own notes, so each is theirs, not anyone's. */}
+                          {!thinking && i === history.length - 1 && (() => {
+                            const chips = msg.offers?.length
+                              ? [...msg.offers, 'None of these']
+                              : history.length === 1 ? ["Not sure yet"] : []
+                            if (chips.length === 0) return null
+                            return (
+                              <div className="flex flex-wrap gap-1.5 mt-3">
+                                {chips.map(chip => (
+                                  <button
+                                    key={chip}
+                                    type="button"
+                                    onClick={() => void handleSend(
+                                      chip === 'None of these' ? 'None of these.'
+                                        : chip === 'Not sure yet' ? "I'm not sure yet. What could I make?"
+                                        : chip,
+                                    )}
+                                    className="text-[13px] px-3 py-1.5 rounded-full text-left transition-all active:scale-[0.97]"
+                                    style={{
+                                      background: 'rgba(var(--brand-primary-rgb),0.08)',
+                                      border: '1px solid rgba(var(--brand-primary-rgb),0.25)',
+                                      color: chip === 'None of these' || chip === 'Not sure yet'
+                                        ? 'var(--brand-text-secondary)'
+                                        : 'var(--brand-text-primary)',
+                                    }}
+                                  >
+                                    {chip}
+                                  </button>
+                                ))}
+                              </div>
+                            )
+                          })()}
                         </div>
                       ) : (
                         <div className="pl-8 flex justify-end">
@@ -524,7 +541,7 @@ export function CreateProjectDialog({
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -8 }}
                 transition={{ duration: 0.18 }}
-                className="flex flex-col pt-1"
+                className="flex flex-col pt-1 pb-[4.5rem]"
                 style={{ maxHeight: '78vh' }}
               >
                 {!hasPrefill && (
@@ -586,7 +603,7 @@ export function CreateProjectDialog({
                   <div className="mt-5 mb-4">
                     <div className="flex items-center justify-between mb-2">
                       <p className="text-[11px] uppercase tracking-wide" style={{ color: 'var(--brand-text-secondary)', opacity: 0.69 }}>
-                        {draftTasks.length > 0 ? 'The first steps, in order' : 'Steps'}
+                        {draftTasks.length === 0 ? 'Steps' : showAll ? 'The first steps, in order' : 'Start with'}
                       </p>
                       <button
                         type="button"
@@ -618,7 +635,7 @@ export function CreateProjectDialog({
                       </div>
                     ) : (
                       <div className="space-y-1">
-                        {draftTasks.map((t, i) => (
+                        {(showAll ? draftTasks : draftTasks.slice(0, 1)).map((t, i) => (
                           <div
                             key={t.id}
                             draggable
@@ -658,14 +675,26 @@ export function CreateProjectDialog({
                             </button>
                           </div>
                         ))}
-                        <button
-                          type="button"
-                          onClick={addTask}
-                          className="flex items-center gap-1.5 text-[11px] mt-1.5 pl-[26px]"
-                          style={{ color: 'var(--brand-text-secondary)', opacity: 0.69 }}
-                        >
-                          <Plus className="h-3 w-3" /> add a step
-                        </button>
+                        {!showAll && draftTasks.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => setShowAll(true)}
+                            className="text-[12px] mt-1.5 pl-[26px]"
+                            style={{ color: 'var(--brand-text-secondary)', opacity: 0.8 }}
+                          >
+                            {draftTasks.length - 1} more {draftTasks.length - 1 === 1 ? 'step' : 'steps'} after that
+                          </button>
+                        )}
+                        {showAll && (
+                          <button
+                            type="button"
+                            onClick={addTask}
+                            className="flex items-center gap-1.5 text-[11px] mt-1.5 pl-[26px]"
+                            style={{ color: 'var(--brand-text-secondary)', opacity: 0.69 }}
+                          >
+                            <Plus className="h-3 w-3" /> add a step
+                          </button>
+                        )}
                       </div>
                     )}
                   </div>
@@ -683,7 +712,7 @@ export function CreateProjectDialog({
                   }}
                 >
                   {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                  {saving ? 'Saving…' : 'Start this project'}
+                  {saving ? 'Saving…' : 'Start with this'}
                 </button>
               </motion.div>
             )}
