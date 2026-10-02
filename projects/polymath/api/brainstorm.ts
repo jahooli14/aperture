@@ -179,15 +179,23 @@ HOW TO REPLY:
 - First, read everything they've said so far and work out which of 1 and 2
   is still missing. Usually one of them is already answered by the time
   they've finished talking.
-- If something's missing, ask ONE plain question that gets it. Tie it to
-  what they just said. Not "tell me more" — the specific thing.
-- If nothing's missing, don't ask. Say back in one sentence what you've got,
-  so they can correct it, and stop.
+- YOUR JOB IS TO HELP THEM FIND THE IDEA, not to show you remember things.
+  When what they're making is still loose ("a wooden toy"), give them 2-3
+  concrete versions to react to, each a few words ("a stacking set of
+  rings", "a push-along duck", "a rattle ring they can chew"). Pick versions
+  that fit what they said, and that someone could actually make in a
+  weekend. They react; that narrows it faster than any question.
+- If it's already concrete and only 2 is missing, ask ONE plain question
+  that gets it. Tie it to what they just said.
+- If nothing's missing, say back in one sentence what you've got, so they
+  can correct it, and stop.
 - Never ask why it matters, who it's for, what tools they have, or how
   much time they've got. None of that changes the first step.
 ${CHAT_TURN_RULES}
-- If you spot something in their notes that connects, name it in a few
-  words. Don't make a question out of it.
+- Their notes below are for you. Use one only when it changes what you'd
+  suggest, and fold it into the suggestion. Never reply with a bare "you
+  did X before" or "that course gave you a good start": that proves you
+  remember and helps with nothing. Most turns, use none.
 - Never tell them what they "haven't" figured out.
 ${projectContext}
 ${contextBlock ? `\n${contextBlock}\n` : ''}
@@ -205,13 +213,16 @@ Return JSON only:
   "readyToExtract": false
 }`
 
-  const raw = await generateText(prompt, { temperature: 0.6, maxTokens: 250, responseFormat: 'json' })
+  const raw = await generateText(prompt, { temperature: 0.7, maxTokens: 300, responseFormat: 'json' })
 
   try {
     const parsed = JSON.parse(raw)
     return {
       reply: (parsed.reply || '').trim(),
-      echoes: lakeResults.all.slice(0, 6),
+      // No chips: the nearest-neighbour hits were mostly off-topic
+      // ("Oscar's Developing Brain as He Sleeps" under a wooden toy) and
+      // only ever looked like proof of recall.
+      echoes: [],
       // Three turns is the interview budget. After that the shape is
       // extracted from whatever was said, and the one gap the extraction
       // finds gets asked on the commit screen instead of here.
@@ -222,7 +233,7 @@ Return JSON only:
     // broken bot, the exact thing this whole feature is trying not to be.
     return {
       reply: "Lost my train of thought there — say that again?",
-      echoes: lakeResults.all.slice(0, 6),
+      echoes: [],
       readyToExtract: false,
     }
   }
