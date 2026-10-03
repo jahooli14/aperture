@@ -1,6 +1,10 @@
 /**
  * What the draft prompt learns from.
  *
+ * The shown line is a take: facts side by side, then one committed claim
+ * they can agree or disagree with. (The field is still called `question` in
+ * the types; renaming it would touch every caller for no gain.)
+ *
  * Every GOOD example puts two or more things from a corpus next to each
  * other -- captured months apart, filed in different places -- and asks
  * about what sits underneath them. That is the mechanism the whole channel
@@ -44,7 +48,7 @@ export const GOOD_EXAMPLES: readonly MullExample[] = [
       { where: 'project "Sea shanty EP", paused', text: 'four songs demoed, never sent to anyone' },
       { where: 'note, 12 March 2025', text: 'I love the bit before anyone has seen it' },
     ],
-    question: "The invites stopped once the proofs came back. The EP stopped at four demos, never sent to anyone. In March you said you love the bit before anyone has seen it. What changes about a thing for you once someone else has seen it?",
+    question: "The invites stopped once the proofs came back. The EP stopped at four demos, never sent to anyone. In March you said you love the bit before anyone has seen it. I think your projects die the moment someone else could see them.",
     stake: 'The next project gets shown to one person halfway through, on purpose, instead of never.',
   },
   {
@@ -54,7 +58,7 @@ export const GOOD_EXAMPLES: readonly MullExample[] = [
       { where: 'list "Books", rated 5', text: 'Stoner by John Williams' },
       { where: 'note, 2 June 2025', text: "everything I make has to be funny or I don't trust it" },
     ],
-    question: "Your five-star shelf is Paris, Texas and Stoner. In June you said everything you make has to be funny or you don't trust it. What would you make if it was allowed to be sad?",
+    question: "Your five-star shelf is Paris, Texas and Stoner. In June you said everything you make has to be funny or you don't trust it. I think you love sad work and only let yourself make jokes.",
     stake: 'One sketch gets written with no joke in it.',
   },
   {
@@ -63,7 +67,7 @@ export const GOOD_EXAMPLES: readonly MullExample[] = [
       { where: 'project "Woodcut prints", active since 2022, last touched last week', text: 'one print, one evening, done' },
       { where: 'project "Oil portraits", paused since April 2025', text: 'needs another layer once it dries' },
     ],
-    question: "The woodcuts have lasted three years: one print, one evening, done. The oil portraits have sat since April because each one needs another layer once it dries. What would an oil portrait look like if it had to be finished in one evening?",
+    question: "The woodcuts have lasted three years: one print, one evening, done. The oil portraits have sat since April because each one needs another layer once it dries. I think you only keep what you can finish in one sitting.",
     stake: 'One portrait gets painted wet-on-wet in a single sitting.',
   },
   {
@@ -73,7 +77,7 @@ export const GOOD_EXAMPLES: readonly MullExample[] = [
       { where: 'note, 9 January 2025', text: 'the choir only clicks when someone disagrees with the arrangement' },
       { where: 'project "Solo album", paused', text: 'writing and recording everything myself this time' },
     ],
-    question: "The best quiz rounds are the ones where people argue. The choir only clicks when someone disagrees with the arrangement. The album is everything yourself this time. Who gets to disagree with the album?",
+    question: "The best quiz rounds are the ones where people argue. The choir only clicks when someone disagrees with the arrangement. The album is everything yourself this time. Nobody gets to argue with the album.",
     stake: 'One person hears the album demos this month and is asked to argue.',
   },
   {
@@ -83,7 +87,7 @@ export const GOOD_EXAMPLES: readonly MullExample[] = [
       { where: 'note, August 2025', text: 'the radio play is really about the house' },
       { where: 'fragment under "Radio play", February 2026', text: 'the kitchen scenes are the only ones I reread' },
     ],
-    question: "In January 2024 the radio play was about your grandmother. By August 2025 it was really about the house, and now the kitchen scenes are the only ones you reread. Where did she go?",
+    question: "In January 2024 the radio play was about your grandmother. By August 2025 it was really about the house, and now the kitchen scenes are the only ones you reread. I think she's already out of it.",
     stake: 'She gets a scene in the kitchen, or the play is renamed for the house.',
   },
   {
@@ -93,7 +97,7 @@ export const GOOD_EXAMPLES: readonly MullExample[] = [
       { where: 'fragment under "Garden studio"', text: 'the kitchen table is where it actually happens' },
       { where: 'note, 18 July 2025', text: 'I want the tools out all the time, never packed away' },
     ],
-    question: "You're building a proper studio at the end of the garden. You also said the kitchen table is where it actually happens, and that you want the tools out all the time. What does the kitchen table have that the studio drawings don't?",
+    question: "You're building a proper studio at the end of the garden. You also said the kitchen table is where it actually happens, and that you want the tools out all the time. I think you don't want a studio. You want a table you never have to clear.",
     stake: 'The studio gets planned around a table that never gets cleared.',
   },
 ]
@@ -105,6 +109,18 @@ export interface BadExample {
 
 /** The shapes the channel actually shipped, on foreign subjects. */
 export const BAD_EXAMPLES: readonly BadExample[] = [
+  {
+    question: 'You finish some things and drop others. I think you care about balance.',
+    why: 'A platitude. Nobody could disagree with it, so there is nothing to react to, and it fits anyone.',
+  },
+  {
+    question: 'The album stopped after four demos and never went to anyone. I think you are afraid of being heard.',
+    why: 'Reads a feeling off a gap. The app can see what they dropped, not what they feel. The take is about what happens, never why they feel it.',
+  },
+  {
+    question: 'The invites stalled at proofs. The EP stalled at demos. Maybe it could be that you might stop when it gets real.',
+    why: 'Hedged three times. A claim nobody could be wrong about gets no reaction.',
+  },
   {
     question: "Your outline centres on a keeper sorting through a lighthouse full of letters. What is 'the one thing the keeper has to find'?",
     why: 'Reads one note back and asks them to define their own phrase. Nothing is put next to it, so there is nothing to discover.',
@@ -123,7 +139,7 @@ export const BAD_EXAMPLES: readonly BadExample[] = [
   },
   {
     question: "For the radio play, you planned to have an actor read the grief scene, then record every line yourself so it sounds like you. What part of the grief belongs strictly to your own voice?",
-    why: "Both rows are one project's plan, so nothing is put next to anything. It opens by reciting the plan, and the question assumes the grief isn't already theirs, which nobody said.",
+    why: "Both rows are one project's plan, so nothing is put next to anything. It opens by reciting the plan, and the question hides a claim (the grief isn't already theirs) that nobody made and they can't push back on.",
   },
 ]
 

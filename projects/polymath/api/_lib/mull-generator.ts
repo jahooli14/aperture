@@ -142,6 +142,8 @@ async function loadResonance(supabase: SupabaseClient, userId: string): Promise<
       .eq('user_id', userId)
       .not('shown_at', 'is', null)
       .is('response_memory_id', null)
+      // A bare yes / no / sort of leaves no memory but is an answer, not a miss.
+      .is('answered_at', null)
       .lt('expires_at', new Date().toISOString())
       .order('shown_at', { ascending: false })
       .limit(6),
@@ -166,7 +168,7 @@ async function loadResonance(supabase: SupabaseClient, userId: string): Promise<
   const landed = (answered ?? [])
     .map((s: any) => {
       const reply = replies.get(s.response_memory_id)
-      return reply ? `  Q: "${s.text}"\n  They said back: "${reply.slice(0, 400)}"` : null
+      return reply ? `  Shown: "${s.text}"\n  They said back: "${reply.slice(0, 400)}"` : null
     })
     .filter(Boolean)
 
@@ -176,8 +178,8 @@ async function loadResonance(supabase: SupabaseClient, userId: string): Promise<
   return `
 ${landed.length > 0 ? `THESE ONES WORKED — they stopped and answered out loud:\n${landed.join('\n\n')}\n` : ''}${missed.length > 0 ? `\nTHESE ONES DIDN'T — read, and left to expire without a word:\n${missed.join('\n')}\n` : ''}
 Whatever made the first group worth answering is what matters. Not their
-subject or their wording -- what they put in front of the person, and how much
-they left for the person to work out.
+subject or their wording -- what they put in front of the person, and how sharp
+the claim was.
 `
 }
 
@@ -298,7 +300,9 @@ export function readCandidates(raw: unknown): Candidate[] {
   const list = (raw as { candidates?: unknown })?.candidates
   if (!Array.isArray(list)) return []
   return list.map((c: any): Candidate => ({
-    question: str(c?.question),
+    // `take` is the key the prompt asks for; `question` is still read, so a
+    // model that falls back to the old shape loses nothing.
+    question: str(c?.take) || str(c?.question),
     noticing: str(c?.noticing),
     stake: str(c?.stake),
     project: str(c?.project) || null,
@@ -464,7 +468,7 @@ export async function generateMull(
     grounded.forEach((g, i) => {
       const s = scores.get(i + 1)
       trace.push(s
-        ? `judge ${s.verdict.toUpperCase()} r${s.revelation} t${s.truth} s${s.specific} a${s.answerable}: ${s.reason} -- ${label(g)}`
+        ? `judge ${s.verdict.toUpperCase()} r${s.revelation} t${s.truth} s${s.specific} a${s.answerable}${s.overreach ? ' OVERREACH' : ''}: ${s.reason} -- ${label(g)}`
         : `judge: no score -- ${label(g)}`)
     })
     ranked = grounded
