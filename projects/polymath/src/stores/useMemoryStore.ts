@@ -53,7 +53,7 @@ interface MemoryStore {
 // Track active polling controllers so they can be aborted on navigation/unmount
 const activePollingControllers = new Map<string, AbortController>()
 
-/** Poll for processing completion to show extraction summary, then steer */
+/** Poll for processing completion to show the one-line "where it went" note */
 async function pollProcessing(memoryId: string) {
   // Abort any existing poll for this memory
   activePollingControllers.get(memoryId)?.abort()
@@ -72,39 +72,13 @@ async function pollProcessing(memoryId: string) {
         if (checkRes.ok) {
           const { memory: processed } = await checkRes.json()
           if (processed?.processed) {
-            const entities = processed.entities || {}
             window.dispatchEvent(new CustomEvent('memory-extracted', {
               detail: {
                 memoryId,
-                topics: (entities.topics?.length || 0) + (entities.skills?.length || 0),
-                people: entities.people?.length || 0,
-                themes: processed.themes?.length || 0,
-                tone: processed.emotional_tone || null,
-                connections: 0,
-                bridgeInsight: processed.triage?.bridge_insight || null,
                 triageCategory: processed.triage?.category || null,
                 suggestedProjectId: processed.triage?.project_id || null,
               }
             }))
-
-            // Fire steering after a short delay so ExtractionSummary shows first
-            setTimeout(async () => {
-              if (controller.signal.aborted) return
-              try {
-                const steerRes = await fetch('/api/memories?action=steer', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ memory_id: memoryId }),
-                  signal: controller.signal,
-                })
-                if (steerRes.ok) {
-                  const steering = await steerRes.json()
-                  window.dispatchEvent(new CustomEvent('memory-steered', { detail: steering }))
-                }
-              } catch {
-                // Non-critical, silently fail
-              }
-            }, 4500) // After ExtractionSummary auto-dismisses (4s)
 
             return
           }
@@ -509,24 +483,6 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
 
       // Non-blocking: poll for extraction summary
       pollProcessing(data.id).catch(() => {})
-
-      // Check for new connections after processing (delayed to allow backend processing)
-      setTimeout(async () => {
-        try {
-          const connResponse = await fetch(`/api/connections?action=suggestions&id=${data.id}&type=thought`)
-          if (connResponse.ok) {
-            const { suggestions } = await connResponse.json()
-            if (suggestions && suggestions.length > 0) {
-              // Dispatch custom event for toast display
-              window.dispatchEvent(new CustomEvent('memory-connections-found', {
-                detail: { memoryId: data.id, count: suggestions.length, connections: suggestions }
-              }))
-            }
-          }
-        } catch (e) {
-          // Non-critical, silently fail
-        }
-      }, 5000) // Wait 5s for backend processing to complete
 
       return data
     } catch (error) {

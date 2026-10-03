@@ -32,8 +32,6 @@ import { lazyRetry } from './lib/lazyRetry'
 // needed for first paint — keeping them out of the main chunk speeds up startup.
 const DebugPanel = lazy(lazyRetry(() => import('./components/DebugPanel').then(m => ({ default: m.DebugPanel }))))
 const ExtractionSummary = lazy(lazyRetry(() => import('./components/memories/ExtractionSummary').then(m => ({ default: m.ExtractionSummary }))))
-const SteeringCard = lazy(lazyRetry(() => import('./components/memories/SteeringCard').then(m => ({ default: m.SteeringCard }))))
-const FirstConnectionCelebration = lazy(lazyRetry(() => import('./components/home/FirstConnectionCelebration').then(m => ({ default: m.FirstConnectionCelebration }))))
 
 // Lazy load pages with retry logic for chunk loading failures after deployments
 const HomePage = lazy(lazyRetry(() => import('./pages/HomePage').then(m => ({ default: m.HomePage }))))
@@ -357,20 +355,6 @@ export default function App() {
               </Suspense>
             </ErrorBoundary>
 
-            {/* Steering Card - Shows live mind steering after extraction completes */}
-            <ErrorBoundary fallback={null}>
-              <Suspense fallback={null}>
-                <SteeringCard />
-              </Suspense>
-            </ErrorBoundary>
-
-            {/* First Connection Celebration — early win for new users */}
-            <ErrorBoundary fallback={null}>
-              <Suspense fallback={null}>
-                <FirstConnectionCelebration />
-              </Suspense>
-            </ErrorBoundary>
-
             <div className="min-h-screen flex flex-col overflow-x-hidden">
               <OfflineIndicator />
               <PWAInstallBanner />
@@ -408,12 +392,6 @@ export default function App() {
                   </Suspense>
                 </ErrorBoundary>
               </main>
-
-              {/* Context Engine Sidebar */}
-              <ErrorBoundary fallback={null}>
-                <Suspense fallback={null}>
-                </Suspense>
-              </ErrorBoundary>
 
               {/* Debug Panel - Shows console logs on screen */}
               <ErrorBoundary fallback={null}>

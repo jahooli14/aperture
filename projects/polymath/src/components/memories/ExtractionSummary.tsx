@@ -1,23 +1,27 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Brain, Users, Hash, Heart, X, Lightbulb, BookOpen, ListPlus, Wrench, ArrowRight } from 'lucide-react'
+import { X, Lightbulb, BookOpen, ListPlus, ArrowRight } from 'lucide-react'
 import { useJourneyStore } from '../../stores/useJourneyStore'
 import { useProjectStore } from '../../stores/useProjectStore'
 import { CreateProjectDialog } from '../projects/CreateProjectDialog'
 
 interface ExtractionDetail {
   memoryId: string
-  topics: number
-  people: number
-  themes: number
-  tone: string | null
-  connections: number
-  bridgeInsight: string | null
   triageCategory: string | null
   suggestedProjectId: string | null
 }
 
+/** How long the line stays up on its own. */
+const AUTO_DISMISS_MS = 8000
+
+/**
+ * After a thought is saved: ONE line saying where it went, and only when it
+ * went somewhere — "Added to <project>", "Added to a list", "Sounds like a
+ * project". The topic/people/tone counts and the model's "bridge" remark are
+ * gone: they described the machine, not what happened to the thought, and the
+ * bridge was the app offering ideas straight after you'd spoken.
+ */
 export function ExtractionSummary() {
   const navigate = useNavigate()
   const [extraction, setExtraction] = useState<ExtractionDetail | null>(null)
@@ -30,191 +34,104 @@ export function ExtractionSummary() {
     const handleExtraction = (e: CustomEvent<ExtractionDetail>) => {
       setExtraction(e.detail)
       setVisible(true)
-
-      // Track data point for the flywheel
-      if (onboardingCompletedAt) {
-        incrementDataPoints()
-      }
+      if (onboardingCompletedAt) incrementDataPoints()
     }
-
     window.addEventListener('memory-extracted', handleExtraction as EventListener)
-    return () => {
-      window.removeEventListener('memory-extracted', handleExtraction as EventListener)
-    }
+    return () => window.removeEventListener('memory-extracted', handleExtraction as EventListener)
   }, [onboardingCompletedAt])
+
+  useEffect(() => {
+    if (!visible) return
+    const id = window.setTimeout(() => setVisible(false), AUTO_DISMISS_MS)
+    return () => window.clearTimeout(id)
+  }, [visible, extraction])
+
+  const project = extraction?.suggestedProjectId
+    ? allProjects.find(p => p.id === extraction.suggestedProjectId)
+    : undefined
+  const category = extraction?.triageCategory ?? null
+
+  const line = (() => {
+    if (!extraction) return null
+    if (category === 'new_project_idea') {
+      return (
+        <>
+          <Lightbulb className="w-3.5 h-3.5 flex-shrink-0" style={{ color: 'var(--brand-primary)' }} />
+          <span className="text-xs" style={{ color: 'var(--brand-text-secondary)' }}>Sounds like a project —</span>
+          {project && (
+            <button onClick={() => { setVisible(false); navigate(`/projects/${project.id}`) }} className="text-xs font-bold underline" style={{ color: 'rgb(var(--brand-primary-rgb))' }}>
+              add to {project.title}
+            </button>
+          )}
+          <button onClick={() => { setVisible(false); setCreateOpen(true) }} className="text-xs font-bold underline" style={{ color: 'rgb(var(--brand-primary-rgb))' }}>
+            start something new
+          </button>
+        </>
+      )
+    }
+    if (category === 'task_update' && project) {
+      return (
+        <>
+          <ArrowRight className="w-3.5 h-3.5 flex-shrink-0" style={{ color: 'var(--brand-primary)' }} />
+          <span className="text-xs" style={{ color: 'var(--brand-text-secondary)' }}>Added to</span>
+          <button onClick={() => { setVisible(false); navigate(`/projects/${project.id}`) }} className="text-xs font-bold underline" style={{ color: 'rgb(var(--brand-primary-rgb))' }}>
+            {project.title}
+          </button>
+        </>
+      )
+    }
+    if (category === 'list_item') {
+      return (
+        <>
+          <ListPlus className="w-3.5 h-3.5 flex-shrink-0" style={{ color: 'var(--brand-primary)' }} />
+          <span className="text-xs" style={{ color: 'var(--brand-text-secondary)' }}>Added to a list.</span>
+          <button onClick={() => { setVisible(false); navigate('/lists') }} className="text-xs font-bold underline" style={{ color: 'rgb(var(--brand-primary-rgb))' }}>
+            see lists
+          </button>
+        </>
+      )
+    }
+    if (category === 'reading_lead') {
+      return (
+        <>
+          <BookOpen className="w-3.5 h-3.5 flex-shrink-0" style={{ color: 'var(--brand-primary)' }} />
+          <span className="text-xs" style={{ color: 'var(--brand-text-secondary)' }}>Added to your reading queue.</span>
+          <button onClick={() => { setVisible(false); navigate('/reading') }} className="text-xs font-bold underline" style={{ color: 'rgb(var(--brand-primary-rgb))' }}>
+            open
+          </button>
+        </>
+      )
+    }
+    return null
+  })()
 
   return (
     <>
-    <CreateProjectDialog isOpen={createOpen} onOpenChange={setCreateOpen} hideTrigger />
-    <AnimatePresence>
-      {visible && extraction && (
-        <motion.div
-          initial={{ opacity: 0, y: 50, scale: 0.9 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: 20, scale: 0.95 }}
-          transition={{ type: 'spring', damping: 20, stiffness: 300 }}
-          className="fixed bottom-24 left-4 right-4 z-50 md:left-1/2 md:-translate-x-1/2 md:w-auto md:max-w-sm"
-        >
-          <div className="px-4 py-3 rounded-2xl bg-[#1a1f35]/95 backdrop-blur-xl border border-[var(--glass-surface-hover)] shadow-2xl">
-            {/* Row 1: extraction stats */}
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-1.5">
-                <Brain className="w-3.5 h-3.5 text-brand-primary" />
-                <span className="text-xs text-brand-primary font-medium">
-                  Understood
-                </span>
-              </div>
-              <div className="h-3 w-px bg-[rgba(255,255,255,0.1)]" />
-              <div className="flex items-center gap-2.5 text-xs text-[var(--brand-text-secondary)]">
-                {extraction.topics > 0 && (
-                  <span className="flex items-center gap-1">
-                    <Hash className="w-3 h-3" />
-                    {extraction.topics} topic{extraction.topics > 1 ? 's' : ''}
-                  </span>
-                )}
-                {extraction.people > 0 && (
-                  <span className="flex items-center gap-1">
-                    <Users className="w-3 h-3 text-brand-primary" />
-                    {extraction.people} {extraction.people > 1 ? 'people' : 'person'}
-                  </span>
-                )}
-                {extraction.tone && (
-                  <span className="flex items-center gap-1">
-                    <Heart className="w-3 h-3" />
-                    {extraction.tone}
-                  </span>
-                )}
-              </div>
-              {/* Dismiss button */}
+      <CreateProjectDialog isOpen={createOpen} onOpenChange={setCreateOpen} hideTrigger />
+      <AnimatePresence>
+        {visible && line && (
+          <motion.div
+            initial={{ opacity: 0, y: 50, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.95 }}
+            transition={{ type: 'spring', damping: 20, stiffness: 300 }}
+            className="fixed bottom-24 left-4 right-4 z-50 md:left-1/2 md:-translate-x-1/2 md:w-auto md:max-w-sm"
+          >
+            <div className="px-4 py-3 rounded-2xl bg-[#1a1f35]/95 backdrop-blur-xl border border-[var(--glass-surface-hover)] shadow-2xl flex items-center gap-2 flex-wrap">
+              {line}
               <button
                 onClick={() => setVisible(false)}
                 className="ml-auto flex-shrink-0 p-1 rounded-md transition-colors hover:bg-[rgba(255,255,255,0.08)]"
                 style={{ color: 'var(--brand-text-muted)' }}
                 title="Dismiss"
+                aria-label="Dismiss"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
             </div>
-
-            {/* Row 2: thought bridge — shown only when present */}
-            {extraction.bridgeInsight && (
-              <>
-                <div className="h-px bg-[rgba(255,255,255,0.07)] my-2.5" />
-                <div className="w-full text-left flex items-start gap-2">
-                  <div
-                    className="flex-shrink-0 h-1.5 w-1.5 rounded-full mt-1.5"
-                    style={{ backgroundColor: 'var(--brand-primary)', opacity: 0.7 }}
-                  />
-                  <p
-                    className="text-xs leading-relaxed flex-1"
-                    style={{ color: 'var(--brand-text-secondary)' }}
-                  >
-                    {extraction.bridgeInsight}
-                  </p>
-                </div>
-              </>
-            )}
-
-            {/* Row 3: intent routing — show what the harness did with the thought */}
-            {extraction.triageCategory === 'new_project_idea' && (
-              <>
-                <div className="h-px bg-[rgba(255,255,255,0.07)] my-2.5" />
-                <div className="w-full text-left flex items-center gap-2 flex-wrap">
-                  <Lightbulb className="w-3.5 h-3.5 flex-shrink-0" style={{ color: 'var(--brand-primary)' }} />
-                  <span className="text-xs" style={{ color: 'var(--brand-text-secondary)' }}>Sounds like a project —</span>
-                  {extraction.suggestedProjectId && allProjects.find(p => p.id === extraction.suggestedProjectId) && (
-                    <button
-                      onClick={() => { setVisible(false); navigate(`/projects/${extraction.suggestedProjectId}`) }}
-                      className="text-xs font-bold underline"
-                      style={{ color: 'rgb(var(--brand-primary-rgb))' }}
-                    >
-                      add to {allProjects.find(p => p.id === extraction.suggestedProjectId)?.title}
-                    </button>
-                  )}
-                  <button
-                    onClick={() => { setVisible(false); setCreateOpen(true) }}
-                    className="text-xs font-bold underline"
-                    style={{ color: 'rgb(var(--brand-primary-rgb))' }}
-                  >
-                    start something new
-                  </button>
-                </div>
-              </>
-            )}
-
-            {extraction.triageCategory === 'task_update' && extraction.suggestedProjectId && allProjects.find(p => p.id === extraction.suggestedProjectId) && (
-              <>
-                <div className="h-px bg-[rgba(255,255,255,0.07)] my-2.5" />
-                <div className="w-full text-left flex items-center gap-2 flex-wrap">
-                  <ArrowRight className="w-3.5 h-3.5 flex-shrink-0" style={{ color: 'var(--brand-primary)' }} />
-                  <span className="text-xs" style={{ color: 'var(--brand-text-secondary)' }}>Added to</span>
-                  <button
-                    onClick={() => { setVisible(false); navigate(`/projects/${extraction.suggestedProjectId}`) }}
-                    className="text-xs font-bold underline"
-                    style={{ color: 'rgb(var(--brand-primary-rgb))' }}
-                  >
-                    {allProjects.find(p => p.id === extraction.suggestedProjectId)?.title}
-                  </button>
-                </div>
-              </>
-            )}
-
-            {extraction.triageCategory === 'list_item' && (
-              <>
-                <div className="h-px bg-[rgba(255,255,255,0.07)] my-2.5" />
-                <div className="w-full text-left flex items-center gap-2 flex-wrap">
-                  <ListPlus className="w-3.5 h-3.5 flex-shrink-0" style={{ color: 'var(--brand-primary)' }} />
-                  <span className="text-xs" style={{ color: 'var(--brand-text-secondary)' }}>Added to a list.</span>
-                  <button
-                    onClick={() => { setVisible(false); navigate('/lists') }}
-                    className="text-xs font-bold underline"
-                    style={{ color: 'rgb(var(--brand-primary-rgb))' }}
-                  >
-                    see lists
-                  </button>
-                </div>
-              </>
-            )}
-
-            {extraction.triageCategory === 'reading_lead' && (
-              <>
-                <div className="h-px bg-[rgba(255,255,255,0.07)] my-2.5" />
-                <div className="w-full text-left flex items-center gap-2 flex-wrap">
-                  <BookOpen className="w-3.5 h-3.5 flex-shrink-0" style={{ color: 'var(--brand-primary)' }} />
-                  <span className="text-xs" style={{ color: 'var(--brand-text-secondary)' }}>Added to your reading queue.</span>
-                  <button
-                    onClick={() => { setVisible(false); navigate('/reading') }}
-                    className="text-xs font-bold underline"
-                    style={{ color: 'rgb(var(--brand-primary-rgb))' }}
-                  >
-                    open
-                  </button>
-                </div>
-              </>
-            )}
-
-            {extraction.triageCategory === 'annoyance' && (
-              <>
-                <div className="h-px bg-[rgba(255,255,255,0.07)] my-2.5" />
-                <div className="w-full text-left flex items-center gap-2 flex-wrap">
-                  <Wrench className="w-3.5 h-3.5 flex-shrink-0" style={{ color: 'var(--brand-primary)' }} />
-                  <span className="text-xs" style={{ color: 'var(--brand-text-secondary)' }}>Logged a frustration.</span>
-                </div>
-              </>
-            )}
-
-            {extraction.triageCategory === 'taste_signal' && (
-              <>
-                <div className="h-px bg-[rgba(255,255,255,0.07)] my-2.5" />
-                <div className="w-full text-left flex items-center gap-2 flex-wrap">
-                  <span className="text-xs" style={{ color: 'var(--brand-text-secondary)' }}>Kept as a taste signal.</span>
-                </div>
-              </>
-            )}
-          </div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   )
 }
