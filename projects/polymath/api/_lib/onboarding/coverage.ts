@@ -43,10 +43,10 @@ export const SLOT_CATALOGUE: Record<CoverageSlotId, {
   },
   builder_impulse: {
     id: 'builder_impulse',
-    what_we_want: 'Something they\'d make, build, or create if time and money weren\'t the blocker. Surfaces project suggestions.',
+    what_we_want: 'ONE project they are actually making or working on right now, outside work: what it is and where they have got to. If they have none, the thing they would start. This becomes their first project, so get it clearly.',
     angle_examples: [
-      'If you had a free weekend and unlimited budget, what would you make?',
-      'What\'s an idea you keep coming back to — something you\'d love to try?',
+      'Is there something you\'re working on outside work at the moment — what is it, and where have you got to?',
+      'If you had a free weekend, what would you start?',
     ],
   },
   cross_domain_curiosity: {
@@ -67,10 +67,10 @@ export const SLOT_CATALOGUE: Record<CoverageSlotId, {
   },
   formative_influence: {
     id: 'formative_influence',
-    what_we_want: 'A book, person, or idea that shaped how they think. Becomes graph nodes; captures intellectual lineage.',
+    what_we_want: 'The things they are into: what they are reading, watching or listening to, places they want to go, paintings or objects they love, a book or person that shaped them. Get a couple of NAMES — these become their lists.',
     angle_examples: [
-      'What\'s a book, person, or idea that changed the way you see things?',
-      'Is there someone whose way of thinking you\'ve borrowed?',
+      'What are you reading or watching at the moment? Anything you keep going back to?',
+      'Is there a place you\'ve been wanting to go, or a painting you love?',
     ],
   },
 }

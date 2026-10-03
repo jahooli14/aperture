@@ -23,6 +23,7 @@ import { useMemoryStore } from '../stores/useMemoryStore'
 import { useListStore } from '../stores/useListStore'
 import { useProjectStore } from '../stores/useProjectStore'
 import { useAuthContext } from '../contexts/AuthContext'
+import { startThingsMoving } from '../lib/startThingsMoving'
 import type {
   CoverageGrid,
   CoverageSlotId,
@@ -303,6 +304,9 @@ export function OnboardingChatPage() {
   // handoff). Each fires at most once per session.
   const persistedItemsRef = useRef(false)
   const persistedProjectsRef = useRef(false)
+  // The real projects this chat created, so the bridge below knows which to
+  // give a first move.
+  const createdProjectIdsRef = useRef<string[]>([])
 
   // Persist projects the observer caught mid-chat. Routing splits by
   // status: ideas go to project_suggestions (feeding Mode 1 of The
@@ -316,7 +320,7 @@ export function OnboardingChatPage() {
     for (const project of projects) {
       try {
         if (project.status === 'in_progress') {
-          await createProject({
+          const created = await createProject({
             title: project.title,
             description: project.description,
             status: 'active',
@@ -326,6 +330,7 @@ export function OnboardingChatPage() {
               grounding_phrase: project.raw_phrase,
             } as any,
           })
+          if (created?.id) createdProjectIdsRef.current.push(created.id)
         } else {
           await fetch('/api/projects?resource=save-idea', {
             method: 'POST',
@@ -612,6 +617,9 @@ export function OnboardingChatPage() {
       await persistCapturedItems()
       await persistCapturedProjects()
       await persistConversationMemories(grid)
+      // Don't make them wait for the reveal: get the first move and the first
+      // question going in the background while the analysis runs.
+      void startThingsMoving(createdProjectIdsRef.current)
       setPhase('analyzing')
       try {
         const res = await fetch('/api/utilities?resource=analyze', {

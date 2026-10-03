@@ -65,7 +65,7 @@ export function OutsideLine() {
   }
 
   return (
-    <div className="mt-3 pt-3 border-t" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
+    <div className="mt-3 mb-4 pt-3 border-t" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
       <p className="text-[11px] uppercase tracking-[0.14em] font-bold mb-1" style={{ color: 'var(--brand-text-muted)' }}>
         From outside · {KIND_LABEL[find.kind]}
       </p>
