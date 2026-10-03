@@ -84,21 +84,6 @@ export interface ChecklistItem {
 // THEME CLUSTERING TYPES
 // ============================================================================
 
-export interface ThemeCluster {
-  id: string
-  name: string
-  icon: string
-  color: string
-  memory_count: number
-  sample_keywords: string[]
-  memories: Memory[]
-}
-
-export interface ThemeClustersResponse {
-  clusters: ThemeCluster[]
-  total_memories: number
-  uncategorized_count: number
-}
 
 // ============================================================================
 // MEMORY ONBOARDING TYPES
