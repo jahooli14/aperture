@@ -39,21 +39,16 @@ const MemoriesPage = lazy(lazyRetry(() => import('./pages/MemoriesPage').then(m 
 const ReadingPage = lazy(lazyRetry(() => import('./pages/ReadingPage').then(m => ({ default: m.ReadingPage }))))
 const ReaderPage = lazy(lazyRetry(() => import('./pages/ReaderPage').then(m => ({ default: m.ReaderPage }))))
 const ProjectsPage = lazy(lazyRetry(() => import('./pages/ProjectsPage').then(m => ({ default: m.ProjectsPage }))))
-const DrawerPage = lazy(lazyRetry(() => import('./pages/DrawerPage')))
 const ProjectDetailPage = lazy(lazyRetry(() => import('./pages/ProjectDetailPage')))
 const OnboardingChatPage = lazy(lazyRetry(() => import('./pages/OnboardingChatPage').then(m => ({ default: m.OnboardingChatPage }))))
-const TimelinePage = lazy(lazyRetry(() => import('./pages/TimelinePage').then(m => ({ default: m.TimelinePage }))))
 const SettingsPage = lazy(lazyRetry(() => import('./pages/SettingsPage').then(m => ({ default: m.SettingsPage }))))
 const SearchPage = lazy(lazyRetry(() => import('./pages/SearchPage').then(m => ({ default: m.SearchPage }))))
 const BedtimePage = lazy(lazyRetry(() => import('./pages/BedtimePage').then(m => ({ default: m.BedtimePage }))))
 const ListsPage = lazy(lazyRetry(() => import('./pages/ListsPage')))
 const ListDetailPage = lazy(lazyRetry(() => import('./pages/ListDetailPage')))
 const FavouritesPage = lazy(lazyRetry(() => import('./pages/FavouritesPage')))
-const FixQueuePage = lazy(lazyRetry(() => import('./pages/FixQueuePage')))
 const LoginPage = lazy(lazyRetry(() => import('./pages/LoginPage').then(m => ({ default: m.LoginPage }))))
-const CognitiveReplayPage = lazy(lazyRetry(() => import('./pages/CognitiveReplayPage').then(m => ({ default: m.CognitiveReplayPage }))))
 const FeedsPage = lazy(lazyRetry(() => import('./pages/FeedsPage').then(m => ({ default: m.FeedsPage }))))
-const SessionPage = lazy(lazyRetry(() => import('./pages/SessionPage').then(m => ({ default: m.SessionPage }))))
 
 // Loading fallback component with skeleton
 import { useBedtimeNotifications } from './hooks/useBedtimeNotifications'
@@ -374,18 +369,13 @@ export default function App() {
                       <Route path="/rss" element={<AnimatedPage page="reading"><FeedsPage /></AnimatedPage>} />
                       {/* /suggestions route removed — content folded into home page carousel */}
                       <Route path="/projects" element={<AnimatedPage page="projects"><ProjectsPage /></AnimatedPage>} />
-                      <Route path="/projects/drawer" element={<AnimatedPage page="projects"><DrawerPage /></AnimatedPage>} />
                       <Route path="/projects/:id" element={<AnimatedPage page="projects"><ProjectDetailPage /></AnimatedPage>} />
-                      <Route path="/timeline" element={<AnimatedPage page="timeline"><TimelinePage /></AnimatedPage>} />
-                      <Route path="/replay" element={<AnimatedPage page="timeline"><CognitiveReplayPage /></AnimatedPage>} />
                       <Route path="/settings" element={<AnimatedPage page="settings"><SettingsPage /></AnimatedPage>} />
                       <Route path="/search" element={<AnimatedPage page="search"><SearchPage /></AnimatedPage>} />
                       <Route path="/bedtime" element={<AnimatedPage page="bedtime"><BedtimePage /></AnimatedPage>} />
                       <Route path="/lists" element={<AnimatedPage page="lists"><ListsPage /></AnimatedPage>} />
                       <Route path="/lists/:id" element={<AnimatedPage page="lists"><ListDetailPage /></AnimatedPage>} />
                       <Route path="/favourites" element={<AnimatedPage page="lists"><FavouritesPage /></AnimatedPage>} />
-                      <Route path="/fixes" element={<AnimatedPage page="fixes"><FixQueuePage /></AnimatedPage>} />
-                      <Route path="/session" element={<AnimatedPage page="session"><SessionPage /></AnimatedPage>} />
                       <Route path="/login" element={<LoginPage />} />
                       <Route path="/share-target" element={<ShareTargetFallback />} />
                     </Routes>

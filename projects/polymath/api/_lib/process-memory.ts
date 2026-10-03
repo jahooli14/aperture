@@ -8,7 +8,6 @@ import { generateText } from './gemini-chat.js'
 import { MODELS } from './models.js'
 import { generateEmbedding } from './gemini-embeddings.js'
 import { thinkingFragment } from './gemini-thinking.js'
-import { draftFix } from './fix-queue/drafter.js'
 import { ExtractMetadataResponse, validate, parseModelJson, stripEchoedTitle } from './schemas.js'
 import { PLAIN_ENGLISH_RULES } from './plain-english.js'
 
@@ -244,26 +243,9 @@ export async function processMemory(memoryId: string, opts: ProcessOptions = {})
       await updateItemConnections(memoryId, 'thought', embedding, userId)
       logger.info({ memory_id: memoryId }, '✅ Connections processed')
 
-      // 6b. Metabolism: bump heat on any drawer project that collides with this
-      // new thought. Fire-and-forget — heat failures never block memory processing.
-      try {
-        const { bumpHeatFromNewMemory } = await import('./metabolism.js')
-        bumpHeatFromNewMemory(supabase, userId, {
-          id: memoryId,
-          content: `${metadata.summary_title} ${metadata.insightful_body}`,
-          embedding,
-        })
-          .then(bumped => {
-            if (bumped > 0) logger.info({ memory_id: memoryId, bumped }, '🔥 Heat bumped on drawer projects')
-          })
-          .catch(() => {}) // Non-critical
-      } catch {
-        // Module not available — ignore
-      }
-
-      // 6c. Fragments: attach this voicing to its best-matching project with a
-      // role (SPEC.md). Fire-and-forget, same discipline as heat bumping —
-      // a fragment failure must never block memory processing.
+      // 6b. Fragments: attach this voicing to its best-matching project with a
+      // role (SPEC.md). Fire-and-forget — a fragment failure must never
+      // block memory processing.
       try {
         const { attachFragmentFromMemory } = await import('./fragments.js')
         attachFragmentFromMemory(supabase, userId, {
@@ -401,118 +383,6 @@ export async function processMemory(memoryId: string, opts: ProcessOptions = {})
             url: metadata.entities?.topics?.[0] || 'thought://' + memoryId // Pseudo-URL
           })
         logger.info('✅ Added to reading queue')
-      } else if (category === 'annoyance') {
-        logger.info('🔧 Routing annoyance to Fix Queue...')
-        // Find or create the "Fix Queue" list
-        let fixQueueId: string | null = null
-        const { data: existingQueue } = await supabase
-          .from('lists')
-          .select('id')
-          .eq('user_id', userId)
-          .eq('type', 'fix')
-          .maybeSingle()
-
-        if (existingQueue) {
-          fixQueueId = existingQueue.id
-        } else {
-          const { data: newQueue } = await supabase
-            .from('lists')
-            .insert({
-              user_id: userId,
-              title: 'Fix Queue',
-              type: 'fix',
-              icon: 'Wrench',
-              settings: {
-                status_enabled: true,
-                status_labels: {
-                  pending: 'Queued',
-                  active: 'Fixing',
-                  completed: 'Fixed'
-                }
-              }
-            })
-            .select('id')
-            .single()
-          if (newQueue) fixQueueId = newQueue.id
-          logger.info('✅ Created Fix Queue list')
-        }
-
-        if (fixQueueId) {
-          const severity = metadata.triage.severity || 'annoying'
-          const automatable = metadata.triage.automatable || false
-          const fixHint = metadata.triage.fix_hint || null
-
-          const { data: insertedItem } = await supabase
-            .from('list_items')
-            .insert({
-              user_id: userId,
-              list_id: fixQueueId,
-              content: metadata.summary_title,
-              status: 'pending',
-              metadata: {
-                original_thought: metadata.insightful_body,
-                memory_id: memoryId,
-                severity,
-                automatable,
-                fix_hint: fixHint,
-                fix_status: automatable ? 'draft_pending' : 'manual'
-              }
-            })
-            .select('id')
-            .single()
-          logger.info({ severity, automatable, fix_hint: fixHint }, '✅ Added to Fix Queue')
-
-          // Eagerly draft a fix inline (fire-and-forget, cron is the fallback)
-          if (automatable && fixHint && insertedItem) {
-            // Fetch user email for fix actions (e.g. email reminders)
-            const userEmail = await supabase.auth.admin.getUserById(userId)
-              .then(({ data }) => data?.user?.email || '')
-              .catch(() => '')
-
-            draftFix({
-              content: metadata.summary_title,
-              original_thought: metadata.insightful_body,
-              fix_hint: fixHint,
-              severity,
-              user_email: userEmail
-            }).then(async (draft) => {
-              if (draft) {
-                await supabase
-                  .from('list_items')
-                  .update({
-                    metadata: {
-                      original_thought: metadata.insightful_body,
-                      memory_id: memoryId,
-                      severity,
-                      automatable,
-                      fix_hint: fixHint,
-                      fix_status: 'drafted',
-                      fix_draft: draft
-                    }
-                  })
-                  .eq('id', insertedItem.id)
-                logger.info({ fix_name: draft.name }, '✅ Fix drafted eagerly')
-              }
-            }).catch((err) => {
-              logger.warn({ error: err }, 'Eager fix drafting failed — cron will retry')
-            })
-          }
-
-          // For manual (non-automatable) annoyances, also create a todo
-          // so it shows up in the daily task flow, not just buried in the fix queue
-          if (!automatable) {
-            await supabase
-              .from('todos')
-              .insert({
-                user_id: userId,
-                text: `Fix: ${metadata.summary_title}`,
-                notes: metadata.insightful_body,
-                status: 'pending',
-                source_memory_id: memoryId
-              })
-            logger.info('✅ Created todo for manual fix')
-          }
-        }
       }
     }
 
@@ -603,12 +473,9 @@ Return JSON:
   "tags": ["0-3 short THEME tags — see TAG RULES below. Empty array is fine."],
   "emotional_tone": "brief phrase describing the mood",
   "triage": {
-    "category": "task_update|list_item|new_thought|reading_lead|new_project_idea|annoyance|taste_signal",
+    "category": "task_update|list_item|new_thought|reading_lead|new_project_idea|taste_signal",
     "project_id": "uuid of matching project or null",
-    "confidence": 0.0-1.0,
-    "severity": "critical|annoying|minor (only for annoyance category)",
-    "automatable": true/false (only for annoyance category - could code/cron/automation fix this?),
-    "fix_hint": "brief description of how code could fix this (only if automatable is true)"
+    "confidence": 0.0-1.0
   }
 }
 
@@ -635,7 +502,6 @@ TRIAGE CATEGORY GUIDE:
 - reading_lead: An article, newsletter, or specific resource to be read later.
 - new_project_idea: A large, multi-step goal that could become a new project.
 - new_thought: Default for insights, musings, or memories without immediate action. Use this for standalone actionable items too — there is no separate todo surface.
-- annoyance: A frustration, recurring problem, or friction point in daily life. Things that bug the user — broken stuff, inefficiencies, things that should work better. If a cron job, notification, API call, or smart home automation could fix it, mark automatable=true and provide a fix_hint.
 - taste_signal: A note about something the user noticed, reacted to, or wants more of — a texture, a vibe, a quality of work they admire. Not a project, not an annoyance, not actionable. "The bass on that track is exactly the texture I want." "The wood grain on the table was perfect." "I love how that book ends mid-sentence." These shape who the user is becoming as a maker and feed the long-arc pattern reader. Use this when the note is an identity signal, not a plan.
 
 Return only valid JSON.`

@@ -57,7 +57,6 @@ import { loadMoveContext, saveMove } from './_lib/next-move-store.js'
 import { readSaid, logMoveDone } from './_lib/move-said.js'
 import { debriefSession, type DebriefOpenTask } from './_lib/debrief-matcher.js'
 import { normalizeTaskOrder } from './_lib/task-order.js'
-import { handleFixQueue } from './_lib/fix-queue/route.js'
 import { reconcileCloseout, parseTicked } from './_lib/session-closeout.js'
 import { readCycleState, cycleLabel, rollToNextCycle, lastCycleSteps } from './_lib/project-cycles.js'
 import { appendMilestone, readMilestones } from './_lib/project-milestones.js'
@@ -87,12 +86,6 @@ const EXECUTION_SPARKS_RESOURCES = new Set(['bake', 'today', 'respond', 'spark-f
 const EXECUTION_PROPOSALS_RESOURCES = new Set([
   'drift-decay', 'reembed-articles', 'backfill-embeddings', 'reprocess-backlog',
 ])
-// Fix Queue, folded in from its own serverless function to stay under
-// Vercel's Hobby cap of 12. Routed on `action`, which nothing else in this
-// file uses, so it can't collide with the `resource` sets above -- note
-// 'reject' means different things to each and never meets.
-const FIX_QUEUE_ACTIONS = new Set(['draft-pending', 'run-fixes', 'approve', 'reject', 'list'])
-
 export const config = {
   // Vercel caps execution at 60s by default. Bumped to 300s for
   // generate-project-ideas, which can run several Flash calls in a
@@ -108,9 +101,6 @@ export const config = {
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const resource = req.query.resource as string
-
-  const action = req.query.action
-  if (typeof action === 'string' && FIX_QUEUE_ACTIONS.has(action)) return handleFixQueue(req, res)
 
   // Execution rebuild (SPEC.md) — routed by disjoint resource-name sets so
   // none of the checks below cost anything extra for the pre-existing

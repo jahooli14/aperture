@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
-import { Check, Bug, ToggleRight, ToggleLeft, RefreshCw, Search, Type, GitBranch, RotateCcw, LogOut } from 'lucide-react'
+import { Check, Bug, ToggleRight, ToggleLeft, RefreshCw, Search, Type, RotateCcw, LogOut } from 'lucide-react'
 import { api } from '../lib/apiClient'
 import { supabase } from '../lib/supabase'
 import { useThemeStore, DEFAULT_ACCENT_COLOR, DEFAULT_BG_ACCENT_COLOR } from '../stores/useThemeStore'
@@ -166,7 +166,6 @@ export function SettingsPage() {
   const [regenerating, setRegenerating] = useState(false)
   const [tidying, setTidying] = useState(false)
   const [rescanningTags, setRescanningTags] = useState(false)
-  const [allowHandoff, setAllowHandoff] = useState(false)
   const [resetConfirm, setResetConfirm] = useState(false)
   const [resetting, setResetting] = useState(false)
 
@@ -239,35 +238,10 @@ export function SettingsPage() {
     }
   }
 
-  useEffect(() => {
-    ;(async () => {
-      try {
-        const res = (await api.get('projects?resource=metabolism-settings')) as { allow_handoff_mutations?: boolean } | null
-        if (res && typeof res.allow_handoff_mutations === 'boolean') {
-          setAllowHandoff(res.allow_handoff_mutations)
-        }
-      } catch {
-        // Silent — settings are optional.
-      }
-    })()
-  }, [])
-
-  const toggleHandoff = async () => {
-    const next = !allowHandoff
-    setAllowHandoff(next)
-    try {
-      await api.post('projects?resource=metabolism-settings', { allow_handoff_mutations: next })
-    } catch {
-      setAllowHandoff(!next)
-      addToast({ title: 'Failed to save', variant: 'destructive' })
-    }
-  }
   const {
     bedtimeEnabled, bedtimeHour, bedtimeMinute,
-    morningEnabled, morningHour, morningMinute,
     voiceNoteEnabled, voiceNoteHour, voiceNoteMinute, voiceNoteError,
     toggleBedtime, updateBedtime,
-    toggleMorning, updateMorning,
     toggleVoiceNote, updateVoiceNoteTime,
   } = useNotificationSettings()
 
@@ -640,53 +614,6 @@ export function SettingsPage() {
                 )}
               </div>
 
-              {/* Morning planning */}
-              <div className="rounded-xl" style={{ background: 'var(--premium-surface-1)', border: '1px solid var(--glass-surface-hover)' }}>
-                <div className="flex items-center justify-between px-4 py-3.5">
-                  <div>
-                    <p className="text-[15px]" style={{ color: "var(--brand-text-secondary)" }}>Morning planning</p>
-                    <p className="text-[12px]" style={{ color: "var(--brand-text-muted)" }}>Set your intentions for the day</p>
-                  </div>
-                  <button
-                    onClick={() => toggleMorning(!morningEnabled)}
-                    className="relative h-7 w-12 rounded-full transition-all flex-shrink-0"
-                    style={{ background: morningEnabled ? 'rgba(var(--brand-primary-rgb), 0.65)' : 'var(--glass-surface-hover)' }}
-                  >
-                    <div className="absolute top-1 h-5 w-5 rounded-full bg-white transition-all" style={{ left: morningEnabled ? '26px' : '4px' }} />
-                  </button>
-                </div>
-                {morningEnabled && (
-                  <div className="px-4 pb-3.5 flex items-center gap-3 border-t border-[var(--glass-surface)] pt-3">
-                    <span className="text-[12px]" style={{ color: "var(--brand-text-muted)" }}>Time</span>
-                    <select
-                      value={morningHour}
-                      onChange={e => updateMorning(Number(e.target.value), morningMinute)}
-                      className="rounded-lg px-2 py-1 text-[13px] outline-none"
-                      style={{ background: 'var(--glass-surface)', color: "var(--brand-text-secondary)" }}
-                    >
-                      {Array.from({ length: 24 }, (_, i) => (
-                        <option key={i} value={i} style={{ background: 'var(--brand-bg)' }}>
-                          {String(i).padStart(2, '0')}
-                        </option>
-                      ))}
-                    </select>
-                    <span style={{ color: "var(--brand-text-muted)" }}>:</span>
-                    <select
-                      value={morningMinute}
-                      onChange={e => updateMorning(morningHour, Number(e.target.value))}
-                      className="rounded-lg px-2 py-1 text-[13px] outline-none"
-                      style={{ background: 'var(--glass-surface)', color: "var(--brand-text-secondary)" }}
-                    >
-                      {[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55].map(m => (
-                        <option key={m} value={m} style={{ background: 'var(--brand-bg)' }}>
-                          {String(m).padStart(2, '0')}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-              </div>
-
               {/* Daily voice note */}
               <div className="rounded-xl" style={{ background: 'var(--premium-surface-1)', border: '1px solid var(--glass-surface-hover)' }}>
                 <div className="flex items-center justify-between px-4 py-3.5">
@@ -822,34 +749,6 @@ export function SettingsPage() {
               </button>
 
               {/* Handoff mutations toggle — opt-in evolution mode */}
-              <button
-                onClick={toggleHandoff}
-                className="w-full flex items-center gap-4 p-4 rounded-xl backdrop-blur-xl transition-all text-left border hover:bg-[var(--glass-surface)]"
-                style={{
-                  background: 'var(--glass-surface)',
-                  borderColor: 'var(--glass-surface)',
-                }}
-              >
-                <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
-                  style={{ background: 'rgba(var(--brand-primary-rgb), 0.15)' }}>
-                  <GitBranch className="w-5 h-5" style={{ color: 'rgb(var(--brand-primary-rgb))' }} />
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-semibold premium-text-platinum text-sm">
-                    Hand off stuck projects
-                  </h3>
-                  <p className="text-xs" style={{ color: 'var(--brand-text-secondary)' }}>
-                    The weekly digest can suggest giving a dormant project to someone else.
-                  </p>
-                </div>
-                <div>
-                  {allowHandoff ? (
-                    <ToggleRight className="w-6 h-6" style={{ color: 'rgb(var(--brand-primary-rgb))' }} />
-                  ) : (
-                    <ToggleLeft className="w-6 h-6" style={{ color: 'var(--brand-text-muted)' }} />
-                  )}
-                </div>
-              </button>
 
               {/* Regenerate Connections */}
               <button
