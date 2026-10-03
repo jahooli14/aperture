@@ -1581,7 +1581,12 @@ async function insertSparks(
   const first = await run(rows)
   if (first.error?.code !== '42703') return first as any
   console.warn('[utilities/sparks] no `stake` column yet — inserting without it')
-  return await run(rows.map(({ stake: _stake, subject_id: _sid, subject_kind: _sk, ...rest }) => rest)) as any
+  const bare = (select ?? '').replace(/,\s*sources\b/, '')
+  const rerun = (payload: Record<string, unknown>[]) => {
+    const q = supabase.from('sparks').insert(payload)
+    return q.select(bare || 'id')
+  }
+  return await rerun(rows.map(({ stake: _stake, subject_id: _sid, subject_kind: _sk, sources: _src, ...rest }) => rest)) as any
 }
 
 // ─── Execution rebuild (SPEC.md) — folded in from sessions.ts/sparks.ts/  ──
@@ -2473,9 +2478,10 @@ async function retireAndRebake(
       stake: spark.stake ?? null,
       subject_id: spark.subject_id ?? null,
       subject_kind: spark.subject_kind ?? null,
+      sources: spark.sources ?? null,
       shown_at: i === 0 ? nowIso : null,
     })),
-    'id, type, text, project_id, shown_at, projects(title)',
+    'id, type, text, project_id, shown_at, sources, projects(title)',
   )
 
   if (insertErr) {
@@ -2580,6 +2586,7 @@ async function handleExecutionSparks(req: VercelRequest, res: VercelResponse) {
       stake: spark.stake ?? null,
       subject_id: spark.subject_id ?? null,
       subject_kind: spark.subject_kind ?? null,
+      sources: spark.sources ?? null,
     }))
 
     const { error: insertErr } = await insertSparks(supabase, rows)
@@ -2597,9 +2604,12 @@ async function handleExecutionSparks(req: VercelRequest, res: VercelResponse) {
     const userId = await getUserId(req)
     if (!userId) return res.status(401).json({ error: 'Unauthorized' })
 
-    const { data, error } = await supabase
+    // `sources` arrives with 20261003_spark_sources.sql; until it's run the
+    // select fails whole on 42703, so retry without it rather than lose the
+    // question itself.
+    const standing = (cols: string) => supabase
       .from('sparks')
-      .select('id, type, text, project_id, shown_at, answered_at, expires_at, projects(title)')
+      .select(cols)
       .eq('user_id', userId)
       .is('answered_at', null)
       .gt('expires_at', new Date().toISOString())
@@ -2612,6 +2622,9 @@ async function handleExecutionSparks(req: VercelRequest, res: VercelResponse) {
       // means the queue needs no created_at juggling to stay in order.
       .order('expires_at', { ascending: true })
       .limit(1)
+    const BASE_COLS = 'id, type, text, project_id, shown_at, answered_at, expires_at, projects(title)'
+    let { data, error } = (await standing(`${BASE_COLS}, sources`)) as { data: any[] | null; error: { code?: string; message: string } | null }
+    if (error?.code === '42703') ({ data, error } = (await standing(BASE_COLS)) as { data: any[] | null; error: { code?: string; message: string } | null })
 
     if (error) {
       console.error('[utilities/sparks] today query failed:', error)

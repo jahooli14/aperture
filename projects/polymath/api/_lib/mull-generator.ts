@@ -34,7 +34,7 @@ import { generateText } from './gemini-chat.js'
 import { parseModelJson } from './schemas.js'
 import { echoesRecent, fetchRecentSparkTexts, fetchRecentSparkProjectIds, fetchRecentSparkSubjectIds } from './spark-echo.js'
 import { SPARK_CORRECTION_TAG } from './corpus-provenance.js'
-import { loadCorpus, normaliseTitle, type Corpus } from './mull-corpus.js'
+import { loadCorpus, normaliseTitle, type Corpus, type CorpusRow } from './mull-corpus.js'
 import { checkCandidate, judgeShips, judgeRank, parseJudgeScores, type Candidate, type Grounded, type JudgeScore } from './mull.js'
 import { draftPrompt, judgePrompt } from './mull-prompts.js'
 
@@ -95,6 +95,9 @@ export interface BakedSpark {
    *  fragment / list_item / article id -- so the next run can avoid it. */
   subject_id?: string
   subject_kind?: string
+  /** Every row the question was built on, by plain title -- what was put
+   *  next to what. Shown under the question. */
+  sources?: { kind: string; title: string }[]
   /** Written now, shown later. */
   banked?: boolean
 }
@@ -349,6 +352,19 @@ function projectFor(c: Grounded, corpus: Corpus): string | null {
   return c.rows.find(r => r.kind === 'project')?.id ?? c.rows.find(r => r.projectId)?.projectId ?? null
 }
 
+/** Titles of the distinct captures behind a question, for display. */
+export function sourcesOf(rows: CorpusRow[]): { kind: string; title: string }[] {
+  const seen = new Set<string>()
+  const out: { kind: string; title: string }[] = []
+  for (const r of rows) {
+    const title = (r.title || r.text).replace(/\s+/g, ' ').trim().slice(0, 60)
+    if (!title || seen.has(r.captureId)) continue
+    seen.add(r.captureId)
+    out.push({ kind: r.kind, title })
+  }
+  return out.slice(0, 4)
+}
+
 const label = (c: Grounded) => `"${c.question}" <- ${c.rows.map(r => r.ref).join(', ')}`
 
 // ─── The channel ──────────────────────────────────────────────────────
@@ -472,6 +488,7 @@ export async function generateMull(
       stake: g.stake || undefined,
       subject_id: g.rows[0].id,
       subject_kind: g.rows[0].kind,
+      sources: sourcesOf(g.rows),
       banked: baked.length > 0,
     })
   }

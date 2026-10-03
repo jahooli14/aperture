@@ -25,6 +25,8 @@ export interface StandingQuestionSpark {
   text: string
   project_id: string | null
   projects?: { title: string } | null
+  /** What the question was built from -- what was put next to what. */
+  sources?: { kind: string; title: string }[] | null
 }
 
 /** Every spark is a question now. The one kind that wasn't -- the
@@ -268,6 +270,15 @@ export function StandingQuestion() {
           </span>
         ))}
       </p>
+
+      {(spark.sources?.length ?? 0) >= 2 && (
+        <p className="text-[12px] mt-2 leading-snug" style={{ color: 'var(--brand-text-secondary)' }}>
+          <span className="text-[11px] uppercase tracking-[0.14em] font-semibold mr-1.5" style={{ color: 'var(--brand-text-muted)' }}>
+            from
+          </span>
+          {spark.sources!.map(x => x.title).join(' + ')}
+        </p>
+      )}
 
       {/* Two quiet words, not two buttons. Answering is opt-in — the voice
           box only appears once you've got something to say, so the resting
