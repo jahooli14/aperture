@@ -30,7 +30,6 @@ const KIND_LABEL: Record<OutsideFind['kind'], string> = {
   work: 'Worth a look',
 }
 
-const linkButton = 'text-[12px] font-medium underline-offset-2 hover:underline disabled:opacity-40'
 
 export function OutsideLine() {
   const [find, setFind] = useState<OutsideFind | null>(null)
@@ -65,20 +64,27 @@ export function OutsideLine() {
   }
 
   return (
-    <div className="mt-3 mb-4 pt-3 border-t" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
-      <p className="text-[11px] uppercase tracking-[0.14em] font-bold mb-1" style={{ color: 'var(--brand-text-muted)' }}>
-        From outside · {KIND_LABEL[find.kind]}
-      </p>
-      <a href={find.url} target="_blank" rel="noreferrer" className="flex items-start gap-1.5 text-[14px] leading-snug" style={{ color: 'var(--brand-text-primary)' }}>
-        <span>{find.title}</span>
-        <ExternalLink className="h-3 w-3 mt-1 flex-shrink-0" style={{ opacity: 0.5 }} />
+    <div className="mt-1 mb-4 flex items-center gap-3 rounded-xl px-3 py-2.5" style={{ background: 'rgba(255,255,255,0.04)' }}>
+      <a href={find.url} target="_blank" rel="noreferrer" className="flex-1 min-w-0" style={{ color: 'var(--brand-text-primary)' }}>
+        <p className="text-[11px] uppercase tracking-[0.14em] font-bold" style={{ color: 'var(--brand-text-muted)' }}>
+          From outside · {KIND_LABEL[find.kind]}
+        </p>
+        <p className="flex items-start gap-1.5 text-[14px] leading-snug mt-0.5">
+          <span className="line-clamp-2">{find.title}</span>
+          <ExternalLink className="h-3 w-3 mt-1 flex-shrink-0" style={{ opacity: 0.5 }} />
+        </p>
+        <p className="text-[12.5px] leading-snug mt-0.5 line-clamp-2" style={{ color: 'var(--brand-text-secondary)' }}>{find.why}</p>
       </a>
-      <p className="text-[12.5px] mt-1" style={{ color: 'var(--brand-text-secondary)', opacity: 0.85 }}>{find.why}</p>
-      <div className="flex gap-4 mt-1.5">
-        <button className={linkButton} style={{ color: 'rgb(var(--brand-primary-rgb))' }} disabled={busy} onClick={() => resolve('saved')}>
-          Save to read
+      <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
+        <button
+          className="text-[12px] font-semibold px-3 py-1.5 rounded-full disabled:opacity-40"
+          style={{ background: 'rgba(var(--brand-primary-rgb),0.16)', color: 'rgb(var(--brand-primary-rgb))' }}
+          disabled={busy}
+          onClick={() => resolve('saved')}
+        >
+          Save
         </button>
-        <button className={linkButton} style={{ color: 'var(--brand-text-secondary)' }} disabled={busy} onClick={() => resolve('dismissed')}>
+        <button className="text-[11.5px] disabled:opacity-40" style={{ color: 'var(--brand-text-secondary)' }} disabled={busy} onClick={() => resolve('dismissed')}>
           Not useful
         </button>
       </div>
