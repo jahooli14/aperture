@@ -2842,7 +2842,10 @@ async function handleExecutionSparks(req: VercelRequest, res: VercelResponse) {
     const userId = await getUserId(req)
     if (!userId) return res.status(401).json({ error: 'Unauthorized' })
 
-    const { spark_id, response_text, turns, is_correction } = req.body || {}
+    const { spark_id, response_text, turns, is_correction, stance: rawStance } = req.body || {}
+    // How they reacted to a take: a tap, before or without any words.
+    const stance: 'yes' | 'no' | 'sort_of' | null =
+      rawStance === 'yes' || rawStance === 'no' || rawStance === 'sort_of' ? rawStance : null
     // `turns` is the answer plus whatever they said to the follow-up. Only
     // THEIR words -- the app's follow-up question is scaffolding and is
     // never stored, or model prose would enter the corpus as "their own
@@ -2852,7 +2855,24 @@ async function handleExecutionSparks(req: VercelRequest, res: VercelResponse) {
     const body = Array.isArray(turns) && turns.length > 0
       ? joinTurns(turns.filter((t: unknown): t is string => typeof t === 'string'))
       : response_text
-    if (!spark_id || !body) return res.status(400).json({ error: 'spark_id and response_text required' })
+    if (!spark_id || (!body && !stance)) return res.status(400).json({ error: 'spark_id and response_text required' })
+
+    // Just a tap: yes, no or sort of, with nothing said. That is an answer
+    // (it must not read as a miss next time) but not a thought, so no note.
+    if (!body) {
+      const mark = (withStance: boolean) => supabase
+        .from('sparks')
+        .update({ answered_at: new Date().toISOString(), ...(withStance ? { stance } : {}) })
+        .eq('id', spark_id)
+        .eq('user_id', userId)
+      let { error: tapErr } = await mark(true)
+      if (tapErr?.code === '42703') {
+        console.warn('[utilities/sparks] sparks.stance missing — run 20261004_spark_stance.sql')
+        ;({ error: tapErr } = await mark(false))
+      }
+      if (tapErr) return res.status(500).json({ error: tapErr.message })
+      return res.status(200).json({ success: true, processed: false })
+    }
 
     // Fetched once, up front -- used both to record which question this
     // note answers (source_reference, below) and, further down, to report
@@ -2888,7 +2908,7 @@ async function handleExecutionSparks(req: VercelRequest, res: VercelResponse) {
         // (mull-generator.ts) can hand it back to future draft calls as
         // plain, undated context -- not a capture, just a reason not to
         // ask the same wrong thing again.
-        tags: is_correction === true
+        tags: is_correction === true || stance === 'no'
           ? [SPARK_RESPONSE_TAG, SPARK_CORRECTION_TAG]
           : [SPARK_RESPONSE_TAG],
         // Provenance only -- never fed to the model as "something they
@@ -2909,11 +2929,21 @@ async function handleExecutionSparks(req: VercelRequest, res: VercelResponse) {
       return res.status(500).json({ error: memErr.message })
     }
 
-    const { error: updateErr } = await supabase
+    const markAnswered = (withStance: boolean) => supabase
       .from('sparks')
-      .update({ answered_at: new Date().toISOString(), response_memory_id: memory.id })
+      .update({
+        answered_at: new Date().toISOString(),
+        response_memory_id: memory.id,
+        ...(withStance && stance ? { stance } : {}),
+      })
       .eq('id', spark_id)
       .eq('user_id', userId)
+    let { error: updateErr } = await markAnswered(true)
+    if (updateErr?.code === '42703') {
+      // Migration not applied yet: the answer still saves, just without the tap.
+      console.warn('[utilities/sparks] sparks.stance missing — run 20261004_spark_stance.sql')
+      ;({ error: updateErr } = await markAnswered(false))
+    }
 
     if (updateErr) {
       console.error('[utilities/sparks] respond spark update failed:', updateErr)

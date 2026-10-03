@@ -191,6 +191,14 @@ describe('the mull channel, end to end', () => {
     expect(trace.join('\n')).toMatch(/names something its evidence doesn't: abbey, road/)
   })
 
+  it('reads a take from the "take" key, and still reads the old "question" key', async () => {
+    const take = 'You said a recording only works if it is one take. You rewrote chapter nine for the fourth time. I think the book is not one take.'
+    const { question: _q, ...rest } = ONE_TAKE
+    respond({ draft: [{ ...rest, take }], judge: [ship(1)] })
+    const baked = await bakeMull(fakeSupabase(corpus()).client, 'u1', undefined, [])
+    expect(baked.map(b => b.text)).toEqual([take])
+  })
+
   it('refuses a yes/no question', async () => {
     respond({ draft: [{ ...ONE_TAKE, question: 'You said a recording only works if it is one take. You rewrote chapter nine for the fourth time. Should the book be one take too?' }], judge: [ship(1)] })
     expect(await bakeMull(fakeSupabase(corpus()).client, 'u1')).toEqual([])
@@ -236,7 +244,7 @@ describe('the mull channel, end to end', () => {
     const baked = await bakeMull(fakeSupabase(corpus()).client, 'u1')
     expect(baked).toHaveLength(2)
     const judgePrompt = generateText.mock.calls.map(c => c[0] as string).find(p => p.includes('You are the last check'))!
-    expect(judgePrompt.match(/QUESTION:/g)).toHaveLength(2)
+    expect(judgePrompt.match(/SHOWN TO THEM:/g)).toHaveLength(2)
   })
 
   it('never uses Pro', async () => {

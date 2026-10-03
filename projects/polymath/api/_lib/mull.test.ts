@@ -95,6 +95,23 @@ describe('checkCandidate', () => {
     const r = checkCandidate(candidate("You said one take, which mirrors how the book swaps characters. What would that look like?"), CORPUS)
     expect(r).toMatchObject({ ok: false, reason: expect.stringMatching(/explains the pattern/) })
   })
+  it('passes a take: facts, then one committed claim, no question mark', () => {
+    const r = checkCandidate(candidate("You said it only works if it's one take. The book swaps its characters out partway through. I think the book is not one take."), CORPUS)
+    expect(r.ok).toBe(true)
+  })
+  it('refuses a take that hedges its claim', () => {
+    const r = checkCandidate(candidate("You said it only works if it's one take. The book swaps its characters out partway through. Maybe the book could be one take."), CORPUS)
+    expect(r).toMatchObject({ ok: false, reason: expect.stringMatching(/hedges/) })
+  })
+  it('does not blame a hedge that is only in their own quoted words', () => {
+    const r = checkCandidate(candidate("You said it only works if it's one take, maybe. The book swaps its characters out partway through. I think the book is not one take."), CORPUS)
+    expect(r.ok).toBe(true)
+  })
+  it('refuses a take that reads a feeling off the evidence, even when loose', () => {
+    const t = "You said it only works if it's one take. The book swaps its characters out partway through. I think you're afraid of one take."
+    expect(checkCandidate(candidate(t), CORPUS).ok).toBe(false)
+    expect(checkCandidate(candidate(t), CORPUS, true).ok).toBe(false)
+  })
   it('loose skips the shape gates but never the honesty ones', () => {
     expect(checkCandidate(candidate('You said one take. Should the book be one take?'), CORPUS, true).ok).toBe(true)
     expect(checkCandidate(candidate('You said one take at Abbey Road. Should the book be one take?'), CORPUS, true).ok).toBe(false)
@@ -114,6 +131,11 @@ describe('the judge', () => {
   it('the loose bar drops taste, never truth', () => {
     expect(judgeShips(s({ verdict: 'kill', revelation: 3 }), true)).toBe(true)
     expect(judgeShips(s({ truth: 5 }), true)).toBe(false)
+  })
+  it('never ships an overreaching take, however sharp', () => {
+    expect(judgeShips(s({ overreach: true }))).toBe(false)
+    expect(judgeShips(s({ overreach: true }), true)).toBe(false)
+    expect(parseJudgeScores({ scores: [{ n: 1, revelation: 8, truth: 8, specific: 8, answerable: 8, overreach: true, verdict: 'ship' }] }, 1).get(1)?.overreach).toBe(true)
   })
   it('revelation outweighs everything else', () => {
     expect(judgeRank(s({ revelation: 10, specific: 6 }))).toBeGreaterThan(judgeRank(s({ revelation: 8, specific: 9 })))

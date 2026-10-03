@@ -29,6 +29,9 @@ export const MIN_EVIDENCE_ROWS = 2
 export interface Evidence { ref: string; quote: string }
 
 export interface Candidate {
+  /** The line they are shown. Named for the old shape and kept for the
+   *  callers: it is now usually a take (a claim, no question mark), and a
+   *  question that is open still passes. */
   question: string
   evidence: Evidence[]
   /** The pattern, in one private sentence. Never shown to the user. */
@@ -188,6 +191,31 @@ export function isClosed(questionText: string): boolean {
 }
 
 /**
+ * Feelings and motives. The app can see what they made, kept and dropped; it
+ * cannot see inside them, and a take that reads a feeling off a gap is the
+ * oracle voice. Always on -- this is invention of an inner state, an honesty
+ * matter, so even "get more creative" keeps it.
+ */
+const MIND_READING: readonly RegExp[] = [
+  /\byou('| a)?re (afraid|scared|terrified|ashamed|anxious|insecure|hiding|running from)\b/i,
+  /\byou (secretly|subconsciously|unconsciously)\b/i,
+  /\bdeep down\b/i,
+  /\byou (really|truly|actually) (want|need|fear)\b/i,
+  /\bafraid of\b/i,
+]
+
+/** A hedge in the claim itself. A take nobody could be wrong about gets no
+ *  reaction. Checked on the last sentence only, so a quoted "maybe" from
+ *  their own note is not blamed on us. */
+const HEDGES = /\b(perhaps|maybe|might be|could be|may be|seems? to|sort of|kind of)\b/i
+
+/** The last sentence: the claim itself, after the facts laid next to it. */
+export function claimSentence(text: string): string {
+  const parts = text.trim().split(/(?<=[.!?])\s+/).filter(Boolean)
+  return parts[parts.length - 1] ?? text.trim()
+}
+
+/**
  * Every reason a candidate is thrown away before the judge sees it, or
  * null with the rows its evidence resolved to. Logged by name, so a
  * channel that keeps going quiet can be diagnosed rather than guessed at.
@@ -197,7 +225,6 @@ export function checkCandidate(
 ): { ok: true; grounded: Grounded } | { ok: false; reason: string } {
   const text = c.question.trim()
   if (!text) return { ok: false, reason: 'empty' }
-  if (!text.includes('?')) return { ok: false, reason: 'not a question' }
   if (text.split(/\s+/).length > MAX_MULL_WORDS) return { ok: false, reason: 'too long to carry around' }
 
   const { rows, bad } = resolveEvidence(c.evidence, corpus)
@@ -222,11 +249,17 @@ export function checkCandidate(
 
   const voice = findVoiceViolations(text)
   if (voice.length > 0) return { ok: false, reason: voice[0] }
+  const mind = MIND_READING.find(re => re.test(text))
+  if (mind) return { ok: false, reason: `reads a feeling or motive nobody gave: ${mind.source}` }
 
   if (!loose) {
     const explainer = EXPLAINER_PATTERNS.find(re => re.test(text))
     if (explainer) return { ok: false, reason: `explains the pattern instead of showing it: ${explainer.source}` }
-    if (isClosed(text)) return { ok: false, reason: 'answerable with yes or no' }
+    // Yes or no is the whole point of a take, so this only bites a question.
+    if (text.includes('?') && isClosed(text)) return { ok: false, reason: 'answerable with yes or no' }
+    if (!text.includes('?') && HEDGES.test(claimSentence(text))) {
+      return { ok: false, reason: 'hedges the claim, so nobody can disagree with it' }
+    }
   }
 
   return { ok: true, grounded: { ...c, question: text, rows } }
@@ -239,6 +272,9 @@ export interface JudgeScore {
   truth: number
   specific: number
   answerable: number
+  /** Says more than the notes show: a feeling, a motive, a cause nobody
+   *  gave, or a plan read back. Absent reads as not overreaching. */
+  overreach?: boolean
   verdict: 'ship' | 'kill'
   reason: string
 }
@@ -251,6 +287,7 @@ export interface JudgeScore {
  * when its scores are generous.
  */
 export function judgeShips(s: JudgeScore, loose = false): boolean {
+  if (s.overreach) return false
   if (loose) return s.truth >= 6 && s.answerable >= 5
   return s.verdict === 'ship' && s.truth >= 7 && s.revelation >= 7 && s.answerable >= 6
 }
@@ -274,6 +311,7 @@ export function parseJudgeScores(raw: unknown, count: number): Map<number, Judge
     const [revelation, truth, specific, answerable] = scores as number[]
     out.set(n, {
       n, revelation, truth, specific, answerable,
+      overreach: s.overreach === true,
       verdict: s.verdict === 'ship' ? 'ship' : 'kill',
       reason: typeof s.reason === 'string' ? s.reason : '',
     })

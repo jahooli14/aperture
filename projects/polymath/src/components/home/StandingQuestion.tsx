@@ -43,6 +43,20 @@ function splitSentences(text: string): string[] {
   return text.match(/[^.!?]+[.!?]+["”’)]*\s*|[^.!?]+$/g)?.map(t => t.trim()).filter(Boolean) ?? [text]
 }
 
+export type Stance = 'yes' | 'no' | 'sort_of'
+
+/** A take is a statement; the older questions end in a question mark. They
+ *  react differently: a take gets yes / no / sort of, a question gets "answer it". */
+export function isTake(text: string): boolean {
+  return !text.includes('?')
+}
+
+const STANCES: { id: Stance; label: string; hint: string }[] = [
+  { id: 'yes', label: 'yes', hint: 'Say more, or just save it.' },
+  { id: 'no', label: 'no', hint: "What's actually true?" },
+  { id: 'sort_of', label: 'sort of', hint: 'Where does it break?' },
+]
+
 const quietActionStyle = { color: 'rgb(var(--brand-primary-rgb))', opacity: 0.85 }
 
 export function StandingQuestion() {
@@ -51,6 +65,12 @@ export function StandingQuestion() {
   const [text, setText] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [rerolling, setRerolling] = useState(false)
+  // Which button started the wait. Both used to read `rerolling`, so tapping
+  // "get more creative" put "thinking…" on it AND on "ask me something else".
+  const [rerollKind, setRerollKind] = useState<'plain' | 'creative'>('plain')
+  // A take is a claim, so the first reaction is a stance, tapped. Saying why
+  // is optional and comes second.
+  const [stance, setStance] = useState<Stance | null>(null)
   const [receipt, setReceipt] = useState<string | null>(null)
   const [note, setNote] = useState<string | null>(null)
   // The regular bar has a high floor and a high ceiling on purpose — see
@@ -110,11 +130,14 @@ export function StandingQuestion() {
       // thing it can do, because the user has no other copy of what they said.
       const data = await api.post('utilities?resource=respond', {
         spark_id: spark.id, response_text: turns[0], turns,
-        is_correction: followUpReason === 'correction',
+        is_correction: followUpReason === 'correction' || (stance === 'no' && turns.length > 0),
+        stance,
       }) as { project_title?: string; processed?: boolean }
       haptic.success()
       setReceipt(
-        data.project_title
+        turns.length === 0
+          ? 'Noted.'
+          : data.project_title
           ? `Saved. It'll be there next time you sit down to ${data.project_title}.`
           : 'Saved.'
       )
@@ -127,7 +150,18 @@ export function StandingQuestion() {
   }
 
   const respond = async () => {
-    if (!text.trim() || !spark) return
+    if (!spark) return
+    // A take can be answered with the tap alone. Nothing they said means
+    // nothing is saved as a note, only the stance.
+    if (!text.trim()) {
+      if (stance) await save([])
+      return
+    }
+    // "No" already is the correction -- nothing to hunt for with a follow-up.
+    if (stance === 'no') {
+      await save([text])
+      return
+    }
     // Ask one thing back before saving — but never let that stand between
     // them and a saved answer. If the follow-up call fails or has nothing
     // to ask, this just saves, which is exactly what it did before.
@@ -153,6 +187,7 @@ export function StandingQuestion() {
 
   const reroll = async (creative = false) => {
     setRerolling(true)
+    setRerollKind(creative ? 'creative' : 'plain')
     setNote(null)
     try {
       // A reroll is one model call over the whole corpus, which can run well
@@ -167,6 +202,7 @@ export function StandingQuestion() {
         setSpark(data.spark)
         setAnswering(false)
         setText('')
+        setStance(null)
         setOfferCreative(false)
         setFollowUp(null)
         setFollowUpText('')
@@ -223,7 +259,7 @@ export function StandingQuestion() {
           disabled={rerolling}
           onClick={() => reroll()}
         >
-          {rerolling ? 'thinking…' : 'give me something to think about'}
+          {rerolling && rerollKind === 'plain' ? 'thinking…' : 'give me something to think about'}
         </button>
         {note && (
           <p className="text-[11px] mt-1.5" style={{ color: 'var(--brand-text-secondary)', opacity: 0.69 }}>
@@ -237,7 +273,7 @@ export function StandingQuestion() {
             disabled={rerolling}
             onClick={() => reroll(true)}
           >
-            {rerolling ? 'thinking…' : 'get more creative'}
+            {rerolling && rerollKind === 'creative' ? 'thinking…' : 'get more creative'}
           </button>
         )}
       </div>
@@ -290,13 +326,29 @@ export function StandingQuestion() {
           state of this whole block is three lines. */}
       {!answering && (
         <div className="flex items-center gap-3 mt-2">
-          <button
-            className="text-[12px] transition-opacity hover:opacity-90"
-            style={quietActionStyle}
-            onClick={() => setAnswering(true)}
-          >
-            answer it
-          </button>
+          {isTake(spark.text) ? (
+            // A claim gets a reaction first: one tap, then optionally why.
+            STANCES.map((st, i) => (
+              <span key={st.id} className="flex items-center gap-3">
+                {i > 0 && <span style={{ color: 'var(--brand-text-secondary)', opacity: 0.6 }}>·</span>}
+                <button
+                  className="text-[13px] font-medium transition-opacity hover:opacity-90"
+                  style={quietActionStyle}
+                  onClick={() => { setStance(st.id); setAnswering(true) }}
+                >
+                  {st.label}
+                </button>
+              </span>
+            ))
+          ) : (
+            <button
+              className="text-[12px] transition-opacity hover:opacity-90"
+              style={quietActionStyle}
+              onClick={() => setAnswering(true)}
+            >
+              answer it
+            </button>
+          )}
           <span style={{ color: 'var(--brand-text-secondary)', opacity: 0.6 }}>·</span>
           <button
             className="text-[12px] transition-opacity hover:opacity-90 disabled:opacity-30"
@@ -304,7 +356,7 @@ export function StandingQuestion() {
             disabled={rerolling}
             onClick={() => reroll()}
           >
-            {rerolling ? 'thinking…' : 'ask me something else'}
+            {rerolling && rerollKind === 'plain' ? 'thinking…' : 'ask me something else'}
           </button>
           {offerCreative && (
             <>
@@ -315,7 +367,7 @@ export function StandingQuestion() {
                 disabled={rerolling}
                 onClick={() => reroll(true)}
               >
-                {rerolling ? 'thinking…' : 'get more creative'}
+                {rerolling && rerollKind === 'creative' ? 'thinking…' : 'get more creative'}
               </button>
             </>
           )}
@@ -340,7 +392,7 @@ export function StandingQuestion() {
           >
             {followUp}
           </p>
-          <VoiceInput onTranscript={setFollowUpText} maxDuration={30} />
+          <VoiceInput onTranscript={t => setFollowUpText(c => (c ? `${c} ${t}` : t))} maxDuration={120} />
           {/* Talk or type — voice being the only way in left this
               unanswerable without a mic. */}
           <textarea
@@ -378,19 +430,26 @@ export function StandingQuestion() {
 
       {answering && !followUp && (
         <div className="mt-2.5">
-          <VoiceInput onTranscript={setText} maxDuration={30} />
+          {stance && (
+            <p className="text-[12px] mb-1.5" style={{ color: 'var(--brand-text-secondary)' }}>
+              You said <span className="font-medium" style={{ color: 'rgb(var(--brand-primary-rgb))' }}>
+                {STANCES.find(st => st.id === stance)?.label}
+              </span>. Say why, or just save it.
+            </p>
+          )}
+          <VoiceInput onTranscript={t => setText(c => (c ? `${c} ${t}` : t))} maxDuration={120} />
           {/* Talk or type — voice being the only way in left this
               unanswerable without a mic. */}
           <textarea
             value={text}
             onChange={e => setText(e.target.value)}
-            placeholder="Or type it..."
+            placeholder={STANCES.find(st => st.id === stance)?.hint ?? 'Or type it...'}
             rows={2}
             className="w-full mt-2 rounded-xl px-3 py-2 text-sm bg-transparent border resize-none outline-none"
             style={{ borderColor: 'var(--glass-border-bold)', color: 'var(--brand-text-primary)' }}
           />
           <div className="flex items-center gap-3 mt-2">
-            {text && (
+            {(text || stance) && (
               <button
                 className="px-3 py-1.5 rounded-lg text-[12px] font-medium disabled:opacity-50"
                 style={{
@@ -407,7 +466,7 @@ export function StandingQuestion() {
             <button
               className="text-[12px] transition-opacity hover:opacity-90"
               style={quietActionStyle}
-              onClick={() => { setAnswering(false); setText('') }}
+              onClick={() => { setAnswering(false); setText(''); setStance(null) }}
             >
               leave it
             </button>
