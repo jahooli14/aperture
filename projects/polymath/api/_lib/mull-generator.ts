@@ -255,8 +255,10 @@ async function readFocus(supabase: SupabaseClient, userId: string): Promise<stri
   if (!p?.title && recent.length === 0) return ''
   return `
 WHERE THEY ARE RIGHT NOW (context -- never quote it, evidence still comes from rows):
-${p?.title ? `- Live project: "${p.title}"${move ? `. Next move: ${move}` : ''}\n` : ''}${recent.length ? `- Just captured: ${recent.map(t => `"${t}"`).join('; ')}\n` : ''}Prefer a question that bears on one of these. A strong one about something else
-beats a weak one about these, but if two are equal, take the one that meets them here.
+${p?.title ? `- Live project: "${p.title}"${move ? `. Next move: ${move}` : ''}\n` : ''}${recent.length ? `- Just captured: ${recent.map(t => `"${t}"`).join('; ')}\n` : ''}Use these as one half of a collision, not as a filter. The best question puts
+something from here next to something that looks unrelated -- a person or
+occasion in their life beside a material, skill or old project. Don't stay inside
+the live project; reach out from it.
 `
 }
 

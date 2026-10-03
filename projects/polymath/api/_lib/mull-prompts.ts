@@ -70,6 +70,9 @@ WHERE TO LOOK -- read everything first, then look for:
 - Drift: how they described something early on, and how they describe it now.
 - The aside: a line said in passing under one project that fits all of them.
 - The missing piece: a person, place or step every note circles and none names.
+- The collision: a person or occasion in their life next to a skill, material or
+  old project they already have. Neither note mentions the other; side by side
+  they suggest something to make.
 These are places to look, not boxes to fill. A real corpus holds two or three
 genuine ones. Find those and leave the rest.
 
