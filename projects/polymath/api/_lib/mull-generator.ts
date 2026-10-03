@@ -33,7 +33,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { generateText } from './gemini-chat.js'
 import { parseModelJson } from './schemas.js'
 import { echoesRecent, fetchRecentSparkTexts, fetchRecentSparkProjectIds, fetchRecentSparkSubjectIds } from './spark-echo.js'
-import { SPARK_CORRECTION_TAG } from './corpus-provenance.js'
+import { SPARK_CORRECTION_TAG, isAppAuthored } from './corpus-provenance.js'
 import { loadCorpus, normaliseTitle, type Corpus, type CorpusRow } from './mull-corpus.js'
 import { checkCandidate, judgeShips, judgeRank, parseJudgeScores, type Candidate, type Grounded, type JudgeScore } from './mull.js'
 import { draftPrompt, judgePrompt } from './mull-prompts.js'
@@ -243,18 +243,26 @@ export async function loadFocus(supabase: SupabaseClient, userId: string): Promi
 }
 
 async function readFocus(supabase: SupabaseClient, userId: string): Promise<string> {
-  const [{ data: proj }, { data: notes }] = await Promise.all([
+  const [{ data: proj, error: projErr }, { data: notes, error: notesErr }] = await Promise.all([
     supabase.from('projects').select('title, metadata')
       .eq('user_id', userId).eq('status', 'active')
       .or('state.eq.live,is_priority.eq.true')
       .order('last_active', { ascending: false }).limit(1),
-    supabase.from('memories').select('title')
+    supabase.from('memories').select('title, tags')
       .eq('user_id', userId).eq('processed', true)
-      .order('created_at', { ascending: false }).limit(5),
+      .order('created_at', { ascending: false }).limit(15),
   ])
+  if (projErr) console.warn('[mull] focus: projects query failed:', projErr.message)
+  if (notesErr) console.warn('[mull] focus: memories query failed:', notesErr.message)
   const p = (proj ?? [])[0] as { title?: string; metadata?: { next_move?: { text?: string } } } | undefined
   const move = p?.metadata?.next_move?.text
-  const recent = (notes ?? []).map((n: any) => n.title).filter((t: unknown): t is string => typeof t === 'string' && !!t)
+  // Notes the app elicited (spark answers, corrections) aren't fresh
+  // capture -- same rule as the corpus. Filtered in JS: `tags` is nullable.
+  const recent = (notes ?? [])
+    .filter((n: any) => !isAppAuthored(n.tags))
+    .map((n: any) => n.title)
+    .filter((t: unknown): t is string => typeof t === 'string' && !!t)
+    .slice(0, 5)
   if (!p?.title && recent.length === 0) return ''
   return `
 WHERE THEY ARE RIGHT NOW (context -- never quote it, evidence still comes from rows):

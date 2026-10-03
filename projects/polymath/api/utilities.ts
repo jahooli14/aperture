@@ -54,7 +54,7 @@ import { generateTaskSpine, toStoredTasks, buildEvidenceFromSaid } from './_lib/
 import { stuckMove } from './_lib/session-moves.js'
 import { writeNextMove, addFeedback, readMove, type NextMove } from './_lib/next-move.js'
 import { loadMoveContext, saveMove } from './_lib/next-move-store.js'
-import { readSaid, logMoveDone } from './_lib/move-said.js'
+import { readSaid, logMoveDone, plainlyDone } from './_lib/move-said.js'
 import { debriefSession, type DebriefOpenTask } from './_lib/debrief-matcher.js'
 import { normalizeTaskOrder } from './_lib/task-order.js'
 import { reconcileCloseout, parseTicked } from './_lib/session-closeout.js'
@@ -1579,14 +1579,23 @@ async function insertSparks(
     return select ? q.select(select) : q.select('id')
   }
   const first = await run(rows)
-  if (first.error?.code !== '42703') return first as any
-  console.warn('[utilities/sparks] no `stake` column yet — inserting without it')
-  const bare = (select ?? '').replace(/,\s*sources\b/, '')
-  const rerun = (payload: Record<string, unknown>[]) => {
-    const q = supabase.from('sparks').insert(payload)
-    return q.select(bare || 'id')
-  }
-  return await rerun(rows.map(({ stake: _stake, subject_id: _sid, subject_kind: _sk, sources: _src, ...rest }) => rest)) as any
+  const missing = (e: { message: string; code?: string } | null) =>
+    e?.code === '42703' || e?.code === 'PGRST204'
+  if (!missing(first.error)) return first as any
+  const withSelect = (payload: Record<string, unknown>[], sel: string | undefined) =>
+    supabase.from('sparks').insert(payload).select(sel || 'id')
+  // Stage 1: only `sources` (20261003) is likely missing -- keep the rest, so
+  // the "next run avoids these rows" guard keeps working.
+  const noSources = rows.map(({ sources: _src, ...rest }) => rest)
+  const bareSelect = (select ?? '').replace(/,\s*sources\b/, '')
+  const second = await withSelect(noSources, bareSelect)
+  if (!missing(second.error)) return second as any
+  // Stage 2: older still -- no diagnostic columns at all.
+  console.warn('[utilities/sparks] no diagnostic columns yet — inserting without them')
+  return await withSelect(
+    rows.map(({ stake: _stake, subject_id: _sid, subject_kind: _sk, sources: _src, ...rest }) => rest),
+    bareSelect,
+  ) as any
 }
 
 // ─── Execution rebuild (SPEC.md) — folded in from sessions.ts/sparks.ts/  ──
@@ -2114,7 +2123,7 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
         : "That one isn't what I want to do right now. Something else."
     } else if (action === 'say') {
       if (!said) return res.status(400).json({ error: 'text required' })
-      ctx.input.said = said
+      ctx.input.said = said.slice(0, 2000)
       // Read what they said against the move on the card. If they've done
       // it, it is logged as done BEFORE the next move is written, so the
       // writer sees it in the log and moves on instead of repeating it.
@@ -2130,9 +2139,14 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
       }
       // What they said is theirs and it's about the project: keep it as a
       // note, the same way an answer to a fork is kept.
-      const { error: sayErr } = await supabase.from('fragments').insert({
-        user_id: userId, project_id, text: said, role: 'material',
-      })
+      // "Done" and "did it" are an acknowledgement, not material: they would
+      // pile up as dated captures on the project's timeline.
+      const worthKeeping = !plainlyDone(said) && said.trim().split(/\s+/).length >= 4
+      const { error: sayErr } = worthKeeping
+        ? await supabase.from('fragments').insert({
+            user_id: userId, project_id, text: said.slice(0, 2000), role: 'material',
+          })
+        : { error: null }
       if (sayErr) console.warn('[utilities/move] could not keep what they said as a note:', sayErr.message)
     } else if (action === 'answer') {
       if (!said) return res.status(400).json({ error: 'text required' })

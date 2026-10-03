@@ -26,7 +26,7 @@ const RateRequestSchema = z.object({
 })
 
 /** Cron-triggered resources that use IDEA_ENGINE_SECRET instead of Supabase JWT */
-const CRON_RESOURCES = ['recompute-heat', 'generate-digest']
+const CRON_RESOURCES: string[] = []
 
 function getCronUserId(req: VercelRequest): string | null {
   const authHeader = req.headers.authorization

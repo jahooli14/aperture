@@ -14,7 +14,10 @@
 const TAG = /\s*\[\s*e\d+(?:\s*[,;]\s*e\d+)*\s*\]/gi
 
 export function stripCitationTags(text: string): string {
-  return text.replace(TAG, '').replace(/\s{2,}/g, ' ').trim()
+  if (!TAG.test(text)) return text
+  TAG.lastIndex = 0
+  // Only spaces collapse: paragraph breaks in a description survive.
+  return text.replace(TAG, '').replace(/[ \t]{2,}/g, ' ').trim()
 }
 
 /** Every string anywhere inside a parsed model response, cleaned. */
