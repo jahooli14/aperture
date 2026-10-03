@@ -133,6 +133,18 @@ The app asks the right question at the right moment: the move-writer, when a fin
 
 Skipped entirely for a repeating project (`metadata.cycle` above) — it already gets the same idea via `cycle.history`, and recording both would double up the same checkpoint. `target_date` is the other half: an optional, ISO date, **never asked for** — same rule as `end_goal` itself — offered in the edit sheet only once a finish line exists (a deadline with nothing it's a deadline *for* is just a nag). Shown as plain day-count arithmetic ("14 days until the target date" / "3 days past it"), never a projected pace — there's rarely enough data for a real rate, and a confident-sounding wrong one is worse than none.
 
+### The new-project chat (`CreateProjectDialog`, `api/_lib/shaping-seeds.ts`)
+
+Its job is to help someone find the version of an idea that only they would make — not to plan it, and not to prove it remembers their notes. The old reply read a note back ("that course gave you a good start") under a row of nearest-neighbour chips; naively fixed, it would offer what any chatbot offers (a stacking set, a rattle). Neither is original.
+
+- **An offer must be built from things only they have**, cited like a spark: by ref, verbatim quote, checked against the row (`gateSeeded`, reuses `resolveEvidence` / `unsupportedSpecifics`). What they just said in the chat counts as one source (ref `SAID`), so chat + one real note is two things. Offers that rest on fewer, or name anything nobody said, are dropped; if nothing real fits it offers nothing and just asks.
+- **Tappable replies**, not chips of notes: up to 3 offers + "None of these" on the newest turn; "Not sure yet" on the opener sends "what could I make?" and the offers come from two of their own notes. Offers already made are handed back so they aren't repeated.
+- **One question allowed** about the person or moment the thing is for (the one question that changes what gets made), once. The old ban on "who is it for" stays for planning, not ideation.
+- **Any failure falls back to the plain chat** (no corpus, slow model, reply naming something nobody said). Seeded path runs on turns 1–2 only; turn 3 is always ready. 9s budget.
+- **Plain-chat note search** now uses everything they've said so far and keeps only the best few within 0.06 of the winner, not everything above 0.38 (an absolute floor decides nothing in this vector space).
+- **The plan opens on its first step** ("Start with"), rest folded; all steps are still saved. Content clears the + button.
+- Unmeasured: whether this makes people start. The test is projects created here that get a session within a week.
+
 ### Attaching a capture to a project (`api/_lib/fragments.ts`)
 
 > The same lesson has now been learned three times in this codebase, in three places: fragment attachment (`ATTACH_MARGIN`), orbit's rival count (`ORBIT_RIVAL_MARGIN`), and orbit's band. **In this vector space an absolute threshold barely discriminates; the margin over the runner-up does.** Orbit's band was set before the geometry was ever measured — floor 0.55 against a live p10 of 0.667, so it admitted everything, and ceiling 0.88 against a p90 of 0.884, so it discarded a tenth of the real matches as restatements. Measured with centroid project vectors: p50 0.749, p99 0.928, max 0.989; margins p50 0.047, p90 0.202. Floor 0.70, ceiling 0.93, and "also near" counts a rival within 0.05 of the winner rather than anything clearing the floor — which is why every pick used to read "also near 14 others".
