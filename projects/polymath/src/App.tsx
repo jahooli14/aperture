@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, useLocation, useNavigate } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { useEffect, lazy, Suspense } from 'react'
 import { ToastProvider } from './components/ui/toast'
 import { OfflineIndicator } from './components/OfflineIndicator'
@@ -32,8 +32,6 @@ import { lazyRetry } from './lib/lazyRetry'
 // needed for first paint — keeping them out of the main chunk speeds up startup.
 const DebugPanel = lazy(lazyRetry(() => import('./components/DebugPanel').then(m => ({ default: m.DebugPanel }))))
 const ExtractionSummary = lazy(lazyRetry(() => import('./components/memories/ExtractionSummary').then(m => ({ default: m.ExtractionSummary }))))
-const SteeringCard = lazy(lazyRetry(() => import('./components/memories/SteeringCard').then(m => ({ default: m.SteeringCard }))))
-const FirstConnectionCelebration = lazy(lazyRetry(() => import('./components/home/FirstConnectionCelebration').then(m => ({ default: m.FirstConnectionCelebration }))))
 
 // Lazy load pages with retry logic for chunk loading failures after deployments
 const HomePage = lazy(lazyRetry(() => import('./pages/HomePage').then(m => ({ default: m.HomePage }))))
@@ -41,21 +39,16 @@ const MemoriesPage = lazy(lazyRetry(() => import('./pages/MemoriesPage').then(m 
 const ReadingPage = lazy(lazyRetry(() => import('./pages/ReadingPage').then(m => ({ default: m.ReadingPage }))))
 const ReaderPage = lazy(lazyRetry(() => import('./pages/ReaderPage').then(m => ({ default: m.ReaderPage }))))
 const ProjectsPage = lazy(lazyRetry(() => import('./pages/ProjectsPage').then(m => ({ default: m.ProjectsPage }))))
-const DrawerPage = lazy(lazyRetry(() => import('./pages/DrawerPage')))
 const ProjectDetailPage = lazy(lazyRetry(() => import('./pages/ProjectDetailPage')))
 const OnboardingChatPage = lazy(lazyRetry(() => import('./pages/OnboardingChatPage').then(m => ({ default: m.OnboardingChatPage }))))
-const TimelinePage = lazy(lazyRetry(() => import('./pages/TimelinePage').then(m => ({ default: m.TimelinePage }))))
 const SettingsPage = lazy(lazyRetry(() => import('./pages/SettingsPage').then(m => ({ default: m.SettingsPage }))))
 const SearchPage = lazy(lazyRetry(() => import('./pages/SearchPage').then(m => ({ default: m.SearchPage }))))
 const BedtimePage = lazy(lazyRetry(() => import('./pages/BedtimePage').then(m => ({ default: m.BedtimePage }))))
 const ListsPage = lazy(lazyRetry(() => import('./pages/ListsPage')))
 const ListDetailPage = lazy(lazyRetry(() => import('./pages/ListDetailPage')))
 const FavouritesPage = lazy(lazyRetry(() => import('./pages/FavouritesPage')))
-const FixQueuePage = lazy(lazyRetry(() => import('./pages/FixQueuePage')))
 const LoginPage = lazy(lazyRetry(() => import('./pages/LoginPage').then(m => ({ default: m.LoginPage }))))
-const CognitiveReplayPage = lazy(lazyRetry(() => import('./pages/CognitiveReplayPage').then(m => ({ default: m.CognitiveReplayPage }))))
 const FeedsPage = lazy(lazyRetry(() => import('./pages/FeedsPage').then(m => ({ default: m.FeedsPage }))))
-const SessionPage = lazy(lazyRetry(() => import('./pages/SessionPage').then(m => ({ default: m.SessionPage }))))
 
 // Loading fallback component with skeleton
 import { useBedtimeNotifications } from './hooks/useBedtimeNotifications'
@@ -357,20 +350,6 @@ export default function App() {
               </Suspense>
             </ErrorBoundary>
 
-            {/* Steering Card - Shows live mind steering after extraction completes */}
-            <ErrorBoundary fallback={null}>
-              <Suspense fallback={null}>
-                <SteeringCard />
-              </Suspense>
-            </ErrorBoundary>
-
-            {/* First Connection Celebration — early win for new users */}
-            <ErrorBoundary fallback={null}>
-              <Suspense fallback={null}>
-                <FirstConnectionCelebration />
-              </Suspense>
-            </ErrorBoundary>
-
             <div className="min-h-screen flex flex-col overflow-x-hidden">
               <OfflineIndicator />
               <PWAInstallBanner />
@@ -390,30 +369,21 @@ export default function App() {
                       <Route path="/rss" element={<AnimatedPage page="reading"><FeedsPage /></AnimatedPage>} />
                       {/* /suggestions route removed — content folded into home page carousel */}
                       <Route path="/projects" element={<AnimatedPage page="projects"><ProjectsPage /></AnimatedPage>} />
-                      <Route path="/projects/drawer" element={<AnimatedPage page="projects"><DrawerPage /></AnimatedPage>} />
                       <Route path="/projects/:id" element={<AnimatedPage page="projects"><ProjectDetailPage /></AnimatedPage>} />
-                      <Route path="/timeline" element={<AnimatedPage page="timeline"><TimelinePage /></AnimatedPage>} />
-                      <Route path="/replay" element={<AnimatedPage page="timeline"><CognitiveReplayPage /></AnimatedPage>} />
                       <Route path="/settings" element={<AnimatedPage page="settings"><SettingsPage /></AnimatedPage>} />
                       <Route path="/search" element={<AnimatedPage page="search"><SearchPage /></AnimatedPage>} />
                       <Route path="/bedtime" element={<AnimatedPage page="bedtime"><BedtimePage /></AnimatedPage>} />
                       <Route path="/lists" element={<AnimatedPage page="lists"><ListsPage /></AnimatedPage>} />
                       <Route path="/lists/:id" element={<AnimatedPage page="lists"><ListDetailPage /></AnimatedPage>} />
                       <Route path="/favourites" element={<AnimatedPage page="lists"><FavouritesPage /></AnimatedPage>} />
-                      <Route path="/fixes" element={<AnimatedPage page="fixes"><FixQueuePage /></AnimatedPage>} />
-                      <Route path="/session" element={<AnimatedPage page="session"><SessionPage /></AnimatedPage>} />
                       <Route path="/login" element={<LoginPage />} />
                       <Route path="/share-target" element={<ShareTargetFallback />} />
+                      {/* Old bookmarks (/timeline, /replay, /fixes, /session, /projects/drawer) */}
+                      <Route path="*" element={<Navigate to="/" replace />} />
                     </Routes>
                   </Suspense>
                 </ErrorBoundary>
               </main>
-
-              {/* Context Engine Sidebar */}
-              <ErrorBoundary fallback={null}>
-                <Suspense fallback={null}>
-                </Suspense>
-              </ErrorBoundary>
 
               {/* Debug Panel - Shows console logs on screen */}
               <ErrorBoundary fallback={null}>

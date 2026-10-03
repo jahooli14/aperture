@@ -221,14 +221,6 @@ class DataSynchronizer {
       // Sync all dashboard resources in parallel
       // Wrap each fetch in try-catch to prevent one failure from blocking others
       await Promise.allSettled([
-        // Inspiration
-        fetchWithTimeout('/api/analytics?resource=inspiration').then(async (res) => {
-          if (res.ok) {
-            const data = await res.json()
-            await readingDb.cacheDashboard('inspiration', data)
-          }
-        }).catch(err => logger.warn('[DataSynchronizer] Inspiration fetch failed:', err)),
-
         // Evolution (Insights)
         fetchWithTimeout('/api/memories?action=evolution').then(async (res) => {
           if (res.ok) {
@@ -236,14 +228,6 @@ class DataSynchronizer {
             await readingDb.cacheDashboard('evolution', data)
           }
         }).catch(err => logger.warn('[DataSynchronizer] Evolution fetch failed:', err)),
-
-        // Patterns (Timeline)
-        fetchWithTimeout('/api/analytics?resource=patterns').then(async (res) => {
-          if (res.ok) {
-            const data = await res.json()
-            await readingDb.cacheDashboard('patterns', data)
-          }
-        }).catch(err => logger.warn('[DataSynchronizer] Patterns fetch failed:', err)),
 
         // Bedtime prompts
         fetchWithTimeout('/api/projects?resource=bedtime').then(async (res) => {

@@ -17,11 +17,10 @@ name: Cron
 
 on:
   schedule:
-    - cron: '0 */2 * * *'    # every 2h: generator + fix-queue runner
-    - cron: '0 */6 * * *'    # every 6h: fix-queue drafter + polymath heat recompute
-    - cron: '0 8 * * *'      # 08:00 UTC daily: polymath evolve
+    - cron: '0 */2 * * *'    # every 2h: idea-engine generator + voice-note reminder
+    - cron: '0 8 * * *'      # 08:00 UTC daily: project ideas + today's question
     - cron: '0 9 * * *'      # 09:00 UTC daily: idea-engine review + email digest
-    - cron: '0 8 * * 0'      # Sunday 08:00 UTC: polymath drawer digest
+    - cron: '0 8 * * 0'      # Sunday 08:00 UTC: drift-decay + outside find
   workflow_dispatch:
     inputs:
       force:
@@ -43,8 +42,6 @@ on:
           - ''
           - bake-explain
           - bake
-          - mine-joints
-          - recompute-heat
           - retire-and-rebake
           - reembed-articles
           - backfill-embeddings
@@ -114,8 +111,6 @@ jobs:
               # steps declined, and the numbers it decided on.
               bake-explain)   hit "/api/utilities?resource=bake&explain=1" ;;
               bake)           hit "/api/utilities?resource=bake" ;;
-              mine-joints)    hit "/api/utilities?resource=mine-joints" ;;
-              recompute-heat) hit "/api/projects?resource=recompute-heat" ;;
               # Retires whatever spark is currently standing (however long
               # it has left) and bakes a fresh one. The only way to clear a
               # question a code fix has already made obsolete without
@@ -149,9 +144,6 @@ jobs:
           # because the daily review step only ever processes 10 pending
           # ideas/day — hourly was generating up to 24/day, more than double
           # what review could consume. 12/day still comfortably covers it.
-          # Fix Queue runner: disabled — feature is dormant (owner doesn't
-          # use it; CLAUDE.md flags it as needs-review). Kept the route +
-          # API so old drafts remain visible if you ever come back.
           if [ "$SCHEDULE" = "0 */2 * * *" ] || [ "$FORCE" = "true" ]; then
             hit "/api/idea-engine?action=generate" &
             # Daily voice-note reminder push — checked every 2h; fires once
@@ -159,34 +151,17 @@ jobs:
             hit "/api/cron/jobs?job=voice-reminder" &
           fi
 
-          # ── Every 6h: Polymath heat recompute ────────────────────────
-          # Fix Queue drafter: disabled (see above).
-          if [ "$SCHEDULE" = "0 */6 * * *" ] || [ "$FORCE" = "true" ]; then
-            hit "/api/projects?resource=recompute-heat" &
-          fi
-
           # ── 08:00 UTC daily: Polymath project ideas ──────────────────
-          # `resource=evolve` removed (2026) -- it duplicated what morphs
-          # now do properly (see api/projects.ts) and wrote to a table
-          # nothing read. Project ideas runs daily (was Sunday-only) so
+          # Project ideas runs daily (was Sunday-only) so
           # the queue stays stocked with cron-baked Read ideas. The home
           # auto-surface gates on confidence >= 70, so daily generation
           # gives the "there's something to show you" teaser a real
           # chance to fire most days instead of just after Sunday's run.
           if [ "$SCHEDULE" = "0 8 * * *" ] || [ "$FORCE" = "true" ]; then
-            # Joints must exist before the mull channel can use its best subject
-            # type ("something you keep saying and have never made"). Mining them
-            # only on Sundays left the table empty on the other six days, so every
-            # bake fell back to dormant projects. Sequential and first, so bake
-            # sees what this run finds.
-            hit "/api/utilities?resource=mine-joints"
             hit "/api/utilities?resource=generate-project-ideas" &
-            # Execution rebuild (SPEC.md): today's spark, baked once overnight
-            # so it's instant and offline-available on first open. One morph
-            # proposal max per day, portfolio-wide (rate limit enforced
-            # server-side in morph.ts, not by this schedule).
+            # Today's question, baked once overnight so it's instant and
+            # offline-available on first open.
             hit "/api/utilities?resource=bake" &
-            hit "/api/utilities?resource=generate-morph" &
           fi
 
           # ── 09:00 UTC daily: Idea Engine review + email digest ────────
@@ -197,13 +172,8 @@ jobs:
             hit "/api/idea-engine?action=send-digest"
           fi
 
-          # ── Sunday 08:00 UTC: Polymath drawer digest ─────────────────
+          # ── Sunday 08:00 UTC: weekly jobs ────────────────────────────
           if [ "$SCHEDULE" = "0 8 * * 0" ] || [ "$FORCE" = "true" ]; then
-            hit "/api/projects?resource=generate-digest" &
-            # Joints must land before composites are generated from them,
-            # so this pair runs sequentially (no &).
-            hit "/api/utilities?resource=mine-joints"
-            hit "/api/utilities?resource=generate-composite"
             # Silent, no-confirmation harvest of drifted + stalled projects.
             hit "/api/utilities?resource=drift-decay" &
             # One thing from outside for the live project's next step.

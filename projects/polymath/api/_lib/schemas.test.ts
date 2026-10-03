@@ -5,8 +5,6 @@ import {
   CaptureMemoryBody,
   CaptureTitleResponse,
   ExtractMetadataResponse,
-  FixAction,
-  FixDraftResponse,
   MAX_MEMORY_BODY_CHARS,
   MAX_TITLE_CHARS,
   MAX_TAGS,
@@ -163,123 +161,6 @@ describe('ExtractMetadataResponse', () => {
     expect(result.success).toBe(true)
     expect(result.data!.triage).toBeUndefined()
     expect(result.data!.summary_title).toBe('A')
-  })
-})
-
-describe('FixAction discriminated union', () => {
-  it('accepts a valid send_email action', () => {
-    const result = FixAction.safeParse({
-      type: 'send_email',
-      to: 'me@example.com',
-      subject: 'hi',
-      body: 'hello',
-    })
-    expect(result.success).toBe(true)
-  })
-
-  it('rejects send_email with a non-email "to" field', () => {
-    const result = FixAction.safeParse({
-      type: 'send_email',
-      to: 'not-an-email',
-      subject: 'hi',
-      body: 'hello',
-    })
-    expect(result.success).toBe(false)
-  })
-
-  it('rejects unknown action type', () => {
-    const result = FixAction.safeParse({
-      type: 'nuke_from_orbit',
-      to: 'me@example.com',
-    })
-    expect(result.success).toBe(false)
-  })
-
-  it('accepts weather_email with in-range coords', () => {
-    const result = FixAction.safeParse({
-      type: 'weather_email',
-      to: 'me@example.com',
-      subject: 'Weather',
-      lat: 51.5,
-      lon: -0.1,
-      template: 'Today: {{weather}}',
-    })
-    expect(result.success).toBe(true)
-  })
-
-  it('rejects weather_email with lat out of range', () => {
-    const result = FixAction.safeParse({
-      type: 'weather_email',
-      to: 'me@example.com',
-      subject: 'Weather',
-      lat: 120,
-      lon: 0,
-      template: 'x',
-    })
-    expect(result.success).toBe(false)
-  })
-
-  it('rejects http_request with invalid method', () => {
-    const result = FixAction.safeParse({
-      type: 'http_request',
-      url: 'https://example.com',
-      method: 'DELETE',
-    })
-    expect(result.success).toBe(false)
-  })
-
-  it('rejects smart_home with unknown device', () => {
-    const result = FixAction.safeParse({
-      type: 'smart_home',
-      device: 'toaster',
-      command: 'on',
-    })
-    expect(result.success).toBe(false)
-  })
-})
-
-describe('FixDraftResponse', () => {
-  it('accepts a minimal valid draft', () => {
-    const result = FixDraftResponse.safeParse({
-      name: 'Morning digest',
-      description: 'daily summary',
-      schedule: { cron: '0 8 * * *', timezone: 'Europe/London', description: 'Every day 8am' },
-      actions: [{
-        type: 'send_email',
-        to: 'me@example.com',
-        subject: 'hi',
-        body: 'hello',
-      }],
-      estimated_cost: '$0.01/month',
-    })
-    expect(result.success).toBe(true)
-  })
-
-  it('rejects a draft with zero actions', () => {
-    const result = FixDraftResponse.safeParse({
-      name: 'noop',
-      description: 'x',
-      schedule: { cron: '* * * * *', timezone: 'UTC', description: 'x' },
-      actions: [],
-      estimated_cost: 'free',
-    })
-    expect(result.success).toBe(false)
-  })
-
-  it('rejects a draft where one action is malformed', () => {
-    const result = FixDraftResponse.safeParse({
-      name: 'bad',
-      description: 'x',
-      schedule: { cron: '* * * * *', timezone: 'UTC', description: 'x' },
-      actions: [{
-        type: 'send_email',
-        to: 'not-an-email',
-        subject: 'hi',
-        body: 'hello',
-      }],
-      estimated_cost: 'free',
-    })
-    expect(result.success).toBe(false)
   })
 })
 

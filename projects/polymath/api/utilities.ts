@@ -10,7 +10,6 @@
  *   GET  ?resource=book-search&q=...        — Google Books auto-complete
  *   POST ?resource=analyze                  — Analyse onboarding transcripts → themes, insight, project suggestions
  *   POST ?resource=refine-idea              — Reshape an idea given voice feedback
- *   GET  ?resource=session-brief&projectId= — AI project briefing on open
  *   POST ?resource=onboarding-start         — Bootstrap a coverage grid for the contextual onboarding chat
  *   POST ?resource=onboarding-observe       — Observe-only planner call (no next-question gen) for the Live API hybrid
  *   POST ?resource=onboarding-token         — Mint an ephemeral Live API token for the browser
@@ -47,17 +46,6 @@ import {
 } from './_lib/onboarding/coverage.js'
 import { MODELS } from './_lib/models.js'
 import { PLAIN_ENGLISH_RULES } from './_lib/plain-english.js'
-import {
-  detectSessionBriefPhase,
-  detectSessionBriefMomentum,
-  buildSessionBriefPrompt,
-  moveHeadline,
-  parseSessionBriefResponse,
-  SESSION_BRIEF_PHASE_LABELS,
-  type SessionBrief,
-  type SessionBriefTask,
-  type RecentCapture,
-} from './_lib/session-brief.js'
 import { DEFAULT_IDEA_BRIEF } from './_lib/project-ideas/default-prompt.js'
 import type { CoverageGrid } from '../src/types'
 import { deriveSessionShapes, needsMvsSeed, measuredMvs, type SlotInput, type SessionShape } from './_lib/session-shapes.js'
@@ -66,17 +54,13 @@ import { generateTaskSpine, toStoredTasks, buildEvidenceFromSaid } from './_lib/
 import { stuckMove } from './_lib/session-moves.js'
 import { writeNextMove, addFeedback, readMove, type NextMove } from './_lib/next-move.js'
 import { loadMoveContext, saveMove } from './_lib/next-move-store.js'
+import { readSaid, logMoveDone, plainlyDone } from './_lib/move-said.js'
 import { debriefSession, type DebriefOpenTask } from './_lib/debrief-matcher.js'
 import { normalizeTaskOrder } from './_lib/task-order.js'
-import { handleFixQueue } from './_lib/fix-queue/route.js'
 import { reconcileCloseout, parseTicked } from './_lib/session-closeout.js'
 import { readCycleState, cycleLabel, rollToNextCycle, lastCycleSteps } from './_lib/project-cycles.js'
 import { appendMilestone, readMilestones } from './_lib/project-milestones.js'
 import { bakeMull, SHELF_LIFE_HOURS } from './_lib/mull-generator.js'
-import { canMorphProject, anyProjectMorphedToday, MORPH_COOLDOWN_DAYS } from './_lib/morph.js'
-import { considerMorph } from './_lib/morph-generator.js'
-import { getStalledProjects, attachFragments, proposeComposite } from './_lib/composite-generator.js'
-import { mineJoints } from './_lib/joint-miner.js'
 import { runDriftDecay } from './_lib/drift-runner.js'
 import { SPARK_RESPONSE_TAG, SPARK_CORRECTION_TAG } from './_lib/corpus-provenance.js'
 import { handleProjectOutputs } from './_lib/project-outputs.js'
@@ -95,21 +79,13 @@ function getCronUserId(req: VercelRequest): string | null {
 const EXECUTION_SESSIONS_RESOURCES = new Set([
   'shape-project',
   'start', 'close', 'pending-closeout', 'log-retro', 'declare-live',
-  'live-reask', 'different-thing-status', 'harvest', 'mirror', 'book',
+  'harvest', 'mirror', 'book',
   'next-cycle', 'stuck', 'move',
 ])
 const EXECUTION_SPARKS_RESOURCES = new Set(['bake', 'today', 'respond', 'spark-followup', 'dismiss-spark', 'reroll-spark', 'retire-and-rebake', 'catch-up'])
 const EXECUTION_PROPOSALS_RESOURCES = new Set([
-  'generate-morph', 'drift-decay', 'mine-joints', 'generate-composite',
-  'pending', 'accept', 'reject', 'reembed-articles', 'backfill-embeddings',
-  'reprocess-backlog',
+  'drift-decay', 'reembed-articles', 'backfill-embeddings', 'reprocess-backlog',
 ])
-// Fix Queue, folded in from its own serverless function to stay under
-// Vercel's Hobby cap of 12. Routed on `action`, which nothing else in this
-// file uses, so it can't collide with the `resource` sets above -- note
-// 'reject' means different things to each and never meets.
-const FIX_QUEUE_ACTIONS = new Set(['draft-pending', 'run-fixes', 'approve', 'reject', 'list'])
-
 export const config = {
   // Vercel caps execution at 60s by default. Bumped to 300s for
   // generate-project-ideas, which can run several Flash calls in a
@@ -125,9 +101,6 @@ export const config = {
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const resource = req.query.resource as string
-
-  const action = req.query.action
-  if (typeof action === 'string' && FIX_QUEUE_ACTIONS.has(action)) return handleFixQueue(req, res)
 
   // Execution rebuild (SPEC.md) — routed by disjoint resource-name sets so
   // none of the checks below cost anything extra for the pre-existing
@@ -192,9 +165,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return handleResetOnboarding(req, res)
   }
 
-  if (req.method === 'GET' && resource === 'session-brief') {
-    return handleSessionBrief(req, res)
-  }
 
   if (req.method === 'GET' && resource === 'project-ideas') {
     return handleProjectIdeasGet(req, res)
@@ -1120,131 +1090,6 @@ async function handleOnboardingToken(req: VercelRequest, res: VercelResponse) {
   }
 }
 
-// ── Session Brief ──────────────────────────────────────────────────────────
-// AI project briefing — replaces the static "Next Action" card. Prompt
-// building, phase/momentum detection and response parsing all live in
-// session-brief.ts, pure and unit-tested; this handler is just the fetch.
-
-async function handleSessionBrief(req: VercelRequest, res: VercelResponse) {
-  const userId = await getUserId(req)
-  if (!userId) return res.status(401).json({ error: 'Sign in to access your data' })
-
-  const projectId = req.query.projectId as string
-  if (!projectId) return res.status(400).json({ error: 'projectId is required' })
-
-  const supabase = getSupabaseClient()
-  const { data: project, error } = await supabase
-    .from('projects')
-    .select('*')
-    .eq('id', projectId)
-    .eq('user_id', userId)
-    .single()
-
-  if (error || !project) {
-    return res.status(404).json({ error: 'Project not found' })
-  }
-
-  const tasks: SessionBriefTask[] = (project.metadata?.tasks as SessionBriefTask[]) || []
-  const totalTasks = tasks.length
-  const completedTasks = tasks.filter(t => t.done).length
-  const progressPercent = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0
-
-  const now = Date.now()
-  const lastActiveIso = project.last_active || project.created_at
-  const lastActive = new Date(lastActiveIso).getTime()
-  const daysSinceActive = Math.floor((now - lastActive) / (1000 * 60 * 60 * 24))
-  const projectAge = Math.floor((now - new Date(project.created_at).getTime()) / (1000 * 60 * 60 * 24))
-
-  const sevenDaysAgo = now - 7 * 24 * 60 * 60 * 1000
-  const recentCompletions = tasks.filter(
-    t => t.done && t.completed_at && new Date(t.completed_at).getTime() > sevenDaysAgo,
-  )
-
-  const phase = detectSessionBriefPhase(tasks, daysSinceActive, projectAge)
-  const momentum = detectSessionBriefMomentum(daysSinceActive, recentCompletions.length)
-  const incompleteTasks = tasks.filter(t => !t.done).sort((a, b) => a.order - b.order)
-  const recentCompletionTexts = recentCompletions.map(t => t.text)
-
-  // What changed on THIS project since it was last actually worked on --
-  // fragments.ts only attaches a capture here once it's already cleared
-  // ATTACH_MARGIN against every other project, so this is real evidence,
-  // not a guess. See session-brief.ts's header for why this replaced a
-  // raw corpus-wide embedding search.
-  const { data: newFragments } = await supabase
-    .from('fragments')
-    .select('text, created_at')
-    .eq('project_id', projectId)
-    .eq('user_id', userId)
-    .gt('created_at', new Date(lastActive).toISOString())
-    .order('created_at', { ascending: false })
-    .limit(3)
-
-  const recentCaptures: RecentCapture[] = (newFragments || [])
-    .filter(f => f.text)
-    .map(f => {
-      const daysAgo = Math.floor((now - new Date(f.created_at).getTime()) / (1000 * 60 * 60 * 24))
-      const when = daysAgo <= 0 ? 'today' : daysAgo === 1 ? 'yesterday' : `${daysAgo} days ago`
-      return { text: f.text as string, when }
-    })
-
-  // The last time this project's list ran out, judged against its own
-  // stated finish line (project-milestones.ts) -- the real "how close is
-  // this" signal, kept only while it's still the current answer.
-  const milestones = readMilestones(project.metadata)
-  const latestMilestone = milestones[milestones.length - 1] ?? null
-  const lastCheckpoint = latestMilestone && !latestMilestone.reached
-    ? { reason: latestMilestone.reason }
-    : null
-
-  // The move on the card below the Guide -- the Guide has to know it, or
-  // it talks about an empty list while the card shows the real next step.
-  const move = readMove(project.metadata)
-
-  const prompt = buildSessionBriefPrompt({
-    title: project.title,
-    description: project.description,
-    motivation: project.metadata?.motivation,
-    endGoal: project.metadata?.end_goal,
-    phase,
-    momentum,
-    daysSinceActive,
-    completedTasks,
-    totalTasks,
-    progressPercent,
-    incompleteTasks,
-    recentCompletionTexts,
-    recentCaptures,
-    lastCheckpoint,
-    nextMove: move ? { text: move.text, kind: move.kind } : null,
-    lastNote: project.last_closeout_text ?? null,
-  })
-
-  const aiRaw = await generateText(prompt, { temperature: 0.75, maxTokens: 200, responseFormat: 'json' })
-  const { greeting, focusSuggestion, proactiveQuestion } = parseSessionBriefResponse(aiRaw, {
-    firstIncompleteTaskText: move ? moveHeadline(move.text) : incompleteTasks[0]?.text || null,
-    title: project.title,
-  })
-
-  const brief: SessionBrief = {
-    greeting,
-    phase,
-    phaseLabel: SESSION_BRIEF_PHASE_LABELS[phase],
-    focusSuggestion,
-    proactiveQuestion,
-    momentum,
-    completedSinceLastVisit: recentCompletionTexts,
-    stats: {
-      totalTasks,
-      completedTasks,
-      daysSinceActive,
-      progressPercent,
-    },
-  }
-
-  return res.json(brief)
-}
-
-
 // ── Project Ideas — homepage headline surface ─────────────────────────────
 // Cron-driven generator that produces a weekly batch of 3 ranked project
 // ideas synthesised from everything the user has captured. Homepage GET is
@@ -1734,9 +1579,23 @@ async function insertSparks(
     return select ? q.select(select) : q.select('id')
   }
   const first = await run(rows)
-  if (first.error?.code !== '42703') return first as any
-  console.warn('[utilities/sparks] no `stake` column yet — inserting without it')
-  return await run(rows.map(({ stake: _stake, subject_id: _sid, subject_kind: _sk, ...rest }) => rest)) as any
+  const missing = (e: { message: string; code?: string } | null) =>
+    e?.code === '42703' || e?.code === 'PGRST204'
+  if (!missing(first.error)) return first as any
+  const withSelect = (payload: Record<string, unknown>[], sel: string | undefined) =>
+    supabase.from('sparks').insert(payload).select(sel || 'id')
+  // Stage 1: only `sources` (20261003) is likely missing -- keep the rest, so
+  // the "next run avoids these rows" guard keeps working.
+  const noSources = rows.map(({ sources: _src, ...rest }) => rest)
+  const bareSelect = (select ?? '').replace(/,\s*sources\b/, '')
+  const second = await withSelect(noSources, bareSelect)
+  if (!missing(second.error)) return second as any
+  // Stage 2: older still -- no diagnostic columns at all.
+  console.warn('[utilities/sparks] no diagnostic columns yet — inserting without them')
+  return await withSelect(
+    rows.map(({ stake: _stake, subject_id: _sid, subject_kind: _sk, sources: _src, ...rest }) => rest),
+    bareSelect,
+  ) as any
 }
 
 // ─── Execution rebuild (SPEC.md) — folded in from sessions.ts/sparks.ts/  ──
@@ -2253,6 +2112,8 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
     if (action === 'get' && ctx.current) return res.status(200).json({ move: ctx.current })
 
     let feedback = ctx.input.feedback
+    let loggedDone: string | null = null
+    let projectDone = false
     if (action === 'feedback') {
       if (reason !== 'too_big' && reason !== 'wrong_thing') return res.status(400).json({ error: 'reason must be too_big or wrong_thing' })
       if (ctx.current?.kind === 'move') feedback = addFeedback(feedback, reason, ctx.current.text)
@@ -2262,7 +2123,31 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
         : "That one isn't what I want to do right now. Something else."
     } else if (action === 'say') {
       if (!said) return res.status(400).json({ error: 'text required' })
-      ctx.input.said = said
+      ctx.input.said = said.slice(0, 2000)
+      // Read what they said against the move on the card. If they've done
+      // it, it is logged as done BEFORE the next move is written, so the
+      // writer sees it in the log and moves on instead of repeating it.
+      if (ctx.current?.kind === 'move') {
+        const verdict = await readSaid(ctx.current.text, said, prompt => generateText(prompt, {
+          model: MODELS.SESSION_SHAPE_CHAT, responseFormat: 'json', temperature: 0, maxTokens: 80, thinkingLevel: 'low',
+        }))
+        if (verdict.moveDone) {
+          loggedDone = await logMoveDone(supabase, userId, project_id, ctx.current.text)
+          if (loggedDone) ctx.input.did = [...ctx.input.did, loggedDone]
+        }
+        projectDone = verdict.projectDone
+      }
+      // What they said is theirs and it's about the project: keep it as a
+      // note, the same way an answer to a fork is kept.
+      // "Done" and "did it" are an acknowledgement, not material: they would
+      // pile up as dated captures on the project's timeline.
+      const worthKeeping = !plainlyDone(said) && said.trim().split(/\s+/).length >= 4
+      const { error: sayErr } = worthKeeping
+        ? await supabase.from('fragments').insert({
+            user_id: userId, project_id, text: said.slice(0, 2000), role: 'material',
+          })
+        : { error: null }
+      if (sayErr) console.warn('[utilities/move] could not keep what they said as a note:', sayErr.message)
     } else if (action === 'answer') {
       if (!said) return res.status(400).json({ error: 'text required' })
       ctx.input.said = said
@@ -2272,7 +2157,7 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
     const from = action === 'get' ? 'start' : action === 'answer' ? 'answer' : 'reshape'
     const { move } = await writeNextMove(ctx.input, from)
     await saveMove(supabase, userId, project_id, move, action === 'feedback' ? feedback : undefined)
-    return res.status(200).json({ move })
+    return res.status(200).json({ move, ...(loggedDone ? { logged: loggedDone } : {}), ...(projectDone ? { project_done: true } : {}) })
   }
 
   // "I'm stuck", mid-session: one move on the step they're on, never a
@@ -2411,111 +2296,6 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
     }
 
     return res.status(200).json({ project: data })
-  }
-
-  // ─── LIVE-PROJECT RE-ASK ────────────────────────────────────────────
-  // Evidence-driven, not on a timer (SPEC.md): if the last 3 logged
-  // sessions all landed on something other than the declared live
-  // project, ask once whether that's the real live project now. An
-  // accurate declaration is never interrupted -- this only fires when the
-  // user's actual behaviour has quietly diverged from what they said.
-  if (resource === 'live-reask') {
-    // "Leave it as is" is an answer, and it has to be recorded somewhere the
-    // next app open can see. Without this the condition (last 3 sessions all
-    // on one other project) stays true indefinitely and the same question
-    // comes back every single open — a timer only changes how often.
-    if (req.method === 'POST') {
-      const { project_id } = req.body || {}
-      if (!project_id) return res.status(400).json({ error: 'project_id required' })
-
-      const { data: project } = await supabase
-        .from('projects')
-        .select('metadata')
-        .eq('id', project_id)
-        .eq('user_id', userId)
-        .maybeSingle()
-
-      const { error } = await supabase
-        .from('projects')
-        .update({
-          metadata: {
-            ...(project?.metadata ?? {}),
-            live_reask_declined_at: new Date().toISOString(),
-          },
-        })
-        .eq('id', project_id)
-        .eq('user_id', userId)
-
-      if (error) return res.status(500).json({ error: 'Failed to record that' })
-      return res.status(200).json({ success: true })
-    }
-
-    if (req.method !== 'GET') return res.status(405).json({ error: 'GET required' })
-
-    const { data: liveProject } = await supabase
-      .from('projects')
-      .select('id')
-      .eq('user_id', userId)
-      .eq('state', 'live')
-      .maybeSingle()
-
-    if (!liveProject) return res.status(200).json({ suggestion: null })
-
-    const { data: recentSessions } = await supabase
-      .from('sessions')
-      .select('project_id, projects(title)')
-      .eq('user_id', userId)
-      .not('project_id', 'is', null)
-      .order('started_at', { ascending: false })
-      .limit(3)
-
-    if (!recentSessions || recentSessions.length < 3) return res.status(200).json({ suggestion: null })
-
-    const allElsewhere = recentSessions.every(s => s.project_id !== liveProject.id)
-    const sameOtherProject = new Set(recentSessions.map(s => s.project_id)).size === 1
-
-    if (!allElsewhere || !sameOtherProject) return res.status(200).json({ suggestion: null })
-
-    const other = recentSessions[0] as any
-
-    // Already answered for this project: the live one stands, and asking
-    // again about the same project is just the same question reworded.
-    // A different project drifting is genuinely new evidence, so that
-    // still gets through.
-    const { data: candidate } = await supabase
-      .from('projects')
-      .select('metadata')
-      .eq('id', other.project_id)
-      .eq('user_id', userId)
-      .maybeSingle()
-
-    if (candidate?.metadata?.live_reask_declined_at) {
-      return res.status(200).json({ suggestion: null })
-    }
-
-    return res.status(200).json({
-      suggestion: { project_id: other.project_id, title: other.projects?.title ?? 'this' },
-    })
-  }
-
-  // ─── DIFFERENT-THING QUOTA ──────────────────────────────────────────
-  if (resource === 'different-thing-status') {
-    if (req.method !== 'GET') return res.status(405).json({ error: 'GET required' })
-
-    const { monthStart } = await import('./_lib/mirror.js')
-    const { isDifferentThingDoneThisMonth, shouldNudgeDifferentThing } = await import('./_lib/different-thing.js')
-    const start = monthStart(new Date())
-
-    const { data } = await supabase
-      .from('sessions')
-      .select('source, started_at')
-      .eq('user_id', userId)
-      .eq('source', 'different-thing')
-      .gte('started_at', start.toISOString())
-      .limit(1)
-
-    const done = isDifferentThingDoneThisMonth(data ?? [], new Date())
-    return res.status(200).json({ done, should_nudge: shouldNudgeDifferentThing(done) })
   }
 
   // ─── HARVEST ────────────────────────────────────────────────────────
@@ -2712,9 +2492,10 @@ async function retireAndRebake(
       stake: spark.stake ?? null,
       subject_id: spark.subject_id ?? null,
       subject_kind: spark.subject_kind ?? null,
+      sources: spark.sources ?? null,
       shown_at: i === 0 ? nowIso : null,
     })),
-    'id, type, text, project_id, shown_at, projects(title)',
+    'id, type, text, project_id, shown_at, sources, projects(title)',
   )
 
   if (insertErr) {
@@ -2819,6 +2600,7 @@ async function handleExecutionSparks(req: VercelRequest, res: VercelResponse) {
       stake: spark.stake ?? null,
       subject_id: spark.subject_id ?? null,
       subject_kind: spark.subject_kind ?? null,
+      sources: spark.sources ?? null,
     }))
 
     const { error: insertErr } = await insertSparks(supabase, rows)
@@ -2836,9 +2618,12 @@ async function handleExecutionSparks(req: VercelRequest, res: VercelResponse) {
     const userId = await getUserId(req)
     if (!userId) return res.status(401).json({ error: 'Unauthorized' })
 
-    const { data, error } = await supabase
+    // `sources` arrives with 20261003_spark_sources.sql; until it's run the
+    // select fails whole on 42703, so retry without it rather than lose the
+    // question itself.
+    const standing = (cols: string) => supabase
       .from('sparks')
-      .select('id, type, text, project_id, shown_at, answered_at, expires_at, projects(title)')
+      .select(cols)
       .eq('user_id', userId)
       .is('answered_at', null)
       .gt('expires_at', new Date().toISOString())
@@ -2851,6 +2636,9 @@ async function handleExecutionSparks(req: VercelRequest, res: VercelResponse) {
       // means the queue needs no created_at juggling to stay in order.
       .order('expires_at', { ascending: true })
       .limit(1)
+    const BASE_COLS = 'id, type, text, project_id, shown_at, answered_at, expires_at, projects(title)'
+    let { data, error } = (await standing(`${BASE_COLS}, sources`)) as { data: any[] | null; error: { code?: string; message: string } | null }
+    if (error?.code === '42703') ({ data, error } = (await standing(BASE_COLS)) as { data: any[] | null; error: { code?: string; message: string } | null })
 
     if (error) {
       console.error('[utilities/sparks] today query failed:', error)
@@ -3179,102 +2967,6 @@ async function handleExecutionProposals(req: VercelRequest, res: VercelResponse)
   const resource = req.query.resource as string
   const supabase = getSupabaseClient()
 
-  // ─── GENERATE MORPH (cron) ──────────────────────────────────────────
-  if (resource === 'generate-morph') {
-    if (req.method !== 'POST') return res.status(405).json({ error: 'POST required' })
-    const userId = getCronUserId(req)
-    if (!userId) return res.status(401).json({ error: 'Unauthorized' })
-
-    const { data: recentProposals } = await supabase
-      .from('proposals')
-      .select('created_at, status')
-      .eq('user_id', userId)
-      .eq('kind', 'morph')
-      .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
-
-    if (anyProjectMorphedToday(recentProposals ?? [])) {
-      return res.status(200).json({ proposed: false, reason: 'already morphed a project today' })
-    }
-
-    const { data: projects } = await supabase
-      .from('projects')
-      .select('id, title, description, last_session_ended_at')
-      .eq('user_id', userId)
-      .neq('state', 'harvested')
-      .limit(100)
-
-    // The per-project 14-day cooldown has to be checked against when a
-    // project was last MORPHED, not when it was last worked on. It used
-    // to be passed last_session_ended_at instead -- session recency, a
-    // different question -- which meant a project you're actively
-    // feeding fresh captures into (exactly where a real insight would
-    // land) could never be eligible, while an abandoned one always was.
-    // Rather than add a schema column for this, the `proposals` table
-    // already records it: the most recent 'morph' proposal per project.
-    // Anything older than the cooldown window can't affect eligibility
-    // either way (canMorphProject(null) is already true), so bounding the
-    // query to it keeps this cheap regardless of how much morph history
-    // accumulates.
-    const { data: pastMorphs } = await supabase
-      .from('proposals')
-      .select('project_id, created_at')
-      .eq('user_id', userId)
-      .eq('kind', 'morph')
-      .gte('created_at', new Date(Date.now() - MORPH_COOLDOWN_DAYS * 24 * 60 * 60 * 1000).toISOString())
-      .order('created_at', { ascending: false })
-      .limit(500)
-
-    const lastMorphedByProject = new Map<string, string>()
-    for (const row of pastMorphs ?? []) {
-      if (row.project_id && !lastMorphedByProject.has(row.project_id)) {
-        lastMorphedByProject.set(row.project_id, row.created_at)
-      }
-    }
-
-    const eligible = (projects ?? []).filter(p => canMorphProject(lastMorphedByProject.get(p.id) ?? null))
-    if (eligible.length === 0) {
-      return res.status(200).json({ proposed: false, reason: 'no eligible projects (cooldown)' })
-    }
-
-    // Strongest evidence first: the project with the most recent fragments.
-    const { data: fragmentCounts } = await supabase
-      .from('fragments')
-      .select('project_id')
-      .eq('user_id', userId)
-      .in('project_id', eligible.map(p => p.id))
-      .order('created_at', { ascending: false })
-      .limit(200)
-
-    const countByProject = new Map<string, number>()
-    for (const f of fragmentCounts ?? []) {
-      countByProject.set(f.project_id, (countByProject.get(f.project_id) ?? 0) + 1)
-    }
-    const ranked = [...eligible].sort((a, b) => (countByProject.get(b.id) ?? 0) - (countByProject.get(a.id) ?? 0))
-    const target = ranked[0]
-    if (!target || (countByProject.get(target.id) ?? 0) === 0) {
-      return res.status(200).json({ proposed: false, reason: 'no fragments to draw from' })
-    }
-
-    const candidate = await considerMorph(supabase, userId, target)
-    if (!candidate) {
-      return res.status(200).json({ proposed: false, reason: 'nothing real found, or citation failed' })
-    }
-
-    const { error: insertErr } = await supabase.from('proposals').insert({
-      user_id: userId,
-      kind: 'morph',
-      project_id: candidate.projectId,
-      proposed_text: candidate.proposedText,
-      cited_fragment_ids: candidate.citedFragmentIds,
-    })
-    if (insertErr) {
-      console.error('[utilities/proposals] generate-morph insert failed:', insertErr)
-      return res.status(500).json({ error: insertErr.message })
-    }
-
-    return res.status(200).json({ proposed: true, project_id: candidate.projectId })
-  }
-
   // ─── DRIFT DECAY (cron) ─────────────────────────────────────────────
   // High drift + silence -> let it go, quietly, no confirmation (SPEC.md).
   // Never touches the live project, and never deletes fragments/memories.
@@ -3406,205 +3098,6 @@ async function handleExecutionProposals(req: VercelRequest, res: VercelResponse)
       remaining: remaining ?? 0,
       done: (remaining ?? 0) === 0,
     })
-  }
-
-  // ─── MINE JOINTS (cron) ─────────────────────────────────────────────
-  if (resource === 'mine-joints') {
-    if (req.method !== 'POST') return res.status(405).json({ error: 'POST required' })
-    const userId = getCronUserId(req)
-    if (!userId) return res.status(401).json({ error: 'Unauthorized' })
-
-    // The trace goes in the response because cron.yml prints the body:
-    // `job=mine-joints` from a phone is then a full diagnosis, the same way
-    // `bake-explain` is. This returned a bare count, and a count of 0 has
-    // five different causes.
-    const { written, trace } = await mineJoints(supabase, userId)
-    return res.status(200).json({ joints_written: written, trace })
-  }
-
-  // ─── GENERATE COMPOSITE (cron) ──────────────────────────────────────
-  if (resource === 'generate-composite') {
-    if (req.method !== 'POST') return res.status(405).json({ error: 'POST required' })
-    const userId = getCronUserId(req)
-    if (!userId) return res.status(401).json({ error: 'Unauthorized' })
-
-    const { data: pendingComposite } = await supabase
-      .from('proposals')
-      .select('id')
-      .eq('user_id', userId)
-      .eq('kind', 'composite')
-      .eq('status', 'pending')
-      .limit(1)
-    if (pendingComposite && pendingComposite.length > 0) {
-      return res.status(200).json({ proposed: false, reason: 'a composite is already pending review' })
-    }
-
-    const stalledBase = await getStalledProjects(supabase, userId)
-    if (stalledBase.length < 2) {
-      return res.status(200).json({ proposed: false, reason: 'fewer than 2 stalled projects' })
-    }
-    // Real material to draw on, so the fusion idea can name something
-    // concrete rather than the model guessing what either project has.
-    const stalled = await attachFragments(supabase, userId, stalledBase)
-
-    const { data: joints } = await supabase
-      .from('joints')
-      .select('id, text, occurrence_count')
-      .eq('user_id', userId)
-      .gte('occurrence_count', 2)
-      .order('last_seen_at', { ascending: false })
-      .limit(5)
-
-    if (!joints || joints.length === 0) {
-      return res.status(200).json({ proposed: false, reason: 'no recurring joints yet' })
-    }
-
-    for (const joint of joints) {
-      const candidate = await proposeComposite(joint, stalled)
-      if (!candidate) continue
-
-      const { error: insertErr } = await supabase.from('proposals').insert({
-        user_id: userId,
-        kind: 'composite',
-        project_id: candidate.projectIdA,
-        project_id_2: candidate.projectIdB,
-        joint_id: joint.id,
-        proposed_text: candidate.proposedText,
-        cited_fragment_ids: candidate.citedFragmentIds,
-      })
-      if (insertErr) {
-        console.error('[utilities/proposals] generate-composite insert failed:', insertErr)
-        return res.status(500).json({ error: insertErr.message })
-      }
-      return res.status(200).json({ proposed: true, joint_id: joint.id })
-    }
-
-    return res.status(200).json({ proposed: false, reason: 'no joint mapped to two stalled projects' })
-  }
-
-  // ─── PENDING ─────────────────────────────────────────────────────────
-  if (resource === 'pending') {
-    if (req.method !== 'GET') return res.status(405).json({ error: 'GET required' })
-    const userId = await getUserId(req)
-    if (!userId) return res.status(401).json({ error: 'Unauthorized' })
-
-    const { data, error } = await supabase
-      .from('proposals')
-      .select('id, kind, project_id, project_id_2, proposed_text, created_at')
-      .eq('user_id', userId)
-      .eq('status', 'pending')
-      .order('created_at', { ascending: false })
-
-    if (error) return res.status(500).json({ error: error.message })
-    return res.status(200).json({ proposals: data ?? [] })
-  }
-
-  // ─── ACCEPT ─────────────────────────────────────────────────────────
-  if (resource === 'accept') {
-    if (req.method !== 'POST') return res.status(405).json({ error: 'POST required' })
-    const userId = await getUserId(req)
-    if (!userId) return res.status(401).json({ error: 'Unauthorized' })
-
-    const { proposal_id } = req.body || {}
-    if (!proposal_id) return res.status(400).json({ error: 'proposal_id required' })
-
-    const { data: proposal, error: fetchErr } = await supabase
-      .from('proposals')
-      .select('*')
-      .eq('id', proposal_id)
-      .eq('user_id', userId)
-      .single()
-    if (fetchErr || !proposal) return res.status(404).json({ error: 'proposal not found' })
-
-    if (proposal.kind === 'morph') {
-      const { error: updateErr } = await supabase
-        .from('projects')
-        .update({ description: proposal.proposed_text })
-        .eq('id', proposal.project_id)
-        .eq('user_id', userId)
-      if (updateErr) return res.status(500).json({ error: updateErr.message })
-    } else {
-      // Composite: create the child project, inheriting fragments from
-      // both parents so it starts specified rather than at zero (SPEC.md).
-      const { data: child, error: createErr } = await supabase
-        .from('projects')
-        .insert({
-          user_id: userId,
-          title: proposal.proposed_text.slice(0, 80),
-          description: proposal.proposed_text,
-          status: 'upcoming',
-          state: 'mull',
-          parent_id: proposal.project_id,
-        })
-        .select()
-        .single()
-      if (createErr) return res.status(500).json({ error: createErr.message })
-
-      const { data: parentFragments } = await supabase
-        .from('fragments')
-        .select('memory_id, role, fills_slot, text')
-        .in('project_id', [proposal.project_id, proposal.project_id_2])
-        .eq('user_id', userId)
-
-      if (parentFragments && parentFragments.length > 0) {
-        const inherited = parentFragments.map(f => ({
-          user_id: userId,
-          project_id: child.id,
-          memory_id: f.memory_id,
-          role: f.role,
-          fills_slot: null, // slots are project-specific; the child defines its own
-          text: f.text,
-        }))
-        await supabase.from('fragments').insert(inherited)
-      }
-    }
-
-    const { error: resolveErr } = await supabase
-      .from('proposals')
-      .update({ status: 'accepted', resolved_at: new Date().toISOString() })
-      .eq('id', proposal_id)
-      .eq('user_id', userId)
-    if (resolveErr) return res.status(500).json({ error: resolveErr.message })
-
-    return res.status(200).json({ ok: true })
-  }
-
-  // ─── REJECT ─────────────────────────────────────────────────────────
-  if (resource === 'reject') {
-    if (req.method !== 'POST') return res.status(405).json({ error: 'POST required' })
-    const userId = await getUserId(req)
-    if (!userId) return res.status(401).json({ error: 'Unauthorized' })
-
-    const { proposal_id, reason } = req.body || {}
-    if (!proposal_id) return res.status(400).json({ error: 'proposal_id required' })
-
-    const { error: updateErr } = await supabase
-      .from('proposals')
-      .update({ status: 'rejected', resolved_at: new Date().toISOString() })
-      .eq('id', proposal_id)
-      .eq('user_id', userId)
-    if (updateErr) return res.status(500).json({ error: updateErr.message })
-
-    // "That's not it" is itself a capture (SPEC.md) -- a cheap voicing, not
-    // a full memory-pipeline run, since it's feedback about a proposal
-    // rather than new material to embed and fragment-match on its own.
-    if (typeof reason === 'string' && reason.trim().length > 0) {
-      const uniqueId = `rejection_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`
-      await supabase.from('memories').insert({
-        audiopen_id: uniqueId,
-        title: 'Proposal rejected',
-        body: reason.trim(),
-        orig_transcript: reason.trim(),
-        // App-authored, like a spark answer: the user only wrote this
-        // because the app put a proposal in front of them.
-        tags: ['proposal-rejected'],
-        audiopen_created_at: new Date().toISOString(),
-        processed: true,
-        user_id: userId,
-      })
-    }
-
-    return res.status(200).json({ ok: true })
   }
 
   return res.status(404).json({ error: `Unknown resource: ${resource}` })

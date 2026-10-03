@@ -4,7 +4,7 @@
  */
 
 import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom'
 import { useAuthContext } from '../contexts/AuthContext'
 import { SignInNudge } from '../components/SignInNudge'
@@ -14,20 +14,14 @@ import { useOnlineStatus } from '../hooks/useOnlineStatus'
 import { MemoryCard } from '../components/MemoryCard'
 import { CreateMemoryDialog } from '../components/memories/CreateMemoryDialog'
 import { SuggestedPrompts } from '../components/onboarding/SuggestedPrompts'
-import { ThemeClusterCard } from '../components/memories/ThemeClusterCard'
 import { Button } from '../components/ui/button'
 import { useToast } from '../components/ui/toast'
 import { PremiumTabs } from '../components/ui/premium-tabs'
 import { SkeletonCard } from '../components/ui/skeleton-card'
-import { Brain, Zap, ArrowLeft, CloudOff, Search, X, Wind, Moon } from 'lucide-react'
-import { BrandName } from '../components/BrandName'
+import { Brain, Zap, Search, X, Wind, Moon } from 'lucide-react'
 import { SubtleBackground } from '../components/SubtleBackground'
-import type { Memory, ThemeCluster, ThemeClustersResponse } from '../types'
+import type { Memory } from '../types'
 import { MemoryDetailModal } from '../components/memories/MemoryDetailModal' // Import MemoryDetailModal
-import { GlassCard } from '../components/ui/GlassCard' // For consistency with other cards
-import { debounce } from '../lib/utils'
-import { CACHE_TTL } from '../lib/cacheConfig'
-import { getIconComponent } from '../lib/themeIcons'
 import { DriftMode } from '../components/bedtime/DriftMode'
 import { MorningFollowUp } from '../components/bedtime/MorningFollowUp'
 
@@ -129,7 +123,7 @@ function MemoriesPageInner() {
   const { addToast } = useToast()
   const { isOnline } = useOnlineStatus()
   const [resurfacing, setResurfacing] = useState<Memory[]>([])
-  const [view, setView] = useState<'recent' | 'themes' | 'resurfacing'>('recent')
+  const [view, setView] = useState<'recent' | 'resurfacing'>('recent')
   const [loadingResurfacing, setLoadingResurfacing] = useState(false)
   const [searchParams, setSearchParams] = useSearchParams()
   const [selectedMemoryForModal, setSelectedMemoryForModal] = useState<Memory | null>(null) // State for the detail modal
@@ -233,12 +227,6 @@ function MemoriesPageInner() {
       return params
     })
   }
-  // Theme clustering state
-  const [clusters, setClusters] = useState<ThemeCluster[]>([])
-  const [selectedCluster, setSelectedCluster] = useState<ThemeCluster | null>(null)
-  const [loadingClusters, setLoadingClusters] = useState(false)
-  const [clustersLastFetched, setClustersLastFetched] = useState<number>(0)
-
   // Use store's fetchMemories directly - it has built-in caching!
   const loadMemories = useCallback(async (force = false) => {
     try {
@@ -247,35 +235,6 @@ function MemoriesPageInner() {
       console.error('Failed to load memories:', error)
     }
   }, [fetchMemories])
-
-  const fetchThemeClusters = useCallback(async (force = false) => {
-    // Check if clusters are still fresh
-    const now = Date.now()
-
-    if (!force && clusters.length > 0 && (now - clustersLastFetched) < CACHE_TTL) {
-      console.log('[MemoriesPage] Using cached clusters')
-      return
-    }
-
-    setLoadingClusters(true)
-    try {
-      const response = await fetch('/api/memories?themes=true')
-      if (!response.ok) {
-        console.error('Failed to fetch themes:', response.status, response.statusText)
-        // Don't throw, just return empty clusters to prevent crash
-        setClusters([])
-        return
-      }
-      const data: ThemeClustersResponse = await response.json()
-      setClusters(data.clusters)
-      setClustersLastFetched(now)
-    } catch (err) {
-      console.error('Failed to fetch theme clusters:', err)
-      setClusters([]) // Fallback to empty
-    } finally {
-      setLoadingClusters(false)
-    }
-  }, [clusters.length, clustersLastFetched])
 
   const fetchResurfacing = useCallback(async () => {
     setLoadingResurfacing(true)
@@ -301,11 +260,6 @@ function MemoriesPageInner() {
 
       if (view === 'resurfacing') {
         await fetchResurfacing()
-      } else if (view === 'themes') {
-        await loadMemories(true)
-        await fetchThemeClusters()
-        // Keep the Resurface tab count fresh while we're on Themes too.
-        fetchResurfacing()
       } else {
         await loadMemories(true)
         fetchOnboardingPrompts() // Load suggested follow-up prompts
@@ -544,7 +498,6 @@ function MemoriesPageInner() {
             <PremiumTabs
               tabs={[
                 { id: 'recent', label: `Thoughts (${memories.length})` },
-                { id: 'themes', label: 'Themes' },
                 { id: 'resurfacing', label: `Resurface (${resurfacing.length})` },
               ]}
               activeTab={view}
@@ -610,7 +563,7 @@ function MemoriesPageInner() {
               {/* Empty State */}
               {!isLoading && displayMemories.length === 0 && (
                 <div className="mb-8 py-16 px-6 text-center">
-                  {(view === 'recent' || view === 'themes') && isFiltered ? (
+                  {view === 'recent' && isFiltered ? (
                     /* Search returned no results */
                     <div className="max-w-xs mx-auto space-y-4">
                       <div className="inline-flex items-center justify-center w-14 h-14 rounded-full"
@@ -630,7 +583,7 @@ function MemoriesPageInner() {
                         Clear search
                       </button>
                     </div>
-                  ) : (view === 'recent' || view === 'themes') ? (
+                  ) : view === 'recent' ? (
                     /* No memories at all — rich inspirational state */
                     <div className="max-w-sm mx-auto">
                       {/* Decorative orb */}
@@ -680,122 +633,6 @@ function MemoriesPageInner() {
                 </div>
               )}
 
-              {/* Theme Clusters View */}
-              {view === 'themes' && !isLoading && memories.length > 0 && (
-                <>
-                  {/* Theme cluster detail view */}
-                  {selectedCluster && (
-                    <div className="mb-8">
-                      <button
-                        onClick={() => setSelectedCluster(null)}
-                        className="mb-6 flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
-                        style={{
-                          background: 'rgba(var(--brand-primary-rgb),0.08)',
-                          color: "var(--brand-text-secondary)",
-                          border: '1.5px solid rgba(var(--brand-primary-rgb),0.25)',
-                          boxShadow: '0 2px 8px rgba(0,0,0,0.5)',
-                        }}
-                      >
-                        <ArrowLeft className="h-3.5 w-3.5" />
-                        Back to themes
-                      </button>
-                      <h2 className="section-heading mb-6" style={{ color: "var(--brand-text-primary)" }}>
-                        <div
-                          className="flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center"
-                          style={{
-                            background: 'rgba(var(--brand-primary-rgb),0.12)',
-                            border: '1px solid rgba(var(--brand-primary-rgb),0.3)',
-                            boxShadow: '0 2px 8px rgba(0,0,0,0.6)',
-                          }}
-                        >
-                          {React.createElement(getIconComponent(selectedCluster.name), {
-                            className: 'h-6 w-6',
-                            style: { color: 'var(--brand-primary)' }
-                          })}
-                        </div>
-                        {selectedCluster.name}
-                        <span className="text-sm font-normal" style={{ color: "var(--brand-text-muted)" }}>
-                          ({selectedCluster.memory_count} thoughts)
-                        </span>
-                      </h2>
-                      <div className="columns-1 sm:columns-2 lg:columns-3 gap-4 space-y-4">
-                        {selectedCluster.memories.map((memory) => (
-                          <div key={memory.id} className="mb-4 break-inside-avoid">
-                            <MemoryCard
-                              memory={memory}
-                              onEdit={handleOpenDetail}
-                              onDelete={handleDelete}
-                            />
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Theme clusters grid */}
-                  {!selectedCluster && (
-                    <>
-                      {loadingClusters && clusters.length === 0 ? (
-                        <div className="text-center py-12">
-                          <div className="inline-block h-10 w-10 animate-spin rounded-lg border-4 border-solid mb-4" style={{ borderColor: 'var(--brand-primary)', borderRightColor: 'transparent' }}></div>
-                          <p className="text-xs" style={{ color: "var(--brand-text-muted)" }}>Working out the themes…</p>
-                        </div>
-                      ) : clusters.length > 0 ? (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                          {clusters.map((cluster, index) => (
-                            <ThemeClusterCard
-                              key={`${cluster.id}-${index}`}
-                              cluster={cluster}
-                              onClick={() => setSelectedCluster(cluster)}
-                            />
-                          ))}
-                        </div>
-                      ) : (
-                        // Empty themes state — show a primer of the canonical
-                        // themes the AI uses so the user knows what to expect
-                        // before their first thoughts get processed. The list
-                        // mirrors the categories enumerated in
-                        // api/_lib/process-memory.ts (career / health /
-                        // creativity / relationships / learning / family).
-                        <div className="rounded-2xl p-6"
-                          style={{ background: 'var(--brand-glass-bg)', border: '1px solid var(--glass-surface-hover)', boxShadow: '0 4px 16px rgba(0,0,0,0.4)' }}>
-                          <p className="page-eyebrow mt-0 mb-3">How themes work</p>
-                          <p className="text-sm leading-relaxed mb-5" style={{ color: 'var(--brand-text-secondary)' }}>
-                            Every thought gets tagged with one or two themes automatically. As you capture more, the themes group your thinking so you can spot what you keep coming back to.
-                          </p>
-                          <p className="text-[11px] tracking-[0.1em] mb-2" style={{ color: 'rgba(var(--brand-primary-rgb), 0.7)' }}>
-                            the six themes
-                          </p>
-                          <div className="flex flex-wrap gap-2">
-                            {[
-                              { name: 'creativity', desc: 'making things' },
-                              { name: 'career', desc: 'work + craft' },
-                              { name: 'learning', desc: 'study + skill' },
-                              { name: 'relationships', desc: 'people in your life' },
-                              { name: 'health', desc: 'body + energy' },
-                              { name: 'family', desc: 'the small core' },
-                            ].map(t => (
-                              <span
-                                key={t.name}
-                                className="inline-flex flex-col px-3 py-1.5 rounded-xl text-xs"
-                                style={{
-                                  background: 'rgba(var(--brand-primary-rgb), 0.08)',
-                                  border: '1px solid rgba(var(--brand-primary-rgb), 0.25)',
-                                  color: 'var(--brand-text-secondary)',
-                                }}
-                              >
-                                <span className="font-medium" style={{ color: 'rgb(var(--brand-primary-rgb))' }}>{t.name}</span>
-                                <span className="opacity-60 text-[11px]">{t.desc}</span>
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </>
-                  )}
-
-                </>
-              )}
 
               {/* Recent memories view - Google Keep Style Masonry (Across then Down) */}
               {view === 'recent' && !isLoading && memories.length > 0 && (

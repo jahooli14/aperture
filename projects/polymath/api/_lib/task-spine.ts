@@ -29,6 +29,7 @@ import { isAdminItem, stripDoneWhen } from './session-items.js'
 import { ESTIMATE_MINUTES, nearestEstimate, type EstimateMinutes } from './session-estimate.js'
 import { orderSteps } from './task-order.js'
 import { MODELS } from './models.js'
+import { stripCitationTagsDeep } from './citation-tags.js'
 
 export const MIN_SPINE_STEPS = 4
 export const MAX_SPINE_STEPS = 8
@@ -308,7 +309,7 @@ export async function generateTaskSpine(input: SpineInput): Promise<SpineStep[]>
       // to plan". Same cap the split and readiness calls already use.
       thinkingLevel: 'low',
     })
-    const cleaned = sanitizeSteps(JSON.parse(response)?.steps)
+    const cleaned = sanitizeSteps(stripCitationTagsDeep(JSON.parse(response))?.steps)
     const { kept, rejected } = filterGrounded(cleaned, evidence, input.title)
     if (rejected.length > 0) {
       console.warn(

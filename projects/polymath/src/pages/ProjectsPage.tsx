@@ -5,8 +5,6 @@ import { useAuthContext } from '../contexts/AuthContext'
 import { SignInNudge } from '../components/SignInNudge'
 import { useProjectStore } from '../stores/useProjectStore'
 import { ProjectsPageCarousel } from '../components/projects/ProjectsPageCarousel'
-import { ForYouToday } from '../components/projects/ForYouToday'
-import { DrawerDigestSheet } from '../components/projects/DrawerDigestSheet'
 import { CreateProjectDialog } from '../components/projects/CreateProjectDialog'
 import { Search, Check, ArrowLeft, Skull, Sprout } from 'lucide-react'
 import { useConfirmDialog } from '../components/ui/confirm-dialog'
@@ -356,12 +354,6 @@ function ProjectsPageInner() {
                 {/* The in-page search bar + tag filter strip have been
                     removed. The top-right search icon goes to the global
                     search; the tab itself is a focused dashboard. */}
-
-                {/* Weekly drawer digest banner — invisible when none unread */}
-                <DrawerDigestSheet />
-
-                {/* "For you today" — warmed drawer items, invisible when empty */}
-                <ForYouToday />
 
                 {/* Masonry Dashboard */}
                 <ProjectsPageCarousel

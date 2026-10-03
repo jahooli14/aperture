@@ -1,38 +1,29 @@
 /**
  * AttentionSlot — the attention budget (SPEC.md).
  *
- * Things that can want the screen on open: a deferred close-out, the
- * monthly mirror, the live-project re-ask, a composite proposal, a morph
- * proposal, and the weekly outside find. Competing surfaces are how "guide, not
- * menu" dies, so this renders AT MOST ONE, in fixed priority order, and
- * whatever loses is not queued behind the winner -- it waits for another
- * day or is dropped, never stacks into a notification tray. It renders
- * NOTHING at all while a session is being planned or run.
+ * The two things the app may put in front of you on open, in this order:
+ *   1. a close-out you owe it (you worked, then closed the app without
+ *      saying where you got to — worth more than anything the app can say);
+ *   2. the monthly mirror, once, on the first open of the month.
+ * It renders AT MOST ONE, and nothing at all while a session is running.
+ * Whatever loses is not queued behind the winner.
  *
- * The monthly "something different" quota used to be the last slot here.
- * It moved onto the answer card's chat row: it isn't a different kind of
- * thing from steering, it's steering the app started, and giving it a
- * third box with its own buttons made it compete with the answer.
+ * It used to hold four more: "make X your live project?", a project reshape,
+ * a two-project mash-up and the weekly find from outside. The first was the
+ * app second-guessing you; the reshape and mash-up are the same kind of
+ * noticing the daily question already does (it looks for the same stall in
+ * two projects, and a project that has drifted from what it says it is); and
+ * the outside find moved into the answer card, under the question. One
+ * voice, not six taking turns.
  *
- * Mounted on HomePage directly beneath the answer box, because "on app
- * open" is what a spark is the reward for -- confining it to a separate
- * route would only fire it when the user was already about to start a
- * session. It goes BELOW the answer box, never above the masthead where
- * the first cut put it: the answer box is the one thing you act on, this
- * is the one thing the app gets to say back, and stacking a second card
- * above the header read as broken chrome rather than as a second voice.
- *
- * Every slot in here answers with one statement and one action. None of
- * them may render a list of things to pick from -- that's the menu the
- * whole spec exists to avoid.
+ * Every slot here answers with one statement and one action. None renders a
+ * list of things to pick from.
  */
 
 import { useEffect, useState } from 'react'
 import { useSessionStore } from '../../stores/useSessionStore'
-import { useProjectStore } from '../../stores/useProjectStore'
 import { VoiceInput } from '../VoiceInput'
 import { api } from '../../lib/apiClient'
-import { OutsideSlot, type OutsideFind } from './OutsideSlot'
 
 const secondaryTextStyle = { color: 'var(--brand-text-secondary)', opacity: 0.7 }
 const borderStyle = { borderColor: 'var(--glass-border-bold)' }
@@ -55,26 +46,13 @@ const primaryButtonStyle = {
 }
 const accentTextStyle = { color: 'rgb(var(--brand-primary-rgb))' }
 
-type SlotKind = 'closeout' | 'mirror' | 'reask' | 'composite' | 'morph' | 'outside' | null
-
-interface ReaskSuggestion {
-  project_id: string
-  title: string
-}
+type SlotKind = 'closeout' | 'mirror' | null
 
 interface MirrorRow {
   project_id: string
   title: string
   minutes: number
   is_live: boolean
-}
-
-interface Proposal {
-  id: string
-  kind: 'morph' | 'composite'
-  project_id: string | null
-  project_id_2: string | null
-  proposed_text: string
 }
 
 const MIRROR_SEEN_KEY_PREFIX = 'aperture-mirror-seen-'
@@ -117,6 +95,7 @@ function MirrorSlot({ rows, onDismiss }: { rows: MirrorRow[]; onDismiss: () => v
   const [submitting, setSubmitting] = useState(false)
   const maxMinutes = Math.max(1, ...rows.map(r => r.minutes))
 
+  const [failed, setFailed] = useState(false)
   const submitMissing = async () => {
     if (!missingText.trim()) return onDismiss()
     setSubmitting(true)
@@ -126,9 +105,12 @@ function MirrorSlot({ rows, onDismiss }: { rows: MirrorRow[]; onDismiss: () => v
       // last night" lands on the right project with the right duration,
       // not a guessed one.
       await api.post('utilities?resource=log-retro', { text: missingText })
+      onDismiss()
+    } catch {
+      // Keep what they typed and say so, rather than closing on a lost note.
+      setFailed(true)
     } finally {
       setSubmitting(false)
-      onDismiss()
     }
   }
 
@@ -173,99 +155,12 @@ function MirrorSlot({ rows, onDismiss }: { rows: MirrorRow[]; onDismiss: () => v
         >
           {missingText ? 'Add it' : 'All good'}
         </button>
+        {failed && <span className="text-[12px]" style={secondaryTextStyle}>That didn’t send. Try again.</span>}
       </div>
     </div>
   )
 }
 
-function ProposalSlot({ proposal, onResolved }: { proposal: Proposal; onResolved: () => void }) {
-  const [busy, setBusy] = useState(false)
-
-  const act = async (action: 'accept' | 'reject') => {
-    setBusy(true)
-    try {
-      await api.post(`utilities?resource=${action}`, { proposal_id: proposal.id })
-    } finally {
-      setBusy(false)
-      onResolved()
-    }
-  }
-
-  return (
-    <div className="glass-card p-6 space-y-3">
-      <p className="text-xs uppercase tracking-wide" style={{ ...secondaryTextStyle, opacity: 0.5 }}>
-        {proposal.kind === 'morph' ? 'A shift, maybe' : 'A bridge, maybe'}
-      </p>
-      <p className="text-base">{proposal.proposed_text}</p>
-      <div className="space-y-1">
-        <button
-          className="w-full py-2 rounded-lg text-sm font-medium disabled:opacity-50"
-          style={primaryButtonStyle}
-          disabled={busy}
-          onClick={() => act('accept')}
-        >
-          Take it
-        </button>
-        {/* Still one tap and still recorded — rejecting is what sets the
-            cooldown — it just isn't a second rectangle arguing with the
-            first one. */}
-        <button className={quietOutClass} style={quietOutStyle} disabled={busy} onClick={() => act('reject')}>
-          that's not it
-        </button>
-      </div>
-    </div>
-  )
-}
-
-function ReaskSlot({ suggestion, onResolved }: { suggestion: ReaskSuggestion; onResolved: () => void }) {
-  const { declareLive } = useSessionStore()
-  const [busy, setBusy] = useState(false)
-
-  const act = async (accept: boolean) => {
-    setBusy(true)
-    try {
-      if (accept) {
-        await declareLive(suggestion.project_id)
-      } else {
-        // Recorded against the project so the answer survives this open —
-        // and this device.
-        await api.post('utilities?resource=live-reask', { project_id: suggestion.project_id }).catch(() => {})
-      }
-    } finally {
-      setBusy(false)
-      onResolved()
-    }
-  }
-
-  return (
-    <div className="glass-card p-6 space-y-3">
-      {/* A statement and an action, not a question with a Yes and a No
-          sitting at identical weight — which is the one shape CLAUDE.md
-          names outright as the thing never to build. */}
-      <p className="text-base">You've been on {suggestion.title} more than anything else.</p>
-      <div className="space-y-1">
-        <button
-          className="w-full py-2 rounded-lg text-sm font-medium disabled:opacity-50"
-          style={primaryButtonStyle}
-          disabled={busy}
-          onClick={() => act(true)}
-        >
-          Make it the live one
-        </button>
-        <button className={quietOutClass} style={quietOutStyle} disabled={busy} onClick={() => act(false)}>
-          or leave it as is
-        </button>
-      </div>
-    </div>
-  )
-}
-
-/**
- * The different-thing quota's nudge (SPEC.md). Lowest priority by design —
- * only ever shown when the spark generator had nothing (silence), and only
- * from day 20 of the month (different-thing.ts). Encouragement, not a
- * debt: no streak, no "you missed it" if the month runs out unused.
- */
 export function AttentionSlot() {
   const { pendingCloseout, checkPendingCloseout, closeoutForPending } = useSessionStore()
   const closing = useSessionStore(s => s.closing)
@@ -275,9 +170,6 @@ export function AttentionSlot() {
   const sessionRunning = useSessionStore(s => s.active != null)
   const [kind, setKind] = useState<SlotKind>(null)
   const [mirrorRows, setMirrorRows] = useState<MirrorRow[]>([])
-  const [reask, setReask] = useState<ReaskSuggestion | null>(null)
-  const [proposal, setProposal] = useState<Proposal | null>(null)
-  const [outside, setOutside] = useState<OutsideFind | null>(null)
   const [closeoutText, setCloseoutText] = useState('')
   const [resolved, setResolved] = useState(false)
 
@@ -285,9 +177,8 @@ export function AttentionSlot() {
     let cancelled = false
 
     async function resolve() {
-      // Five sequential API calls, and the whole slot renders null during a
-      // session anyway -- there is no reason to spend them competing with
-      // the hour they'd interrupt.
+      // The slot renders null during a session anyway -- no reason to spend
+      // calls competing with the hour it would interrupt.
       if (sessionRunning) return
       await checkPendingCloseout()
       if (cancelled) return
@@ -306,41 +197,6 @@ export function AttentionSlot() {
           return
         }
       }
-
-      // No client-side timer: the server drops a project you've already
-      // answered for, so a suggestion arriving here is one you haven't seen.
-      const reaskResult = await getJson<{ suggestion: ReaskSuggestion | null }>('/api/utilities?resource=live-reask')
-      if (cancelled) return
-      if (reaskResult?.suggestion) {
-        setReask(reaskResult.suggestion)
-        setKind('reask')
-        return
-      }
-
-      const proposals = await getJson<{ proposals: Proposal[] }>('/api/utilities?resource=pending')
-      if (cancelled) return
-      if (proposals && proposals.proposals.length > 0) {
-        const composite = proposals.proposals.find(p => p.kind === 'composite')
-        const chosen = composite ?? proposals.proposals[0]
-        setProposal(chosen)
-        setKind(chosen.kind)
-        return
-      }
-
-      // Last and quietest: one thing from outside, found weekly for the
-      // live project's next step (outside-find.ts).
-      const outsideResult = await getJson<{ find: OutsideFind | null }>('/api/utilities?resource=outside-find')
-      if (cancelled) return
-      if (outsideResult?.find) {
-        setOutside(outsideResult.find)
-        setKind('outside')
-        return
-      }
-
-      // Only the proposal-shaped spark stays here. The question types moved
-      // to the answer card as the standing question, where they get to sit
-      // for days instead of being one open's interruption — showing them in
-      // both places would just be the same question twice.
 
     }
 
@@ -410,30 +266,6 @@ export function AttentionSlot() {
     return (
       <div className="mt-5 mb-4">
         <MirrorSlot rows={mirrorRows} onDismiss={() => setResolved(true)} />
-      </div>
-    )
-  }
-
-  if (kind === 'reask' && reask) {
-    return (
-      <div className="mt-5 mb-4">
-        <ReaskSlot suggestion={reask} onResolved={() => setResolved(true)} />
-      </div>
-    )
-  }
-
-  if (kind === 'outside' && outside) {
-    return (
-      <div className="mt-5 mb-4">
-        <OutsideSlot find={outside} onResolved={() => setResolved(true)} />
-      </div>
-    )
-  }
-
-  if ((kind === 'morph' || kind === 'composite') && proposal) {
-    return (
-      <div className="mt-5 mb-4">
-        <ProposalSlot proposal={proposal} onResolved={() => setResolved(true)} />
       </div>
     )
   }

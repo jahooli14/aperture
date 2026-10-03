@@ -27,7 +27,7 @@ This file is the **single source of truth** for working on this repo. If somethi
 | **Golf Masters** | `projects/golf-masters/` | Active | Masters pool tracker with live ESPN scores |
 | **Heart Recovery** | `projects/heart-recovery/` | Active | Day-by-day post-heart-attack (stent/PCI) recovery guide — single user, no backend, localStorage only |
 | **Relay** | `projects/relay/` | Active | Write a story with friends, a line at a time. PWA + web push. Up to 10 writers per story. |
-| **Fix Queue** | `projects/polymath/` (feature) | **Needs review** — owner doesn't actively use this; code may still be running. Don't extend without checking. |
+| **Fix Queue** | removed | **Deleted** — route, drafter, runner, page and the `annoyance` fix branch are gone. Don't recreate. | |
 
 > **Sonically Sound** ships from outside this repo.
 
@@ -54,22 +54,22 @@ Polymath is a **creative harness**. The user opens it with willpower to spend on
 
 1. **Capture.** Voice note in-app → transcribe → tidy prose → title → save as a "thought." Capture-time triage classifies intent (`memory_type`, `triage.category`) so downstream surfaces can find it.
 2. **Feed the corpus.** Thoughts join projects (active / dormant / abandoned with `blockers`), lists (films / books / music / places / etc.), and reading (queue + RSS + highlights). Lists are **identity signals**, not consumption logs — reading *Flowers for Algernon* makes you a different creative person from someone reading *50 Shades*.
-3. **Direct the willpower.** The home surface is the session contract plus one spark a day — see below. Lists and reading feed the identity layer, which shapes what the spark/composite/morph channel proposes.
+3. **Direct the willpower.** The home surface is the session contract plus one spark a day — see below. Lists and reading feed the identity layer, which shapes what the spark channel asks.
 
 ### Home surface (execution rebuild — `SPEC.md`, `HomePage.tsx`)
 
 Mid-2026 the home page was rebuilt around a different thesis: thinking time is unlimited, execution time is scarce — so capture without limit, but spend zero of the scarce hour deciding what to do. **This replaced the old "review rotation" model.** `ReviewRotation` ("worth a look" — pick it up / still mine / park it) is fully deleted; its job (offering a forgotten project back into play) now lives in the attention slot below, and quiet drift-decay kills dead projects without ever asking you to confirm a kill.
 
 1. **Masthead** — wordmark + search + (after 21:30) bedtime icon.
-2. **Today's answer = the session contract.** `TodaysAnswerCard` IS the session now, not a card that launches one: the live project and its **one next move**, already written from your last close-out note — "Go" starts the session straight away (full-screen focus → breadcrumb → hand-off; see "The next move" below). Its redirect panel holds the Focus chat thread and the on-demand idea deck (`ProjectIdeasHome`, still live — see caveat below). `FeelingPill` renders inside it, feeding session context into both the redirect and the idea generator.
-3. **The attention slot** — `AttentionSlot`. At most **one** interruption per app open, fixed priority: a deferred close-out > the monthly mirror (once a month) > a live-project re-ask (when behaviour has quietly diverged from your stated live project) > a composite proposal (rare) > a morph proposal > the weekly outside find. Silent most of the time — this is the piece that stops several surfaces competing for the same slot. Today's spark isn't in this stack: it lives permanently in the answer card as the standing question (below, and `StandingQuestion.tsx`), not as a one-shot interruption — showing it in both places would be the same question twice. (A `SparkSlot` used to sit at the bottom of this priority list for exactly that; it's gone, along with the `kind === 'spark'` branch that rendered it — dead since the move, unreachable, and quietly missing the follow-up/correction/reference handling `respond` now does.)
+2. **Today's answer = a two-sided card** (`TodaysAnswerCard`, no props). Top: the standing question (`StandingQuestion`, baked nightly, now leaning toward the live project and your latest captures — `loadFocus` in `mull-generator.ts`) plus the weekly outside find (`OutsideLine`). Bottom: the live project, its **one next move**, the last note quote, **Go**, and "Not this — change it". Go starts the session (focus → breadcrumb → hand-off). The Focus chat, steer chips and `FeelingPill` are deleted.
+3. **The attention slot** — `AttentionSlot`. At most one interruption per app open: a deferred close-out, else the monthly mirror. That's all. Re-ask, morph, composite and outside-in-the-slot were cut; the outside find now sits in the card.
 4. **Everything else** — `EverythingElseMini`, one swipeable row: still-warm projects then queued ones, always ending in a "suggest a project" card.
 5. **Now consuming** — `ConsumingWidget`, the identity layer. Active list items on top; Saved reads + New reads underneath.
 6. **Thought of the day** — `ThoughtOfTheDay`. Deliberately kept (an earlier rebuild cut removed it as redundant with sparks, then reinstated it): a spark asks something and wants a voice answer back, this just shows something you said and asks nothing. Page's closer, not a competing interruption.
 
 > "Guide, not menu" — one statement, one action, one quiet way to redirect. Every section below the answer box is invisible when empty.
 
-### The mull channel — sparks, morphs, composites, the mirror
+### The mull channel — sparks, the outside find, the mirror
 
 The mechanism behind "the attention slot" and the thing your weekday "what should I think about" question actually is:
 
@@ -80,21 +80,18 @@ The mechanism behind "the attention slot" and the thing your weekday "what shoul
   - **Up to three per run**: one shown, two banked with staggered expiry, so "ask me something else" is usually instant and free. Shipped questions never share a row. `subject_id` is the first cited row, so the next run's prompt is told those refs and a candidate citing one is dropped; `echoesRecent` still catches the same question in new words.
   - **"Get more creative"** (`creative` flag, reroll only, after a strict reroll came back empty) — recent ground allowed again, shape gates off, judge bar drops to truth ≥ 6 / answerable ≥ 5. Honesty never relaxes.
   - **Flash only, never Pro** — the owner's call: Pro is too slow for a reroll someone is waiting on and several times the cost, and Flash is close to as good here. **Ten seconds, whole run, hard ceiling** (`TOTAL_BUDGET_MS`, the owner's call): history and corpus load in parallel, each model call gets only what's left, and a judge with under 1.2s left is skipped (first honest candidate ships alone). **Hidden thinking is where the time went**, not the corpus: the old draft ran at `medium` and took ~24s. At `low` this model does no hidden thinking at all (measured: 0 thinking tokens) — the draft reasons in the open instead (`noticing`, `doubt`). Measured on a 17k-token corpus: draft 2.6–5.2s (usually ~3.2s), judge 1.1–1.6s, plus ~2.5s of DB reads. **`minimal` is not supported on `gemini-flash-latest` — it 400s.** `bake-explain` prints input / thinking / output tokens per call.
-  - **Exclusions unchanged**: app-authored notes (`userSaid`, and fragments filed under them), graveyarded projects and their fragments, articles without a `good` vote. Corrections from the follow-up reach the draft as undated context, never as quotable rows. `sparks.stake` stores what they'd do differently.
+  - **Exclusions unchanged**: app-authored notes (`userSaid`, and fragments filed under them), graveyarded projects and their fragments, articles without a `good` vote. Corrections from the follow-up reach the draft as undated context, never as quotable rows. `sparks.stake` stores what they'd do differently. `sparks.sources` (`20261003_spark_sources.sql`, falls back if not yet run) holds the titles of every capture the question was built on, shown as "from A + B" under it.
   - **Diagnose from a phone**: `job=bake-explain` prints every candidate with its refs, every gate rejection by name, and every judge score with its reason. `mull-pipeline.test.ts` runs the whole thing against a fake five-table corpus with the draft and judge stubbed, and checks Pro is never called.
   > The subject/blind-spot/connector search (`mull-subjects.ts`, `orbit-pairs.ts`, `project-shapes.ts`, `CONNECTOR_FLOOR`/`CEILING`), the nine rotating spark types and their bandit (`spark-generator.ts`, `spark-types.ts`), and `forgotten.ts`/`ForgottenSlot` are all **deleted** — don't recreate them. A dormant project resurfaces the same way anything else does: when the drafter finds a real pattern in it. `today` refuses to serve legacy `forgotten` rows.
-- **Morphs** (`generate-morph`, daily) — a project quietly reshapes itself from accumulated fragments. Rate-limited to one project per day, one per project per 14 days. Always a proposal, never a silent rewrite; one-tap "that's not it."
-- **Composites** (`joint-miner.ts` → `mine-joints`, then `composite-generator.ts` → `generate-composite`, both **weekly, Sunday**) — two *stalled* projects fuse, but only from a joint (something you keep saying, quoted, recurring) the corpus actually supplies — joint → pair, not pair → invented bridge. That inversion is what stops it producing forced mashups.
-- **The outside find** (`outside-find.ts` + `outside-find-check.ts` → `find-outside`, weekly, Sunday; `OutsideSlot.tsx`) — the one way something new gets in, since everything else only recombines what's been captured (SPEC.md's "closed loop"). Kept narrow so it can't pollute: only the live project's next step, not the corpus; one find a week, last in the attention slot; web search via Gemini's `googleSearch` tool, then the page is fetched and must be real, not a bot wall, and actually about the named thing (`pageMentions`) — otherwise nothing is shown. Stored in `outside_finds`, never as a note, never embedded. "Save to read" drops the link in the reading queue, where it counts for nothing until voted "good"; "not useful" is handed to next week's prompt. `job=find-outside` prints the candidate and why it was kept or dropped. Needs `20260923_outside_finds.sql`.
+- **The outside find** (`outside-find.ts` + `outside-find-check.ts` → `find-outside`, weekly, Sunday) — the one way something new gets in, since everything else only recombines what's been captured (SPEC.md's "closed loop"). Kept narrow so it can't pollute: only the live project's next step, not the corpus; one find a week, shown in the home card (`OutsideLine.tsx`); web search via Gemini's `googleSearch` tool, then the page is fetched and must be real, not a bot wall, and actually about the named thing (`pageMentions`) — otherwise nothing is shown. Stored in `outside_finds`, never as a note, never embedded. "Save to read" drops the link in the reading queue, where it counts for nothing until voted "good"; "not useful" is handed to next week's prompt. `job=find-outside` prints the candidate and why it was kept or dropped. Needs `20260923_outside_finds.sql`.
 - **Drift-decay** (`drift-runner.ts` → `drift-decay`, weekly) — the silent, no-confirmation harvest: high drift + no recent capture lets a project go and releases its reusable fragments back into the pool. Never asks you to confirm a kill.
 - **The mirror** (`resource=mirror`) — monthly, logged execution hours per project. Zeros shown only for the live project. No streaks, no capture counts — execution time is the only number the app ever shows. Because most execution happens off-app, there's a once-a-month voice correction ("did two hours on the decks last night") so it doesn't lie by omission.
-- **The different-thing quota** (`different-thing.ts`, `different-thing-status` resource) — one hour a month on something off your usual pattern, exempt from the live-project rule. Never nagged if missed, doesn't roll over.
 
 ### `ProjectIdeasHome` (READ/CROSSOVER) — deliberately kept for now, not a bug
 
-`SPEC.md` originally called for the rebuild to **replace** `ProjectIdeasHome` — "the idea generator becomes joints and composites." That hasn't happened, and it's staying that way on purpose: `ProjectIdeasHome` is the only **on-demand** "give me a new project idea right now" surface in the app. Sparks are cron-baked once nightly, morphs and composites are rate-limited proposals — none of them can be triggered on demand. Retiring `ProjectIdeasHome` means either accepting the loss of the on-demand button or building an on-demand path into the spark/morph/composite system first, and that decision hasn't been made. Don't remove it without that decision.
+`SPEC.md` originally called for the rebuild to **replace** `ProjectIdeasHome` — "the idea generator becomes joints and composites." That hasn't happened, and it's staying that way on purpose: `ProjectIdeasHome` is the only **on-demand** "give me a new project idea right now" surface in the app. Sparks are cron-baked once nightly — they can't be triggered on demand. Decision (Oct 2026): it stays as the one "Suggest a project" button. Don't add a second generator. It pairs two things (centre × arrival, picked in code), and the card shows them as "made from A + B" up front.
 
-The old `resource=evolve` cron call (daily, active-projects-only, wrote to an `evolution_events` table nothing read) **has been removed** (2026) — that part of the duplication was genuinely dead weight and is gone. `ProjectIdeasHome` + `generate-project-ideas` (feeding `project_ideas`) is the one on-demand generator left, running alongside sparks/morphs/composites deliberately, not by accident.
+The old `resource=evolve` cron call (daily, active-projects-only, wrote to an `evolution_events` table nothing read) **has been removed** (2026) — that part of the duplication was genuinely dead weight and is gone. `ProjectIdeasHome` + `generate-project-ideas` (feeding `project_ideas`) is the one on-demand generator left, running alongside sparks deliberately, not by accident.
 
 What `ProjectIdeasHome` does:
 
@@ -103,13 +100,13 @@ What `ProjectIdeasHome` does:
 
 ### What's NOT in the user's mental model
 
-- **Todos / Fix Queue / AudioPen** — historical or unused. Fix Queue route + API still exist so old drafts stay visible, but cron is disabled and it isn't surfaced on home. Don't extend without checking.
+- **Todos / AudioPen** — historical, unused.
 - **Idea Engine emails** — not a Polymath surface. Lives inside the polymath API (`api/_lib/idea-engine-v2/`). See Cron section.
 - **Context Engine sidebar** — **removed.** It was a "What connects here" panel opened from cards across the app, with six AI actions (summarize, find-gaps, suggest-next, connect-dots, chase-thread, provoke) plus an `analyze` readout.
 
   It invented. The only check on its output was `findVoiceViolations` — a *voice* gate, which gives the prose the house style and then passes whatever titles the model made up. With an empty corpus the context block read `(no related items found in knowledge lake)` while the prompt still ordered "Show 2-3 ways this idea echoes… Name titles directly", so at zero connections it named three articles that don't exist.
 
-  Grounding it was possible (`session-grounding.ts` and Relay's `index/ground.ts` both do exactly this) and not worth it. Five of the six actions were "tell me something interesting about this note" — browsing enrichment with no output, the knowledge-graph mode this app isn't. The sixth, suggest-next, is already answered four times over and grounded: the answer card, the session shaper, the crossover generator, the Guide. **The test to apply to anything like it: does it end in an output, or does it just make the note more interesting to look at?**
+  Grounding it was possible (`session-grounding.ts` and Relay's `index/ground.ts` both do exactly this) and not worth it. Five of the six actions were "tell me something interesting about this note" — browsing enrichment with no output, the knowledge-graph mode this app isn't. The sixth, suggest-next, is already answered four times over and grounded: the answer card and the crossover generator. **The test to apply to anything like it: does it end in an output, or does it just make the note more interesting to look at?**
 
   `/api/connections` itself stays — it's real plumbing (sparks, suggestions, paths, links) with a dozen callers, and the `connections` table feeds `memories.ts` and embeddings maintenance.
 
@@ -117,7 +114,7 @@ What `ProjectIdeasHome` does:
 
 Active, partly-shaped, dormant, and abandoned are different states. Long-dormant projects are explicitly **not** waste — they are eligible for reshape via the crossover generator.
 
-**Never ask what done looks like.** Plenty of real projects are ongoing (DJing, a sketchbook habit) and have no "done"; asking makes people invent one and rewrite it forever. `metadata.end_goal` is kept when the user volunteers it (extraction picks it up, the Guide writes it down when it's said in passing) and used to plan backwards. When it's absent, steps are planned *forwards* from what the project is. Its absence is never a gate, a warning, or an empty field on a card. See SPEC.md → "Where session shapes come from".
+**Never ask what done looks like.** Plenty of real projects are ongoing (DJing, a sketchbook habit) and have no "done"; asking makes people invent one and rewrite it forever. `metadata.end_goal` is kept when the user volunteers it (extraction picks it up, the move say-box writes it down when it's said in passing) and used to plan backwards. When it's absent, steps are planned *forwards* from what the project is. Its absence is never a gate, a warning, or an empty field on a card. See SPEC.md → "Where session shapes come from".
 
 **Projects whose finish line repeats** (`api/_lib/project-cycles.ts`). DJing is "record a mix, record a mix, record a mix". Removing the finish line is one answer, and it was the old one — but it means you never finish *anything*, and each cycle looks like a brand-new project when the list empties. So the finish line is scoped to ONE unit instead: `metadata.end_goal` becomes "a recorded mix" and `metadata.cycle = { unit, done, history }` says it repeats. Every planner then works unchanged and works *well* — the spine plans backwards from a real finish, and the move-writer’s finish verdict asks a question with a real answer. Only the ending differs: `resource=next-cycle` files what the finished one took, counts it, and plans the next from that shape (`SpineInput.previousCycle`) rather than from nothing.
 - **Not a habit tracker** — that was tried and rejected. A habit is measured in frequency (did you this week, streak, you've missed three); a cycle is measured in outputs (this is the fifth). No cadence, nothing to fall behind on. A quiet repeating project goes cold like any other and is resurfaced the same way.
@@ -132,7 +129,7 @@ Active, partly-shaped, dormant, and abandoned are different states. Long-dormant
 
 **The arc — real progress on a project that runs longer than one spine** (`api/_lib/project-milestones.ts`, `ProjectArc.tsx`). A spine is 5-8 steps and gets replanned every time the list empties (task-spine.ts) — the right way to plan a big, open-ended project, backwards from the goal, a stretch at a time, but it left nothing behind: each replan silently starts a new list, and `completedTasks / totalTasks` (the only number ever shown) runs toward 100% as done tasks pile up in `metadata.tasks` forever, whatever fraction of the *real* goal is actually left. There is no honest percentage to compute here — the app doesn't know how many spines a project will take, and inventing one would be exactly the fabricated precision this app refuses everywhere else.
 
-The app asks the right question at the right moment: the move-writer, when a finish line exists, also reads it against what's actually been done and says which, in one plain sentence (only a *reached* verdict is shown in the hand-off — "not yet" after every session is a nag). Each changed verdict is kept as a checkpoint (`Milestone: { n, at, reached, reason, steps }`, `metadata.milestones`) — the arc is the sequence of these, and the latest one's `reason` is the real "how close is this" signal (shown on the project page via `ProjectArc.tsx`, and fed into the Guide's catch-up greeting via `session-brief.ts`'s `lastCheckpoint`, so "still needs a synopsis and three comp titles" can actually be said out loud next time the project's opened, not just buried in a receipt from three weeks ago).
+The app asks the right question at the right moment: the move-writer, when a finish line exists, also reads it against what's actually been done and says which, in one plain sentence (only a *reached* verdict is shown in the hand-off — "not yet" after every session is a nag). Each changed verdict is kept as a checkpoint (`Milestone: { n, at, reached, reason, steps }`, `metadata.milestones`) — the arc is the sequence of these, and the latest one's `reason` is the real "how close is this" signal (shown on the project page via `ProjectArc.tsx`).
 
 Skipped entirely for a repeating project (`metadata.cycle` above) — it already gets the same idea via `cycle.history`, and recording both would double up the same checkpoint. `target_date` is the other half: an optional, ISO date, **never asked for** — same rule as `end_goal` itself — offered in the edit sheet only once a finish line exists (a deadline with nothing it's a deadline *for* is just a nag). Shown as plain day-count arithmetic ("14 days until the target date" / "3 days past it"), never a projected pace — there's rarely enough data for a real rate, and a confident-sounding wrong one is worse than none.
 
@@ -219,7 +216,7 @@ Excluded from: `loadCaptures` (one point, covering project timelines, joint memb
 - `normalizeTag` slugifies (lowercase, hyphenated, 2–24 chars) and drops anything that can't reduce to one. A malformed label is worse than a missing one — it becomes a filter matching exactly one project forever.
 - Max 3 labels per project. Backfill is **idempotent** (skips projects that already have labels), so it's safe to re-run and safe on cron. `projects?resource=backfill-tags` POST, plus a 40-project pass in the Vercel daily cron to catch newly-created projects.
 
-> The old review rotation (`api/_lib/project-review.ts` → `ReviewRotation` — "still mine" / "pick it up" / "park it") is fully deleted, per the execution rebuild above. Its one job worth keeping — offering a long-forgotten project back into play — now lives in `forgotten.ts` and surfaces through the attention slot; the rest (a nag to confirm a project isn't dead) is what quiet drift-decay replaced. Don't recreate `project-review.ts`, `reviewRotationOps.ts`, or their exports (`selectReviewCandidates`, `getReviewQueue`, `REVIEW_BATCH_SIZE`, `REVIEW_COOLDOWN_DAYS`) — none of them exist anymore.
+> The old review rotation (`api/_lib/project-review.ts` → `ReviewRotation` — "still mine" / "pick it up" / "park it") is fully deleted, per the execution rebuild above. Its one job worth keeping — offering a long-forgotten project back into play — now happens when the question drafter finds a real pattern in it (`forgotten.ts` is deleted); the rest (a nag to confirm a project isn't dead) is what quiet drift-decay replaced. Don't recreate `project-review.ts`, `reviewRotationOps.ts`, or their exports (`selectReviewCandidates`, `getReviewQueue`, `REVIEW_BATCH_SIZE`, `REVIEW_COOLDOWN_DAYS`) — none of them exist anymore.
 
 **Labels drive colour** (`getTheme` in `projectTheme.ts`). Colour resolves label → legacy `type` → hashed title. A label with its own palette entry (music, art, writing…) uses it; any other label is hashed on the *label*, so every woodwork project comes out the same colour and the page reads as grouped by craft instead of as confetti. Every project card passes `metadata.tags` now.
 
@@ -265,10 +262,6 @@ The mirror counts hours; this keeps the things. A photo, screenshot or audio cli
 ### Recording from outside the app (`src/lib/launchCapture.ts`)
 
 Every note not recorded is one the app never sees, so recording is one tap from the home screen: the PWA icon's long-press shortcut (`/?capture=voice`), and on the Android build a static app shortcut plus a one-button home-screen widget (`CaptureWidget.java`), both launching `polymath://capture`. All three end in the same place — the voice recorder already running. A launch can land before sign-in finishes, so the request is held until `FloatingNav` (which owns the recorder) takes it. iOS doesn't support manifest shortcuts.
-
-### Session context
-
-`useSessionContextStore` carries a per-session `feeling` (focused / scattered / restless), captured by the FeelingPill at app open and persisted to sessionStorage (resets when the tab closes). The on-demand "suggest a project" path passes it into the generator prompt so the re-roll calibrates to right-now state.
 
 ### Inputs still to add
 
@@ -539,60 +532,34 @@ Conventional commits. PR metadata is short.
 
 ## Cron (`.github/workflows/cron.yml`)
 
-One workflow dispatches every Vercel cron endpoint for Polymath and Pupils. Branches on `github.event.schedule` (the cron string that fired) — never wall-clock time, because GitHub delays scheduled runs. `BASE` is hardcoded to `https://aper-ture.vercel.app`. `workflow_dispatch` with `force=true` runs everything; **`job=<name>` runs exactly one and stops** (`bake-explain`, `bake`, `mine-joints`, `recompute-heat`, `retire-and-rebake`, `reembed-articles`, `backfill-embeddings`, `find-outside`) — `force` for a single endpoint also pays for two digests, the idea-engine generator, a morph and a whole-corpus joint mine. `hit()` prints the response body into the Actions log, so `job=bake-explain` is a full diagnosis of the mull channel from a phone: no terminal, no Vercel dashboard, no cron secret. `job=retire-and-rebake` (`resource=retire-and-rebake`, cron-authenticated twin of the user-facing `reroll-spark`) retires whatever spark is currently standing and bakes a fresh one — the only way to clear a question a code fix has already made obsolete without waiting out its four-day shelf life or tapping "ask me something else" in the app. The two callers differ by one flag and it is load-bearing: `retireAndRebake(…, force)`. Without `force` it restores the standing spark's expiry whenever no replacement can be baked, which is right for "ask me something else" (don't take away a spark the user was fine with because a reroll came up empty) and exactly wrong for the cron path, which defeats its own purpose that way. A football question baked from pre-fix logic survived a full day of correct fixes because retire-and-rebake dutifully put it back each time the echo gate — correctly comparing against that same poisoned history — rejected every fresh draft. Restoring "the one you had" only makes sense when it was a fine spark you're gambling away, never when it *was* the bug.
+One workflow dispatches every Vercel cron endpoint for Polymath and Pupils. Branches on `github.event.schedule` (the cron string that fired) — never wall-clock time, because GitHub delays scheduled runs. `BASE` is hardcoded to `https://aper-ture.vercel.app`. `workflow_dispatch` with `force=true` runs everything; **`job=<name>` runs exactly one and stops** (`bake-explain`, `bake`, `retire-and-rebake`, `reembed-articles`, `backfill-embeddings`, `find-outside`) — `force` for a single endpoint also pays for two digests, and the idea-engine generator. `hit()` prints the response body into the Actions log, so `job=bake-explain` is a full diagnosis of the mull channel from a phone: no terminal, no Vercel dashboard, no cron secret. `job=retire-and-rebake` (`resource=retire-and-rebake`, cron-authenticated twin of the user-facing `reroll-spark`) retires whatever spark is currently standing and bakes a fresh one — the only way to clear a question a code fix has already made obsolete without waiting out its four-day shelf life or tapping "ask me something else" in the app. The two callers differ by one flag and it is load-bearing: `retireAndRebake(…, force)`. Without `force` it restores the standing spark's expiry whenever no replacement can be baked, which is right for "ask me something else" (don't take away a spark the user was fine with because a reroll came up empty) and exactly wrong for the cron path, which defeats its own purpose that way. A football question baked from pre-fix logic survived a full day of correct fixes because retire-and-rebake dutifully put it back each time the echo gate — correctly comparing against that same poisoned history — rejected every fresh draft. Restoring "the one you had" only makes sense when it was a fine spark you're gambling away, never when it *was* the bug.
 
-Every query in the mull channel (`api/_lib/mull-corpus.ts`, `api/_lib/mull-generator.ts`, `api/_lib/joint-miner.ts`, `api/_lib/drift-runner.ts`) reports its own errors into the trace or console rather than letting `const { data } = await supabase…` read a rejection as an empty table — that exact bug cost a day (`memories.project_id` didn't exist) and then recurred twice more (a PostgREST embed on `memories(embedding)` that silently kept the joints table empty for months; `sparks.type` missing `'mull'` from its CHECK constraint, read by the UI as "couldn't reach the server"). `mull-corpus.ts`'s `loadCorpus` retries each of its five queries once on a transient error (Gateway Timeout, ECONNRESET, `isTransientError`) — the one query-failure class worth retrying; everything else (a bad filter, a missing column) is a real rejection and retrying it would just be slower.
+Every query in the mull channel (`api/_lib/mull-corpus.ts`, `api/_lib/mull-generator.ts`, `api/_lib/drift-runner.ts`) reports its own errors into the trace or console rather than letting `const { data } = await supabase…` read a rejection as an empty table — that exact bug cost a day (`memories.project_id` didn't exist) and then recurred twice more (a PostgREST embed on `memories(embedding)` that silently kept the joints table empty for months; `sparks.type` missing `'mull'` from its CHECK constraint, read by the UI as "couldn't reach the server"). `mull-corpus.ts`'s `loadCorpus` retries each of its five queries once on a transient error (Gateway Timeout, ECONNRESET, `isTransientError`) — the one query-failure class worth retrying; everything else (a bad filter, a missing column) is a real rejection and retrying it would just be slower.
 
 > Relay has its own separate `.github/workflows/relay-cron.yml` — it hardcodes a different `BASE` (Relay's own domain), so it's deliberately not folded into this file. See the Relay section above for what it does.
 
 | Schedule | Endpoints |
 |----------|-----------|
 | `0 */2 * * *` | `idea-engine?action=generate` |
-| `0 */6 * * *` | `projects?resource=recompute-heat` |
-| `0 8 * * *` | `utilities?resource=generate-project-ideas`, `utilities?resource=bake` (spark), `utilities?resource=generate-morph` |
+| `0 8 * * *` | `utilities?resource=generate-project-ideas`, `utilities?resource=bake` (spark) |
 | `0 9 * * *` | `idea-engine?action=review` then `idea-engine?action=send-digest` (sequential) |
-| `0 8 * * 0` | `projects?resource=generate-digest`, `utilities?resource=mine-joints` → `generate-composite` (sequential), `utilities?resource=drift-decay`, `utilities?resource=find-outside` |
+| `0 8 * * 0` | `utilities?resource=drift-decay`, `utilities?resource=find-outside` |
 
 > **Note:** the `idea-engine?action=*` endpoints are TypeScript, living in `projects/polymath/api/idea-engine.ts` + `api/_lib/idea-engine-v2/`, deployed as part of the polymath Vercel app — there's no separate standalone project. `idea-engine?action=generate` runs every 2 hours (was hourly, was `*/30 * * * *` before that) — cut because `action=review` only ever processes 10 pending ideas/day, so hourly generation (up to 24/day) was more than double what review could use.
 >
-> **Fix Queue cron is disabled** — the route and API remain so existing drafts stay visible, but no new drafts are generated or executed.
 
-Besides the GitHub Actions table above, Vercel's own cron (`projects/polymath/vercel.json`, Hobby-tier limit of 1 cron) fires `/api/cron/jobs?job=daily` once a day at 21:30 UTC. That single request bundles several more Gemini-calling tasks: stuck-memory reprocessing, bedtime prompts, Power Hour plan, rotting-project detection, project labelling (untagged projects only, 40/run), embedding maintenance, and (Sundays) capability extraction + drawer digest. It used to also re-run project evolution (same prompt/table as the 08:00 UTC `projects?resource=evolve` above) — removed, since it meant every active project got evolved twice a day.
+Besides the GitHub Actions table above, Vercel's own cron (`projects/polymath/vercel.json`, Hobby-tier limit of 1 cron) fires `/api/cron/jobs?job=daily` once a day at 21:30 UTC. That single request bundles several more Gemini-calling tasks: stuck-memory reprocessing, bedtime prompts, Power Hour plan, rotting-project detection, project labelling (untagged projects only, 40/run), embedding maintenance, and (Sundays) capability extraction. It used to also re-run project evolution (same prompt/table as the 08:00 UTC `projects?resource=evolve` above) — removed, since it meant every active project got evolved twice a day.
 
 Background sync calls (DataSynchronizer): `/api/memories?action=evolution`, `/api/projects?resource=bedtime`, `/api/reading?resource=rss` — these are triggered from the client on internal timers, not by cron, so they are not in the table above. Of those, only `bedtime` can call Gemini, and only if the Vercel daily cron hasn't already generated today's prompts.
-
-## Fix Queue (Polymath feature)
-
-Voice-capture life annoyances → AI drafts automated fixes → approve → runs on cron.
-
-**Architecture**
-- Triage: voice notes classified as `annoyance` by Gemini (severity + automatable flag)
-- Drafting: AI generates data-driven fix specs
-- Approval: `/fixes` page in Polymath UI
-- Execution: cron would hit `/api/utilities?action=run-fixes` (disabled)
-
-**Fix action types**
-- `send_email` — Reminder/notification via Resend
-- `weather_email` — Email with live Open-Meteo weather data
-- `smart_home` — Frame TV / Sonos / bird cam (Home Assistant or direct)
-- `http_request` — Generic API calls
-
-**Key files** (all under `projects/polymath/`)
-- `api/_lib/fix-queue/route.ts` — Main API (draft-pending, run-fixes, approve, reject, list), served by `/api/utilities?action=…`. It was its own route until the serverless-function budget below made that too expensive; routed on `action`, which nothing else in utilities.ts uses.
-- `api/_lib/fix-queue/drafter.ts` — AI fix generation
-- `api/_lib/fix-queue/runner.ts` — Fix execution (tests in `runner.test.ts`)
-- `api/_lib/fix-queue/types.ts` — FixDraft, FixAction types
-- `src/pages/FixQueuePage.tsx` — Approval UI
-
-**Env vars**
-- `RESEND_API_KEY` — Email (configured)
-- `IDEA_ENGINE_SECRET` — Bearer token cron uses to call `/api/*` endpoints
-- `HOME_ASSISTANT_URL` + `HOME_ASSISTANT_TOKEN` — Smart home hub (optional)
-- `SONOS_HTTP_API_URL` — node-sonos-http-api bridge (optional)
-- `BIRD_CAM_URL` — Bird cam HTTP endpoint (optional)
-
-> Frame TV has no env var — it's driven through Home Assistant (`runner.ts`), since direct local-IP control isn't possible from the cloud.
 
 ## Session start
 
 If `NEXT_SESSION.md` exists, read it. Otherwise just begin.
+
+## What changed in the Oct 2026 simplification
+
+- **Guide chat removed.** The project page leads with the move and a say-box (`NextMovePanel`): "I did that" logs the move (`api/_lib/move-said.ts`) and writes the next; anything else rewrites it.
+- **Cold start.** Onboarding asks for one non-work project and a few lists, then `src/lib/startThingsMoving.ts` makes a project live, writes its first move and bakes the first question.
+- **Post-capture** shows one routing line only. No steering card, celebration or suggestion toast.
+- **Deleted:** Drawer, Timeline, Replay, Fix Queue, heat/digest/metabolism, Themes view, morphs, composites, portfolio chat, different-thing quota. Don't recreate.
+- **Helpers:** `useModalOpen` (hides the floating + while a modal/focus shell is open), `citation-tags.ts` (strips `[e1]` from model prose).

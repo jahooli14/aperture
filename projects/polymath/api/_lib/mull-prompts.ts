@@ -29,6 +29,8 @@ export interface DraftContext {
   resonance: string
   /** Premises earlier questions got wrong, in their words. */
   corrections: string
+  /** Live project and latest captures. Context, not corpus. */
+  focus?: string
 }
 
 export function draftPrompt(ctx: DraftContext): string {
@@ -68,6 +70,9 @@ WHERE TO LOOK -- read everything first, then look for:
 - Drift: how they described something early on, and how they describe it now.
 - The aside: a line said in passing under one project that fits all of them.
 - The missing piece: a person, place or step every note circles and none names.
+- The collision: a person or occasion in their life next to a skill, material or
+  old project they already have. Neither note mentions the other; side by side
+  they suggest something to make.
 These are places to look, not boxes to fill. A real corpus holds two or three
 genuine ones. Find those and leave the rest.
 
@@ -93,7 +98,7 @@ ${goodExamplesBlock()}
 
 BAD -- shapes that have shipped before and failed:
 ${badExamplesBlock()}
-${ctx.resonance}${ctx.corrections}${avoid}${avoidRefs}
+${ctx.resonance}${ctx.corrections}${ctx.focus ?? ''}${avoid}${avoidRefs}
 ${PLAIN_ENGLISH_RULES}
 (Those examples are about voice. The question's shape still follows HOW TO ASK:
 open, never yes/no, never "X, or Y?".)

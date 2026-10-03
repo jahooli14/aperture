@@ -1,0 +1,79 @@
+/**
+ * The bridge between onboarding and the first time home opens.
+ *
+ * Everything the app does to keep you moving is built from what you've
+ * already said and done: a move comes out of your last note, a question out
+ * of your corpus, overnight. On day one there is no last note and no night
+ * has passed, so the first open used to land on a project with no move and an
+ * empty question slot — a capture tool, not something that drives you.
+ *
+ * So the moment onboarding has saved what you told it, this does the three
+ * things that would otherwise take days:
+ *   1. the project you named becomes your live one (you declared it — the app
+ *      never picks);
+ *   2. its first move is written now, so home opens on Go;
+ *   3. the first question is baked now, from your own words, rather than
+ *      waiting for the nightly run.
+ * Best-effort throughout: onboarding has already succeeded by this point, and
+ * anything that fails here simply happens the normal way later.
+ */
+
+import { api } from './apiClient'
+import { useProjectStore } from '../stores/useProjectStore'
+import { chooseLiveStarter } from './liveStarter'
+
+/** At most this many projects get a first move written up front. */
+const MAX_FIRST_MOVES = 2
+
+/** One run per page load: a double-tap on "skip" must not un-live what the
+ *  first run just made live (setPriority toggles). */
+let started = false
+
+export async function startThingsMoving(createdProjectIds: string[]): Promise<void> {
+  if (started) return
+  started = true
+
+  // An offline create hands back a placeholder id the server has never seen.
+  const ids = createdProjectIds.filter(id => !id.startsWith('temp-'))
+  if (ids.length === 0) return
+
+  // Judge "already live" from fresh data, not whatever the store held.
+  try { await useProjectStore.getState().fetchProjects() } catch { /* fall back to the store */ }
+  const store = useProjectStore.getState()
+
+  const liveId = chooseLiveStarter(ids, store.allProjects.filter(p => !ids.includes(p.id)))
+  const target = liveId ? store.allProjects.find(p => p.id === liveId) : null
+  if (liveId && target && !target.is_priority) {
+    try { await store.setPriority(liveId) } catch (e) { console.warn('[start-moving] could not make it live:', e) }
+  }
+
+  // The first question doesn't depend on the moves, so bake it alongside.
+  // A thin corpus often has nothing strict enough to ask about, so if the
+  // first pass comes back empty, take the looser one: day one is exactly
+  // when "nothing worth asking yet" is the wrong answer.
+  const bake = (async () => {
+    try {
+      const first = await api.post('utilities?resource=reroll-spark', {}, { timeout: 120_000 }) as { rerolled?: boolean }
+      if (!first?.rerolled) {
+        await api.post('utilities?resource=reroll-spark', { creative: true }, { timeout: 120_000 })
+      }
+    } catch (e) {
+      console.warn('[start-moving] could not bake the first question:', e)
+    }
+    // Home may already be open and showing no question: tell it to look again.
+    window.dispatchEvent(new Event('sparkBaked'))
+  })()
+
+  const moves = (async () => {
+    for (const id of ids.slice(0, MAX_FIRST_MOVES)) {
+      try {
+        await api.post('utilities?resource=move', { project_id: id, action: 'get' }, { timeout: 60_000 })
+      } catch (e) {
+        console.warn('[start-moving] could not write the first move:', e)
+      }
+    }
+    try { await useProjectStore.getState().fetchProjects() } catch { /* home refetches anyway */ }
+  })()
+
+  await Promise.all([bake, moves])
+}

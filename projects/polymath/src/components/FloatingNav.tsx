@@ -13,6 +13,7 @@ import { useKeyboardVisible } from '../hooks/useKeyboardVisible'
 import { useMemoryStore } from '../stores/useMemoryStore'
 import { useDriftStore, wrapWithDriftContext } from '../stores/useDriftStore'
 import { useOfflineSync } from '../hooks/useOfflineSync'
+import { useModalOpen } from '../hooks/useModalOpen'
 import { useToast } from './ui/toast'
 import { useAuthContext } from '../contexts/AuthContext'
 import { CAPTURE_EVENT, CAPTURE_PARAM, isCaptureLaunch, requestCapture, takePendingCapture } from '../lib/launchCapture'
@@ -64,7 +65,13 @@ export function FloatingNav() {
   // ordering race between this component mounting and the page's.
   const isReaderPage = location.pathname.startsWith('/reading/') && location.pathname !== '/reading'
 
+  // The + button also steps aside whenever a sheet, dialog or the session's
+  // full-screen view is open: in each of those it was parked over the one
+  // button the screen exists for.
+  const modalOpen = useModalOpen()
+
   const shouldHide = isReaderPage
+  const fabHidden = shouldHide || modalOpen
 
   // Launched to record (home-screen shortcut, widget, `/?capture=voice`):
   // open the recorder already running. Waits for sign-in, since the
@@ -98,22 +105,6 @@ export function FloatingNav() {
     }
     window.addEventListener('voice-capture-queued-offline', handleOfflineQueued)
     return () => window.removeEventListener('voice-capture-queued-offline', handleOfflineQueued)
-  }, [addToast])
-
-  // Listen for memory connections found after creation
-  React.useEffect(() => {
-    const handleConnectionsFound = (e: Event) => {
-      const customEvent = e as CustomEvent
-      const { count } = customEvent.detail
-      addToast({
-        title: `Connected to ${count} related thought${count > 1 ? 's' : ''}`,
-        description: 'Tap to explore connections',
-        duration: 4000,
-        variant: 'success',
-      })
-    }
-    window.addEventListener('memory-connections-found', handleConnectionsFound)
-    return () => window.removeEventListener('memory-connections-found', handleConnectionsFound)
   }, [addToast])
 
   const handleNavClick = (option: NavOption) => {
@@ -298,14 +289,14 @@ export function FloatingNav() {
           middle slot) rather than the right-edge orphan it used to be. */}
       <VoiceFAB
         onTranscript={handleVoiceTranscript}
-        hidden={shouldHide || isKeyboardVisible}
+        hidden={fabHidden || isKeyboardVisible}
         onTap={handleVoiceFABTap}
       />
 
       {/* Bottom Navigation Bar - Premium Glassmorphism */}
       <motion.nav
         initial={false}
-        animate={{ y: (shouldHide || isKeyboardVisible) ? 100 : 0, opacity: isKeyboardVisible ? 0 : 1 }}
+        animate={{ y: (fabHidden || isKeyboardVisible) ? 100 : 0, opacity: isKeyboardVisible ? 0 : 1 }}
         transition={{ duration: 0.3 }}
         className="fixed bottom-0 left-0 right-0 z-[9999] w-full"
         style={{

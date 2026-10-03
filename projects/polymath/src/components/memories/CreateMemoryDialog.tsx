@@ -27,7 +27,6 @@ import {
 import { celebrate, checkThoughtMilestone, getMilestoneMessage } from '../../utils/celebrations'
 import { handleInputFocus } from '../../utils/keyboard'
 import { useAutoSuggestion } from '../../contexts/AutoSuggestionContext'
-import { SuggestionToast } from '../SuggestionToast'
 import { motion, AnimatePresence } from 'framer-motion'
 import { RichTextEditor } from '../ui/RichTextEditor'
 import { useBodyEditor } from '../../hooks/useBodyEditor'
@@ -295,7 +294,6 @@ export function CreateMemoryDialog({
   onSwitchType,
 }: CreateMemoryDialogProps = {}) {
   const [internalOpen, setInternalOpen] = useState(false)
-  const [lastCreatedId, setLastCreatedId] = useState<string | null>(null)
   const [selectedFiles, setSelectedFiles] = useState<File[]>([])
   const [previewUrls, setPreviewUrls] = useState<string[]>([])
 
@@ -458,7 +456,6 @@ export function CreateMemoryDialog({
         const newMemory = await createMemory(memoryData)
 
         if (newMemory?.id) {
-          setLastCreatedId(newMemory.id)
           if (!isChecklistMode) {
             fetchSuggestions('thought', newMemory.id, `${savedTitle} ${body}`)
           }
@@ -783,14 +780,6 @@ export function CreateMemoryDialog({
         </BottomSheetContent>
       </BottomSheet>
 
-      {/* AI Suggestion Toast */}
-      {lastCreatedId && (
-        <SuggestionToast
-          itemId={lastCreatedId}
-          itemType="thought"
-          itemTitle={formData.title}
-        />
-      )}
     </>
   )
 }

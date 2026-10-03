@@ -16,7 +16,6 @@ import { extractCapabilities } from './_lib/capabilities-extraction.js'
 import { analyzeTaskEnergy } from './_lib/task-energy-analyzer.js'
 import { identifyRottingProjects, generateZebraReport, buryProject, resurrectProject, pickSynthesisResurfaceCandidate } from './_lib/project-maintenance.js'
 import { updateItemConnections } from './_lib/connection-logic.js'
-import { recomputeHeatForUser, DRAWER_STATUSES, MUTATION_MODES, MODES_THAT_RETIRE_PARENT, type MutationMode } from './_lib/metabolism.js'
 import { backfillProjectTags } from './_lib/project-tags.js'
 import { isGraveyarded } from './_lib/project-state.js'
 
@@ -27,7 +26,7 @@ const RateRequestSchema = z.object({
 })
 
 /** Cron-triggered resources that use IDEA_ENGINE_SECRET instead of Supabase JWT */
-const CRON_RESOURCES = ['recompute-heat', 'generate-digest']
+const CRON_RESOURCES: string[] = []
 
 function getCronUserId(req: VercelRequest): string | null {
   const authHeader = req.headers.authorization
@@ -596,338 +595,6 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
     }
   }
 
-  if (resource === 'recompute-heat') {
-    if (req.method !== 'POST') {
-      return res.status(405).json({ error: 'Method not allowed' })
-    }
-    try {
-      const result = await recomputeHeatForUser(supabase, userId)
-      return res.status(200).json({ success: true, ...result })
-    } catch (error) {
-      console.error('[recompute-heat] error:', error)
-      return res.status(500).json({
-        error: 'Failed to recompute heat',
-        details: error instanceof Error ? error.message : String(error),
-      })
-    }
-  }
-
-  if (resource === 'drawer') {
-    if (req.method !== 'GET') {
-      return res.status(405).json({ error: 'Method not allowed' })
-    }
-    try {
-      // Fetch all projects — the drawer is everything not in the focus area
-      // (focus = priority + top recent). No status filtering needed.
-      const { data: projects, error } = await supabase
-        .from('projects')
-        .select('*')
-        .eq('user_id', userId)
-        .order('heat_score', { ascending: false, nullsFirst: false })
-
-      if (error) {
-        return res.status(500).json({ error: 'Failed to fetch drawer', details: error.message })
-      }
-
-      const allProjects = projects || []
-
-      // Drawer excludes the focus stack: priority (1) + Up Next (up to 3) +
-      // the single most-recent non-pinned active project (the "recent" slot
-      // in Keep Going).
-      const priorityProjects = allProjects.filter((p: any) => p.is_priority).slice(0, 1)
-      const priorityIds = new Set(priorityProjects.map((p: any) => p.id))
-      const upNextProjects = allProjects.filter((p: any) => p.up_next_position != null)
-      const upNextIds = new Set(upNextProjects.map((p: any) => p.id))
-      const recentSlot = [...allProjects]
-        .filter((p: any) =>
-          !priorityIds.has(p.id) &&
-          !upNextIds.has(p.id) &&
-          ['active', 'upcoming'].includes(p.status) &&
-          p.metadata?.is_shaped !== false
-        )
-        .sort((a: any, b: any) =>
-          new Date(b.last_active || b.updated_at || b.created_at).getTime() -
-          new Date(a.last_active || a.updated_at || a.created_at).getTime()
-        )
-        .slice(0, 1)
-      const focusIds = new Set(
-        [...priorityProjects, ...upNextProjects, ...recentSlot].map((p: any) => p.id)
-      )
-
-      const all = allProjects.filter((p: any) => !focusIds.has(p.id) && !isGraveyarded(p))
-      const warmed = all.filter((p: any) => (p.heat_score || 0) > 0 && p.heat_reason)
-      const warmedIds = new Set(warmed.map((p: any) => p.id))
-      const rest = all.filter((p: any) => !warmedIds.has(p.id))
-
-      return res.status(200).json({
-        warmed,
-        shuffle: rest,
-        total: all.length,
-      })
-    } catch (error) {
-      console.error('[drawer] error:', error)
-      return res.status(500).json({
-        error: 'Failed to load drawer',
-        details: error instanceof Error ? error.message : String(error),
-      })
-    }
-  }
-
-  if (resource === 'generate-digest') {
-    if (req.method !== 'POST') {
-      return res.status(405).json({ error: 'Method not allowed' })
-    }
-    try {
-      const { data: warmedProjects } = await supabase
-        .from('projects')
-        .select('id, title, description, heat_score, heat_reason, catalysts, status, metadata')
-        .eq('user_id', userId)
-        .in('status', DRAWER_STATUSES)
-        .eq('is_priority', false)
-        .gt('heat_score', 0)
-        .not('heat_reason', 'is', null)
-        .order('heat_score', { ascending: false })
-        .limit(5)
-
-      const warmed = warmedProjects || []
-
-      if (warmed.length === 0) {
-        return res.status(200).json({ success: true, warmed: 0, evolutions: 0, skipped: 'no-warmed' })
-      }
-
-      const { data: userSettings } = await supabase
-        .from('user_settings')
-        .select('allow_handoff_mutations')
-        .eq('user_id', userId)
-        .maybeSingle()
-      const allowHandoff = !!userSettings?.allow_handoff_mutations
-
-      interface Evolution {
-        project_id: string
-        project_title: string
-        mode: MutationMode
-        title: string
-        proposal: string
-        evidence: string
-      }
-
-      const proposals = await Promise.all(warmed.slice(0, 3).map(async (p: any): Promise<Evolution | null> => {
-        const evidence = p.heat_reason || ''
-        const prompt = `You're helping me evolve a dormant project. Pick ONE mutation mode and write the proposal.
-
-PROJECT
-title: ${p.title}
-description: ${p.description || '(none)'}
-recent evidence that it's warming: ${evidence}
-
-MODES (pick ONE that fits best)
-- shrink: propose a much smaller 1-3 day version
-- merge: propose combining with another related project (requires mentioning which)
-- split: propose splitting into 2 focused children
-- reframe: propose a new angle / positioning
-- snapshot: propose capturing current state as a standalone artifact (essay, note, sketch) and retiring the full project${allowHandoff ? '\n- handoff: propose handing off to someone else' : ''}
-
-HOW TO WRITE
-${PLAIN_ENGLISH_RULES}
-- No invented hyphenated phrases in scare-quotes. No coach voice ("you are shifting from X to Y").
-- The proposal must cite the provided evidence. If you can't, return mode='none'.
-- Bad: "Reframe to leverage the synergies between your recent reading and the project's core thesis."
-- Good: "Reframe it: stop trying to build the full IDE. Ship the single best thing — the chapter outline view — as a standalone tool."
-
-Return JSON only:
-{ "mode": "shrink|merge|split|reframe|snapshot${allowHandoff ? '|handoff' : ''}|none", "title": "new title if applicable", "proposal": "2-3 sentence concrete proposal in plain English", "evidence": "the evidence you cited" }`
-        try {
-          const raw = await generateText(prompt, { temperature: 0.5, maxTokens: 400, responseFormat: 'json' })
-          const parsed = JSON.parse(raw)
-          if (!parsed?.mode || parsed.mode === 'none' || !parsed.proposal) return null
-          if (!MUTATION_MODES.includes(parsed.mode)) return null
-          if (parsed.mode === 'handoff' && !allowHandoff) return null
-          return {
-            project_id: p.id,
-            project_title: p.title,
-            mode: parsed.mode,
-            title: parsed.title || p.title,
-            proposal: parsed.proposal,
-            evidence: parsed.evidence || evidence,
-          }
-        } catch (e) {
-          console.warn('[generate-digest] evolve-project failed for', p.id, e)
-          return null
-        }
-      }))
-
-      const evolutions = proposals.filter((e): e is Evolution => e !== null).slice(0, 2)
-
-      const { data: digestRow, error: insertErr } = await supabase
-        .from('drawer_digests')
-        .insert([{
-          user_id: userId,
-          warmed: warmed.map((p: any) => ({
-            id: p.id,
-            title: p.title,
-            heat_score: p.heat_score,
-            heat_reason: p.heat_reason,
-          })),
-          evolutions,
-          status: 'unread',
-        }])
-        .select()
-        .single()
-
-      if (insertErr) {
-        return res.status(500).json({ error: 'Failed to write digest', details: insertErr.message })
-      }
-
-      return res.status(200).json({ success: true, digest: digestRow, warmed: warmed.length, evolutions: evolutions.length })
-    } catch (error) {
-      console.error('[generate-digest] error:', error)
-      return res.status(500).json({
-        error: 'Failed to generate digest',
-        details: error instanceof Error ? error.message : String(error),
-      })
-    }
-  }
-
-  // Read the latest unread digest for this user, or null.
-  if (resource === 'digest' && req.method === 'GET') {
-    try {
-      const { data, error } = await supabase
-        .from('drawer_digests')
-        .select('*')
-        .eq('user_id', userId)
-        .eq('status', 'unread')
-        .order('generated_at', { ascending: false })
-        .limit(1)
-        .maybeSingle()
-
-      if (error) {
-        return res.status(500).json({ error: 'Failed to read digest', details: error.message })
-      }
-      return res.status(200).json({ digest: data || null })
-    } catch (error) {
-      return res.status(500).json({
-        error: 'Failed to read digest',
-        details: error instanceof Error ? error.message : String(error),
-      })
-    }
-  }
-
-  if (resource === 'digest-act' && req.method === 'POST') {
-    try {
-      const { digest_id, action, evolution_index } = req.body as {
-        digest_id: string
-        action: 'read' | 'accept'
-        evolution_index?: number
-      }
-      if (!digest_id || !action) {
-        return res.status(400).json({ error: 'digest_id and action required' })
-      }
-
-      const { data: digest } = await supabase
-        .from('drawer_digests')
-        .select('*')
-        .eq('id', digest_id)
-        .eq('user_id', userId)
-        .maybeSingle()
-
-      if (!digest) {
-        return res.status(404).json({ error: 'Digest not found' })
-      }
-
-      if (action === 'read') {
-        await supabase
-          .from('drawer_digests')
-          .update({ status: 'read' })
-          .eq('id', digest_id)
-          .eq('user_id', userId)
-        return res.status(200).json({ success: true })
-      }
-
-      if (action === 'accept') {
-        const evolutions = (digest.evolutions || []) as Array<{
-          project_id: string
-          mode: MutationMode
-          title?: string
-          proposal: string
-          evidence: string
-        }>
-        const idx = typeof evolution_index === 'number' ? evolution_index : 0
-        const evo = evolutions[idx]
-        if (!evo) {
-          return res.status(400).json({ error: 'evolution_index out of range' })
-        }
-
-        const { data: parent } = await supabase
-          .from('projects')
-          .select('id, title, description, type, lineage_root_id')
-          .eq('id', evo.project_id)
-          .eq('user_id', userId)
-          .maybeSingle()
-
-        if (!parent) {
-          return res.status(404).json({ error: 'Parent project not found' })
-        }
-
-        const lineageRoot = parent.lineage_root_id || parent.id
-
-        const { data: child, error: childErr } = await supabase
-          .from('projects')
-          .insert([{
-            user_id: userId,
-            title: evo.title || `${parent.title} (${evo.mode})`,
-            description: evo.proposal,
-            type: parent.type || 'hobby',
-            status: 'upcoming',
-            parent_id: parent.id,
-            lineage_root_id: lineageRoot,
-            metadata: {
-              mutation: {
-                mode: evo.mode,
-                evidence: evo.evidence,
-                parent_id: parent.id,
-                accepted_from_digest: digest_id,
-              },
-            },
-          }])
-          .select()
-          .single()
-
-        if (childErr) {
-          return res.status(500).json({ error: 'Failed to create mutation', details: childErr.message })
-        }
-
-        const followUps: PromiseLike<unknown>[] = [
-          supabase
-            .from('drawer_digests')
-            .update({ status: 'acted' })
-            .eq('id', digest_id)
-            .eq('user_id', userId),
-        ]
-        if (MODES_THAT_RETIRE_PARENT.has(evo.mode)) {
-          followUps.push(
-            supabase
-              .from('projects')
-              .update({ status: 'completed' })
-              .eq('id', parent.id)
-              .eq('user_id', userId)
-          )
-        }
-        await Promise.all(followUps)
-
-        return res.status(200).json({ success: true, child })
-      }
-
-      return res.status(400).json({ error: `Unknown action: ${action}` })
-    } catch (error) {
-      console.error('[digest-act] error:', error)
-      return res.status(500).json({
-        error: 'Failed to act on digest',
-        details: error instanceof Error ? error.message : String(error),
-      })
-    }
-  }
-
-
   // Labels. Idempotent — only touches projects with none, so it's safe to
   // re-run and safe on the daily cron to catch newly-created projects.
   if (resource === 'backfill-tags' && req.method === 'POST') {
@@ -1060,47 +727,6 @@ Return JSON only:
         details: error instanceof Error ? error.message : String(error),
       })
     }
-  }
-
-  if (resource === 'metabolism-settings') {
-    if (req.method === 'GET') {
-      try {
-        const { data } = await supabase
-          .from('user_settings')
-          .select('allow_handoff_mutations')
-          .eq('user_id', userId)
-          .maybeSingle()
-        return res.status(200).json({
-          allow_handoff_mutations: !!data?.allow_handoff_mutations,
-        })
-      } catch (error) {
-        return res.status(500).json({
-          error: 'Failed to read metabolism settings',
-          details: error instanceof Error ? error.message : String(error),
-        })
-      }
-    }
-    if (req.method === 'PUT' || req.method === 'POST') {
-      try {
-        const { allow_handoff_mutations } = req.body as { allow_handoff_mutations: boolean }
-        const { error } = await supabase
-          .from('user_settings')
-          .upsert(
-            { user_id: userId, allow_handoff_mutations: !!allow_handoff_mutations },
-            { onConflict: 'user_id' }
-          )
-        if (error) {
-          return res.status(500).json({ error: 'Failed to save', details: error.message })
-        }
-        return res.status(200).json({ success: true, allow_handoff_mutations: !!allow_handoff_mutations })
-      } catch (error) {
-        return res.status(500).json({
-          error: 'Failed to save metabolism settings',
-          details: error instanceof Error ? error.message : String(error),
-        })
-      }
-    }
-    return res.status(405).json({ error: 'Method not allowed' })
   }
 
   // SUGGESTIONS RESOURCE (merged from suggestions.ts)
@@ -1555,20 +1181,6 @@ Return JSON only:
           await ensureProjectHasTasks(project.id, userId)
 
           try {
-            const { inferCatalysts } = await import('./_lib/metabolism.js')
-            const catalysts = await inferCatalysts(project.title, project.description || '')
-            if (catalysts.length > 0) {
-              await supabase
-                .from('projects')
-                .update({ catalysts })
-                .eq('id', project.id)
-                .eq('user_id', userId)
-            }
-          } catch (catErr) {
-            console.warn('[projects] Catalyst inference failed (non-fatal):', catErr)
-          }
-
-          try {
             const { seedSlotsForProject } = await import('./_lib/slot-seed.js')
             await seedSlotsForProject(supabase, userId, {
               id: project.id,
@@ -1690,11 +1302,6 @@ Return JSON only:
         updates.is_priority = false
         updates.up_next_position = null
         updates.booked_session_at = null
-        // recomputeHeatForUser skips graveyarded projects entirely (metabolism.ts),
-        // so it never clears a heat_score/heat_reason set before burial -- without
-        // this, a buried project keeps showing up in "for you today" forever.
-        updates.heat_score = 0
-        updates.heat_reason = null
       }
 
       // The projects.status CHECK constraint permits upcoming / active /
@@ -1757,16 +1364,8 @@ Return JSON only:
     }
   }
 
-  // EVOLVE RESOURCE — POST to trigger project evolution / nightly reshaping
-  // `resource === 'evolve'` removed (2026): it ran daily against every
-  // active/upcoming project, proposing a "new direction" whether or not
-  // anyone was working on it, and wrote to an `evolution_events` table
-  // nothing in the frontend ever read. The thing it was reaching for --
-  // occasional reshape proposals, never for the live project -- is what
-  // morphs (`generate-morph`, one per project per 14 days) and composites
-  // (`generate-composite`, stalled projects only) now do properly. The
-  // `evolution_events` table is left in place but unused; safe to drop in
-  // a later migration if nothing else turns up depending on it.
+  // (No 'evolve' resource: it proposed a "new direction" for every active
+  // project into a table nothing read. Reshaping is the daily question's job now.)
 
   // SAVE-IDEA RESOURCE — POST to save an onboarding suggestion as a saved idea
   if (resource === 'save-idea') {

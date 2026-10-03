@@ -1819,7 +1819,10 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
           .is('dismissed_at', null)
           .or('status.neq.unread,tags.not.cs.{rss}')
           .order('pinned_at', { ascending: false, nullsFirst: false })
-          .order('updated_at', { ascending: false })
+          // reading_queue has never had an updated_at column (no migration adds
+          // one), so ordering by it made this whole query -- and "Now
+          // consuming" on home -- fail with a 500.
+          .order('created_at', { ascending: false })
           .limit(savedLimit)
 
         // New reads — rss-tagged, untouched, undismissed. Reverse chrono with

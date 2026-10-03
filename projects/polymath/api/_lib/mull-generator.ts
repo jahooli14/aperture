@@ -33,8 +33,8 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { generateText } from './gemini-chat.js'
 import { parseModelJson } from './schemas.js'
 import { echoesRecent, fetchRecentSparkTexts, fetchRecentSparkProjectIds, fetchRecentSparkSubjectIds } from './spark-echo.js'
-import { SPARK_CORRECTION_TAG } from './corpus-provenance.js'
-import { loadCorpus, normaliseTitle, type Corpus } from './mull-corpus.js'
+import { SPARK_CORRECTION_TAG, isAppAuthored } from './corpus-provenance.js'
+import { loadCorpus, normaliseTitle, type Corpus, type CorpusRow } from './mull-corpus.js'
 import { checkCandidate, judgeShips, judgeRank, parseJudgeScores, type Candidate, type Grounded, type JudgeScore } from './mull.js'
 import { draftPrompt, judgePrompt } from './mull-prompts.js'
 
@@ -95,6 +95,9 @@ export interface BakedSpark {
    *  fragment / list_item / article id -- so the next run can avoid it. */
   subject_id?: string
   subject_kind?: string
+  /** Every row the question was built on, by plain title -- what was put
+   *  next to what. Shown under the question. */
+  sources?: { kind: string; title: string }[]
   /** Written now, shown later. */
   banked?: boolean
 }
@@ -112,6 +115,8 @@ export interface EchoContext {
   resonance: string
   /** Premises earlier questions got wrong. Context, never corpus. */
   corrections: string
+  /** Where they are now; see loadFocus. */
+  focus?: string
 }
 
 /**
@@ -221,17 +226,65 @@ mistake.
 `
 }
 
+/**
+ * What they're on right now: the live project and its next move, plus the
+ * last few things they captured. The draft leans toward these so the
+ * question meets them where they are, instead of landing anywhere in the
+ * corpus. Context only -- never quotable, evidence still comes from rows.
+ */
+export async function loadFocus(supabase: SupabaseClient, userId: string): Promise<string> {
+  try {
+    return await readFocus(supabase, userId)
+  } catch (e) {
+    // A garnish: never costs the run.
+    console.warn('[mull] could not read focus:', e instanceof Error ? e.message : String(e))
+    return ''
+  }
+}
+
+async function readFocus(supabase: SupabaseClient, userId: string): Promise<string> {
+  const [{ data: proj, error: projErr }, { data: notes, error: notesErr }] = await Promise.all([
+    supabase.from('projects').select('title, metadata')
+      .eq('user_id', userId).eq('status', 'active')
+      .or('state.eq.live,is_priority.eq.true')
+      .order('last_active', { ascending: false }).limit(1),
+    supabase.from('memories').select('title, tags')
+      .eq('user_id', userId).eq('processed', true)
+      .order('created_at', { ascending: false }).limit(15),
+  ])
+  if (projErr) console.warn('[mull] focus: projects query failed:', projErr.message)
+  if (notesErr) console.warn('[mull] focus: memories query failed:', notesErr.message)
+  const p = (proj ?? [])[0] as { title?: string; metadata?: { next_move?: { text?: string } } } | undefined
+  const move = p?.metadata?.next_move?.text
+  // Notes the app elicited (spark answers, corrections) aren't fresh
+  // capture -- same rule as the corpus. Filtered in JS: `tags` is nullable.
+  const recent = (notes ?? [])
+    .filter((n: any) => !isAppAuthored(n.tags))
+    .map((n: any) => n.title)
+    .filter((t: unknown): t is string => typeof t === 'string' && !!t)
+    .slice(0, 5)
+  if (!p?.title && recent.length === 0) return ''
+  return `
+WHERE THEY ARE RIGHT NOW (context -- never quote it, evidence still comes from rows):
+${p?.title ? `- Live project: "${p.title}"${move ? `. Next move: ${move}` : ''}\n` : ''}${recent.length ? `- Just captured: ${recent.map(t => `"${t}"`).join('; ')}\n` : ''}Use these as one half of a collision, not as a filter. The best question puts
+something from here next to something that looks unrelated -- a person or
+occasion in their life beside a material, skill or old project. Don't stay inside
+the live project; reach out from it.
+`
+}
+
 export async function loadEchoContext(
   supabase: SupabaseClient, userId: string,
 ): Promise<EchoContext> {
-  const [recentTexts, recentProjectIds, recentSubjectIds, resonance, corrections] = await Promise.all([
+  const [recentTexts, recentProjectIds, recentSubjectIds, resonance, corrections, focus] = await Promise.all([
     fetchRecentSparkTexts(supabase, userId),
     fetchRecentSparkProjectIds(supabase, userId),
     fetchRecentSparkSubjectIds(supabase, userId),
     loadResonance(supabase, userId),
     loadCorrections(supabase, userId),
+    loadFocus(supabase, userId),
   ])
-  return { recentTexts, recentProjectIds, recentSubjectIds, resonance, corrections }
+  return { recentTexts, recentProjectIds, recentSubjectIds, resonance, corrections, focus }
 }
 
 function expiresAt(hours: number): string {
@@ -307,6 +360,19 @@ function projectFor(c: Grounded, corpus: Corpus): string | null {
   return c.rows.find(r => r.kind === 'project')?.id ?? c.rows.find(r => r.projectId)?.projectId ?? null
 }
 
+/** Titles of the distinct captures behind a question, for display. */
+export function sourcesOf(rows: CorpusRow[]): { kind: string; title: string }[] {
+  const seen = new Set<string>()
+  const out: { kind: string; title: string }[] = []
+  for (const r of rows) {
+    const title = (r.title || r.text).replace(/\s+/g, ' ').trim().slice(0, 60)
+    if (!title || seen.has(r.captureId)) continue
+    seen.add(r.captureId)
+    out.push({ kind: r.kind, title })
+  }
+  return out.slice(0, 4)
+}
+
 const label = (c: Grounded) => `"${c.question}" <- ${c.rows.map(r => r.ref).join(', ')}`
 
 // ─── The channel ──────────────────────────────────────────────────────
@@ -346,6 +412,7 @@ export async function generateMull(
     recentRefs: corpus.rows.filter(r => recentIds.has(r.id)).map(r => r.ref),
     resonance: echo.resonance,
     corrections: echo.corrections,
+    focus: echo.focus ?? '',
   })
   trace.push(`draft prompt: ${prompt.length} chars`)
 
@@ -429,6 +496,7 @@ export async function generateMull(
       stake: g.stake || undefined,
       subject_id: g.rows[0].id,
       subject_kind: g.rows[0].kind,
+      sources: sourcesOf(g.rows),
       banked: baked.length > 0,
     })
   }

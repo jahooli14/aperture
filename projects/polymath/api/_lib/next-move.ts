@@ -35,6 +35,7 @@ import { MODELS } from './models.js'
 import { PLAIN_ENGLISH_RULES, CLEAR_STEP_RULES, CREATIVE_MOVE_RULES, FIRST_MOVE_RULES } from './plain-english.js'
 import { evidenceHaystack, hasOnlyKnownSpecifics } from './session-grounding.js'
 import { isAdminItem, stripDoneWhen } from './session-items.js'
+import { stripCitationTagsDeep } from './citation-tags.js'
 
 export const RETURNING_AFTER_DAYS = 28
 export const FEEDBACK_LIMIT = 12
@@ -289,7 +290,7 @@ export async function writeNextMove(
       // can spend the budget before writing any JSON.
       thinkingLevel: 'low',
     })
-    const parsed = parseMove(JSON.parse(response), input, evidence, from)
+    const parsed = parseMove(stripCitationTagsDeep(JSON.parse(response)), input, evidence, from)
     if (parsed.move) return { move: parsed.move, finish: parsed.finish }
     console.warn(`[next-move] "${input.title}": ${parsed.rejected} -- falling back`)
     return { move: fallbackMove(input, debriefNext), finish: parsed.finish }

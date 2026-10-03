@@ -25,6 +25,8 @@ export interface StandingQuestionSpark {
   text: string
   project_id: string | null
   projects?: { title: string } | null
+  /** What the question was built from -- what was put next to what. */
+  sources?: { kind: string; title: string }[] | null
 }
 
 /** Every spark is a question now. The one kind that wasn't -- the
@@ -74,7 +76,7 @@ export function StandingQuestion() {
 
   useEffect(() => {
     let cancelled = false
-    ;(async () => {
+    const load = async () => {
       try {
         // AttentionSlot's own fallback chain hits this exact same endpoint
         // on the same home render -- api.get's cache+dedup (apiClient.ts)
@@ -85,10 +87,15 @@ export function StandingQuestion() {
         if (isStandingQuestion(data.spark)) setSpark(data.spark)
         setLoaded(true)
       } catch {
-        // Offline — the question simply isn't shown. It'll still be there.
+        // Offline or slow: show the "give me something to think about"
+        // button anyway, so there's a way to try again.
+        if (!cancelled) setLoaded(true)
       }
-    })()
-    return () => { cancelled = true }
+    }
+    void load()
+    // Onboarding bakes the first question after home may already be open.
+    window.addEventListener('sparkBaked', load)
+    return () => { cancelled = true; window.removeEventListener('sparkBaked', load) }
   }, [])
 
   /** Save their turns and close the card. */
@@ -268,6 +275,15 @@ export function StandingQuestion() {
           </span>
         ))}
       </p>
+
+      {(spark.sources?.length ?? 0) >= 2 && (
+        <p className="text-[12px] mt-2 leading-snug" style={{ color: 'var(--brand-text-secondary)' }}>
+          <span className="text-[11px] uppercase tracking-[0.14em] font-semibold mr-1.5" style={{ color: 'var(--brand-text-muted)' }}>
+            from
+          </span>
+          {spark.sources!.map(x => x.title).filter(Boolean).join(' + ')}
+        </p>
+      )}
 
       {/* Two quiet words, not two buttons. Answering is opt-in — the voice
           box only appears once you've got something to say, so the resting
