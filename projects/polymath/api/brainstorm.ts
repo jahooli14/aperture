@@ -19,6 +19,7 @@ import { generateEmbedding, cosineSimilarity } from './_lib/gemini-embeddings.js
 import { generateText } from './_lib/gemini-chat.js'
 import { PLAIN_ENGLISH_RULES, CHAT_TURN_RULES } from './_lib/plain-english.js'
 import { handlePortfolioChat } from './_lib/portfolio-chat.js'
+import { stripCitationTagsDeep } from './_lib/citation-tags.js'
 
 const supabase = createClient(
   process.env.VITE_SUPABASE_URL || '',
@@ -208,7 +209,7 @@ Return JSON only:
   const raw = await generateText(prompt, { temperature: 0.6, maxTokens: 250, responseFormat: 'json' })
 
   try {
-    const parsed = JSON.parse(raw)
+    const parsed = stripCitationTagsDeep(JSON.parse(raw))
     return {
       reply: (parsed.reply || '').trim(),
       echoes: lakeResults.all.slice(0, 6),
@@ -277,7 +278,7 @@ Return JSON only:
   const raw = await generateText(prompt, { temperature: 0.3, maxTokens: 600, responseFormat: 'json' })
 
   try {
-    const parsed = JSON.parse(raw)
+    const parsed = stripCitationTagsDeep(JSON.parse(raw))
     const clean = (v: unknown) => (typeof v === 'string' && v.trim() && v.trim().toLowerCase() !== 'null' ? v.trim() : '')
     return {
       title: clean(parsed.title),
@@ -359,7 +360,7 @@ Return JSON only:
   const raw = await generateText(prompt, { temperature: 0.82, maxTokens: 800, responseFormat: 'json' })
 
   try {
-    const result = JSON.parse(raw)
+    const result = stripCitationTagsDeep(JSON.parse(raw))
     return {
       ghost: result.ghost || '',
       provocations: Array.isArray(result.provocations) ? result.provocations : [],
@@ -670,7 +671,7 @@ HARD RULES:
   let noteAppend: NoteAppend | null = null
 
   try {
-    const parsed = JSON.parse(raw)
+    const parsed = stripCitationTagsDeep(JSON.parse(raw))
     reply = (parsed.reply || '').trim()
     suggestedTasks = Array.isArray(parsed.suggestedTasks) ? parsed.suggestedTasks : []
     taskOps = Array.isArray(parsed.taskOps) ? parsed.taskOps : []
@@ -755,7 +756,7 @@ Return JSON only:
   const raw = await generateText(prompt, { temperature: 0.8, maxTokens: 200, responseFormat: 'json' })
 
   try {
-    const parsed = JSON.parse(raw)
+    const parsed = stripCitationTagsDeep(JSON.parse(raw))
     return { statement: (parsed.statement || '').trim() }
   } catch {
     // The frontend only renders this beat when statement is truthy

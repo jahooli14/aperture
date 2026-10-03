@@ -19,6 +19,7 @@ import { generateText } from './gemini-chat.js'
 import { PLAIN_ENGLISH_RULES } from './plain-english.js'
 import { sharesSubstantialWording } from './session-grounding.js'
 import { isAdminItem } from './session-items.js'
+import { stripCitationTagsDeep } from './citation-tags.js'
 
 export interface DebriefOpenTask {
   id: string
@@ -224,7 +225,7 @@ export async function debriefSession(closeoutText: string, openTasks: DebriefOpe
       // Mechanical: sorting stated facts into three buckets, not composing.
       thinkingLevel: 'minimal',
     })
-    return sanitizeDebrief(JSON.parse(response), text, openTasks)
+    return sanitizeDebrief(stripCitationTagsDeep(JSON.parse(response)), text, openTasks)
   } catch (e) {
     console.error('[debrief-matcher] failed, continuing with ticks only:', e)
     return EMPTY

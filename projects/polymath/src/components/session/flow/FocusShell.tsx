@@ -24,6 +24,7 @@ export function FocusShell({ children }: { children: ReactNode }) {
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.2 }}
+      data-hides-fab
       className="fixed inset-0 z-[10001] flex flex-col overflow-y-auto"
       style={{
         background: '#000',

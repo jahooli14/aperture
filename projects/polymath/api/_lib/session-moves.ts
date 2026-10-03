@@ -16,6 +16,7 @@ import { MODELS } from './models.js'
 import { PLAIN_ENGLISH_RULES, CLEAR_STEP_RULES, CREATIVE_MOVE_RULES, FIRST_MOVE_RULES } from './plain-english.js'
 import { evidenceHaystack, hasOnlyKnownSpecifics, type Evidence } from './session-grounding.js'
 import { sanitizeRawItems } from './session-items.js'
+import { stripCitationTagsDeep } from './citation-tags.js'
 
 function evidenceBlock(evidence: Evidence[]): string {
   return evidence.length
@@ -93,7 +94,7 @@ async function askForMove(prompt: string): Promise<unknown> {
     // can spend the whole budget before writing any JSON.
     thinkingLevel: 'low',
   })
-  return JSON.parse(response)?.move
+  return stripCitationTagsDeep(JSON.parse(response))?.move
 }
 
 export async function stuckMove(input: StuckInput): Promise<string | null> {

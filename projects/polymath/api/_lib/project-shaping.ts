@@ -26,6 +26,7 @@ import { normalizeTag } from './project-tags.js'
 import { filterGrounded, type Evidence } from './session-grounding.js'
 import { ESTIMATE_MINUTES } from './session-estimate.js'
 import { sanitizeSteps, assembleSteps, MAX_SPINE_STEPS, FIRST_CUT_STEPS, type SpineStep } from './task-spine.js'
+import { stripCitationTagsDeep } from './citation-tags.js'
 
 export interface ShapedProject {
   title: string
@@ -156,7 +157,7 @@ export async function shapeProjectFromDump(
       temperature: 0.3,
       maxTokens: 2000,
     })
-    const parsed = JSON.parse(response)
+    const parsed = stripCitationTagsDeep(JSON.parse(response))
 
     const title = typeof parsed?.title === 'string' ? parsed.title.trim() : ''
     if (!title) return null

@@ -19,6 +19,7 @@ import { useHomeAnswerStore } from './useHomeAnswerStore'
 import { isActiveShaped, recentExcluding, resolveFocusProjectId, warmRow, queueRow } from './focusProjectOps'
 import { useOfflineStore } from './useOfflineStore'
 import { isRetired } from '../utils/projectStatus'
+import { cleanProjectCitations } from '../lib/citationTags'
 
 // The `api` client's fetchWithTimeout rethrows a raw TypeError for a genuine
 // connectivity failure, and wraps its own abort-timeout as ApiError(408) —
@@ -191,6 +192,9 @@ export const useProjectStore = create<ProjectState>()(
 
           // Merge pending local changes to avoid clobbering optimistic updates
           fetchedProjects = await mergePending(fetchedProjects)
+
+          // Strip model citation tags like [e1] saved into older projects
+          fetchedProjects = fetchedProjects.map(cleanProjectCitations)
 
           // Sort once
           fetchedProjects = smartSortProjects(fetchedProjects)
