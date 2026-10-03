@@ -1,5 +1,7 @@
 # Aperture — execution spec
 
+> **Status, Oct 2026:** the home is now one two-sided card (question + outside find on top, live project's one move below). The Guide chat, morphs, composites, the different-thing quota, Fix Queue, heat/digest, Drawer, Timeline and Replay are deleted; sections below that mention them are history. `CLAUDE.md` is the current truth.
+>
 > A **rebuild** spec: it replaces the home surface and the model of what a project is.
 > `WHY.md` is the thesis. This is the machine.
 
@@ -374,17 +376,6 @@ answer is a tap, not words, so the attention slot renders it with an action.
 
 ## How projects change
 
-### Morph
-
-Fragments accumulate; the project recomputes over them. Structure does the thinking,
-the model writes the sentence.
-
-- Cite or stay silent. The link is a quoted capture, never an invented causal story.
-- **One morph per project per 14 days; one project per day; strongest evidence only.**
-  Four projects changed overnight and you trust none of them. The rate limit is the product.
-- A morph is a **proposal**, never a silent rewrite.
-- One-tap *"that's not it"* — and that rejection is itself a capture.
-
 ### Negative signal
 
 Captures must be able to **subtract**: close a slot, shrink scope, fork, or kill. A
@@ -398,33 +389,6 @@ system that only accretes turns forty projects into forty bloated ones.
   one good constraint it found — back into the pool.
 - Never ask the user to confirm a kill. It decays quietly.
 - Voicings are never deleted. Only commitments are revocable.
-
-### Composites
-
-Two projects fuse when the corpus supplies the joint.
-
-The current crossover goes *pair → link*: hand the model two projects and it must invent
-a bridge, so it always does. That's where forced mashups come from. Invert it:
-
-> **joint → pair.** *"Here's a thing you keep saying. Which two projects does it apply to?"*
-
-The model's job shrinks from inventing a connection to applying a stated one, and a bad
-output is visibly bad because the joint is a quote you can check.
-
-Three conditions, all required:
-
-1. The joint is quoted and has **recurred**. Once is a coincidence.
-2. **Both projects are stalled** (as defined above). Fusing two healthy ones is a distraction.
-3. The composite **inherits real material** from both — your timber, your deck dimensions
-   — so it starts specified instead of at zero.
-
-Prefer the **bridge object** (one small thing that unblocks two stalls) over the grand
-fusion. Fusion is reversible: if the composite flops, both parents come back intact.
-
-Best joints come from ideas that died — nothing was at stake when you said them, so
-they're the purest taste signal you have.
-
----
 
 ## The mirror
 
@@ -448,33 +412,20 @@ sessions is a **lying** mirror, which is worse than none.
   One voice reply fixes the month. Never asked at any other time — that would be a nag.
 - The mirror is labelled **logged** hours, never "your hours". It doesn't claim to be truth.
 
-## The different-thing quota
-
-One hour a month on something you wouldn't usually do. The app asks you to book it.
-
-Encouragement, never a debt. Doesn't roll over. Missing it is never mentioned. Exempt
-from the live-project rule by definition. Focus without this collapses into a rut.
-
----
-
 ## The attention budget
 
-Five things in this spec can want the screen on open: today's spark, a morph proposal,
-a composite, the live-project re-ask, and the monthly mirror. Five surfaces competing
-is how "guide, not menu" dies.
-
-**At most one interruption per app open.** Fixed priority:
+**At most one interruption per app open.** Two things can take it, in this order:
 
 1. **A deferred close-out** — the missing input is worth more than anything the app can say.
 2. **The monthly mirror** — once a month, on the first open of the month.
-3. **The live-project re-ask** — only when the evidence rule above has fired.
-4. **A composite** — rare by construction, so it rarely competes.
-5. **A morph proposal.**
-6. **Today's spark** — the default, and what you get on almost every open.
 
-Anything that loses is not queued behind the winner. It waits for another day or is
-dropped. A backlog of unshown prompts becomes a notification tray, which is the thing
-this app exists not to be.
+Everything else lives inside the home card, not on top of it: the standing question
+and the weekly outside find sit on its top half, the one next move on its bottom half.
+Morph proposals, composites and the live-project re-ask were cut (Oct 2026) because
+each was one more thing asking for the same screen.
+
+Anything that loses is not queued behind the winner. It waits or is dropped. A backlog
+of unshown prompts becomes a notification tray, which is the thing this app exists not to be.
 
 ## Interaction rules
 
@@ -555,9 +506,8 @@ than ten good ones earn.
 jobs are absorbed by the session contract and the spark channel, and both are
 gone from the codebase.
 
-**Rebuilt in place, not replaced** — `TodaysAnswerCard` (became the session
-contract under the same name), `EverythingElseMini`, `FeelingPill`. All still
-exist and are still mounted on home.
+**Rebuilt in place, not replaced** — `TodaysAnswerCard` (now the two-sided card),
+`EverythingElseMini`. `FeelingPill` and the Focus chat are deleted.
 
 **Kept, on reflection** — `ThoughtOfTheDay`. An earlier cut of this rebuild
 removed it as "the spark channel already does quotes from your past," and
@@ -576,8 +526,7 @@ either accepting the loss of on-demand generation or building an on-demand
 path into the spark/morph/composite system first. Undecided; don't remove it
 without that decision being made explicitly.
 
-**Retired** — Fix Queue (cron already off), Power Hour, cognitive replay, the Context
-Engine sidebar.
+**Retired** — Fix Queue, Power Hour, cognitive replay, the Context Engine sidebar, the project Guide chat, morphs, composites, the different-thing quota, heat and digests, Drawer, Timeline.
 
 **Kept as-is, outside this rebuild** — bedtime prompts. Different job (priming
 overnight thinking before sleep, not daytime execution) and the owner still wants it.
@@ -607,8 +556,7 @@ the review rotation becomes the live-project re-ask.
    flow when MVS exceeds real windows.
 4. **Spark channel** — nightly bake, blind spot → search → collision, talk-back tracking.
 5. **Slots and fragments** — roles at capture, empty slots as the dormancy model.
-6. **Morph, drift, harvest** — rate-limited proposals, cite-or-silent.
-7. **Joints and composites** — mine recurring joints, invert crossover to joint → pair.
+6. **Drift, harvest** — quiet, no confirmation. (Morph and composites were built, then cut.)
 
 The attention budget is enforced from step 1 and re-checked at every step that adds a
 surface. It is the thing that quietly rots as features land.
