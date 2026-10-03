@@ -20,14 +20,19 @@ export function useModalOpen(): boolean {
   useEffect(() => {
     const check = () => setOpen(document.querySelector(MODAL_SELECTOR) !== null)
     check()
-    const observer = new MutationObserver(check)
+    // Coalesce bursts (animations, toasts) into one lookup per frame.
+    let frame = 0
+    const observer = new MutationObserver(() => {
+      if (frame) return
+      frame = requestAnimationFrame(() => { frame = 0; check() })
+    })
     observer.observe(document.body, {
       childList: true,
       subtree: true,
       attributes: true,
       attributeFilter: ['aria-modal', 'data-hides-fab'],
     })
-    return () => observer.disconnect()
+    return () => { observer.disconnect(); if (frame) cancelAnimationFrame(frame) }
   }, [])
 
   return open

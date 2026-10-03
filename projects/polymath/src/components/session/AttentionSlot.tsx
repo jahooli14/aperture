@@ -95,6 +95,7 @@ function MirrorSlot({ rows, onDismiss }: { rows: MirrorRow[]; onDismiss: () => v
   const [submitting, setSubmitting] = useState(false)
   const maxMinutes = Math.max(1, ...rows.map(r => r.minutes))
 
+  const [failed, setFailed] = useState(false)
   const submitMissing = async () => {
     if (!missingText.trim()) return onDismiss()
     setSubmitting(true)
@@ -104,9 +105,12 @@ function MirrorSlot({ rows, onDismiss }: { rows: MirrorRow[]; onDismiss: () => v
       // last night" lands on the right project with the right duration,
       // not a guessed one.
       await api.post('utilities?resource=log-retro', { text: missingText })
+      onDismiss()
+    } catch {
+      // Keep what they typed and say so, rather than closing on a lost note.
+      setFailed(true)
     } finally {
       setSubmitting(false)
-      onDismiss()
     }
   }
 
@@ -151,6 +155,7 @@ function MirrorSlot({ rows, onDismiss }: { rows: MirrorRow[]; onDismiss: () => v
         >
           {missingText ? 'Add it' : 'All good'}
         </button>
+        {failed && <span className="text-[12px]" style={secondaryTextStyle}>That didn’t send. Try again.</span>}
       </div>
     </div>
   )

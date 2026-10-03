@@ -118,6 +118,11 @@ export function ProjectDetailPage() {
 
   useEffect(() => {
     activeIdRef.current = id
+    // The same page instance serves every project: nothing from the last one
+    // may carry over.
+    setSparkedByMemories([])
+    setSessionOpen(false)
+    setSessionAutoStart(false)
     void loadProjectDetails()
   }, [id, loadProjectDetails])
 
@@ -138,7 +143,7 @@ export function ProjectDetailPage() {
         .eq('target_id', id)
         .eq('connection_type', 'inspired_by')
         .eq('source_type', 'memory')
-      if (!connections?.length) return
+      if (!connections?.length) { setSparkedByMemories([]); return }
       const memoryIds = connections.map((c: { source_id: string }) => c.source_id)
       const { data: memories } = await supabase
         .from('memories')

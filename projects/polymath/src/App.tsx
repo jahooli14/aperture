@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, useLocation, useNavigate } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { useEffect, lazy, Suspense } from 'react'
 import { ToastProvider } from './components/ui/toast'
 import { OfflineIndicator } from './components/OfflineIndicator'
@@ -378,6 +378,8 @@ export default function App() {
                       <Route path="/favourites" element={<AnimatedPage page="lists"><FavouritesPage /></AnimatedPage>} />
                       <Route path="/login" element={<LoginPage />} />
                       <Route path="/share-target" element={<ShareTargetFallback />} />
+                      {/* Old bookmarks (/timeline, /replay, /fixes, /session, /projects/drawer) */}
+                      <Route path="*" element={<Navigate to="/" replace />} />
                     </Routes>
                   </Suspense>
                 </ErrorBoundary>

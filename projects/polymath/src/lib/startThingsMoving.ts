@@ -25,34 +25,55 @@ import { chooseLiveStarter } from './liveStarter'
 /** At most this many projects get a first move written up front. */
 const MAX_FIRST_MOVES = 2
 
+/** One run per page load: a double-tap on "skip" must not un-live what the
+ *  first run just made live (setPriority toggles). */
+let started = false
+
 export async function startThingsMoving(createdProjectIds: string[]): Promise<void> {
+  if (started) return
+  started = true
+
+  // An offline create hands back a placeholder id the server has never seen.
+  const ids = createdProjectIds.filter(id => !id.startsWith('temp-'))
+  if (ids.length === 0) return
+
+  // Judge "already live" from fresh data, not whatever the store held.
+  try { await useProjectStore.getState().fetchProjects() } catch { /* fall back to the store */ }
   const store = useProjectStore.getState()
 
-  const liveId = chooseLiveStarter(createdProjectIds, store.allProjects.filter(p => !createdProjectIds.includes(p.id)))
-  if (liveId) {
+  const liveId = chooseLiveStarter(ids, store.allProjects.filter(p => !ids.includes(p.id)))
+  const target = liveId ? store.allProjects.find(p => p.id === liveId) : null
+  if (liveId && target && !target.is_priority) {
     try { await store.setPriority(liveId) } catch (e) { console.warn('[start-moving] could not make it live:', e) }
   }
 
-  for (const id of createdProjectIds.slice(0, MAX_FIRST_MOVES)) {
-    try {
-      await api.post('utilities?resource=move', { project_id: id, action: 'get' }, { timeout: 60_000 })
-    } catch (e) {
-      console.warn('[start-moving] could not write the first move:', e)
-    }
-  }
-  if (createdProjectIds.length > 0) {
-    try { await useProjectStore.getState().fetchProjects() } catch { /* home refetches anyway */ }
-  }
-
+  // The first question doesn't depend on the moves, so bake it alongside.
   // A thin corpus often has nothing strict enough to ask about, so if the
   // first pass comes back empty, take the looser one: day one is exactly
   // when "nothing worth asking yet" is the wrong answer.
-  try {
-    const first = await api.post('utilities?resource=reroll-spark', {}, { timeout: 120_000 }) as { rerolled?: boolean }
-    if (!first?.rerolled) {
-      await api.post('utilities?resource=reroll-spark', { creative: true }, { timeout: 120_000 })
+  const bake = (async () => {
+    try {
+      const first = await api.post('utilities?resource=reroll-spark', {}, { timeout: 120_000 }) as { rerolled?: boolean }
+      if (!first?.rerolled) {
+        await api.post('utilities?resource=reroll-spark', { creative: true }, { timeout: 120_000 })
+      }
+    } catch (e) {
+      console.warn('[start-moving] could not bake the first question:', e)
     }
-  } catch (e) {
-    console.warn('[start-moving] could not bake the first question:', e)
-  }
+    // Home may already be open and showing no question: tell it to look again.
+    window.dispatchEvent(new Event('sparkBaked'))
+  })()
+
+  const moves = (async () => {
+    for (const id of ids.slice(0, MAX_FIRST_MOVES)) {
+      try {
+        await api.post('utilities?resource=move', { project_id: id, action: 'get' }, { timeout: 60_000 })
+      } catch (e) {
+        console.warn('[start-moving] could not write the first move:', e)
+      }
+    }
+    try { await useProjectStore.getState().fetchProjects() } catch { /* home refetches anyway */ }
+  })()
+
+  await Promise.all([bake, moves])
 }

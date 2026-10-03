@@ -53,8 +53,10 @@ export function OutsideLine() {
   const resolve = async (verdict: 'saved' | 'dismissed') => {
     setBusy(true)
     try {
-      if (verdict === 'saved') await useReadingStore.getState().saveArticle({ url: find.url })
+      // Record the verdict first: if it fails the find stays and a retry
+      // can't save the article twice.
       await api.post('utilities?resource=outside-find', { id: find.id, verdict })
+      if (verdict === 'saved') await useReadingStore.getState().saveArticle({ url: find.url })
       setFind(null)
     } catch {
       // A failed save leaves it on screen, so it can be tried again.
