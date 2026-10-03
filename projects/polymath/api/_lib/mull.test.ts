@@ -112,6 +112,10 @@ describe('checkCandidate', () => {
     expect(checkCandidate(candidate(t), CORPUS).ok).toBe(false)
     expect(checkCandidate(candidate(t), CORPUS, true).ok).toBe(false)
   })
+  it('refuses "but secretly" -- the app cannot see what they secretly want', () => {
+    const t = "You said it only works if it's one take. The book swaps its characters out partway through. I think you preach one take but secretly want a labyrinth."
+    expect(checkCandidate(candidate(t), CORPUS).ok).toBe(false)
+  })
   it('loose skips the shape gates but never the honesty ones', () => {
     expect(checkCandidate(candidate('You said one take. Should the book be one take?'), CORPUS, true).ok).toBe(true)
     expect(checkCandidate(candidate('You said one take at Abbey Road. Should the book be one take?'), CORPUS, true).ok).toBe(false)

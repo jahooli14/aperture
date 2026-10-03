@@ -198,7 +198,7 @@ export function isClosed(questionText: string): boolean {
  */
 const MIND_READING: readonly RegExp[] = [
   /\byou('| a)?re (afraid|scared|terrified|ashamed|anxious|insecure|hiding|running from)\b/i,
-  /\byou (secretly|subconsciously|unconsciously)\b/i,
+  /\b(secretly|subconsciously|unconsciously)\b/i,
   /\bdeep down\b/i,
   /\byou (really|truly|actually) (want|need|fear)\b/i,
   /\bafraid of\b/i,
