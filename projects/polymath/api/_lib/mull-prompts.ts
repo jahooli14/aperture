@@ -29,6 +29,8 @@ export interface DraftContext {
   resonance: string
   /** Premises earlier questions got wrong, in their words. */
   corrections: string
+  /** Live project and latest captures. Context, not corpus. */
+  focus?: string
 }
 
 export function draftPrompt(ctx: DraftContext): string {
@@ -93,7 +95,7 @@ ${goodExamplesBlock()}
 
 BAD -- shapes that have shipped before and failed:
 ${badExamplesBlock()}
-${ctx.resonance}${ctx.corrections}${avoid}${avoidRefs}
+${ctx.resonance}${ctx.corrections}${ctx.focus ?? ''}${avoid}${avoidRefs}
 ${PLAIN_ENGLISH_RULES}
 (Those examples are about voice. The question's shape still follows HOW TO ASK:
 open, never yes/no, never "X, or Y?".)

@@ -112,6 +112,8 @@ export interface EchoContext {
   resonance: string
   /** Premises earlier questions got wrong. Context, never corpus. */
   corrections: string
+  /** Where they are now; see loadFocus. */
+  focus?: string
 }
 
 /**
@@ -221,17 +223,55 @@ mistake.
 `
 }
 
+/**
+ * What they're on right now: the live project and its next move, plus the
+ * last few things they captured. The draft leans toward these so the
+ * question meets them where they are, instead of landing anywhere in the
+ * corpus. Context only -- never quotable, evidence still comes from rows.
+ */
+export async function loadFocus(supabase: SupabaseClient, userId: string): Promise<string> {
+  try {
+    return await readFocus(supabase, userId)
+  } catch (e) {
+    // A garnish: never costs the run.
+    console.warn('[mull] could not read focus:', e instanceof Error ? e.message : String(e))
+    return ''
+  }
+}
+
+async function readFocus(supabase: SupabaseClient, userId: string): Promise<string> {
+  const [{ data: proj }, { data: notes }] = await Promise.all([
+    supabase.from('projects').select('title, metadata')
+      .eq('user_id', userId).eq('status', 'active')
+      .or('state.eq.live,is_priority.eq.true')
+      .order('last_active', { ascending: false }).limit(1),
+    supabase.from('memories').select('title')
+      .eq('user_id', userId).eq('processed', true)
+      .order('created_at', { ascending: false }).limit(5),
+  ])
+  const p = (proj ?? [])[0] as { title?: string; metadata?: { next_move?: { text?: string } } } | undefined
+  const move = p?.metadata?.next_move?.text
+  const recent = (notes ?? []).map((n: any) => n.title).filter((t: unknown): t is string => typeof t === 'string' && !!t)
+  if (!p?.title && recent.length === 0) return ''
+  return `
+WHERE THEY ARE RIGHT NOW (context -- never quote it, evidence still comes from rows):
+${p?.title ? `- Live project: "${p.title}"${move ? `. Next move: ${move}` : ''}\n` : ''}${recent.length ? `- Just captured: ${recent.map(t => `"${t}"`).join('; ')}\n` : ''}Prefer a question that bears on one of these. A strong one about something else
+beats a weak one about these, but if two are equal, take the one that meets them here.
+`
+}
+
 export async function loadEchoContext(
   supabase: SupabaseClient, userId: string,
 ): Promise<EchoContext> {
-  const [recentTexts, recentProjectIds, recentSubjectIds, resonance, corrections] = await Promise.all([
+  const [recentTexts, recentProjectIds, recentSubjectIds, resonance, corrections, focus] = await Promise.all([
     fetchRecentSparkTexts(supabase, userId),
     fetchRecentSparkProjectIds(supabase, userId),
     fetchRecentSparkSubjectIds(supabase, userId),
     loadResonance(supabase, userId),
     loadCorrections(supabase, userId),
+    loadFocus(supabase, userId),
   ])
-  return { recentTexts, recentProjectIds, recentSubjectIds, resonance, corrections }
+  return { recentTexts, recentProjectIds, recentSubjectIds, resonance, corrections, focus }
 }
 
 function expiresAt(hours: number): string {
@@ -346,6 +386,7 @@ export async function generateMull(
     recentRefs: corpus.rows.filter(r => recentIds.has(r.id)).map(r => r.ref),
     resonance: echo.resonance,
     corrections: echo.corrections,
+    focus: echo.focus ?? '',
   })
   trace.push(`draft prompt: ${prompt.length} chars`)
 
