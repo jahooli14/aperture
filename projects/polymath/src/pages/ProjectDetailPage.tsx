@@ -1,165 +1,70 @@
 /**
  * Project Detail Page
- * Full detail view for individual projects
+ *
+ * Two jobs, and nothing else competing with them:
+ *   - a project you're working on: the one next move, Go, and a box to tell
+ *     it what changed (NextMovePanel);
+ *   - a project you've put down: enough to remember what it is and where you
+ *     stopped — what it's about, when you last touched it, your own last
+ *     note, a move that gets you back in — so you can pick it up in a minute.
+ *
+ * Below the move: the finish line if there is one, how far along it is, what
+ * you've made, and a notes space. The Guide chat, the old step list, the
+ * lineage breadcrumb and the "what's pausing this" prompt used to sit here
+ * too; each answered "what next?" a little differently from the card above it.
  */
 
-import { useEffect, useState, useRef, useMemo, useCallback } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Loader2, MoreVertical, Check, X, GripVertical, Target, Star, Sprout, ArrowLeft } from 'lucide-react'
+import { Loader2, MoreVertical, Target, Star, Sprout, ArrowLeft } from 'lucide-react'
 import { useProjectStore } from '../stores/useProjectStore'
 import { useSessionStore } from '../stores/useSessionStore'
 import { SessionContract } from '../components/session/SessionContract'
 import { ProjectNotes } from '../components/projects/ProjectNotes'
 import { ProjectArc } from '../components/projects/ProjectArc'
 import { MadeWall } from '../components/projects/MadeWall'
-import { ProjectPath } from '../components/projects/ProjectPath'
 import { NextMovePanel } from '../components/projects/NextMovePanel'
-import type { Task } from '../components/projects/TaskList'
-import { InlineGuide } from '../components/projects/InlineGuide'
 import { Button } from '../components/ui/button'
 import { useToast } from '../components/ui/toast'
 import { useConfirmDialog } from '../components/ui/confirm-dialog'
-import { handleInputFocus } from '../utils/keyboard'
 import { EditProjectDialog } from '../components/projects/EditProjectDialog'
 import { ProjectCompletionModal } from '../components/projects/ProjectCompletionModal'
 import { CompletionRitual } from '../components/projects/CompletionRitual'
-import { LineageBreadcrumb } from '../components/projects/LineageBreadcrumb'
 import type { Project, Memory } from '../types'
 import { supabase } from '../lib/supabase'
 import { fetchWithTimeout } from '../lib/network'
-import { useMemoryStore } from '../stores/useMemoryStore'
 import { isRetired, GRAVEYARD_STATUS } from '../utils/projectStatus'
 
 import { SubtleBackground } from '../components/SubtleBackground'
 import { ApiError } from '../lib/apiClient'
 
-/**
- * What paused this — a post-it, but only once there's something written on it.
- *
- * This used to render on every unfinished project as an empty amber card
- * saying "Tap if something paused this." That is a warning-coloured box on a
- * project that isn't in trouble, and it's the same anti-pattern the finish
- * line was fixed for: never an empty field on a card, never a gate, never a
- * warning. So when it's empty it's one quiet line of text you can tap; when
- * it holds a real sentence it becomes the paper note it always was, because
- * then it's saying something.
- */
-function BlockerField({ blocker, onSave }: { blocker?: string; onSave: (text: string) => Promise<void> }) {
-  const [editing, setEditing] = useState(false)
-  const [text, setText] = useState(blocker ?? '')
-  const [saving, setSaving] = useState(false)
-
-  const handleSave = async () => {
-    setSaving(true)
-    try { await onSave(text) } finally { setSaving(false); setEditing(false) }
-  }
-
-  if (!blocker && !editing) {
-    return (
-      <button
-        onClick={() => setEditing(true)}
-        className="w-full text-center text-[12px] py-1 transition-opacity hover:opacity-90"
-        style={{ color: 'var(--brand-text-secondary)', opacity: 0.72 }}
-      >
-        or say what's pausing this
-      </button>
-    )
-  }
-
-  // Post-it: shared styling lives in design-tokens.css (.post-it).
-  return (
-    <div className="post-it">
-      <span
-        className="block mb-2 italic text-xs"
-        style={{
-          fontFamily: 'var(--brand-font-body)',
-          color: 'var(--brand-text-secondary)',
-          letterSpacing: '0.02em',
-        }}
-      >
-        what's pausing this?
-      </span>
-      {editing ? (
-        <div className="space-y-2">
-          <textarea
-            autoFocus
-            value={text}
-            onChange={e => setText(e.target.value)}
-            placeholder="One sentence."
-            className="w-full bg-black/20 rounded-xl p-3 resize-none focus:outline-none border text-base"
-            style={{
-              fontFamily: 'var(--brand-font-body)',
-              lineHeight: 1.55,
-              color: 'var(--brand-text-primary)',
-              borderColor: 'var(--glass-border-bold)',
-            }}
-            rows={2}
-            onKeyDown={e => {
-              if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSave() }
-              if (e.key === 'Escape') { setText(blocker ?? ''); setEditing(false) }
-            }}
-          />
-          <div className="flex gap-2 justify-end">
-            <button
-              onClick={() => { setText(blocker ?? ''); setEditing(false) }}
-              className="px-3 py-1.5 text-[11px] rounded-full hover:bg-white/[0.05] transition-colors italic"
-              style={{ fontFamily: 'var(--brand-font-body)', color: 'var(--brand-text-secondary)', opacity: 0.81 }}
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className="px-3.5 py-1.5 text-[11px] font-medium rounded-full transition-all"
-              style={{ background: 'rgba(var(--brand-primary-rgb),0.12)', color: 'rgb(var(--brand-primary-rgb))', border: '1px solid rgba(var(--brand-primary-rgb),0.32)' }}
-            >
-              {saving ? 'Saving…' : 'Save'}
-            </button>
-          </div>
-        </div>
-      ) : (
-        <p
-          className="cursor-pointer hover:opacity-95 transition-opacity text-base"
-          style={{
-            fontFamily: 'var(--brand-font-body)',
-            lineHeight: 1.55,
-            color: 'var(--brand-text-primary)',
-            opacity: 0.92,
-          }}
-          onClick={() => setEditing(true)}
-        >
-          {blocker}
-        </p>
-      )}
-    </div>
-  )
+/** A date, not "3 months ago": the date is a fact about the project, the
+ *  count of months reads as an accusation (SPEC.md: never show time since
+ *  last touched as a number). */
+function lastWorkedOn(iso: string): string {
+  const d = new Date(iso)
+  const sameYear = d.getFullYear() === new Date().getFullYear()
+  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', ...(sameYear ? {} : { year: 'numeric' }) })
 }
 
 export function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
 
-  const { projects, fetchProjects, deleteProject, updateProject, syncProject, setPriority } = useProjectStore()
-  // A session started elsewhere (Focus chat, KeepGoingCard) and still
-  // sitting in its pre-task overview phase, for this exact project. When
-  // this is true, FocusSession's floating sheet renders nothing (see
-  // isOnThisProjectsPage there) so the pending session shows inline here
-  // instead — same state, one place it's presented.
+  const { fetchProjects, deleteProject, updateProject, syncProject, setPriority } = useProjectStore()
   const activeSessionProjectId = useSessionStore(s => s.active?.project_id ?? null)
   const [sessionOpen, setSessionOpen] = useState(false)
   // Go on the move IS the decision; "change it" opens without starting.
   const [sessionAutoStart, setSessionAutoStart] = useState(false)
 
-  // Reactive selection from store
   const project = useProjectStore(state => state.allProjects.find(p => p.id === id))
 
   // "5 mixes so far" on a project whose finish line repeats. Computed here
-  // rather than imported from api/_lib/project-cycles.ts, which is the
-  // source of truth for the shape but is server-side — shipped src code
-  // never reaches across into api/ (only a test does). Kept trivial so the
-  // duplication is a plural rule rather than any real logic.
+  // rather than imported from api/_lib/project-cycles.ts, which is the source
+  // of truth for the shape but is server-side — shipped src code never reaches
+  // across into api/. Kept trivial so the duplication is a plural rule.
   const cycleCount = (() => {
-    const cycle = (project?.metadata as any)?.cycle
+    const cycle = (project?.metadata as { cycle?: { unit?: unknown; done?: unknown } } | undefined)?.cycle
     const unit = typeof cycle?.unit === 'string' ? cycle.unit.trim() : ''
     const done = typeof cycle?.done === 'number' ? cycle.done : 0
     if (!unit || done <= 0) return null
@@ -167,74 +72,62 @@ export function ProjectDetailPage() {
     return `${done} ${plural} so far`
   })()
 
-  const [projectMemories, setProjectMemories] = useState<Memory[]>([])
   const [sparkedByMemories, setSparkedByMemories] = useState<Memory[]>([])
 
-  // Local-first: Only show blocking loader if we don't have the project in cache/store
+  // Local-first: only block on a loader when the project isn't in the store.
   const [loading, setLoading] = useState(!project)
-  const [isUpdating, setIsUpdating] = useState(false)
   const [showMenu, setShowMenu] = useState(false)
-  const [showCreateConnection, setShowCreateConnection] = useState(false)
-
   const [showEditDialog, setShowEditDialog] = useState(false)
   const [showCompletionModal, setShowCompletionModal] = useState(false)
   const [showRetroRitual, setShowRetroRitual] = useState(false)
+  const [showAbout, setShowAbout] = useState(false)
 
-  // Inline guide state
-  const [recentCompletions, setRecentCompletions] = useState<{ id: string; text: string }[]>([])
-  const prevTasksRef = useRef<{ id: string; done: boolean }[]>([])
-  const seededPrevTasksRef = useRef(false)
-
-  // When the Guide applies a change, scroll to and briefly flash the card
-  // it changed — makes the link between the conversation and the artifact
-  // visible instead of the change silently landing off-screen.
-  const [flashTarget, setFlashTarget] = useState<'goal' | 'tasks' | 'note' | null>(null)
-  const handleGuideApplied = useCallback((kind: 'goal' | 'tasks' | 'note') => {
-    const selector = kind === 'goal' ? '[data-finish-line]' : kind === 'tasks' ? '[data-task-list]' : '[data-notes-section]'
-    document.querySelector(selector)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-    setFlashTarget(kind)
-    setTimeout(() => setFlashTarget(prev => (prev === kind ? null : prev)), 1600)
-  }, [])
-
-  const [editingTitle, setEditingTitle] = useState(false)
   const [editingGoal, setEditingGoal] = useState(false)
-  const [tempTitle, setTempTitle] = useState('')
   const [tempGoal, setTempGoal] = useState('')
-  const [showCategoryMenu, setShowCategoryMenu] = useState(false)
-  const titleInputRef = useRef<HTMLInputElement>(null)
   const goalInputRef = useRef<HTMLTextAreaElement>(null)
-  const endGoalInputRef = useRef<HTMLTextAreaElement>(null)
   const { addToast } = useToast()
   const { confirm, dialog: confirmDialog } = useConfirmDialog()
   // The project currently in view. A fetch for a previous project (after
-  // navigating A->B) must not write its notes/memories onto B's page.
+  // navigating A->B) must not write its details onto B's page.
   const activeIdRef = useRef(id)
+
+  const loadProjectDetails = useCallback(async () => {
+    if (!id) return
+    if (!useProjectStore.getState().allProjects.find(p => p.id === id)) setLoading(true)
+    try {
+      const response = await fetchWithTimeout(`/api/projects?id=${id}`)
+      if (!response.ok) throw new Error('Failed to fetch project details')
+      const data = await response.json()
+      if (data.project && activeIdRef.current === id) syncProject(data.project)
+    } catch (error) {
+      console.warn('[ProjectDetail] Fetch failed:', error)
+      // Only say anything if there's cached content to fall back on, and tell
+      // a real offline state from a server failure.
+      if (useProjectStore.getState().allProjects.find(p => p.id === id)) {
+        const offline = typeof navigator !== 'undefined' && !navigator.onLine
+        addToast({
+          title: offline ? 'Offline' : "Couldn't refresh",
+          description: 'Showing cached project content',
+          variant: 'default',
+        })
+      }
+    } finally {
+      setLoading(false)
+    }
+  }, [id, syncProject, addToast])
 
   useEffect(() => {
     activeIdRef.current = id
-    loadProjectDetails()
-  }, [id])
+    void loadProjectDetails()
+  }, [id, loadProjectDetails])
 
-  // A session running on this project when the page mounts is one to
-  // rejoin, not to start again. `active` lives in the store and survives
-  // navigation; `sessionOpen` is local state and doesn't — so opening this
-  // page mid-session showed a "Start session" button under the project
-  // record, and pressing it opened a second session on the same project.
+  // A session running on this project when the page mounts is one to rejoin,
+  // not to start again.
   useEffect(() => {
     if (activeSessionProjectId && activeSessionProjectId === id) setSessionOpen(true)
   }, [activeSessionProjectId, id])
 
-  useEffect(() => {
-    if (project) {
-      if (!seededPrevTasksRef.current) {
-        const tasks = (project.metadata?.tasks as { id: string; done: boolean }[] | undefined) || []
-        prevTasksRef.current = tasks.map(t => ({ id: t.id, done: !!t.done }))
-        seededPrevTasksRef.current = true
-      }
-    }
-  }, [project])
-
-  // Fetch memories that sparked this project (inspired_by connections)
+  // The thought(s) this project grew from.
   useEffect(() => {
     if (!id) return
     const loadSparkedBy = async () => {
@@ -245,82 +138,19 @@ export function ProjectDetailPage() {
         .eq('target_id', id)
         .eq('connection_type', 'inspired_by')
         .eq('source_type', 'memory')
-
       if (!connections?.length) return
-
-      const memoryIds = connections.map((c: any) => c.source_id)
+      const memoryIds = connections.map((c: { source_id: string }) => c.source_id)
       const { data: memories } = await supabase
         .from('memories')
         .select('id, title, body, created_at')
         .in('id', memoryIds)
-
       setSparkedByMemories((memories as Memory[]) || [])
     }
     loadSparkedBy().catch(console.warn)
   }, [id])
 
-  const loadProjectDetails = async () => {
-    if (!id) return
-
-    // If we don't have the project yet, show blocking loader
-    if (!project) {
-      setLoading(true)
-    } else {
-      // If we have it, we're just checking for updates in background
-      setIsUpdating(true)
-    }
-
-    try {
-      // Fetch fresh data from API
-      const response = await fetchWithTimeout(`/api/projects?id=${id}`)
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch project details')
-      }
-
-      const data = await response.json()
-
-      if (data.project) {
-        // Bail if the user navigated to a different project mid-flight — don't
-        // paint this project's notes/memories onto the one now in view.
-        if (activeIdRef.current !== id) return
-        // Sync project to store - this will trigger a re-render because we're subscribed
-        syncProject(data.project)
-
-        // Fetch linked memories (Quick Notes)
-        const { data: linkedMemories } = await supabase
-          .from('memories')
-          .select('*')
-          .contains('source_reference', { id: id, type: 'project' })
-          .order('created_at', { ascending: false })
-
-        if (linkedMemories && activeIdRef.current === id) {
-          setProjectMemories(linkedMemories)
-        }
-      }
-    } catch (error) {
-      console.warn('[ProjectDetail] Fetch failed:', error)
-
-      // Only toast if we have cached data to show. Distinguish a real offline
-      // state from a server / auth failure so the user isn't told they're
-      // offline when they aren't.
-      if (project) {
-        const offline = typeof navigator !== 'undefined' && !navigator.onLine
-        addToast({
-          title: offline ? 'Offline' : "Couldn't refresh",
-          description: 'Showing cached project content',
-          variant: 'default',
-        })
-      }
-    } finally {
-      setLoading(false)
-      setIsUpdating(false)
-    }
-  }
-
   const handleDelete = async () => {
     if (!project) return
-
     const confirmed = await confirm({
       title: `Delete "${project.title}"?`,
       description: 'This action cannot be undone. The project and all its notes will be permanently removed.',
@@ -328,50 +158,14 @@ export function ProjectDetailPage() {
       cancelText: 'Cancel',
       variant: 'destructive',
     })
-
-    if (confirmed) {
-      try {
-        await deleteProject(project.id)
-        addToast({
-          title: 'Project deleted',
-          description: `"${project.title}" has been removed.`,
-          variant: 'success',
-        })
-        navigate('/projects')
-      } catch (error) {
-        addToast({
-          title: 'Failed to delete project',
-          description: error instanceof Error ? error.message : 'Try again in a moment.',
-          variant: 'destructive',
-        })
-      }
-    }
-  }
-
-  const startEditTitle = () => {
-    setTempTitle(project?.title || '')
-    setEditingTitle(true)
-    setTimeout(() => titleInputRef.current?.select(), 0)
-  }
-
-  const saveTitle = async () => {
-    if (!project || !tempTitle.trim()) {
-      setEditingTitle(false)
-      return
-    }
-
-    const oldTitle = project.title
-    setEditingTitle(false)
-
+    if (!confirmed) return
     try {
-      await updateProject(project.id, { title: tempTitle.trim() })
-      addToast({
-        title: 'Title updated',
-        variant: 'success',
-      })
+      await deleteProject(project.id)
+      addToast({ title: 'Project deleted', description: `"${project.title}" has been removed.`, variant: 'success' })
+      navigate('/projects')
     } catch (error) {
       addToast({
-        title: 'Failed to update title',
+        title: 'Failed to delete project',
         description: error instanceof Error ? error.message : 'Try again in a moment.',
         variant: 'destructive',
       })
@@ -379,25 +173,13 @@ export function ProjectDetailPage() {
   }
 
   const saveGoal = async () => {
-    if (!project) {
-      setEditingGoal(false)
-      return
-    }
-
+    if (!project) { setEditingGoal(false); return }
     setEditingGoal(false)
-
     try {
       await updateProject(project.id, {
-        metadata: {
-          ...project.metadata,
-          end_goal: tempGoal.trim(),
-          end_goal_source: 'manual',
-        }
+        metadata: { ...project.metadata, end_goal: tempGoal.trim(), end_goal_source: 'manual' },
       })
-      addToast({
-        title: 'Goal updated',
-        variant: 'success',
-      })
+      addToast({ title: 'Goal updated', variant: 'success' })
     } catch (error) {
       addToast({
         title: 'Failed to update goal',
@@ -407,66 +189,21 @@ export function ProjectDetailPage() {
     }
   }
 
-  const cancelEdit = () => {
-    setEditingTitle(false)
-    setEditingGoal(false)
-  }
-
   const startEditGoal = () => {
-    setTempGoal(project?.metadata?.end_goal || '')
+    setTempGoal((project?.metadata?.end_goal as string | undefined) || '')
     setEditingGoal(true)
     setTimeout(() => goalInputRef.current?.focus(), 0)
   }
 
-
-
-
-  const handleReorder = useCallback((draggedId: string, targetId: string) => {
-    if (!project) return
-
-    const allTasks = (project.metadata?.tasks || []) as Task[]
-    const sortedTasks = [...allTasks].sort((a, b) => a.order - b.order)
-
-    const draggedIndex = sortedTasks.findIndex(t => t.id === draggedId)
-    const targetIndex = sortedTasks.findIndex(t => t.id === targetId)
-
-    if (draggedIndex === -1 || targetIndex === -1) return
-
-    // Reorder tasks
-    const newTasks = [...sortedTasks]
-    const [draggedTask] = newTasks.splice(draggedIndex, 1)
-    newTasks.splice(targetIndex, 0, draggedTask)
-
-    // Update order property
-    const reorderedTasks = newTasks.map((task, index) => ({
-      ...task,
-      order: index
-    }))
-
-    const newMetadata = {
-      ...project.metadata,
-      tasks: reorderedTasks
-    }
-
-    // Store will handle update and notify subscribers
-    updateProject(project.id, { metadata: newMetadata })
-  }, [project, updateProject])
-
-
   const handleStatusChange = async (newStatus: Project['status']) => {
     if (!project) return
-
     try {
       await updateProject(project.id, { status: newStatus })
       if (newStatus === 'completed') {
         setShowCompletionModal(true)
         setShowRetroRitual(true)
       } else {
-        addToast({
-          title: 'Status updated',
-          description: `Project is now ${newStatus}`,
-          variant: 'success',
-        })
+        addToast({ title: 'Status updated', description: `Project is now ${newStatus}`, variant: 'success' })
       }
     } catch (error) {
       addToast({
@@ -477,146 +214,35 @@ export function ProjectDetailPage() {
     }
   }
 
-  const handleCategoryChange = async (newCategory: string) => {
-    if (!project) return
-
-    try {
-      await updateProject(project.id, { type: newCategory })
-      addToast({ title: 'Category updated', variant: 'success' })
-    } catch (error) {
-      addToast({ title: 'Failed to update category', variant: 'destructive' })
-    }
-    setShowCategoryMenu(false)
-  }
-
-  // The one manual way to set which project is "the" priority — the star the
-  // review rotation, the colour-matching and the home answer all build
-  // around. It used to exist only behind a long-press on a project card
-  // (undiscoverable, no visual hint) and not at all on this page, even
-  // though the badge above already showed the state read-only.
-  const handleTogglePriority = async () => {
+  // Which one project is live: the one the home card is built around. The
+  // old "priority" star and the live state are the same thing now; only the
+  // wording was out of date.
+  const handleToggleLive = async () => {
     if (!project) return
     try {
       await setPriority(project.id)
     } catch (err: unknown) {
       const isCapReached = err instanceof ApiError && (err.details as { error?: string } | undefined)?.error === 'focus_cap_reached'
-      if (isCapReached) {
-        addToast({
-          title: 'You already have a priority project',
-          description: 'Remove the current priority first, then promote this one.',
-          variant: 'destructive',
-        })
-      } else {
-        addToast({
-          title: "Couldn't set priority",
-          description: err instanceof Error ? err.message : 'Try again in a moment.',
-          variant: 'destructive',
-        })
-      }
+      addToast(isCapReached
+        ? {
+            title: 'You already have a live project',
+            description: 'Take the current one off live first, then make this one live.',
+            variant: 'destructive',
+          }
+        : {
+            title: "Couldn't change that",
+            description: err instanceof Error ? err.message : 'Try again in a moment.',
+            variant: 'destructive',
+          })
     }
   }
-
-  // The guide can drop a note into the project's content space. Append to the
-  // existing doc (with a blank line) rather than overwrite, then persist.
-  const handleChatAppendNote = async (text: string) => {
-    const fresh = getFreshProject()
-    if (!fresh) return
-    const existing = (fresh.notes_doc || '').trim()
-    const next = existing ? `${existing}\n\n${text.trim()}` : text.trim()
-    await updateProject(fresh.id, { notes_doc: next })
-  }
-
-  // Read the freshest project from the store at call time. Using props here
-  // means a rapid second click reads stale metadata (the React re-render lags
-  // behind the optimistic store update) and the spread `...project.metadata`
-  // clobbers the change from the first click.
-  const getFreshProject = useCallback((): Project | undefined => {
-    return useProjectStore.getState().allProjects.find(p => p.id === id)
-  }, [id])
-
-  const handleChatAddTask = async (taskData: {
-    text: string
-    task_type?: 'ignition' | 'core' | 'shutdown'
-    estimated_minutes?: number
-    reasoning?: string
-  }) => {
-    const fresh = getFreshProject()
-    if (!fresh) return
-    const now = new Date().toISOString()
-    const existingTasks: Task[] = (fresh.metadata?.tasks as Task[] | undefined) || []
-    const newTask: Task = {
-      id: crypto.randomUUID(),
-      text: taskData.text,
-      done: false,
-      created_at: now,
-      order: existingTasks.length,
-      is_ai_suggested: true,
-      ai_reasoning: taskData.reasoning,
-      task_type: taskData.task_type,
-      estimated_minutes: taskData.estimated_minutes,
-    }
-    const updatedTasks = [...existingTasks, newTask]
-    await updateProject(fresh.id, {
-      metadata: {
-        ...fresh.metadata,
-        tasks: updatedTasks,
-        progress: Math.round((updatedTasks.filter(t => t.done).length / updatedTasks.length) * 100) || 0,
-      },
-      last_active: now,
-      updated_at: now,
-    })
-    // debounced enrichment fires automatically via aiEnrichmentManager
-  }
-
-  const handleChatUpdateGoal = async (newGoal: string) => {
-    const fresh = getFreshProject()
-    if (!fresh) return
-    await updateProject(fresh.id, {
-      metadata: {
-        ...fresh.metadata,
-        end_goal: newGoal,
-        end_goal_source: 'guide',
-      },
-    })
-    addToast({
-      title: 'Finish line updated',
-      variant: 'success',
-    })
-  }
-
-  const handleChatUpdateTasks = async (updatedTasks: Task[]) => {
-    const fresh = getFreshProject()
-    if (!fresh) return
-    const now = new Date().toISOString()
-    const newlyCompleted = updatedTasks.filter(
-      t => t.done && !prevTasksRef.current.find(p => p.id === t.id && p.done)
-    )
-    if (newlyCompleted.length > 0) {
-      setRecentCompletions(prev => [...prev, ...newlyCompleted.map(t => ({ id: t.id, text: t.text }))])
-    }
-    prevTasksRef.current = updatedTasks.map(t => ({ id: t.id, done: t.done }))
-    await updateProject(fresh.id, {
-      metadata: {
-        ...fresh.metadata,
-        tasks: updatedTasks,
-        progress: Math.round((updatedTasks.filter(t => t.done).length / updatedTasks.length) * 100) || 0,
-      },
-      last_active: now,
-      updated_at: now,
-    })
-  }
-
-  // Calculate these before ANY early returns to avoid hooks order violation
-  const progress = project?.metadata?.progress || 0
-  const tasks = project?.metadata?.tasks || []
-  const nextTask = tasks.find(t => !t.done)
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-brand-bg" style={{ backgroundColor: 'var(--brand-bg)' }}>
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--brand-bg)' }}>
         <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-[var(--brand-primary)]" style={{ color: "var(--brand-primary)" }} />
-          <p className="text-[var(--brand-text-secondary)]" style={{ color: "var(--brand-text-secondary)" }}>Loading project...</p>
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" style={{ color: 'var(--brand-primary)' }} />
+          <p style={{ color: 'var(--brand-text-secondary)' }}>Loading project...</p>
         </div>
       </div>
     )
@@ -624,16 +250,20 @@ export function ProjectDetailPage() {
 
   if (!project) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-brand-bg" style={{ backgroundColor: 'var(--brand-bg)' }}>
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--brand-bg)' }}>
         <div className="text-center">
-          <h2 className="text-xl font-semibold mb-2 text-[var(--brand-text-primary)]" style={{ color: "var(--brand-text-primary)" }}>Project not found</h2>
-          <Button onClick={() => navigate('/projects')} variant="outline">
-            Back to Projects
-          </Button>
+          <h2 className="text-xl font-semibold mb-2" style={{ color: 'var(--brand-text-primary)' }}>Project not found</h2>
+          <Button onClick={() => navigate('/projects')} variant="outline">Back to Projects</Button>
         </div>
       </div>
     )
   }
+
+  const parked = project.status === 'dormant'
+  const lastTouched = project.last_active || project.updated_at || null
+  const description = project.description?.trim() || ''
+  const endGoal = (project.metadata?.end_goal as string | undefined) || ''
+  const hasCycle = !!(project.metadata as { cycle?: unknown } | undefined)?.cycle
 
   return (
     <div className="min-h-screen page-bottom relative" style={{ backgroundColor: 'var(--brand-bg)' }}>
@@ -641,110 +271,80 @@ export function ProjectDetailPage() {
       <div className="max-w-2xl mx-auto px-5 sm:px-6 pb-4">
         <header className="page-masthead mb-6">
           <div className="page-masthead-text">
-          <button
-            onClick={() => navigate('/projects')}
-            className="flex items-center gap-2 text-[11px] uppercase tracking-[0.1em] text-[var(--brand-text-muted)] hover:text-[var(--brand-text-secondary)] transition-colors"
-          >
-            <ArrowLeft className="h-3.5 w-3.5" />
-            Back
-          </button>
+            <button
+              onClick={() => navigate('/projects')}
+              className="flex items-center gap-2 text-[11px] uppercase tracking-[0.1em] text-[var(--brand-text-muted)] hover:text-[var(--brand-text-secondary)] transition-colors"
+            >
+              <ArrowLeft className="h-3.5 w-3.5" />
+              Back
+            </button>
           </div>
           <div className="page-masthead-actions">
-          <div className="relative flex items-center gap-2">
-            <button
-              onClick={() => setShowMenu(!showMenu)}
-              className="masthead-action press-spring"
-              aria-label="More options"
-            >
-              <MoreVertical className="h-5 w-5" />
-            </button>
+            <div className="relative flex items-center gap-2">
+              <button onClick={() => setShowMenu(!showMenu)} className="masthead-action press-spring" aria-label="More options">
+                <MoreVertical className="h-5 w-5" />
+              </button>
 
-            {showMenu && (
-              <>
-                <div
-                  className="fixed inset-0 z-50"
-                  onClick={() => setShowMenu(false)}
-                />
-                <div className="absolute right-0 top-full mt-2 w-52 max-w-[calc(100vw-2rem)] rounded-2xl p-1.5 z-[60] bg-[#1a1a24] border border-white/[0.08] shadow-2xl">
-                  <button
-                    onClick={() => { setShowMenu(false); setShowEditDialog(true) }}
-                    className="w-full px-3.5 py-3 text-left text-[14px] font-medium transition-colors hover:bg-white/[0.05] rounded-xl min-h-[44px]"
-                    style={{ color: 'var(--brand-text-primary)', opacity: 0.9 }}
-                  >
-                    Edit Details
-                  </button>
-                  {!isRetired(project.status) && (
+              {showMenu && (
+                <>
+                  <div className="fixed inset-0 z-50" onClick={() => setShowMenu(false)} />
+                  <div className="absolute right-0 top-full mt-2 w-52 max-w-[calc(100vw-2rem)] rounded-2xl p-1.5 z-[60] bg-[#1a1a24] border border-white/[0.08] shadow-2xl">
                     <button
-                      onClick={async () => {
-                        setShowMenu(false)
-                        const ok = await confirm({
-                          title: `Send "${project.title}" to the graveyard?`,
-                          description: 'Parks the project. It stops surfacing on Home but stays in the graveyard view — you can revive it later.',
-                          confirmText: 'Send to graveyard',
-                          cancelText: 'Cancel',
-                          variant: 'destructive',
-                        })
-                        if (ok) handleStatusChange(GRAVEYARD_STATUS)
-                      }}
+                      onClick={() => { setShowMenu(false); setShowEditDialog(true) }}
                       className="w-full px-3.5 py-3 text-left text-[14px] font-medium transition-colors hover:bg-white/[0.05] rounded-xl min-h-[44px]"
                       style={{ color: 'var(--brand-text-primary)', opacity: 0.9 }}
                     >
-                      Send to graveyard
+                      Edit details
                     </button>
-                  )}
-                  <button
-                    onClick={() => { setShowMenu(false); handleDelete() }}
-                    className="w-full px-3.5 py-3 text-left text-[14px] font-medium transition-colors hover:bg-red-500/10 rounded-xl text-red-400 min-h-[44px]"
-                  >
-                    Delete
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
+                    {!isRetired(project.status) && (
+                      <>
+                        <button
+                          onClick={() => { setShowMenu(false); handleStatusChange(parked ? 'active' : 'dormant') }}
+                          className="w-full px-3.5 py-3 text-left text-[14px] font-medium transition-colors hover:bg-white/[0.05] rounded-xl min-h-[44px]"
+                          style={{ color: 'var(--brand-text-primary)', opacity: 0.9 }}
+                        >
+                          {parked ? 'Pick this back up' : 'Park it'}
+                        </button>
+                        <button
+                          onClick={async () => {
+                            setShowMenu(false)
+                            const ok = await confirm({
+                              title: `Send "${project.title}" to the graveyard?`,
+                              description: 'It stops surfacing on Home but stays in the graveyard view — you can revive it later.',
+                              confirmText: 'Send to graveyard',
+                              cancelText: 'Cancel',
+                              variant: 'destructive',
+                            })
+                            if (ok) handleStatusChange(GRAVEYARD_STATUS)
+                          }}
+                          className="w-full px-3.5 py-3 text-left text-[14px] font-medium transition-colors hover:bg-white/[0.05] rounded-xl min-h-[44px]"
+                          style={{ color: 'var(--brand-text-primary)', opacity: 0.9 }}
+                        >
+                          Send to graveyard
+                        </button>
+                      </>
+                    )}
+                    <button
+                      onClick={() => { setShowMenu(false); handleDelete() }}
+                      className="w-full px-3.5 py-3 text-left text-[14px] font-medium transition-colors hover:bg-red-500/10 rounded-xl text-red-400 min-h-[44px]"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </header>
 
-        <LineageBreadcrumb project={project} />
+        <h1 className="page-hero mb-3">{project.title}</h1>
 
-        {/* Sparked by — where this came from, same "origin" idea as the
-            lineage breadcrumb above, so it lives here instead of as its
-            own boxed section further down the page. */}
-        {sparkedByMemories.length > 0 && (
-          <div className="mb-3 space-y-1.5">
-            <div className="flex items-center gap-1.5">
-              <Sprout className="h-3 w-3" style={{ color: 'var(--brand-text-secondary)', opacity: 0.69 }} />
-              <span className="text-[11px] font-medium tracking-wide lowercase" style={{ color: 'var(--brand-text-secondary)', opacity: 0.69 }}>sparked by</span>
-            </div>
-            {sparkedByMemories.map(m => (
-              <p key={m.id} className="text-[13px] italic leading-relaxed line-clamp-2 pl-4" style={{ color: 'var(--brand-text-primary)', opacity: 0.81 }}>
-                "{m.body || m.title}"
-              </p>
-            ))}
-          </div>
-        )}
-
-        {/* Day One-style project hero — chapter-cover, not CRM record */}
-        <h1 className="page-hero mb-4">{project.title}</h1>
-        <div
-          aria-hidden
-          className="h-[2px] w-12 mb-6 rounded-full"
-          style={{
-            background: `linear-gradient(to right, rgb(var(--brand-primary-rgb)), rgba(var(--brand-primary-rgb), 0.15))`,
-            boxShadow: `0 0 12px rgba(var(--brand-primary-rgb), 0.35)`,
-          }}
-        />
-
-        {/* Meta row — status + type as inline chips */}
-        <div className="flex flex-wrap items-center gap-2 mb-8 relative">
-          {/* The priority toggle — the only manual way to set which one
-              project everything else (review rotation, colour, the home
-              answer) is built around. A visible, tappable chip, not a
-              read-only badge you had to already know about to find. */}
+        {/* One quiet line of state, then the chips. */}
+        <div className="flex flex-wrap items-center gap-2 mb-4">
           {!isRetired(project.status) && (
             <button
-              onClick={handleTogglePriority}
-              title={project.is_priority ? 'Remove as the priority project' : 'Make this the priority project'}
+              onClick={handleToggleLive}
+              title={project.is_priority ? 'Take this off live' : 'Make this your live project'}
               className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-colors"
               style={
                 project.is_priority
@@ -753,66 +353,14 @@ export function ProjectDetailPage() {
               }
             >
               <Star className={`h-3 w-3 ${project.is_priority ? 'fill-current' : ''}`} />
-              {project.is_priority ? 'Priority' : 'Make it the priority'}
+              {project.is_priority ? 'Live' : 'Make it live'}
             </button>
           )}
-          {/* Active or parked, and tappable to change it. This was a
-              read-only chip on the theory that dormancy is set by
-              inactivity — which left no way anywhere in the app to say "I'm
-              on this now" or "park this", only to finish it or bury it.
-              Completed and graveyard still happen through their own
-              explicit actions, so the toggle is only offered between the
-              two states you actually pick between. */}
-          {(() => {
-            const parked = project.status === 'dormant'
-            const togglable = project.status === 'active' || parked
-            const chipBody = (
-              <>
-                <span
-                  className="h-1.5 w-1.5 rounded-full"
-                  style={{
-                    background:
-                      project.status === 'active' || project.status === 'completed'
-                        ? 'rgb(var(--brand-primary-rgb))'
-                        : 'rgba(255,255,255,0.25)',
-                  }}
-                />
-                <span
-                  className="text-[11px] font-semibold capitalize"
-                  style={{ color: 'var(--brand-text-secondary)', opacity: 0.81 }}
-                >
-                  {parked ? 'Parked' : project.status}
-                </span>
-              </>
-            )
-
-            if (!togglable) {
-              return (
-                <span
-                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg"
-                  style={{ background: 'rgba(255,255,255,0.03)' }}
-                >
-                  {chipBody}
-                </span>
-              )
-            }
-
-            return (
-              <button
-                onClick={() => handleStatusChange(parked ? 'active' : 'dormant')}
-                title={parked ? 'Pick this back up' : 'Park it — stops it surfacing on Home'}
-                className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg transition-colors hover:bg-white/[0.06]"
-                style={{ background: 'rgba(255,255,255,0.03)' }}
-              >
-                {chipBody}
-              </button>
-            )
-          })()}
-          {/* `type` is legacy and is NOT a grouping axis (see CLAUDE.md) --
-              "hobby" on a project page tells you nothing and reads as a
-              category the app cares about. metadata.tags is the real axis
-              — it drives the colour, the resurface ordering and the idea
-              generator's seed pairs — so it's what renders here instead. */}
+          {(parked || project.status === 'completed') && (
+            <span className="px-2.5 py-1 rounded-lg text-[11px] font-semibold" style={{ background: 'rgba(255,255,255,0.03)', color: 'var(--brand-text-secondary)', opacity: 0.85 }}>
+              {parked ? 'Parked' : 'Finished'}
+            </span>
+          )}
           {((project.metadata?.tags as string[] | undefined) ?? []).slice(0, 3).map((tag) => (
             <span
               key={tag}
@@ -822,225 +370,146 @@ export function ProjectDetailPage() {
               {tag}
             </span>
           ))}
+          {lastTouched && (
+            <span className="text-[11px]" style={{ color: 'var(--brand-text-muted)' }}>
+              last worked on {lastWorkedOn(lastTouched)}
+            </span>
+          )}
         </div>
+
+        {/* What it is — for the project you've put down and want to remember. */}
+        {description && (
+          <button
+            onClick={() => setShowAbout(v => !v)}
+            className="text-left w-full mb-4"
+            aria-expanded={showAbout}
+          >
+            <p
+              className={`text-[15px] leading-relaxed ${showAbout ? '' : 'line-clamp-3'}`}
+              style={{ color: 'var(--brand-text-secondary)', fontFamily: 'var(--brand-font-body)' }}
+            >
+              {description}
+            </p>
+          </button>
+        )}
+
+        {/* Where it came from. */}
+        {sparkedByMemories.length > 0 && (
+          <div className="mb-4 space-y-1.5">
+            <div className="flex items-center gap-1.5">
+              <Sprout className="h-3 w-3" style={{ color: 'var(--brand-text-secondary)', opacity: 0.69 }} />
+              <span className="text-[11px] font-medium tracking-wide lowercase" style={{ color: 'var(--brand-text-secondary)', opacity: 0.69 }}>sparked by</span>
+            </div>
+            {sparkedByMemories.slice(0, 2).map(m => (
+              <p key={m.id} className="text-[13px] italic leading-relaxed line-clamp-2 pl-4" style={{ color: 'var(--brand-text-primary)', opacity: 0.81 }}>
+                "{m.body || m.title}"
+              </p>
+            ))}
+          </div>
+        )}
       </div>
 
-      {/* Content */}
       <div className="max-w-2xl mx-auto px-5 sm:px-6 space-y-8">
-              {/* Guide — primary surface. This is what a project's mid-life
-                  view is for: keep the chat that scopes/frames/edits front
-                  and center, not just at project creation. It has no start
-                  button of its own: "Go" on the next move card below is the
-                  one way into a session, so there aren't two buttons that
-                  do the same thing. */}
-              {!sessionOpen && project && (
-                <InlineGuide
-                  project={project}
-                  recentCompletions={recentCompletions}
-                  onAddTask={handleChatAddTask}
-                  onUpdateTasks={handleChatUpdateTasks}
-                  onUpdateGoal={handleChatUpdateGoal}
-                  onAppendNote={handleChatAppendNote}
-                  onApplied={handleGuideApplied}
-                />
-              )}
+        {/* The one session engine, run in place: the same contract the home
+            runs, opened here so you can look around first and then start
+            without leaving. */}
+        {sessionOpen && (
+          <SessionContract
+            project={project}
+            autoStart={sessionAutoStart}
+            onDone={() => { setSessionOpen(false); setSessionAutoStart(false); void fetchProjects() }}
+            onFinish={() => handleStatusChange('completed')}
+          />
+        )}
 
-              {/* The one session engine, run in place. This page used to
-                  show a "session ready" card belonging to the old Power
-                  Hour overlay — a second session flow with its own plan,
-                  its own timer and its own summary. There's one now: the
-                  same contract the home runs, opened here so you can look
-                  around the project first and then start without leaving. */}
-              {sessionOpen && (
-                <SessionContract
-                  project={project}
-                  autoStart={sessionAutoStart}
-                  onDone={() => { setSessionOpen(false); setSessionAutoStart(false); void fetchProjects() }}
-                  onFinish={() => handleStatusChange('completed')}
-                />
-              )}
+        {/* Everything below goes while the contract is open: one thing on
+            screen, exactly as the home clears around a session. */}
+        {!sessionOpen && (
+          <>
+            <NextMovePanel
+              project={project}
+              onGo={() => { setSessionAutoStart(true); setSessionOpen(true) }}
+              onChange={() => { setSessionAutoStart(false); setSessionOpen(true) }}
+              onFinish={() => handleStatusChange('completed')}
+            />
 
-              {/* Everything below is the project's record — the finish
-                  line, the blocker, what sparked it, the whole task list,
-                  the notes. All of it is worth reading BEFORE you sit
-                  down and is a distraction the moment you have. It goes
-                  while the contract is open, exactly as the home page
-                  clears around a session: one thing on screen. */}
-              {!sessionOpen && (<>
-
-              {/* What done looks like — only when the user has actually
-                  said. An empty "What does done look like?" box on every
-                  project is the question this app doesn't ask: plenty of
-                  real projects are ongoing and have no end. Tap the label
-                  under the title to add one if you want it. */}
-              {(project.metadata?.end_goal || editingGoal) && (
+            {/* What done looks like — only when the user has actually said.
+                An empty "What does done look like?" box on every project is
+                the question this app doesn't ask: plenty of real projects are
+                ongoing and have no end. */}
+            {(endGoal || editingGoal) && (
               <div
                 data-finish-line
-                className="p-5 sm:p-6 rounded-2xl transition-all duration-700"
-                style={{
-                  background: flashTarget === 'goal' ? 'rgba(var(--brand-primary-rgb),0.08)' : 'rgba(255,255,255,0.02)',
-                  border: `1px solid ${flashTarget === 'goal' ? 'rgba(var(--brand-primary-rgb),0.4)' : 'rgba(255,255,255,0.05)'}`,
-                  boxShadow: flashTarget === 'goal' ? '0 0 24px rgba(var(--brand-primary-rgb),0.15)' : 'none',
-                }}
+                className="rounded-2xl p-5 cursor-pointer"
+                style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}
+                onClick={!editingGoal ? startEditGoal : undefined}
               >
-                <span className="text-[11px] font-medium tracking-wide mb-2 flex items-center gap-1.5 lowercase" style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.75 }}>
+                <span className="text-[11px] font-medium tracking-wide mb-2 flex items-center gap-1.5 lowercase" style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.85 }}>
                   <Target className="h-3 w-3" /> done when
-                  {project.metadata?.end_goal_source === 'guide' && (
-                    <span style={{ opacity: 0.7 }}>· via guide</span>
-                  )}
                 </span>
-                <div
-                  className="cursor-pointer hover:opacity-80 transition-opacity"
-                  onClick={!editingGoal ? startEditGoal : undefined}
-                >
-                  {editingGoal ? (
-                    <div className="space-y-3">
-                      <textarea
-                        ref={goalInputRef}
-                        value={tempGoal}
-                        onChange={(e) => setTempGoal(e.target.value)}
-                        className="w-full bg-black/30 rounded-xl p-4 text-[15px] sm:text-base font-medium resize-none focus:outline-none text-[var(--brand-text-primary)] leading-relaxed italic font-serif text-center border border-white/[0.08] focus:border-white/[0.15]"
-                        rows={3}
-                        placeholder="What does done look like?"
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); saveGoal() }
-                          else if (e.key === 'Escape') { cancelEdit() }
-                        }}
-                      />
-                      <div className="flex gap-2 justify-end">
-                        <button onClick={(e) => { e.stopPropagation(); cancelEdit() }} className="px-3 py-1.5 text-[11px] font-medium rounded-lg hover:bg-white/[0.05] transition-colors" style={{ color: 'var(--brand-text-secondary)', opacity: 0.75 }}>Cancel</button>
-                        <button onClick={(e) => { e.stopPropagation(); saveGoal() }} className="px-3 py-1.5 text-[11px] font-medium rounded-lg transition-all" style={{ background: 'rgba(var(--brand-primary-rgb),0.1)', color: 'rgb(var(--brand-primary-rgb))' }}>Save</button>
-                      </div>
+                {editingGoal ? (
+                  <div className="space-y-3">
+                    <textarea
+                      ref={goalInputRef}
+                      value={tempGoal}
+                      onChange={(e) => setTempGoal(e.target.value)}
+                      rows={3}
+                      placeholder="What does done look like?"
+                      className="w-full bg-black/20 rounded-xl p-3 resize-none focus:outline-none border text-base"
+                      style={{ color: 'var(--brand-text-primary)', borderColor: 'var(--glass-border-bold)' }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void saveGoal() }
+                        else if (e.key === 'Escape') setEditingGoal(false)
+                      }}
+                    />
+                    <div className="flex gap-2 justify-end">
+                      <button onClick={(e) => { e.stopPropagation(); setEditingGoal(false) }} className="px-3 py-1.5 text-[11px] font-medium rounded-lg hover:bg-white/[0.05]" style={{ color: 'var(--brand-text-secondary)' }}>Cancel</button>
+                      <button onClick={(e) => { e.stopPropagation(); void saveGoal() }} className="px-3 py-1.5 text-[11px] font-medium rounded-lg" style={{ background: 'rgba(var(--brand-primary-rgb),0.12)', color: 'rgb(var(--brand-primary-rgb))' }}>Save</button>
                     </div>
-                  ) : (
-                    <div className="space-y-1.5">
-                      <p className="text-[15px] sm:text-base font-medium leading-relaxed italic font-serif text-center" style={{ color: 'var(--brand-text-primary)', opacity: 0.81 }}>
-                        {project.metadata?.end_goal}
+                  </div>
+                ) : (
+                  <div className="space-y-1.5">
+                    <p className="text-[15px] sm:text-base font-medium leading-relaxed italic font-serif text-center" style={{ color: 'var(--brand-text-primary)', opacity: 0.92 }}>
+                      {endGoal}
+                    </p>
+                    {/* On a repeating project the finish line is ONE of them,
+                        so the count says how far this has actually got. A
+                        number of real things made — never a streak. */}
+                    {cycleCount && (
+                      <p className="text-[11px] uppercase tracking-wide text-center" style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.81 }}>
+                        {cycleCount}
                       </p>
-                      {/* On a repeating project the finish line above is ONE
-                          of them, so the count is what says how far this has
-                          actually got. A number of real things made — never a
-                          streak, and nothing to fall behind on. */}
-                      {cycleCount && (
-                        <p className="text-[11px] uppercase tracking-wide text-center" style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.81 }}>
-                          {cycleCount}
-                        </p>
-                      )}
-                    </div>
-                  )}
-                </div>
+                    )}
+                  </div>
+                )}
               </div>
-              )}
+            )}
 
-              {/* Not shown on a repeating project -- metadata.cycle already
-                  has its own version of this (cycleCount, above), and the
-                  backend never writes milestones for one (they'd double up
-                  the same checkpoint). */}
-              {!(project.metadata as any)?.cycle && (
-                <ProjectArc
-                  milestones={(project.metadata?.milestones as any) || []}
-                  targetDate={project.metadata?.target_date as string | undefined}
-                />
-              )}
+            {/* Not on a repeating project — metadata.cycle has its own version
+                of this (the count above), and the backend never writes
+                milestones for one. */}
+            {!hasCycle && (
+              <ProjectArc
+                milestones={(project.metadata?.milestones as never[] | undefined) || []}
+                targetDate={project.metadata?.target_date as string | undefined}
+              />
+            )}
 
-              <MadeWall projectId={project.id} />
+            <MadeWall projectId={project.id} />
 
-              {/* Paused — why it stalled, and, for a dormant project, the
-                  new framing the system found for it. Used to be two
-                  separately-boxed cards stacked on top of each other; the
-                  angle is really a preface to the blocker question, not a
-                  standalone thing, so they share one card now. */}
-              {project.status !== 'completed' && project.status !== 'graveyard' && (
-                <div className="space-y-3">
-                  {project.metadata?.evolved_description && project.status === 'dormant' && (
-                    <div>
-                      <span className="text-[11px] font-medium tracking-wide block mb-2 lowercase" style={{ color: 'rgba(var(--brand-primary-rgb),0.7)' }}>
-                        a new angle
-                      </span>
-                      <p className="text-[15px] leading-relaxed italic" style={{ color: 'var(--brand-text-primary)', fontFamily: 'var(--brand-font-body)' }}>
-                        {project.metadata.evolved_description as string}
-                      </p>
-                      {project.heat_reason && (
-                        <p className="mt-2 text-[12px] leading-relaxed" style={{ color: 'var(--brand-text-secondary)', opacity: 0.87 }}>
-                          {project.heat_reason}
-                        </p>
-                      )}
-                    </div>
-                  )}
-                  <BlockerField
-                    key={project.id}
-                    blocker={project.metadata?.blocker as string | undefined}
-                    onSave={async (text) => {
-                      await updateProject(project.id, {
-                        metadata: { ...project.metadata, blocker: text || undefined }
-                      })
-                    }}
-                  />
-                </div>
-              )}
-
-              {/* The next move, what you've done, and the old list folded away */}
-              <div
-                data-task-list
-                className="rounded-2xl transition-shadow duration-700"
-                style={{
-                  boxShadow: flashTarget === 'tasks' ? '0 0 0 1px rgba(var(--brand-primary-rgb),0.4), 0 0 24px rgba(var(--brand-primary-rgb),0.15)' : 'none',
-                }}
-              >
-                <NextMovePanel
-                  project={project}
-                  onGo={() => { setSessionAutoStart(true); setSessionOpen(true) }}
-                  onChange={() => { setSessionAutoStart(false); setSessionOpen(true) }}
-                  oldList={
-                <ProjectPath
-                  tasks={project.metadata?.tasks || []}
-                  highlightedTasks={[]}
-                  projectId={project.id}
-                  onUpdate={async (tasks) => {
-                    if (!project) return
-                    const newlyCompleted = tasks.filter(t => t.done && !prevTasksRef.current.find(p => p.id === t.id && p.done))
-                    if (newlyCompleted.length > 0) { setRecentCompletions(prev => [...prev, ...newlyCompleted.map(t => ({ id: t.id, text: t.text }))]) }
-                    prevTasksRef.current = tasks.map(t => ({ id: t.id, done: t.done }))
-                    const now = new Date().toISOString()
-                    try {
-                      await updateProject(project.id, {
-                        metadata: { ...project.metadata, tasks, progress: Math.round((tasks.filter(t => t.done).length / tasks.length) * 100) || 0 },
-                        last_active: now, updated_at: now,
-                      })
-                    } catch (error) { console.error('[ProjectDetail] Update failed:', error) }
-                  }}
-                />
-                  }
-                />
-              </div>
-
-              {/* Notes — the project's freeform content space */}
-              <div
-                data-notes-section
-                className="pb-32 pt-2 rounded-2xl transition-shadow duration-700"
-                style={{
-                  boxShadow: flashTarget === 'note' ? '0 0 0 1px rgba(var(--brand-primary-rgb),0.4), 0 0 24px rgba(var(--brand-primary-rgb),0.15)' : 'none',
-                }}
-              >
-                <ProjectNotes projectId={project.id} notesDoc={project.notes_doc} />
-              </div>
-              </>)}
+            <div data-notes-section className="pb-32 pt-2">
+              <ProjectNotes projectId={project.id} notesDoc={project.notes_doc} />
+            </div>
+          </>
+        )}
       </div>
 
-
-      {/* Confirmation Dialog */}
       {confirmDialog}
 
-      {/* Edit Project Dialog */}
       {project && (
-        <EditProjectDialog
-          project={project}
-          isOpen={showEditDialog}
-          onOpenChange={setShowEditDialog}
-        />
+        <EditProjectDialog project={project} isOpen={showEditDialog} onOpenChange={setShowEditDialog} />
       )}
 
-      {/* Project Completion Modal */}
       {project && (
         <ProjectCompletionModal
           project={project}
@@ -1050,15 +519,10 @@ export function ProjectDetailPage() {
         />
       )}
 
-      {/* Retrospective Ritual — three questions, feeds new sparks */}
+      {/* Retrospective — three questions, feeds new sparks */}
       {project && (
-        <CompletionRitual
-          project={project}
-          isOpen={showRetroRitual}
-          onClose={() => setShowRetroRitual(false)}
-        />
+        <CompletionRitual project={project} isOpen={showRetroRitual} onClose={() => setShowRetroRitual(false)} />
       )}
-
     </div>
   )
 }

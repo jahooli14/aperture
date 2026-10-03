@@ -223,6 +223,9 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       const { move } = await postJson<{ move: SessionMove }>(
         '/api/utilities?resource=move', { project_id: projectId, action: 'get' },
       )
+      // Cache it on the project too, so a project page showing "working out
+      // where to start" can swap in the move the moment it lands.
+      patchCachedMove(projectId, move)
       if (get().moveFor === projectId) set({ move, moveBusy: false })
     } catch (e) {
       console.error('[session] could not get the next move:', e)

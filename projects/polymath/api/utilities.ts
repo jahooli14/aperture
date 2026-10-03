@@ -10,7 +10,6 @@
  *   GET  ?resource=book-search&q=...        — Google Books auto-complete
  *   POST ?resource=analyze                  — Analyse onboarding transcripts → themes, insight, project suggestions
  *   POST ?resource=refine-idea              — Reshape an idea given voice feedback
- *   GET  ?resource=session-brief&projectId= — AI project briefing on open
  *   POST ?resource=onboarding-start         — Bootstrap a coverage grid for the contextual onboarding chat
  *   POST ?resource=onboarding-observe       — Observe-only planner call (no next-question gen) for the Live API hybrid
  *   POST ?resource=onboarding-token         — Mint an ephemeral Live API token for the browser
@@ -47,17 +46,6 @@ import {
 } from './_lib/onboarding/coverage.js'
 import { MODELS } from './_lib/models.js'
 import { PLAIN_ENGLISH_RULES } from './_lib/plain-english.js'
-import {
-  detectSessionBriefPhase,
-  detectSessionBriefMomentum,
-  buildSessionBriefPrompt,
-  moveHeadline,
-  parseSessionBriefResponse,
-  SESSION_BRIEF_PHASE_LABELS,
-  type SessionBrief,
-  type SessionBriefTask,
-  type RecentCapture,
-} from './_lib/session-brief.js'
 import { DEFAULT_IDEA_BRIEF } from './_lib/project-ideas/default-prompt.js'
 import type { CoverageGrid } from '../src/types'
 import { deriveSessionShapes, needsMvsSeed, measuredMvs, type SlotInput, type SessionShape } from './_lib/session-shapes.js'
@@ -66,6 +54,7 @@ import { generateTaskSpine, toStoredTasks, buildEvidenceFromSaid } from './_lib/
 import { stuckMove } from './_lib/session-moves.js'
 import { writeNextMove, addFeedback, readMove, type NextMove } from './_lib/next-move.js'
 import { loadMoveContext, saveMove } from './_lib/next-move-store.js'
+import { readSaid, logMoveDone } from './_lib/move-said.js'
 import { debriefSession, type DebriefOpenTask } from './_lib/debrief-matcher.js'
 import { normalizeTaskOrder } from './_lib/task-order.js'
 import { handleFixQueue } from './_lib/fix-queue/route.js'
@@ -186,9 +175,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return handleResetOnboarding(req, res)
   }
 
-  if (req.method === 'GET' && resource === 'session-brief') {
-    return handleSessionBrief(req, res)
-  }
 
   if (req.method === 'GET' && resource === 'project-ideas') {
     return handleProjectIdeasGet(req, res)
@@ -1113,131 +1099,6 @@ async function handleOnboardingToken(req: VercelRequest, res: VercelResponse) {
     return res.status(500).json({ error: 'Token mint failed' })
   }
 }
-
-// ── Session Brief ──────────────────────────────────────────────────────────
-// AI project briefing — replaces the static "Next Action" card. Prompt
-// building, phase/momentum detection and response parsing all live in
-// session-brief.ts, pure and unit-tested; this handler is just the fetch.
-
-async function handleSessionBrief(req: VercelRequest, res: VercelResponse) {
-  const userId = await getUserId(req)
-  if (!userId) return res.status(401).json({ error: 'Sign in to access your data' })
-
-  const projectId = req.query.projectId as string
-  if (!projectId) return res.status(400).json({ error: 'projectId is required' })
-
-  const supabase = getSupabaseClient()
-  const { data: project, error } = await supabase
-    .from('projects')
-    .select('*')
-    .eq('id', projectId)
-    .eq('user_id', userId)
-    .single()
-
-  if (error || !project) {
-    return res.status(404).json({ error: 'Project not found' })
-  }
-
-  const tasks: SessionBriefTask[] = (project.metadata?.tasks as SessionBriefTask[]) || []
-  const totalTasks = tasks.length
-  const completedTasks = tasks.filter(t => t.done).length
-  const progressPercent = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0
-
-  const now = Date.now()
-  const lastActiveIso = project.last_active || project.created_at
-  const lastActive = new Date(lastActiveIso).getTime()
-  const daysSinceActive = Math.floor((now - lastActive) / (1000 * 60 * 60 * 24))
-  const projectAge = Math.floor((now - new Date(project.created_at).getTime()) / (1000 * 60 * 60 * 24))
-
-  const sevenDaysAgo = now - 7 * 24 * 60 * 60 * 1000
-  const recentCompletions = tasks.filter(
-    t => t.done && t.completed_at && new Date(t.completed_at).getTime() > sevenDaysAgo,
-  )
-
-  const phase = detectSessionBriefPhase(tasks, daysSinceActive, projectAge)
-  const momentum = detectSessionBriefMomentum(daysSinceActive, recentCompletions.length)
-  const incompleteTasks = tasks.filter(t => !t.done).sort((a, b) => a.order - b.order)
-  const recentCompletionTexts = recentCompletions.map(t => t.text)
-
-  // What changed on THIS project since it was last actually worked on --
-  // fragments.ts only attaches a capture here once it's already cleared
-  // ATTACH_MARGIN against every other project, so this is real evidence,
-  // not a guess. See session-brief.ts's header for why this replaced a
-  // raw corpus-wide embedding search.
-  const { data: newFragments } = await supabase
-    .from('fragments')
-    .select('text, created_at')
-    .eq('project_id', projectId)
-    .eq('user_id', userId)
-    .gt('created_at', new Date(lastActive).toISOString())
-    .order('created_at', { ascending: false })
-    .limit(3)
-
-  const recentCaptures: RecentCapture[] = (newFragments || [])
-    .filter(f => f.text)
-    .map(f => {
-      const daysAgo = Math.floor((now - new Date(f.created_at).getTime()) / (1000 * 60 * 60 * 24))
-      const when = daysAgo <= 0 ? 'today' : daysAgo === 1 ? 'yesterday' : `${daysAgo} days ago`
-      return { text: f.text as string, when }
-    })
-
-  // The last time this project's list ran out, judged against its own
-  // stated finish line (project-milestones.ts) -- the real "how close is
-  // this" signal, kept only while it's still the current answer.
-  const milestones = readMilestones(project.metadata)
-  const latestMilestone = milestones[milestones.length - 1] ?? null
-  const lastCheckpoint = latestMilestone && !latestMilestone.reached
-    ? { reason: latestMilestone.reason }
-    : null
-
-  // The move on the card below the Guide -- the Guide has to know it, or
-  // it talks about an empty list while the card shows the real next step.
-  const move = readMove(project.metadata)
-
-  const prompt = buildSessionBriefPrompt({
-    title: project.title,
-    description: project.description,
-    motivation: project.metadata?.motivation,
-    endGoal: project.metadata?.end_goal,
-    phase,
-    momentum,
-    daysSinceActive,
-    completedTasks,
-    totalTasks,
-    progressPercent,
-    incompleteTasks,
-    recentCompletionTexts,
-    recentCaptures,
-    lastCheckpoint,
-    nextMove: move ? { text: move.text, kind: move.kind } : null,
-    lastNote: project.last_closeout_text ?? null,
-  })
-
-  const aiRaw = await generateText(prompt, { temperature: 0.75, maxTokens: 200, responseFormat: 'json' })
-  const { greeting, focusSuggestion, proactiveQuestion } = parseSessionBriefResponse(aiRaw, {
-    firstIncompleteTaskText: move ? moveHeadline(move.text) : incompleteTasks[0]?.text || null,
-    title: project.title,
-  })
-
-  const brief: SessionBrief = {
-    greeting,
-    phase,
-    phaseLabel: SESSION_BRIEF_PHASE_LABELS[phase],
-    focusSuggestion,
-    proactiveQuestion,
-    momentum,
-    completedSinceLastVisit: recentCompletionTexts,
-    stats: {
-      totalTasks,
-      completedTasks,
-      daysSinceActive,
-      progressPercent,
-    },
-  }
-
-  return res.json(brief)
-}
-
 
 // ── Project Ideas — homepage headline surface ─────────────────────────────
 // Cron-driven generator that produces a weekly batch of 3 ranked project
@@ -2247,6 +2108,8 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
     if (action === 'get' && ctx.current) return res.status(200).json({ move: ctx.current })
 
     let feedback = ctx.input.feedback
+    let loggedDone: string | null = null
+    let projectDone = false
     if (action === 'feedback') {
       if (reason !== 'too_big' && reason !== 'wrong_thing') return res.status(400).json({ error: 'reason must be too_big or wrong_thing' })
       if (ctx.current?.kind === 'move') feedback = addFeedback(feedback, reason, ctx.current.text)
@@ -2257,6 +2120,25 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
     } else if (action === 'say') {
       if (!said) return res.status(400).json({ error: 'text required' })
       ctx.input.said = said
+      // Read what they said against the move on the card. If they've done
+      // it, it is logged as done BEFORE the next move is written, so the
+      // writer sees it in the log and moves on instead of repeating it.
+      if (ctx.current?.kind === 'move') {
+        const verdict = await readSaid(ctx.current.text, said, prompt => generateText(prompt, {
+          model: MODELS.SESSION_SHAPE_CHAT, responseFormat: 'json', temperature: 0, maxTokens: 80, thinkingLevel: 'low',
+        }))
+        if (verdict.moveDone) {
+          loggedDone = await logMoveDone(supabase, userId, project_id, ctx.current.text)
+          if (loggedDone) ctx.input.did = [...ctx.input.did, loggedDone]
+        }
+        projectDone = verdict.projectDone
+      }
+      // What they said is theirs and it's about the project: keep it as a
+      // note, the same way an answer to a fork is kept.
+      const { error: sayErr } = await supabase.from('fragments').insert({
+        user_id: userId, project_id, text: said, role: 'material',
+      })
+      if (sayErr) console.warn('[utilities/move] could not keep what they said as a note:', sayErr.message)
     } else if (action === 'answer') {
       if (!said) return res.status(400).json({ error: 'text required' })
       ctx.input.said = said
@@ -2266,7 +2148,7 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
     const from = action === 'get' ? 'start' : action === 'answer' ? 'answer' : 'reshape'
     const { move } = await writeNextMove(ctx.input, from)
     await saveMove(supabase, userId, project_id, move, action === 'feedback' ? feedback : undefined)
-    return res.status(200).json({ move })
+    return res.status(200).json({ move, ...(loggedDone ? { logged: loggedDone } : {}), ...(projectDone ? { project_done: true } : {}) })
   }
 
   // "I'm stuck", mid-session: one move on the step they're on, never a
