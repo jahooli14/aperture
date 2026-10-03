@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   quoteIsReal, resolveEvidence, specifics, unsupportedSpecifics, ordinalSupported,
-  offersAChoice, isClosed, checkCandidate, judgeShips, judgeRank, parseJudgeScores,
+  offersAChoice, isClosed, checkCandidate, judgeShips, judgeRank, parseJudgeScores, readsAnInnerState,
   type Candidate, type JudgeScore,
 } from './mull.js'
 import type { Corpus, CorpusRow } from './mull-corpus.js'
@@ -116,6 +116,25 @@ describe('checkCandidate', () => {
     const t = "You said it only works if it's one take. The book swaps its characters out partway through. I think you preach one take but secretly want a labyrinth."
     expect(checkCandidate(candidate(t), CORPUS).ok).toBe(false)
   })
+  it('refuses a take that says what they value -- the live overreach', () => {
+    const t = "You said it only works if it's one take. The book swaps its characters out partway through. I think you value starting things far more than finishing them."
+    expect(checkCandidate(candidate(t), CORPUS)).toMatchObject({ ok: false, reason: expect.stringMatching(/feel or value/) })
+    expect(checkCandidate(candidate(t), CORPUS, true).ok).toBe(false)
+  })
+  it('refuses "let yourself" -- permission is a motive', () => {
+    const t = "You said it only works if it's one take. The book swaps its characters out partway through. I think you only let yourself do one take."
+    expect(checkCandidate(candidate(t), CORPUS).ok).toBe(false)
+  })
+  it('refuses opening on a plan, as the live "For Going Analogue, you planned..." did', () => {
+    const t = "For the book, you planned to swap characters out partway through. You said it only works if it's one take. I think the book is not one take."
+    expect(checkCandidate(candidate(t), CORPUS)).toMatchObject({ ok: false, reason: 'opens by reciting a plan' })
+  })
+  it('refuses "probably" in the claim, and a claim long enough to be a theory', () => {
+    const base = "You said it only works if it's one take. The book swaps its characters out partway through. "
+    expect(checkCandidate(candidate(`${base}I think the book is probably not one take.`), CORPUS).ok).toBe(false)
+    const long = `${base}I think the book is the one place where you keep going back and changing what you already did before anyone reads it.`
+    expect(checkCandidate(candidate(long), CORPUS)).toMatchObject({ ok: false, reason: expect.stringMatching(/theory/) })
+  })
   it('loose skips the shape gates but never the honesty ones', () => {
     expect(checkCandidate(candidate('You said one take. Should the book be one take?'), CORPUS, true).ok).toBe(true)
     expect(checkCandidate(candidate('You said one take at Abbey Road. Should the book be one take?'), CORPUS, true).ok).toBe(false)
@@ -152,5 +171,19 @@ describe('the judge', () => {
       { n: 9, revelation: 8, truth: 8, specific: 8, answerable: 8, verdict: 'ship' },
     ] }, 3)
     expect([...scores.keys()]).toEqual([1])
+  })
+})
+
+describe('readsAnInnerState', () => {
+  it('lets a want through when it is their own word', () => {
+    expect(readsAnInnerState('I think you want a table you never have to clear.', ['I want the tools out all the time'])).toBeNull()
+    expect(readsAnInnerState("I think you'd rather keep it.", ["I'd rather not show anyone"])).toBeNull()
+  })
+  it('names one that is not', () => {
+    expect(readsAnInnerState('I think you want an audience.', ['four songs demoed, never sent'])).toBe('you want')
+    expect(readsAnInnerState("I think you don't care about the ending.", ['wrote the ending twice'])).toBe('you care about')
+  })
+  it('leaves behaviour alone', () => {
+    expect(readsAnInnerState('I think your projects stop the moment someone could see them.', [])).toBeNull()
   })
 })

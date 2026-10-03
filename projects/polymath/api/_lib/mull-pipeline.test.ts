@@ -344,6 +344,40 @@ describe('what the corpus lets in', () => {
   })
 })
 
+describe('what the judge and the next draft are told', () => {
+  beforeEach(() => { generateText.mockReset() })
+
+  it("hands the drafter's own doubt to the judge", async () => {
+    respond({ draft: [ONE_TAKE], judge: [ship(1)] })
+    await bakeMull(fakeSupabase(corpus()).client, 'u1')
+    const judgeSent = generateText.mock.calls.map(c => c[0] as string).find(p => p.includes('You are the last check'))!
+    expect(judgeSent).toContain("THE WRITER'S OWN DOUBT: Music and prose may just work differently for them.")
+  })
+
+  it('tells the next draft which takes got a bare "no"', async () => {
+    const data = corpus() as any
+    data.sparks = [{
+      user_id: 'u1', id: 's1', type: 'mull', text: 'I think the greenhouse is where the book gets written.',
+      stance: 'no', answered_at: ago(1), response_memory_id: null, shown_at: ago(2), expires_at: ago(-2),
+      dismissed_at: null, subject_id: null, project_id: null, created_at: ago(3),
+    }]
+    respond({ draft: [] })
+    await bakeMull(fakeSupabase(data).client, 'u1')
+    expect(draftPromptSent()).toMatch(/THEY TAPPED AN ANSWER[\s\S]*- no: "I think the greenhouse is where the book gets written\."/)
+  })
+
+  it('leaves taps out, without failing, before the stance column exists', async () => {
+    const data = corpus() as any
+    data.sparks = [{
+      user_id: 'u1', id: 's1', type: 'mull', text: 'An old question?', answered_at: ago(1), response_memory_id: null,
+      shown_at: ago(2), expires_at: ago(-2), dismissed_at: null, subject_id: null, project_id: null, created_at: ago(3),
+    }]
+    respond({ draft: [] })
+    await bakeMull(fakeSupabase(data).client, 'u1')
+    expect(draftPromptSent()).not.toContain('THEY TAPPED')
+  })
+})
+
 describe('recent questions', () => {
   beforeEach(() => { generateText.mockReset() })
 

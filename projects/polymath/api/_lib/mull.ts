@@ -36,6 +36,9 @@ export interface Candidate {
   evidence: Evidence[]
   /** The pattern, in one private sentence. Never shown to the user. */
   noticing: string
+  /** The drafter's own best case against it. Handed to the judge, which
+   *  is otherwise left to find the weak spot alone. */
+  doubt?: string
   /** What they would do differently once they have answered. */
   stake: string
   project: string | null
@@ -204,10 +207,41 @@ const MIND_READING: readonly RegExp[] = [
   /\bafraid of\b/i,
 ]
 
+/**
+ * What they value, love, want or would rather -- an inner state, said about
+ * them. The live failure: "I think you value conceiving simple physical
+ * projects far more than executing them." The judge killed it as overreach,
+ * but only after it had cost a slot. A take is about what they make, keep,
+ * drop and say. The one exception is their own word: "I want the tools out"
+ * lets a take say "you want a table you never have to clear".
+ */
+const INNER_STATE = /\byou(?:'d| would| really| secretly| actually| only| just| do not| don't| never)? (value|values|care about|crave|long for|yearn|fear|love|hate|enjoy|prefer|resent|want|desire|dread|rather)\b/i
+/** Permission to themselves is a motive however it is phrased. */
+const SELF_PERMISSION = /\b(let|allow|give) yourself\b/i
+
+/** An inner state the take puts on them that their own words don't. */
+export function readsAnInnerState(text: string, evidence: string[]): string | null {
+  if (SELF_PERMISSION.test(text)) return SELF_PERMISSION.source
+  const m = INNER_STATE.exec(text)
+  if (!m) return null
+  // Their own word, any tense: "love" is supported by "loved", "rather" by "I'd rather".
+  const verb = m[1].split(' ')[0].replace(/s$/, '')
+  const said = new RegExp(`\\b${verb}`, 'i')
+  return evidence.some(e => said.test(e)) ? null : `you ${m[1]}`
+}
+
+/** Opening on a plan is reciting it: "For the book, you planned to...". A
+ *  plan may be the second half of a contrast, never the first thing said. */
+const OPENS_ON_A_PLAN = /^(for [^.,]{1,60},\s*)?(you (planned|plan to|intend|intended|were going to|said you would|said you'd|meant to)|the plan (is|was)|your plan)\b/i
+
+/** The claim is one short sentence; the prompt asks for under 15 words. A
+ *  long one is a theory with clauses, which is the analyst voice again. */
+export const MAX_CLAIM_WORDS = 20
+
 /** A hedge in the claim itself. A take nobody could be wrong about gets no
  *  reaction. Checked on the last sentence only, so a quoted "maybe" from
  *  their own note is not blamed on us. */
-const HEDGES = /\b(perhaps|maybe|might be|could be|may be|seems? to|sort of|kind of)\b/i
+const HEDGES = /\b(perhaps|maybe|probably|possibly|might be|could be|may be|seems? to|sort of|kind of|in a way|i wonder)\b/i
 
 /** The last sentence: the claim itself, after the facts laid next to it. */
 export function claimSentence(text: string): string {
@@ -251,14 +285,19 @@ export function checkCandidate(
   if (voice.length > 0) return { ok: false, reason: voice[0] }
   const mind = MIND_READING.find(re => re.test(text))
   if (mind) return { ok: false, reason: `reads a feeling or motive nobody gave: ${mind.source}` }
+  const inner = readsAnInnerState(text, rows.map(r => r.text))
+  if (inner) return { ok: false, reason: `says what they feel or value, in words they never used: ${inner}` }
 
   if (!loose) {
     const explainer = EXPLAINER_PATTERNS.find(re => re.test(text))
     if (explainer) return { ok: false, reason: `explains the pattern instead of showing it: ${explainer.source}` }
+    if (OPENS_ON_A_PLAN.test(text)) return { ok: false, reason: 'opens by reciting a plan' }
     // Yes or no is the whole point of a take, so this only bites a question.
     if (text.includes('?') && isClosed(text)) return { ok: false, reason: 'answerable with yes or no' }
-    if (!text.includes('?') && HEDGES.test(claimSentence(text))) {
-      return { ok: false, reason: 'hedges the claim, so nobody can disagree with it' }
+    if (!text.includes('?')) {
+      const claim = claimSentence(text)
+      if (HEDGES.test(claim)) return { ok: false, reason: 'hedges the claim, so nobody can disagree with it' }
+      if (claim.split(/\s+/).length > MAX_CLAIM_WORDS) return { ok: false, reason: 'the claim is a theory, not one short sentence' }
     }
   }
 

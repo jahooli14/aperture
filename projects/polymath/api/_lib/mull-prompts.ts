@@ -110,6 +110,16 @@ HOW TO WRITE IT
 - Make the claim about what they make, keep, drop or say. Never about how they
   feel or why: you can't see inside them. "I think you stop the moment someone
   else could see it" is about what happens. "You're afraid of being seen" is not.
+- No "you value", "you love", "you care about", "you want", "you'd rather",
+  "you let yourself" -- unless that exact word is in their notes. "I think you
+  value ideas more than making them" is a motive. Say what happens instead:
+  "I think nothing you start in an evening gets a second evening."
+- Claims that work: "I think X stops when Y." "I think you only finish what Z."
+  "I think A is really B." "Nothing you make looks like what you rate highest."
+- A collision is a claim too. Not "you could make X for Y" but "I think the
+  half-bound book is her wedding present." They can still say no.
+- Each fact has to carry the claim. Three facts that don't point the same way
+  are a list, not a pattern -- drop the one that doesn't.
 - Don't explain it. No "which suggests", "this shows", "both are about", "it
   seems like". Name the pattern, don't theorise about it.
 - Claim only what the rows support. If they could answer "that's not what I
@@ -161,7 +171,8 @@ function rowForJudge(r: CorpusRow): string {
 
 export function judgePrompt(candidates: Grounded[], loose: boolean): string {
   const list = candidates.map((c, i) =>
-    `#${i + 1}\n  SHOWN TO THEM: "${c.question}"\n  CLAIMED PATTERN: ${c.noticing || '(none given)'}\n  BUILT ON:\n${c.rows.map(rowForJudge).join('\n')}`,
+    `#${i + 1}\n  SHOWN TO THEM: "${c.question}"\n  CLAIMED PATTERN: ${c.noticing || '(none given)'}\n` +
+    `  THE WRITER'S OWN DOUBT: ${c.doubt || '(none given)'}\n  BUILT ON:\n${c.rows.map(rowForJudge).join('\n')}`,
   ).join('\n\n')
 
   return `You are the last check before a take reaches one person's home screen,
@@ -172,24 +183,29 @@ built from.
 ${list}
 
 Score each from 0 to 10:
-- "revelation": would reacting to it tell them something about their own work
-  they haven't put into words? 10 = they'd stop walking. 0 = they already know,
-  or it's a summary of one note.
+- "revelation": would reacting to it show them something about their own work
+  or life they haven't put together -- a pattern, or two things of theirs that
+  belong together? 10 = they'd stop walking. 0 = they already know, or it's a
+  summary of one note.
 - "truth": is the pattern really in those notes, read in full? Or is it two
-  things that merely share a word, or a note read wrong? 0 = forced or false.
+  things that merely share a word, or a note read wrong? Weigh the writer's own
+  doubt: if it's right, truth is low. 0 = forced or false.
 - "specific": could only this person be shown this? 0 = it fits anyone.
 - "answerable": could they react at once AND have something to say after? 0 = a
   platitude nobody could disagree with, or a riddle.
-- "overreach": true if it says more than the notes show: a feeling, a motive, a
-  cause nobody gave, or a plan read back as if it were something they did. An
-  overreaching take is always a kill, however sharp.
+- "overreach": true if it says more than the notes show: a feeling, a motive or
+  value put on them ("you value", "you're scared"), a reason WHY they did
+  something that nobody gave, or a plan read back as if it were something they
+  did. Naming a pattern in what happened ("stops whenever someone could see
+  it") is not overreach -- that is the take's whole job, and it is allowed to
+  be wrong. An overreaching take is always a kill, however sharp.
 Kill it outright if all its evidence is one project's own plan or next steps,
 even from two notes: that is a summary, not something side by side.
 Then "verdict": "ship" or "kill", and "reason": one plain sentence.
 
 ${loose
     ? 'This is a second pass after nothing better was found, so ship anything true and reactable -- but never anything false.'
-    : 'Be harsh. Most candidates should be killed. They would rather see nothing than a clever-sounding claim that doesn\'t land.'}
+    : 'Be harsh: they would rather see nothing than a clever-sounding claim that doesn\'t land. But judge each on its own. A take that is true, specific and sharp ships, even if it is the only one here.'}
 
 JSON only:
 { "scores": [ { "n": 1, "revelation": 0, "truth": 0, "specific": 0, "answerable": 0, "overreach": false, "verdict": "kill", "reason": "" } ] }`

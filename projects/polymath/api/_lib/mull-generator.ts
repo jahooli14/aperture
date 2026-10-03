@@ -128,7 +128,7 @@ export interface EchoContext {
  * that worked on them.
  */
 async function loadResonance(supabase: SupabaseClient, userId: string): Promise<string> {
-  const [{ data: answered }, { data: ignored }] = await Promise.all([
+  const [{ data: answered }, { data: ignored }, { data: tapped, error: tapErr }] = await Promise.all([
     supabase
       .from('sparks')
       .select('text, response_memory_id')
@@ -147,6 +147,19 @@ async function loadResonance(supabase: SupabaseClient, userId: string): Promise<
       .lt('expires_at', new Date().toISOString())
       .order('shown_at', { ascending: false })
       .limit(6),
+    // A bare tap on a take: yes, no or sort of, with nothing said. The
+    // cheapest answer there is, and the most common -- a "no" is a take
+    // that was wrong about them, which the next draft should know.
+    // `stance` arrives with 20261004_spark_stance.sql; before that this
+    // query fails and is simply left out.
+    supabase
+      .from('sparks')
+      .select('text, stance')
+      .eq('user_id', userId)
+      .not('answered_at', 'is', null)
+      .is('response_memory_id', null)
+      .order('answered_at', { ascending: false })
+      .limit(8),
   ])
 
   const memoryIds = (answered ?? []).map((s: any) => s.response_memory_id).filter(Boolean)
@@ -173,14 +186,26 @@ async function loadResonance(supabase: SupabaseClient, userId: string): Promise<
     .filter(Boolean)
 
   const missed = (ignored ?? []).map((s: any) => `  - "${s.text}"`)
-  if (landed.length === 0 && missed.length === 0) return ''
+  const taps = tapErr ? [] : tapLines(tapped ?? [])
+  if (landed.length === 0 && missed.length === 0 && taps.length === 0) return ''
 
   return `
-${landed.length > 0 ? `THESE ONES WORKED — they stopped and answered out loud:\n${landed.join('\n\n')}\n` : ''}${missed.length > 0 ? `\nTHESE ONES DIDN'T — read, and left to expire without a word:\n${missed.join('\n')}\n` : ''}
+${landed.length > 0 ? `THESE ONES WORKED — they stopped and answered out loud:\n${landed.join('\n\n')}\n` : ''}${missed.length > 0 ? `\nTHESE ONES DIDN'T — read, and left to expire without a word:\n${missed.join('\n')}\n` : ''}${taps.length > 0 ? `\nTHEY TAPPED AN ANSWER, NO WORDS. "no" means the claim was wrong about them -- don't make it again in new words:\n${taps.join('\n')}\n` : ''}
 Whatever made the first group worth answering is what matters. Not their
 subject or their wording -- what they put in front of the person, and how sharp
 the claim was.
 `
+}
+
+const STANCE_WORDS: Record<string, string> = { yes: 'yes', no: 'no', sort_of: 'sort of' }
+
+/** One line per tapped take: what they tapped, then the take. A row with
+ *  no stance (an old question, or one answered before the column) says
+ *  nothing about agreement and is left out. */
+export function tapLines(rows: { text?: unknown; stance?: unknown }[]): string[] {
+  return rows
+    .filter(s => typeof s.text === 'string' && typeof s.stance === 'string' && STANCE_WORDS[s.stance])
+    .map(s => `  - ${STANCE_WORDS[s.stance as string]}: "${s.text}"`)
 }
 
 /**
@@ -304,6 +329,7 @@ export function readCandidates(raw: unknown): Candidate[] {
     // model that falls back to the old shape loses nothing.
     question: str(c?.take) || str(c?.question),
     noticing: str(c?.noticing),
+    doubt: str(c?.doubt) || undefined,
     stake: str(c?.stake),
     project: str(c?.project) || null,
     evidence: Array.isArray(c?.evidence)
