@@ -340,7 +340,7 @@ export function StandingQuestion() {
           >
             {followUp}
           </p>
-          <VoiceInput onTranscript={setFollowUpText} maxDuration={30} />
+          <VoiceInput onTranscript={t => setFollowUpText(c => (c ? `${c} ${t}` : t))} maxDuration={120} />
           {/* Talk or type — voice being the only way in left this
               unanswerable without a mic. */}
           <textarea
@@ -378,7 +378,7 @@ export function StandingQuestion() {
 
       {answering && !followUp && (
         <div className="mt-2.5">
-          <VoiceInput onTranscript={setText} maxDuration={30} />
+          <VoiceInput onTranscript={t => setText(c => (c ? `${c} ${t}` : t))} maxDuration={120} />
           {/* Talk or type — voice being the only way in left this
               unanswerable without a mic. */}
           <textarea

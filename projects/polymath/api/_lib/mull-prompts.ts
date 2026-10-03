@@ -52,6 +52,16 @@ Find the few things in here they can't see from inside, and ask about each one
 so that they see it. The question sits on their home screen for four days. They
 carry it around and answer it out loud on a walk.
 
+WHAT COUNTS AS EVIDENCE
+- Things they did or said they felt: what stalled, what they kept, what they
+  rated, a line said in passing, how they described something then and now.
+- Plans, next steps and intentions ("I'm going to...", "the plan is...") are
+  what they mean to do, not what they showed. Use one only as the other half
+  of a contrast with what actually happened. Never build on a plan alone.
+- Reach across places. At least two of the rows must come from different
+  projects, or from a project and something outside it (a note, a list, an
+  article). Two notes from one project's own plan are one thought.
+
 WHAT A REVELATION IS
 - The answer is already in them, but they have never said it, even to themselves.
 - It only shows when two or more things they captured -- often months apart,
@@ -87,6 +97,14 @@ HOW TO ASK
   for?", "what would X look like if it had to be like Y?".
 - The question sentence starts with What, Which, Who, Where, When, Why or How.
   Never yes/no. Never "X, or Y?".
+- Don't smuggle in a claim. The question may only assume what the quotes say.
+  "What part of the tension belongs strictly to your voice?" assumes the tension
+  isn't already theirs, which nobody said. If they could answer "that's not
+  true", rewrite it.
+- Don't open with "For <project>, you planned..." or "You said you would...".
+  Open with the thing that happened, or the line they said.
+- They will answer out loud, walking, with no screen. Ask one thing, in words
+  they'd use. No clause-stacked sentences, no jargon of the project.
 - Talk about the work. You can't see whether they are avoiding, scared or stuck.
 - Every name, number, date and title in the question must be in the rows you
   cite. Don't count things you haven't counted.
@@ -146,8 +164,12 @@ Score each from 0 to 10:
 - "truth": is the pattern really in those notes, read in full? Or is it two
   things that merely share a word, or a note read wrong? 0 = forced or false.
 - "specific": could only this person be asked this? 0 = anyone could.
+- "loaded": does the question assume something the notes never say, or push
+  them to defend themselves? true if so. A loaded question is always a kill.
 - "answerable": can they answer it from their own life in a few minutes of
   thought? 0 = a riddle, or a quiz answered in five seconds.
+Kill it outright if all its evidence is one project's own plan or next steps
+read back, even from two notes: that is a summary, not something side by side.
 Then "verdict": "ship" or "kill", and "reason": one plain sentence.
 
 ${loose
@@ -155,5 +177,5 @@ ${loose
     : 'Be harsh. Most candidates should be killed. They would rather see nothing than a clever-sounding question that doesn\'t land.'}
 
 JSON only:
-{ "scores": [ { "n": 1, "revelation": 0, "truth": 0, "specific": 0, "answerable": 0, "verdict": "kill", "reason": "" } ] }`
+{ "scores": [ { "n": 1, "revelation": 0, "truth": 0, "specific": 0, "answerable": 0, "loaded": false, "verdict": "kill", "reason": "" } ] }`
 }

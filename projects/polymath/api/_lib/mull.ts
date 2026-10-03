@@ -239,6 +239,8 @@ export interface JudgeScore {
   truth: number
   specific: number
   answerable: number
+  /** Assumes something the notes never say. Absent reads as not loaded. */
+  loaded?: boolean
   verdict: 'ship' | 'kill'
   reason: string
 }
@@ -251,6 +253,7 @@ export interface JudgeScore {
  * when its scores are generous.
  */
 export function judgeShips(s: JudgeScore, loose = false): boolean {
+  if (s.loaded) return false
   if (loose) return s.truth >= 6 && s.answerable >= 5
   return s.verdict === 'ship' && s.truth >= 7 && s.revelation >= 7 && s.answerable >= 6
 }
@@ -274,6 +277,7 @@ export function parseJudgeScores(raw: unknown, count: number): Map<number, Judge
     const [revelation, truth, specific, answerable] = scores as number[]
     out.set(n, {
       n, revelation, truth, specific, answerable,
+      loaded: s.loaded === true,
       verdict: s.verdict === 'ship' ? 'ship' : 'kill',
       reason: typeof s.reason === 'string' ? s.reason : '',
     })

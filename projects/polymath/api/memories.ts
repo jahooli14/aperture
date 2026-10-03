@@ -11,6 +11,7 @@ import { generateText } from './_lib/gemini-chat.js'
 import { tidyThought } from './_lib/tidy-thought.js'
 import { getCachedInsights } from './_lib/project-genesis.js'
 import { MODELS } from './_lib/models.js'
+import { thinkingFragment } from './_lib/gemini-thinking.js'
 import { CaptureMemoryBody, CaptureTitleResponse, validate, tryValidate } from './_lib/schemas.js'
 import { PLAIN_ENGLISH_RULES } from './_lib/plain-english.js'
 
@@ -2027,13 +2028,24 @@ async function handleMediaAnalysis(req: VercelRequest, res: VercelResponse) {
     const base64Data = fileData.toString('base64')
 
     // Use Gemini 3 Flash
-    const model = genAI.getGenerativeModel({ model: MODELS.DEFAULT_CHAT })
+    // Transcription is mechanical: no hidden thinking, and a low temperature
+    // so it writes what was said instead of improving it.
+    const model = genAI.getGenerativeModel({
+      model: MODELS.DEFAULT_CHAT,
+      generationConfig: { temperature: 0, ...thinkingFragment('low') },
+    })
 
     let prompt = ''
     if (isImage) {
       prompt = 'Describe this image in detail for a personal knowledge base. Capture text, key objects, diagram structures, and the overall context. If it is a whiteboard sketch, explain the concepts drawn. Return plain text.'
     } else {
-      prompt = 'Listen to this audio recording and transcribe exactly what is said. Return only the transcribed text, with no additional commentary or formatting.'
+      prompt = `Transcribe this voice recording word for word. It is one person talking to themselves, usually about their own projects.
+- Write all of it, start to finish. Never stop early or summarise.
+- Leave out filler sounds (um, uh, er) and false starts. Keep every real word, repeated or not.
+- Add normal punctuation and paragraph breaks where they pause to change subject.
+- Names, titles and jargon: use the spelling that makes sense in context.
+- If a stretch is silent or unclear, skip it. Never invent words.
+Return only the transcript. No intro, no quotes, no notes.`
     }
 
     console.log('[media-analysis] Sending to Gemini...')

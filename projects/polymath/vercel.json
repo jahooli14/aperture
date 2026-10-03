@@ -44,6 +44,9 @@
     "api/idea-engine.ts": {
       "maxDuration": 60
     },
+    "api/memories.ts": {
+      "maxDuration": 60
+    },
     "api/projects.ts": {
       "maxDuration": 60
     },

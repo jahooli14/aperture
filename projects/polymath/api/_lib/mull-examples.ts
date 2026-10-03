@@ -121,6 +121,10 @@ export const BAD_EXAMPLES: readonly BadExample[] = [
     question: 'Your love of ambient music and your pottery both seem to be about patience. How might patience shape your next piece?',
     why: 'Explains the link instead of showing it, and the link is a word, not a pattern. Nobody is surprised by their own answer.',
   },
+  {
+    question: "For the radio play, you planned to have an actor read the grief scene, then record every line yourself so it sounds like you. What part of the grief belongs strictly to your own voice?",
+    why: "Both rows are one project's plan, so nothing is put next to anything. It opens by reciting the plan, and the question assumes the grief isn't already theirs, which nobody said.",
+  },
 ]
 
 export function goodExamplesBlock(): string {
