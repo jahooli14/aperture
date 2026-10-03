@@ -282,7 +282,7 @@ export function TodaysAnswerCard() {
         overflow, which would cut an outer glow off at the edge. */}
     <div className="relative isolate rounded-2xl neon-breathe">
     <div
-      className="rounded-2xl p-5 flex flex-col overflow-hidden relative transition-all duration-700 neon-edge"
+      className="rounded-2xl p-5 flex flex-col overflow-hidden relative transition-colors duration-700 neon-edge"
       style={{
         background: 'linear-gradient(155deg, rgba(var(--brand-primary-rgb),0.10) 0%, rgba(13,20,34,0.86) 55%)',
         backdropFilter: 'blur(32px) saturate(190%)',

@@ -14,7 +14,7 @@
  * nothing is the normal outcome.
  */
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { VoiceInput } from '../VoiceInput'
 import { haptic } from '../../utils/haptics'
 import { api } from '../../lib/apiClient'
@@ -93,6 +93,20 @@ export function StandingQuestion() {
   // future questions (spark-followup.ts, mull-generator.ts's loadCorrections).
   const [followUpReason, setFollowUpReason] = useState<'correction' | 'next_step' | null>(null)
   const [loaded, setLoaded] = useState(false)
+  // The block loads after the card has already painted, so it used to snap in
+  // and shove the project section down in one frame. It now mounts closed and
+  // opens a beat later (.reveal in theme.css), so everything below slides down.
+  const [shown, setShown] = useState(false)
+  useEffect(() => {
+    if (!loaded) return
+    const t = setTimeout(() => setShown(true), 30)
+    return () => clearTimeout(t)
+  }, [loaded])
+  const reveal = (node: ReactNode) => (
+    <div className="reveal" data-open={shown}>
+      <div>{node}</div>
+    </div>
+  )
 
   useEffect(() => {
     let cancelled = false
@@ -244,8 +258,8 @@ export function StandingQuestion() {
   // ask for one until tomorrow. An empty block with a way in is the whole
   // difference between a feature that works on demand and one you wait for.
   if (!spark) {
-    if (!loaded) return null
-    return (
+    if (!loaded) return reveal(null)
+    return reveal(
       <div className="pb-3.5 mb-4">
         <p
           className="text-[11px] font-medium uppercase tracking-[0.14em] mb-1.5"
@@ -281,7 +295,7 @@ export function StandingQuestion() {
   }
 
   if (receipt) {
-    return (
+    return reveal(
       <div className="pb-3 mb-4">
         <p className="text-[12px]" style={{ color: 'var(--brand-text-secondary)', opacity: 0.81 }}>{receipt}</p>
       </div>
@@ -290,7 +304,7 @@ export function StandingQuestion() {
 
   const projectTitle = spark.projects?.title ?? null
 
-  return (
+  return reveal(
     <div className="pb-3.5 mb-4">
       <p
         className="text-[11px] font-medium uppercase tracking-[0.14em] mb-1.5"
