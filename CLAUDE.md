@@ -89,7 +89,7 @@ The mechanism behind "the attention slot" and the thing your weekday "what shoul
 
 ### `ProjectIdeasHome` (READ/CROSSOVER) — deliberately kept for now, not a bug
 
-`SPEC.md` originally called for the rebuild to **replace** `ProjectIdeasHome` — "the idea generator becomes joints and composites." That hasn't happened, and it's staying that way on purpose: `ProjectIdeasHome` is the only **on-demand** "give me a new project idea right now" surface in the app. Sparks are cron-baked once nightly — they can't be triggered on demand. Decision (Oct 2026): it stays as the one "Suggest a project" button. Don't add a second generator.
+`SPEC.md` originally called for the rebuild to **replace** `ProjectIdeasHome` — "the idea generator becomes joints and composites." That hasn't happened, and it's staying that way on purpose: `ProjectIdeasHome` is the only **on-demand** "give me a new project idea right now" surface in the app. Sparks are cron-baked once nightly — they can't be triggered on demand. Decision (Oct 2026): it stays as the one "Suggest a project" button. Don't add a second generator. It pairs two things (centre × arrival, picked in code), and the card shows them as "made from A + B" up front.
 
 The old `resource=evolve` cron call (daily, active-projects-only, wrote to an `evolution_events` table nothing read) **has been removed** (2026) — that part of the duplication was genuinely dead weight and is gone. `ProjectIdeasHome` + `generate-project-ideas` (feeding `project_ideas`) is the one on-demand generator left, running alongside sparks deliberately, not by accident.
 

@@ -639,6 +639,23 @@ export function ProjectIdeasHome({ startExpanded = false, onClose }: { startExpa
                   {active.why_now}
                 </p>
 
+                {/* The ingredients, up front. A collision is only a revelation
+                    if you can see what was put next to what -- "Oscar's first
+                    birthday" beside "willow carving" -- so the two or three
+                    things it was made from sit on the card, not behind a link. */}
+                {(() => {
+                  const parts = Array.from(new Set((active.evidence ?? []).map(e => e.label).filter(Boolean))).slice(0, 3)
+                  if (parts.length < 2) return null
+                  return (
+                    <p className="relative mb-5 text-[13px] leading-snug" style={{ color: 'var(--brand-text-secondary)' }}>
+                      <span className="text-[11px] uppercase tracking-[0.14em] font-semibold mr-2" style={{ color: `rgb(${accent})` }}>
+                        made from
+                      </span>
+                      {parts.join(' + ')}
+                    </p>
+                  )
+                })()}
+
                 {/* Your move — the one emphasised block, because it's the
                     concrete first action. Flat fill, no gradient — the
                     accent still marks it as "the" block without the card
