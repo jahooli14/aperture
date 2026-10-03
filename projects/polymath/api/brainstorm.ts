@@ -7,7 +7,6 @@
  *   extract        — distill the conversation into a structured project definition
  *   studio-magic   — AI writing partner for the Studio tab
  *   project-chat   — contextual AI chat for an active project (replaces /api/project-chat)
- *   portfolio-chat — "what should I work on" triage across all projects (Home)
  *
  * POST /api/brainstorm
  */
@@ -18,7 +17,6 @@ import { getUserId } from './_lib/auth.js'
 import { generateEmbedding, cosineSimilarity } from './_lib/gemini-embeddings.js'
 import { generateText } from './_lib/gemini-chat.js'
 import { PLAIN_ENGLISH_RULES, CHAT_TURN_RULES } from './_lib/plain-english.js'
-import { handlePortfolioChat } from './_lib/portfolio-chat.js'
 import { stripCitationTagsDeep } from './_lib/citation-tags.js'
 
 const supabase = createClient(
@@ -814,8 +812,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.json(await handleStudioMagic(body as unknown as Parameters<typeof handleStudioMagic>[0], userId))
       case 'project-chat':
         return res.json(await handleProjectChat(body as unknown as Parameters<typeof handleProjectChat>[0], userId))
-      case 'portfolio-chat':
-        return res.json(await handlePortfolioChat(body as unknown as Parameters<typeof handlePortfolioChat>[0], userId))
       case 'project-reveal':
         return res.json(await handleProjectReveal(body as unknown as Parameters<typeof handleProjectReveal>[0], userId))
       case 'infer-catalysts':

@@ -1757,16 +1757,8 @@ Return JSON only:
     }
   }
 
-  // EVOLVE RESOURCE — POST to trigger project evolution / nightly reshaping
-  // `resource === 'evolve'` removed (2026): it ran daily against every
-  // active/upcoming project, proposing a "new direction" whether or not
-  // anyone was working on it, and wrote to an `evolution_events` table
-  // nothing in the frontend ever read. The thing it was reaching for --
-  // occasional reshape proposals, never for the live project -- is what
-  // morphs (`generate-morph`, one per project per 14 days) and composites
-  // (`generate-composite`, stalled projects only) now do properly. The
-  // `evolution_events` table is left in place but unused; safe to drop in
-  // a later migration if nothing else turns up depending on it.
+  // (No 'evolve' resource: it proposed a "new direction" for every active
+  // project into a table nothing read. Reshaping is the daily question's job now.)
 
   // SAVE-IDEA RESOURCE — POST to save an onboarding suggestion as a saved idea
   if (resource === 'save-idea') {

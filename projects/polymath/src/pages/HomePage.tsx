@@ -1,45 +1,19 @@
 /**
  * Home Page — the creative harness.
  *
- * The home is a labelled stack of sections, all sharing the editorial
- * .section-header style (lowercase serif with the accent word brand-tinted),
- * separated by 1px .section-seam hairlines that fade across the page width.
+ * One page that drives you, top to bottom:
+ *   1. The two-sided card (TodaysAnswerCard). Top: a question to think about
+ *      while you're not working. Bottom: the project to pick up right now,
+ *      its one next move, and Go. During a session this card is the session.
+ *   2. The attention slot (AttentionSlot): at most ONE thing the app has to
+ *      say — a close-out you owe it, or the monthly mirror. Silent otherwise.
+ *   3. Everything else (EverythingElseMini): one swipeable row of the other
+ *      projects you're keeping warm, ▶ to start one now, ending in
+ *      "Suggest a project".
+ *   4. Now consuming (ConsumingWidget): what you're reading, watching, playing.
+ *   5. Thought of the day (ThoughtOfTheDay): something you said, back to you.
  *
- * Section order:
- *   1. Today's answer    — TodaysAnswerCard: one statement, one action, one
- *                          redirect. Since the execution rebuild (SPEC.md)
- *                          this card IS the session contract — the live
- *                          project, the last close-out played back in your
- *                          own words, and a Start session that runs the
- *                          window → shapes → timer → close-out flow inside
- *                          this same box. The redirect panel still owns the
- *                          Focus chat thread and the full idea deck.
- *   2. The attention slot — AttentionSlot: at most ONE of a deferred
- *                          close-out, the monthly mirror, the live-project
- *                          re-ask, a morph/composite proposal, today's
- *                          spark, or the different-thing nudge. Silent on
- *                          most opens. Never a competing hero.
- *   3. Everything else   — EverythingElseMini: one swipeable row, still
- *                          warm projects then queued ones. Used to be two
- *                          stacked 2-up grids ("still warm" / "the queue");
- *                          merged into the single carousel the design
- *                          settled on, so priority/warm/queue reads as one
- *                          continuum instead of three separate lists.
- *   4. Now consuming     — ConsumingWidget (identity layer + reading drawers)
- *   5. Thought of the day — ThoughtOfTheDay (editorial pull-quote, the
- *                          page's closer). Distinct from a spark: a spark
- *                          asks and wants an answer; this shows and asks
- *                          nothing.
- *
- * Removed by the execution rebuild: "worth a look" (ReviewRotation). Its
- * three-button triage (still mine / pick it up / park it) was a menu, and
- * "park it" asks you to confirm a kill — which drift-decay now does quietly
- * on its own. The half of its job that IS still needed (offering a
- * long-forgotten project back into play) belongs in the attention slot, not
- * in a section of its own. Component untouched.
- *
- * Behind everything: a vanishingly subtle vertical wash (.home-atmosphere) —
- * warmer at the top, cooler at the bottom.
+ * Everything below the card hides while a session runs.
  */
 
 import { useEffect, useState } from 'react'
@@ -69,13 +43,6 @@ export function HomePage() {
   const fetchMemories = useMemoryStore(s => s.fetchMemories)
   const onboardingCompletedAt = useJourneyStore(s => s.onboardingCompletedAt)
   const startSession = useJourneyStore(s => s.startSession)
-  // One thing on screen at a time. True whenever the answer card has taken
-  // the screen: the chips, the focus thread, the full deck, or an open
-  // session in ANY of its phases — picking the window, the two minutes of
-  // planning, the hour itself, the close-out. Everything under it is a
-  // second surface competing with the one thing the user just opened.
-  const [cardOwnsScreen, setCardOwnsScreen] = useState(false)
-
   // The row used to be hidden when it had no projects, because a bare
   // "everything else" header over nothing reads as a bug. It always ends
   // with the "suggest a project" card now, so it is never empty — and a
@@ -85,7 +52,7 @@ export function HomePage() {
   // included) clears the page too, so coming back to home mid-hour never
   // lands on a wall of other projects.
   const sessionRunning = useSessionStore(s => s.active != null)
-  const clearPage = sessionRunning || cardOwnsScreen
+  const clearPage = sessionRunning
   // The suggestions deck opens under the "everything else" row and is a
   // full surface of its own, so what sits BELOW it goes — the row itself
   // stays, because the deck is anchored to it.
@@ -245,7 +212,7 @@ export function HomePage() {
               — that used to produce two stacked glass cards with duplicate
               headers and duplicate input fields. */}
           <motion.div {...stackTransition(1)}>
-            <TodaysAnswerCard onExpandedChange={setCardOwnsScreen} />
+            <TodaysAnswerCard />
           </motion.div>
 
           {/* Everything below is other projects and other things to look at

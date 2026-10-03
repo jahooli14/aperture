@@ -43,7 +43,6 @@ on:
           - ''
           - bake-explain
           - bake
-          - mine-joints
           - recompute-heat
           - retire-and-rebake
           - reembed-articles
@@ -114,7 +113,6 @@ jobs:
               # steps declined, and the numbers it decided on.
               bake-explain)   hit "/api/utilities?resource=bake&explain=1" ;;
               bake)           hit "/api/utilities?resource=bake" ;;
-              mine-joints)    hit "/api/utilities?resource=mine-joints" ;;
               recompute-heat) hit "/api/projects?resource=recompute-heat" ;;
               # Retires whatever spark is currently standing (however long
               # it has left) and bakes a fresh one. The only way to clear a
@@ -166,27 +164,16 @@ jobs:
           fi
 
           # ── 08:00 UTC daily: Polymath project ideas ──────────────────
-          # `resource=evolve` removed (2026) -- it duplicated what morphs
-          # now do properly (see api/projects.ts) and wrote to a table
-          # nothing read. Project ideas runs daily (was Sunday-only) so
+          # Project ideas runs daily (was Sunday-only) so
           # the queue stays stocked with cron-baked Read ideas. The home
           # auto-surface gates on confidence >= 70, so daily generation
           # gives the "there's something to show you" teaser a real
           # chance to fire most days instead of just after Sunday's run.
           if [ "$SCHEDULE" = "0 8 * * *" ] || [ "$FORCE" = "true" ]; then
-            # Joints must exist before the mull channel can use its best subject
-            # type ("something you keep saying and have never made"). Mining them
-            # only on Sundays left the table empty on the other six days, so every
-            # bake fell back to dormant projects. Sequential and first, so bake
-            # sees what this run finds.
-            hit "/api/utilities?resource=mine-joints"
             hit "/api/utilities?resource=generate-project-ideas" &
-            # Execution rebuild (SPEC.md): today's spark, baked once overnight
-            # so it's instant and offline-available on first open. One morph
-            # proposal max per day, portfolio-wide (rate limit enforced
-            # server-side in morph.ts, not by this schedule).
+            # Today's question, baked once overnight so it's instant and
+            # offline-available on first open.
             hit "/api/utilities?resource=bake" &
-            hit "/api/utilities?resource=generate-morph" &
           fi
 
           # ── 09:00 UTC daily: Idea Engine review + email digest ────────
@@ -200,10 +187,6 @@ jobs:
           # ── Sunday 08:00 UTC: Polymath drawer digest ─────────────────
           if [ "$SCHEDULE" = "0 8 * * 0" ] || [ "$FORCE" = "true" ]; then
             hit "/api/projects?resource=generate-digest" &
-            # Joints must land before composites are generated from them,
-            # so this pair runs sequentially (no &).
-            hit "/api/utilities?resource=mine-joints"
-            hit "/api/utilities?resource=generate-composite"
             # Silent, no-confirmation harvest of drifted + stalled projects.
             hit "/api/utilities?resource=drift-decay" &
             # One thing from outside for the live project's next step.
