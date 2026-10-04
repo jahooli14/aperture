@@ -322,7 +322,7 @@ export function TodaysAnswerCard() {
         <div className="flex items-start justify-between gap-2 mb-1 mt-1">
           <h3
             className="card-title-lg line-clamp-2 flex-1"
-            style={{ fontWeight: 600, fontSize: '1.25rem', fontFamily: 'var(--brand-font-serif)' }}
+            style={{ fontWeight: 600, fontSize: '1.125rem', fontFamily: 'var(--brand-font-body)' }}
           >
             {focusProject.title}
           </h3>
@@ -359,8 +359,8 @@ export function TodaysAnswerCard() {
               next move
             </p>
             <p
-              className="text-[17px] leading-[1.4]"
-              style={{ color: 'var(--brand-text-primary)', fontFamily: 'var(--brand-font-serif)' }}
+              className="text-[16px] leading-[1.4] font-medium"
+              style={{ color: 'var(--brand-text-primary)', fontFamily: 'var(--brand-font-body)' }}
             >
               {nextMove.move}
             </p>
@@ -378,7 +378,7 @@ export function TodaysAnswerCard() {
             <p className="text-[11px] font-medium uppercase tracking-[0.14em] mb-1.5" style={{ color: 'var(--brand-text-muted)' }}>
               first, decide
             </p>
-            <p className="text-[17px] leading-[1.4]" style={{ fontFamily: 'var(--brand-font-serif)' }}>{fork}</p>
+            <p className="text-[16px] leading-[1.4] font-medium" style={{ fontFamily: 'var(--brand-font-body)' }}>{fork}</p>
           </div>
         ) : reEntry ? (
           <div className="p-3 rounded-xl mb-4" style={{ background: 'rgba(255,255,255,0.055)' }}>
@@ -386,8 +386,8 @@ export function TodaysAnswerCard() {
               where you left off
             </p>
             <p
-              className="text-[15.5px] leading-[1.5] italic"
-              style={{ color: 'var(--brand-text-primary)', fontFamily: 'var(--brand-font-serif)' }}
+              className="text-[14px] leading-[1.5]"
+              style={{ color: 'var(--brand-text-primary)', fontFamily: 'var(--brand-font-body)' }}
             >
               “{reEntry}”
             </p>
