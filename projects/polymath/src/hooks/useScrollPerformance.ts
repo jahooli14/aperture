@@ -19,19 +19,20 @@ const SCROLL_END_DELAY = 150
 
 export function useScrollPerformance() {
   useEffect(() => {
-    let ticking = false
+    let active = false
     let endTimer: ReturnType<typeof setTimeout> | undefined
 
     const onScroll = () => {
-      if (!ticking) {
-        ticking = true
-        requestAnimationFrame(() => {
-          document.body.setAttribute('data-scrolling', 'true')
-          ticking = false
-        })
+      // Set in the same frame as the first scroll event, not the next one —
+      // a rAF here let the first frame of every flick still pay for the blur.
+      // Once set, later events skip the DOM write entirely.
+      if (!active) {
+        active = true
+        document.body.setAttribute('data-scrolling', 'true')
       }
       if (endTimer) clearTimeout(endTimer)
       endTimer = setTimeout(() => {
+        active = false
         document.body.removeAttribute('data-scrolling')
       }, SCROLL_END_DELAY)
     }

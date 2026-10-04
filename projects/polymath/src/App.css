@@ -459,7 +459,14 @@
   button,
   a,
   [role="button"] {
-    transition: all 0.1s cubic-bezier(0.4, 0, 0.2, 1);
+    /* Named properties, not `all`: `all` makes every button on screen watch
+       layout and filter properties too, which adds up in long lists. */
+    transition: transform 0.1s cubic-bezier(0.4, 0, 0.2, 1),
+      opacity 0.1s cubic-bezier(0.4, 0, 0.2, 1),
+      background-color 0.1s cubic-bezier(0.4, 0, 0.2, 1),
+      border-color 0.1s cubic-bezier(0.4, 0, 0.2, 1),
+      color 0.1s cubic-bezier(0.4, 0, 0.2, 1),
+      box-shadow 0.1s cubic-bezier(0.4, 0, 0.2, 1);
     -webkit-tap-highlight-color: transparent;
     user-select: none;
   }

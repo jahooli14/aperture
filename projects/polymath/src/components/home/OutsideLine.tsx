@@ -34,6 +34,14 @@ const KIND_LABEL: Record<OutsideFind['kind'], string> = {
 export function OutsideLine() {
   const [find, setFind] = useState<OutsideFind | null>(null)
   const [busy, setBusy] = useState(false)
+  // Arrives after the card has painted; open a beat later so it eases in
+  // rather than snapping the project section down (.reveal in theme.css).
+  const [shown, setShown] = useState(false)
+  useEffect(() => {
+    if (!find) return
+    const t = setTimeout(() => setShown(true), 30)
+    return () => clearTimeout(t)
+  }, [find])
 
   useEffect(() => {
     let cancelled = false
@@ -66,6 +74,8 @@ export function OutsideLine() {
   }
 
   return (
+    <div className="reveal" data-open={shown}>
+    <div>
     <div className="mt-1 mb-4 flex items-center gap-3 rounded-xl px-3 py-2.5" style={{ background: 'rgba(255,255,255,0.04)' }}>
       <a href={find.url} target="_blank" rel="noreferrer" className="flex-1 min-w-0" style={{ color: 'var(--brand-text-primary)' }}>
         <p className="text-[11px] uppercase tracking-[0.14em] font-bold" style={{ color: 'var(--brand-text-muted)' }}>
@@ -90,6 +100,8 @@ export function OutsideLine() {
           Not useful
         </button>
       </div>
+    </div>
+    </div>
     </div>
   )
 }
