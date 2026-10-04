@@ -18,6 +18,7 @@ import { useEffect, useState } from 'react'
 import { VoiceInput } from '../VoiceInput'
 import { haptic } from '../../utils/haptics'
 import { api } from '../../lib/apiClient'
+import { isTake, splitSentences } from '../../lib/takeText'
 
 export interface StandingQuestionSpark {
   id: string
@@ -37,22 +38,13 @@ export function isStandingQuestion(spark: { type: string } | null | undefined): 
   return !!spark
 }
 
-/** Sentence-sized pieces for the staggered reveal. Keeps the punctuation
- *  with its sentence; a question with no full stop is one piece. */
-function splitSentences(text: string): string[] {
-  return text.match(/[^.!?]+[.!?]+["”’)]*\s*|[^.!?]+$/g)?.map(t => t.trim()).filter(Boolean) ?? [text]
-}
-
 export type Stance = 'yes' | 'no' | 'sort_of'
 
-/** A take is a statement; the older questions end in a question mark. They
- *  react differently: a take gets yes / no / sort of, a question gets "answer it". */
-export function isTake(text: string): boolean {
-  return !text.includes('?')
-}
-
+// A take gets yes / no / sort of; an older question gets "answer it".
+// The hint is what's worth saying after each tap -- "Say why" is already
+// the line above the box, so the placeholder asks the next thing.
 const STANCES: { id: Stance; label: string; hint: string }[] = [
-  { id: 'yes', label: 'yes', hint: 'Say more, or just save it.' },
+  { id: 'yes', label: 'yes', hint: 'What would you do differently?' },
   { id: 'no', label: 'no', hint: "What's actually true?" },
   { id: 'sort_of', label: 'sort of', hint: 'Where does it break?' },
 ]
@@ -136,7 +128,9 @@ export function StandingQuestion() {
       haptic.success()
       setReceipt(
         turns.length === 0
-          ? 'Noted.'
+          // A bare "no" is the most useful tap there is: the next take is
+          // told this one was wrong (mull-generator.ts, tapLines).
+          ? stance === 'no' ? 'Noted. Wrong is useful too.' : 'Noted.'
           : data.project_title
           ? `Saved. It'll be there next time you sit down to ${data.project_title}.`
           : 'Saved.'

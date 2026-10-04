@@ -18,7 +18,7 @@
  * example is a template, not an example.
  *
  * Subject matter is deliberately foreign: letterpress, a choir, woodcuts, a
- * radio play. Nothing here may name anything the real corpus could
+ * radio play, bookbinding. Nothing here may name anything the real corpus could
  * plausibly contain -- a fact invented here, handed over next to the real
  * corpus, arrives looking exactly like one the notes supplied.
  *
@@ -58,7 +58,7 @@ export const GOOD_EXAMPLES: readonly MullExample[] = [
       { where: 'list "Books", rated 5', text: 'Stoner by John Williams' },
       { where: 'note, 2 June 2025', text: "everything I make has to be funny or I don't trust it" },
     ],
-    question: "Your five-star shelf is Paris, Texas and Stoner. In June you said everything you make has to be funny or you don't trust it. I think you love sad work and only let yourself make jokes.",
+    question: "Your five-star shelf is Paris, Texas and Stoner. In June you said everything you make has to be funny or you don't trust it. Nothing you make looks like anything you rate highest.",
     stake: 'One sketch gets written with no joke in it.',
   },
   {
@@ -99,6 +99,16 @@ export const GOOD_EXAMPLES: readonly MullExample[] = [
     ],
     question: "You're building a proper studio at the end of the garden. You also said the kitchen table is where it actually happens, and that you want the tools out all the time. I think you don't want a studio. You want a table you never have to clear.",
     stake: 'The studio gets planned around a table that never gets cleared.',
+  },
+  {
+    move: 'the collision -- an occasion in their life next to something half-made',
+    evidence: [
+      { where: 'note, 4 February 2026', text: 'my sister gets married in May and wants everything handmade' },
+      { where: 'project "Bookbinding", paused since November 2025', text: 'stitched one signature, then stopped' },
+      { where: 'note, 20 August 2025', text: 'I only finish things when someone is waiting for them' },
+    ],
+    question: "Your sister gets married in May and wants everything handmade. The bookbinding stopped after one stitched signature. You only finish things when someone is waiting for them. I think the half-bound book is her wedding present.",
+    stake: 'The guest book for the wedding gets bound, starting from the stitched signature.',
   },
 ]
 
@@ -141,13 +151,17 @@ export const BAD_EXAMPLES: readonly BadExample[] = [
     question: "For the radio play, you planned to have an actor read the grief scene, then record every line yourself so it sounds like you. What part of the grief belongs strictly to your own voice?",
     why: "Both rows are one project's plan, so nothing is put next to anything. It opens by reciting the plan, and the question hides a claim (the grief isn't already theirs) that nobody made and they can't push back on.",
   },
+  {
+    question: 'One card per idea was meant to stop the binders piling up. The sketch-a-day stopped after day one. In May you said ideas are worth more than gold. I think you value dreaming up projects far more than making them.',
+    why: "Three facts that point three ways, the first one a plan. And the claim says what they value -- a motive nobody gave. Say what happens instead: what stopped, and when.",
+  },
 ]
 
 export function goodExamplesBlock(): string {
   return GOOD_EXAMPLES.map(e =>
     `- ${e.move}\n` +
     e.evidence.map(ev => `    [${ev.where}] "${ev.text}"`).join('\n') +
-    `\n  QUESTION: "${e.question}"\n  STAKE: "${e.stake}"`,
+    `\n  TAKE: "${e.question}"\n  STAKE: "${e.stake}"`,
   ).join('\n\n')
 }
 
