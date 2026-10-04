@@ -322,13 +322,13 @@ export function TodaysAnswerCard() {
         <div className="flex items-start justify-between gap-2 mb-1 mt-1">
           <h3
             className="card-title-lg line-clamp-2 flex-1"
-            style={{ fontWeight: 700, fontSize: '1.3125rem' }}
+            style={{ fontWeight: 600, fontSize: '1.125rem', fontFamily: 'var(--brand-font-body)' }}
           >
             {focusProject.title}
           </h3>
           {dormancyLabel && (
             <span
-              className="text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full flex-shrink-0 mt-0.5"
+              className="text-[11px] font-medium uppercase tracking-[0.14em] px-2 py-0.5 rounded-full flex-shrink-0 mt-0.5"
               style={{
                 color: dormancyBadgeColor ?? undefined,
                 border: `1px solid rgba(245,158,11,0.4)`,
@@ -341,9 +341,9 @@ export function TodaysAnswerCard() {
           )}
         </div>
         <span
-          className="text-[11px] uppercase tracking-[0.14em] font-bold mb-3 inline-block"
+          className="text-[11px] uppercase tracking-[0.14em] font-medium mb-3 inline-block"
           style={{
-            color: dormancyBadgeColor ?? 'rgb(var(--brand-primary-rgb))',
+            color: dormancyBadgeColor ?? 'var(--brand-text-muted)',
           }}
         >
           {formatRelativeTime(focusProject.last_active || focusProject.updated_at)}
@@ -355,39 +355,39 @@ export function TodaysAnswerCard() {
             boxes; fill alone separates it from the card behind it. */}
         {nextMove ? (
           <div className="p-3.5 rounded-xl mb-4" style={{ background: 'rgba(255,255,255,0.055)' }}>
-            <p className="text-[11px] font-bold uppercase tracking-[0.14em] mb-1.5" style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.9 }}>
+            <p className="text-[11px] font-medium uppercase tracking-[0.14em] mb-1.5" style={{ color: 'var(--brand-text-muted)' }}>
               next move
             </p>
             <p
-              className="text-[19px] leading-[1.3]"
-              style={{ color: 'var(--brand-text-primary)', fontFamily: 'var(--brand-font-serif)' }}
+              className="text-[16px] leading-[1.4] font-medium"
+              style={{ color: 'var(--brand-text-primary)', fontFamily: 'var(--brand-font-body)' }}
             >
               {nextMove.move}
             </p>
             {nextMove.doneWhen && (
-              <p className="text-[12.5px] mt-1.5" style={{ color: 'var(--brand-text-secondary)', opacity: 0.84 }}>{nextMove.doneWhen}</p>
+              <p className="text-[12px] mt-1.5" style={{ color: 'var(--brand-text-secondary)' }}>{nextMove.doneWhen}</p>
             )}
             {reEntry && (
-              <p className="text-[12px] mt-2.5 italic line-clamp-2" style={{ color: 'var(--brand-text-secondary)', opacity: 0.75 }}>
+              <p className="text-[12px] mt-2.5 line-clamp-2" style={{ color: 'var(--brand-text-secondary)' }}>
                 You stopped with “{reEntry}”
               </p>
             )}
           </div>
         ) : fork ? (
           <div className="p-3.5 rounded-xl mb-4" style={{ background: 'rgba(255,255,255,0.055)' }}>
-            <p className="text-[11px] font-bold uppercase tracking-[0.14em] mb-1.5" style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.9 }}>
+            <p className="text-[11px] font-medium uppercase tracking-[0.14em] mb-1.5" style={{ color: 'var(--brand-text-muted)' }}>
               first, decide
             </p>
-            <p className="text-[19px] leading-[1.3]" style={{ fontFamily: 'var(--brand-font-serif)' }}>{fork}</p>
+            <p className="text-[16px] leading-[1.4] font-medium" style={{ fontFamily: 'var(--brand-font-body)' }}>{fork}</p>
           </div>
         ) : reEntry ? (
           <div className="p-3 rounded-xl mb-4" style={{ background: 'rgba(255,255,255,0.055)' }}>
-            <p className="text-[11px] font-bold uppercase tracking-[0.14em] mb-1.5" style={{ color: 'var(--brand-text-muted)' }}>
+            <p className="text-[11px] font-medium uppercase tracking-[0.14em] mb-1.5" style={{ color: 'var(--brand-text-muted)' }}>
               where you left off
             </p>
             <p
-              className="text-[17px] leading-[1.5] italic"
-              style={{ color: 'var(--brand-text-primary)', fontFamily: 'var(--brand-font-serif)' }}
+              className="text-[14px] leading-[1.5]"
+              style={{ color: 'var(--brand-text-primary)', fontFamily: 'var(--brand-font-body)' }}
             >
               “{reEntry}”
             </p>
@@ -408,8 +408,8 @@ export function TodaysAnswerCard() {
           {nextMove && (
             <button
               onClick={() => handleStartSession(false)}
-              className="w-full text-[11.5px] py-0.5"
-              style={{ color: 'var(--brand-text-secondary)', opacity: 0.75 }}
+              className="w-full text-[12px] py-0.5"
+              style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.85 }}
             >
               Not this — change it
             </button>

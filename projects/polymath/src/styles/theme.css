@@ -871,18 +871,22 @@ h6 {
 .mull-text {
     font-family: var(--brand-font-serif);
     font-style: italic;
-    color: rgb(218, 238, 250);
-    text-shadow: 0 0 22px rgba(var(--brand-primary-rgb), 0.28);
+    font-weight: 300;
+    letter-spacing: 0.01em;
+    color: rgb(226, 242, 252);
+    text-shadow:
+        0 0 14px rgba(var(--brand-primary-rgb), 0.35),
+        0 0 38px rgba(var(--brand-primary-rgb), 0.22);
     text-wrap: pretty;
 }
 .mull-line {
     display: inline;
     opacity: 0;
-    filter: blur(6px);
-    animation: mull-surface 1.6s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    filter: blur(8px);
+    animation: mull-surface 2.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 @keyframes mull-surface {
-    from { opacity: 0; filter: blur(6px); }
+    from { opacity: 0; filter: blur(8px); }
     to   { opacity: 1; filter: blur(0); }
 }
 

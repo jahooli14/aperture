@@ -299,7 +299,7 @@ export function StandingQuestion() {
   const projectTitle = spark.projects?.title ?? null
 
   return reveal(
-    <div className="pb-3.5 mb-4">
+    <div className="pb-4 mb-5">
       <p
         className="text-[11px] font-medium uppercase tracking-[0.14em] mb-1.5"
         style={{ color: 'var(--brand-text-muted)' }}
@@ -312,9 +312,9 @@ export function StandingQuestion() {
           .mull-line in theme.css). It settles sharp and still, so it's
           dreamy on arrival and readable at rest. Keyed on the spark so a
           new question arrives the same way. */}
-      <p key={spark.id} className="mull-text text-[15.5px] leading-[1.6]">
+      <p key={spark.id} className="mull-text text-[18px] leading-[1.75] mt-1">
         {splitSentences(spark.text).map((line, i) => (
-          <span key={i} className="mull-line" style={{ animationDelay: `${0.15 + i * 0.55}s` }}>
+          <span key={i} className="mull-line" style={{ animationDelay: `${0.2 + i * 0.9}s` }}>
             {line}{' '}
           </span>
         ))}
@@ -322,7 +322,7 @@ export function StandingQuestion() {
 
       {(spark.sources?.length ?? 0) >= 2 && (
         <p className="text-[12px] mt-2 leading-snug" style={{ color: 'var(--brand-text-secondary)' }}>
-          <span className="text-[11px] uppercase tracking-[0.14em] font-semibold mr-1.5" style={{ color: 'var(--brand-text-muted)' }}>
+          <span className="text-[11px] uppercase tracking-[0.14em] font-medium mr-1.5" style={{ color: 'var(--brand-text-muted)' }}>
             from
           </span>
           {spark.sources!.map(x => x.title).filter(Boolean).join(' + ')}
