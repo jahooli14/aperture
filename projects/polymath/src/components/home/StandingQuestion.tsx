@@ -322,7 +322,7 @@ export function StandingQuestion() {
 
       {(spark.sources?.length ?? 0) >= 2 && (
         <p className="text-[12px] mt-2 leading-snug" style={{ color: 'var(--brand-text-secondary)' }}>
-          <span className="text-[11px] uppercase tracking-[0.14em] font-semibold mr-1.5" style={{ color: 'var(--brand-text-muted)' }}>
+          <span className="text-[11px] uppercase tracking-[0.14em] font-medium mr-1.5" style={{ color: 'var(--brand-text-muted)' }}>
             from
           </span>
           {spark.sources!.map(x => x.title).filter(Boolean).join(' + ')}
