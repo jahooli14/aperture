@@ -29,7 +29,7 @@ const KIND_LABEL: Record<OutsideFind['kind'], string> = {
   maker: 'Someone who did this',
   work: 'Worth a look',
 }
-
+const quietActionStyle = { color: 'rgb(var(--brand-primary-rgb))', opacity: 0.85 }
 
 export function OutsideLine() {
   const [find, setFind] = useState<OutsideFind | null>(null)
@@ -76,28 +76,26 @@ export function OutsideLine() {
   return (
     <div className="reveal" data-open={shown}>
     <div>
-    <div className="mt-1 mb-4 flex items-center gap-3 rounded-xl px-3 py-2.5" style={{ background: 'rgba(255,255,255,0.04)' }}>
-      <a href={find.url} target="_blank" rel="noreferrer" className="flex-1 min-w-0" style={{ color: 'var(--brand-text-primary)' }}>
-        <p className="text-[11px] uppercase tracking-[0.14em] font-bold" style={{ color: 'var(--brand-text-muted)' }}>
-          From outside · {KIND_LABEL[find.kind]}
+    // Same shape as the question above it: no box, same label, same quiet
+    // action row. A filled panel with pill buttons read as a different app.
+    <div className="pb-3.5 mb-4">
+      <p className="text-[11px] font-medium uppercase tracking-[0.14em] mb-1.5" style={{ color: 'var(--brand-text-muted)' }}>
+        from outside · {KIND_LABEL[find.kind].toLowerCase()}
+      </p>
+      <a href={find.url} target="_blank" rel="noreferrer" className="block" style={{ color: 'var(--brand-text-primary)' }}>
+        <p className="flex items-start gap-1.5 text-[15.5px] leading-[1.45]" style={{ fontFamily: 'var(--brand-font-serif)' }}>
+          <span>{find.title}</span>
+          <ExternalLink className="h-3 w-3 mt-1.5 flex-shrink-0" style={{ opacity: 0.5 }} />
         </p>
-        <p className="flex items-start gap-1.5 text-[14px] leading-snug mt-0.5">
-          <span className="line-clamp-2">{find.title}</span>
-          <ExternalLink className="h-3 w-3 mt-1 flex-shrink-0" style={{ opacity: 0.5 }} />
-        </p>
-        <p className="text-[12.5px] leading-snug mt-0.5 line-clamp-2" style={{ color: 'var(--brand-text-secondary)' }}>{find.why}</p>
+        <p className="text-[12px] leading-snug mt-1" style={{ color: 'var(--brand-text-secondary)' }}>{find.why}</p>
       </a>
-      <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
-        <button
-          className="text-[12px] font-semibold px-3 py-1.5 rounded-full disabled:opacity-40"
-          style={{ background: 'rgba(var(--brand-primary-rgb),0.16)', color: 'rgb(var(--brand-primary-rgb))' }}
-          disabled={busy}
-          onClick={() => resolve('saved')}
-        >
-          Save
+      <div className="flex items-center gap-3 mt-2">
+        <button className="text-[12px] disabled:opacity-30" style={quietActionStyle} disabled={busy} onClick={() => resolve('saved')}>
+          save to read
         </button>
-        <button className="text-[11.5px] disabled:opacity-40" style={{ color: 'var(--brand-text-secondary)' }} disabled={busy} onClick={() => resolve('dismissed')}>
-          Not useful
+        <span style={{ color: 'var(--brand-text-secondary)', opacity: 0.6 }}>·</span>
+        <button className="text-[12px] disabled:opacity-30" style={quietActionStyle} disabled={busy} onClick={() => resolve('dismissed')}>
+          not useful
         </button>
       </div>
     </div>
