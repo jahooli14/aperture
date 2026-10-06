@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react'
 import { Reorder, motion, AnimatePresence } from 'framer-motion'
-import { Plus, Trash2, GripVertical, ListOrdered, Check, Star, ArrowUpDown, ImageIcon, Search } from 'lucide-react'
+import { Plus, Trash2, GripVertical, ListOrdered, Check, Star, ArrowUpDown, ImageIcon, Search, BookOpen, ChevronRight } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthContext } from '../contexts/AuthContext'
 import { SignInNudge } from '../components/SignInNudge'
@@ -283,6 +283,21 @@ function ListsPageInner() {
                     </button>
                 </div>
             </header>
+
+            {/* Reading had no way in except a link at the bottom of home,
+                and an article only counts once it's voted on -- so the
+                page has to be findable. */}
+            <button
+                onClick={() => navigate('/reading')}
+                className="glass-card w-full flex items-center gap-3 px-4 py-3.5 mb-4 rounded-2xl text-left press-spring"
+            >
+                <BookOpen className="h-5 w-5 flex-shrink-0" style={{ color: 'rgb(var(--brand-primary-rgb))' }} />
+                <span className="flex-1 min-w-0">
+                    <span className="block text-[15px]" style={{ color: 'var(--brand-text-primary)' }}>Reading</span>
+                    <span className="block text-[12px]" style={{ color: 'var(--brand-text-muted)' }}>Saved articles and feeds</span>
+                </span>
+                <ChevronRight className="h-4 w-4 flex-shrink-0" style={{ color: 'var(--brand-text-muted)' }} />
+            </button>
 
             {/* Loading State - Show skeleton cards while loading */}
             {initialLoad && loading && lists.length === 0 && (

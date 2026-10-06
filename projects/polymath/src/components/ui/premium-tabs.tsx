@@ -1,4 +1,4 @@
-import React from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { cn } from '@/lib/utils'
 
 interface Tab {
@@ -14,9 +14,33 @@ interface PremiumTabsProps {
   className?: string
 }
 
+// Fades the right edge while there are more tabs off-screen, so a row cut
+// mid-word ("ARCHI") reads as "scroll for more" rather than as a bug.
+const MORE_FADE = 'linear-gradient(to right, black calc(100% - 40px), transparent)'
+
 export function PremiumTabs({ tabs, activeTab, onChange, className }: PremiumTabsProps) {
+  const rowRef = useRef<HTMLDivElement>(null)
+  const [moreRight, setMoreRight] = useState(false)
+
+  useEffect(() => {
+    const row = rowRef.current
+    if (!row) return
+    const check = () => setMoreRight(row.scrollLeft + row.clientWidth < row.scrollWidth - 2)
+    check()
+    row.addEventListener('scroll', check, { passive: true })
+    window.addEventListener('resize', check)
+    return () => {
+      row.removeEventListener('scroll', check)
+      window.removeEventListener('resize', check)
+    }
+  }, [tabs.length])
+
   return (
-    <div className={cn('flex border-b border-white/10 overflow-x-auto scrollbar-hide', className)} style={{ gap: 0 }}>
+    <div
+      ref={rowRef}
+      className={cn('flex border-b border-white/10 overflow-x-auto scrollbar-hide', className)}
+      style={{ gap: 0, maskImage: moreRight ? MORE_FADE : undefined, WebkitMaskImage: moreRight ? MORE_FADE : undefined }}
+    >
       {tabs.map((tab) => {
         const isActive = activeTab === tab.id
 

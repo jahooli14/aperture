@@ -186,9 +186,9 @@ export function SettingsPage() {
           prompt: string | null
           default: string
         } | null
-        if (!res) return
+        if (!res || typeof res.default !== 'string') return
         setDefaultBrief(res.default)
-        setSavedBrief(res.prompt)
+        setSavedBrief(res.prompt ?? null)
         setDraftBrief(res.prompt ?? res.default)
       } catch {
         // Silent — section just stays empty until the user retries.

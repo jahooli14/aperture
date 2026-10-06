@@ -9,7 +9,7 @@
  * pill, an icon) is needed to tell the two groups apart.
  */
 
-import { useEffect, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { ChevronDown } from 'lucide-react'
 import { useRecentNonPriorityProjects, useUpNextMiniProjects } from '../../stores/useProjectStore'
 import { ProjectMiniCard } from './ProjectMiniCard'
@@ -49,6 +49,16 @@ export function EverythingElseMini({
   const [showIdeas, setShowIdeas] = useState(false)
   useEffect(() => { onExpandedChange?.(showIdeas) }, [showIdeas, onExpandedChange])
 
+  // The suggest card renders before projects load, and with snap-mandatory
+  // Chrome keeps whatever card was snapped in view when new ones are added
+  // in front of it -- so the row opened scrolled to its end, the first
+  // project cut off at the left. Back to the start whenever the cards change.
+  const rowRef = useRef<HTMLDivElement>(null)
+  const cardKey = [...recent, ...upNext].map(p => p.id).join(',')
+  useLayoutEffect(() => {
+    if (rowRef.current) rowRef.current.scrollLeft = 0
+  }, [cardKey])
+
   return (
     <div className="space-y-3">
       {/* scroll-pl-4 matters: with `snap-mandatory`, the browser snaps the
@@ -58,7 +68,7 @@ export function EverythingElseMini({
           items-stretch + h-full on the card (not just the wrapper) is what
           keeps a 2-line title and a 1-line title the same height; without
           it the wrapper stretched but the card inside stayed content-sized. */}
-      <div className="shelf-fade flex items-stretch gap-3 overflow-x-auto pb-2 -mx-4 px-4 scroll-pl-4 scroll-pr-4 snap-x snap-mandatory scrollbar-hide">
+      <div ref={rowRef} className="shelf-fade flex items-stretch gap-3 overflow-x-auto pb-2 -mx-4 px-4 scroll-pl-4 scroll-pr-4 snap-x snap-mandatory scrollbar-hide">
         {recent.map(p => (
           <div key={p.id} className="flex-shrink-0 w-[70vw] max-w-[260px] snap-start flex">
             <ProjectMiniCard project={p} variant="glass" meta={relative(p.last_active || p.updated_at)} />

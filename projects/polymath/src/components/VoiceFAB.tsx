@@ -421,6 +421,7 @@ export function VoiceFAB({
         isOpen={isMenuOpen}
         onClose={() => setIsMenuOpen(false)}
         onAction={(action) => {
+          if (action === 'voice') setIsVoiceOpen(true)
           if (action === 'thought') setShowThoughtDialog(true)
           if (action === 'project') setShowProjectDialog(true)
           if (action === 'article') setShowArticleDialog(true)

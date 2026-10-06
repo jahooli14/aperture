@@ -1,18 +1,21 @@
 import { motion, AnimatePresence } from 'framer-motion'
-import { Lightbulb, Rocket, Link, ListPlus, X } from 'lucide-react'
+import { Mic, Lightbulb, Rocket, Link, ListPlus, X } from 'lucide-react'
 
 interface CreateMenuModalProps {
     isOpen: boolean
     onClose: () => void
-    onAction: (action: 'thought' | 'project' | 'article' | 'list') => void
+    onAction: (action: 'voice' | 'thought' | 'project' | 'article' | 'list') => void
 }
 
 // All actions share the brand cyan accent — icon + label do the work of
 // distinguishing them. Per design system: cyan-only chrome.
 // The description has to earn its line. "Thought — write down a thought"
 // is the label said twice; these say what the thing is FOR.
+// Voice is first: an unrecorded note is one the app never sees, so saying
+// it is one tap from here, not a gesture you have to know about.
 const creationActions = [
-    { id: 'thought', label: 'Thought',   description: 'Something you noticed', icon: Lightbulb },
+    { id: 'voice',   label: 'Say it',    description: 'Starts recording now', icon: Mic },
+    { id: 'thought', label: 'Write it',  description: 'Something you noticed', icon: Lightbulb },
     { id: 'project', label: 'Project',   description: 'Something you want to make', icon: Rocket },
     { id: 'list',    label: 'List item', description: 'A book, a film, a place', icon: ListPlus },
     { id: 'article', label: 'Article',   description: 'A link to read later', icon: Link },
@@ -140,7 +143,7 @@ export function CreateMenuModal({ isOpen, onClose, onAction }: CreateMenuModalPr
 
                         {/* Footer hint */}
                         <p className="meta-caps text-center pb-4" style={{ color: 'rgba(255,255,255,0.5)' }}>
-                            Hold the FAB to dictate directly
+                            Hold + to start recording straight away
                         </p>
                     </motion.div>
                 </div>

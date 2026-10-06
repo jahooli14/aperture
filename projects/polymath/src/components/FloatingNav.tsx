@@ -113,8 +113,12 @@ export function FloatingNav() {
     }
   }
 
+  // Reading lives under Lists (it's the same identity layer), so the Lists
+  // tab stays lit there and on a list's own page.
   const isActive = (option: NavOption): boolean => {
-    return location.pathname === option.path
+    const path = location.pathname
+    if (option.id === 'lists') return /^\/(lists|reading|rss|favourites)(\/|$)/.test(path)
+    return path === option.path
   }
 
   const handleVoiceFABTap = () => {

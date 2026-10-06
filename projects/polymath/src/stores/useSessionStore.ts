@@ -132,6 +132,9 @@ interface SessionState {
   /** "Too big" / "wrong thing", their own words, a fork answer, or a move
    *  they wrote themselves -- each comes back as a new move. */
   reworkMove: (projectId: string, change: MoveChange) => Promise<void>
+  /** The move was just done and no new one came back (offline, or the
+   *  writer failed): drop it, so it is never offered again as "next". */
+  forgetMove: (projectId: string) => void
 
   startSession: (projectId: string, windowMinutes: number | null, source?: string, items?: PlanItem[], friction?: FrictionLine | null, packdown?: FrictionLine | null) => Promise<void>
   closeSession: (closeoutText: string, mvsSeedMinutes?: number, doneItems?: { text: string; taskId: string | null; partial?: boolean }[]) => Promise<CloseResult | null>
@@ -307,6 +310,18 @@ export const useSessionStore = create<SessionState>((set, get) => ({
         starting: false,
       })
     }
+  },
+
+  forgetMove: (projectId) => {
+    if (get().moveFor === projectId) set({ move: null })
+    const store = useProjectStore.getState()
+    useProjectStore.setState({
+      allProjects: store.allProjects.map(p => {
+        if (p.id !== projectId || !p.metadata) return p
+        const { next_move: _gone, ...rest } = p.metadata as Record<string, unknown>
+        return { ...p, metadata: rest as typeof p.metadata }
+      }),
+    })
   },
 
   closeSession: async (closeoutText, mvsSeedMinutes, doneItems) => {
