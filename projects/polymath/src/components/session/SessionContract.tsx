@@ -215,6 +215,12 @@ export function SessionContract({
     const text = note.trim() || closeoutDraft(shapes, ticked)
     const result = await closeSession(text, mvsSeed ?? undefined, doneItems)
     if (!result) return
+    // No new move came back but the old one was just done: without this
+    // the hand-off (and the home card) offer the finished move as next.
+    const finished = moveHere?.kind === 'move' ? splitDoneWhen(moveHere.text).move : null
+    if (!result.nextMove && finished && doneItems.some(d => !d.partial && d.text === finished)) {
+      useSessionStore.getState().forgetMove(project.id)
+    }
     setSavedNote(note.trim())
     setCloseResult(result)
     setPhase('receipt')

@@ -87,7 +87,12 @@ export function Handoff({ result, nextMove, onSetMove, note, minutes, busy, onCl
         <div className="space-y-2">
           <p className={label} style={faint(0.45)}>Your note for next time</p>
           <p className="text-[20px] leading-[1.3] italic" style={serif}>“{note.trim()}”</p>
+          {result.pendingSync && (
+            <p className="text-[12.5px]" style={faint(0.55)}>The next move gets written from it once you’re back online.</p>
+          )}
         </div>
+      ) : result.pendingSync ? (
+        <p className="text-[13px]" style={faint(0.6)}>The next move gets written once you’re back online.</p>
       ) : null}
 
       {done.length > 0 && (
