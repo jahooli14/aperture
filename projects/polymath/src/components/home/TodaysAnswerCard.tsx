@@ -27,7 +27,6 @@ import {
 import { useHomeAnswerStore } from '../../stores/useHomeAnswerStore'
 import { formatRelativeTime, KeepGoingEmpty } from './KeepGoingEmpty'
 import { StandingQuestion } from './StandingQuestion'
-import { OutsideLine } from './OutsideLine'
 import { SessionContract, type Phase } from '../session/SessionContract'
 import { useSessionStore, readStoredMove } from '../../stores/useSessionStore'
 import { splitDoneWhen } from '../session/sessionRunOps'
@@ -307,7 +306,6 @@ export function TodaysAnswerCard() {
           project. */}
       <div onClick={(e) => e.stopPropagation()}>
         <StandingQuestion />
-        <OutsideLine />
       </div>
 
       <div className="cursor-pointer" onClick={() => navigate(`/projects/${focusProject!.id}`)}>
