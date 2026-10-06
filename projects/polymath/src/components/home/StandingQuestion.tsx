@@ -299,9 +299,9 @@ export function StandingQuestion() {
   const projectTitle = spark.projects?.title ?? null
 
   return reveal(
-    <div className="pb-4 mb-5">
+    <div className="pb-2 mb-2.5">
       <p
-        className="text-[11px] font-medium uppercase tracking-[0.14em] mb-1.5"
+        className="text-[11px] font-medium uppercase tracking-[0.14em] mb-1 truncate"
         style={{ color: 'var(--brand-text-muted)' }}
       >
         {projectTitle ? `to mull · ${projectTitle}` : 'to mull'}
@@ -312,7 +312,7 @@ export function StandingQuestion() {
           .mull-line in theme.css). It settles sharp and still, so it's
           dreamy on arrival and readable at rest. Keyed on the spark so a
           new question arrives the same way. */}
-      <p key={spark.id} className="mull-text text-[18px] leading-[1.75] mt-1">
+      <p key={spark.id} className="mull-text text-[16px] leading-[1.45] mt-0.5 line-clamp-5">
         {splitSentences(spark.text).map((line, i) => (
           <span key={i} className="mull-line" style={{ animationDelay: `${0.2 + i * 0.9}s` }}>
             {line}{' '}
@@ -321,7 +321,7 @@ export function StandingQuestion() {
       </p>
 
       {(spark.sources?.length ?? 0) >= 2 && (
-        <p className="text-[12px] mt-2 leading-snug" style={{ color: 'var(--brand-text-secondary)' }}>
+        <p className="text-[12px] mt-1 leading-snug line-clamp-1" style={{ color: 'var(--brand-text-secondary)' }}>
           <span className="text-[11px] uppercase tracking-[0.14em] font-medium mr-1.5" style={{ color: 'var(--brand-text-muted)' }}>
             from
           </span>
@@ -333,7 +333,7 @@ export function StandingQuestion() {
           box only appears once you've got something to say, so the resting
           state of this whole block is three lines. */}
       {!answering && (
-        <div className="flex items-center gap-3 mt-2">
+        <div className="flex items-center gap-3 mt-1.5">
           {isTake(spark.text) ? (
             // A claim gets a reaction first: one tap, then optionally why.
             STANCES.map((st, i) => (

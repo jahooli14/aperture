@@ -27,7 +27,6 @@ import {
 import { useHomeAnswerStore } from '../../stores/useHomeAnswerStore'
 import { formatRelativeTime, KeepGoingEmpty } from './KeepGoingEmpty'
 import { StandingQuestion } from './StandingQuestion'
-import { OutsideLine } from './OutsideLine'
 import { SessionContract, type Phase } from '../session/SessionContract'
 import { useSessionStore, readStoredMove } from '../../stores/useSessionStore'
 import { splitDoneWhen } from '../session/sessionRunOps'
@@ -282,7 +281,7 @@ export function TodaysAnswerCard() {
         overflow, which would cut an outer glow off at the edge. */}
     <div className="relative isolate rounded-2xl neon-breathe">
     <div
-      className="rounded-2xl p-5 flex flex-col overflow-hidden relative transition-colors duration-700 neon-edge"
+      className="rounded-2xl p-4 flex flex-col overflow-hidden relative transition-colors duration-700 neon-edge"
       style={{
         background: 'linear-gradient(155deg, rgba(var(--brand-primary-rgb),0.10) 0%, rgba(13,20,34,0.86) 55%)',
         backdropFilter: 'blur(32px) saturate(190%)',
@@ -307,7 +306,6 @@ export function TodaysAnswerCard() {
           project. */}
       <div onClick={(e) => e.stopPropagation()}>
         <StandingQuestion />
-        <OutsideLine />
       </div>
 
       <div className="cursor-pointer" onClick={() => navigate(`/projects/${focusProject!.id}`)}>
@@ -316,13 +314,13 @@ export function TodaysAnswerCard() {
             project, so it carries more contrast and a touch of the brand
             glow rather than reading as one more hairline. */}
         <div
-          className="h-px mb-4 -mt-0.5"
+          className="h-px mb-2.5 -mt-0.5"
           style={{ background: 'linear-gradient(90deg, rgba(var(--brand-primary-rgb),0.35), rgba(255,255,255,0.16) 40%, transparent)' }}
         />
-        <div className="flex items-start justify-between gap-2 mb-1 mt-1">
+        <div className="flex items-start justify-between gap-2 mb-0.5">
           <h3
-            className="card-title-lg line-clamp-2 flex-1"
-            style={{ fontWeight: 600, fontSize: '1.125rem', fontFamily: 'var(--brand-font-body)' }}
+            className="card-title-lg line-clamp-1 flex-1"
+            style={{ fontWeight: 600, fontSize: '1.0625rem', fontFamily: 'var(--brand-font-body)' }}
           >
             {focusProject.title}
           </h3>
@@ -341,7 +339,7 @@ export function TodaysAnswerCard() {
           )}
         </div>
         <span
-          className="text-[11px] uppercase tracking-[0.14em] font-medium mb-3 inline-block"
+          className="text-[11px] uppercase tracking-[0.14em] font-medium mb-2 inline-block"
           style={{
             color: dormancyBadgeColor ?? 'var(--brand-text-muted)',
           }}
@@ -354,39 +352,39 @@ export function TodaysAnswerCard() {
             weight is what made the page read as a stack of outlined
             boxes; fill alone separates it from the card behind it. */}
         {nextMove ? (
-          <div className="p-3.5 rounded-xl mb-4" style={{ background: 'rgba(255,255,255,0.055)' }}>
-            <p className="text-[11px] font-medium uppercase tracking-[0.14em] mb-1.5" style={{ color: 'var(--brand-text-muted)' }}>
+          <div className="p-3 rounded-xl mb-2.5" style={{ background: 'rgba(255,255,255,0.055)' }}>
+            <p className="text-[11px] font-medium uppercase tracking-[0.14em] mb-1" style={{ color: 'var(--brand-text-muted)' }}>
               next move
             </p>
             <p
-              className="text-[16px] leading-[1.4] font-medium"
+              className="text-[15px] leading-[1.35] font-medium"
               style={{ color: 'var(--brand-text-primary)', fontFamily: 'var(--brand-font-body)' }}
             >
               {nextMove.move}
             </p>
             {nextMove.doneWhen && (
-              <p className="text-[12px] mt-1.5" style={{ color: 'var(--brand-text-secondary)' }}>{nextMove.doneWhen}</p>
+              <p className="text-[12px] mt-1" style={{ color: 'var(--brand-text-secondary)' }}>{nextMove.doneWhen}</p>
             )}
             {reEntry && (
-              <p className="text-[12px] mt-2.5 line-clamp-2" style={{ color: 'var(--brand-text-secondary)' }}>
+              <p className="text-[12px] mt-1.5 line-clamp-1" style={{ color: 'var(--brand-text-secondary)' }}>
                 You stopped with “{reEntry}”
               </p>
             )}
           </div>
         ) : fork ? (
-          <div className="p-3.5 rounded-xl mb-4" style={{ background: 'rgba(255,255,255,0.055)' }}>
-            <p className="text-[11px] font-medium uppercase tracking-[0.14em] mb-1.5" style={{ color: 'var(--brand-text-muted)' }}>
+          <div className="p-3 rounded-xl mb-2.5" style={{ background: 'rgba(255,255,255,0.055)' }}>
+            <p className="text-[11px] font-medium uppercase tracking-[0.14em] mb-1" style={{ color: 'var(--brand-text-muted)' }}>
               first, decide
             </p>
             <p className="text-[16px] leading-[1.4] font-medium" style={{ fontFamily: 'var(--brand-font-body)' }}>{fork}</p>
           </div>
         ) : reEntry ? (
-          <div className="p-3 rounded-xl mb-4" style={{ background: 'rgba(255,255,255,0.055)' }}>
-            <p className="text-[11px] font-medium uppercase tracking-[0.14em] mb-1.5" style={{ color: 'var(--brand-text-muted)' }}>
+          <div className="p-3 rounded-xl mb-2.5" style={{ background: 'rgba(255,255,255,0.055)' }}>
+            <p className="text-[11px] font-medium uppercase tracking-[0.14em] mb-1" style={{ color: 'var(--brand-text-muted)' }}>
               where you left off
             </p>
             <p
-              className="text-[14px] leading-[1.5]"
+              className="text-[14px] leading-[1.4] line-clamp-3"
               style={{ color: 'var(--brand-text-primary)', fontFamily: 'var(--brand-font-body)' }}
             >
               “{reEntry}”
@@ -397,10 +395,10 @@ export function TodaysAnswerCard() {
         {/* One button. The move is already written, so Go starts the
             session straight away; "change it" opens the same box without
             starting, for "too big" / "wrong thing". */}
-        <div className="space-y-2" onClick={e => e.stopPropagation()}>
+        <div className="space-y-1" onClick={e => e.stopPropagation()}>
           <button
             onClick={() => handleStartSession(!!nextMove)}
-            className="neon-button w-full py-3.5 rounded-xl font-semibold text-[15px] flex items-center justify-center gap-2"
+            className="neon-button w-full py-3 rounded-xl font-semibold text-[15px] flex items-center justify-center gap-2"
           >
             <Play className="h-3.5 w-3.5 fill-current" />
             {nextMove ? 'Go' : fork ? 'Answer it' : 'Find the first move'}
