@@ -76,20 +76,21 @@ export function OutsideLine() {
   return (
     <div className="reveal" data-open={shown}>
     <div>
-    // Same shape as the question above it: no box, same label, same quiet
-    // action row. A filled panel with pill buttons read as a different app.
-    <div className="pb-3.5 mb-4">
-      <p className="text-[11px] font-medium uppercase tracking-[0.14em] mb-1.5" style={{ color: 'var(--brand-text-muted)' }}>
+    {/* Same shape as the question above it: no box, same label, same quiet
+        action row. A filled panel with pill buttons read as a different app.
+        Kept to three short lines so the whole home card fits one screen. */}
+    <div className="pb-2 mb-2.5">
+      <p className="text-[11px] font-medium uppercase tracking-[0.14em] mb-1 truncate" style={{ color: 'var(--brand-text-muted)' }}>
         from outside · {KIND_LABEL[find.kind].toLowerCase()}
       </p>
       <a href={find.url} target="_blank" rel="noreferrer" className="block" style={{ color: 'var(--brand-text-primary)' }}>
-        <p className="flex items-start gap-1.5 text-[15.5px] leading-[1.45]" style={{ fontFamily: 'var(--brand-font-serif)' }}>
-          <span>{find.title}</span>
+        <p className="flex items-start gap-1.5 text-[14.5px] leading-[1.35]" style={{ fontFamily: 'var(--brand-font-serif)' }}>
+          <span className="line-clamp-1">{find.title}</span>
           <ExternalLink className="h-3 w-3 mt-1.5 flex-shrink-0" style={{ opacity: 0.5 }} />
         </p>
-        <p className="text-[12px] leading-snug mt-1" style={{ color: 'var(--brand-text-secondary)' }}>{find.why}</p>
+        <p className="text-[12px] leading-snug mt-0.5 line-clamp-2" style={{ color: 'var(--brand-text-secondary)' }}>{find.why}</p>
       </a>
-      <div className="flex items-center gap-3 mt-2">
+      <div className="flex items-center gap-3 mt-1">
         <button className="text-[12px] disabled:opacity-30" style={quietActionStyle} disabled={busy} onClick={() => resolve('saved')}>
           save to read
         </button>
