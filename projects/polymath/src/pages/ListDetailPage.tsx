@@ -1194,7 +1194,7 @@ function ArticleListMode({ list, navigate }: ArticleListModeProps) {
             <div className="px-4 sm:px-6 lg:px-8 pb-4">
                 <header className="page-masthead">
                     <div className="page-masthead-text">
-                        <button onClick={() => navigate('/lists')} className="flex items-center gap-2 text-[11px] uppercase tracking-[0.1em] text-[var(--brand-text-muted)] hover:text-[var(--brand-text-secondary)] transition-colors mb-2">
+                        <button onClick={() => navigate('/lists')} className="back-link">
                             <ArrowLeft className="h-3.5 w-3.5" /> All lists
                         </button>
 
@@ -1648,7 +1648,7 @@ export default function ListDetailPage() {
             <div className="px-4 sm:px-6 lg:px-8 pb-4">
                 <header className="page-masthead">
                     <div className="page-masthead-text">
-                        <button onClick={() => navigate('/lists')} className="flex items-center gap-2 text-[11px] uppercase tracking-[0.1em] text-[var(--brand-text-muted)] hover:text-[var(--brand-text-secondary)] transition-colors mb-2">
+                        <button onClick={() => navigate('/lists')} className="back-link">
                             <ArrowLeft className="h-3.5 w-3.5" /> All lists
                         </button>
 

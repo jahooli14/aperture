@@ -438,7 +438,7 @@ export function VoiceFAB({
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="absolute inset-0 bg-black/80 backdrop-blur-md"
+                className="absolute inset-0 modal-backdrop"
                 onClick={() => setIsVoiceOpen(false)}
               />
               <motion.div
@@ -447,7 +447,7 @@ export function VoiceFAB({
                 animate={{ y: 0, opacity: 1 }}
                 exit={{ y: '100%', opacity: 0 }}
                 transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-                className="relative w-full md:w-[500px] bg-[#0A0A0B] border border-[var(--glass-surface-hover)] rounded-t-[2.5rem] md:rounded-[2.5rem] shadow-2xl z-10 overflow-hidden mb-0 md:mb-12"
+                className="sheet-surface relative w-full md:w-[500px] md:!rounded-2xl md:!border md:!border-white/15 z-10 overflow-hidden mb-0 md:mb-12"
               >
                 <div style={{ paddingBottom: 'env(safe-area-inset-bottom, 20px)' }}>
                   <div className="flex justify-center pt-4 pb-2 md:hidden">

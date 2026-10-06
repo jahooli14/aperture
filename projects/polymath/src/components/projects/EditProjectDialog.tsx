@@ -97,7 +97,7 @@ export function EditProjectDialog({ project, isOpen, onOpenChange }: EditProject
         <BottomSheet open={isOpen} onOpenChange={onOpenChange}>
             <BottomSheetContent>
                 <BottomSheetHeader>
-                    <BottomSheetTitle>Edit Project</BottomSheetTitle>
+                    <BottomSheetTitle>Edit project</BottomSheetTitle>
                     <BottomSheetDescription>
                         Update your project details.
                     </BottomSheetDescription>
@@ -194,16 +194,10 @@ export function EditProjectDialog({ project, isOpen, onOpenChange }: EditProject
                             type="button"
                             onClick={handleSubmit}
                             disabled={loading || !isFormValid}
-                            className="w-full h-12 font-semibold tracking-wide touch-manipulation"
-                            style={{
-                              background: 'rgba(var(--brand-primary-rgb),0.15)',
-                              border: '1px solid rgba(var(--brand-primary-rgb),0.4)',
-                              borderRadius: 'var(--brand-radius)',
-                              boxShadow: '0 4px 16px rgba(0,0,0,0.3)',
-                              color: 'var(--brand-primary)',
-                            }}
+                            variant="tinted"
+                            className="w-full touch-manipulation"
                         >
-                            {loading ? 'Saving...' : 'Save Changes'}
+                            {loading ? 'Saving…' : 'Save changes'}
                         </Button>
                     </BottomSheetFooter>
                 </div>

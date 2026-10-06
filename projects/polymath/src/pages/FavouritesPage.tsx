@@ -191,16 +191,16 @@ export default function FavouritesPage() {
     }, [items])
 
     return (
-        <div className="min-h-screen flex flex-col">
-            <div className="px-4 sm:px-6 lg:px-8 pb-4 max-w-5xl">
+        <div className="min-h-screen page-bottom">
+            <div className="px-4 sm:px-6 lg:px-8 pb-4 max-w-7xl mx-auto">
               <header className="page-masthead">
                 <div className="page-masthead-text">
                 <button
                     onClick={() => navigate('/lists')}
-                    className="flex items-center gap-2 text-[11px] uppercase tracking-[0.1em] text-[var(--brand-text-muted)] hover:text-[var(--brand-text-secondary)] transition-colors mb-2"
+                    className="back-link"
                 >
                     <ArrowLeft className="h-3.5 w-3.5" />
-                    Back to Collections
+                    All lists
                 </button>
 
                 <div className="flex items-center gap-3 mb-3">
@@ -229,13 +229,13 @@ export default function FavouritesPage() {
                     )}
                 </div>
 
-                <h1 className="page-hero-sm">Your top-rated.</h1>
+                <h1 className="page-hero">Your top-rated.</h1>
                 <div className="page-eyebrow">Four stars &amp; up, across every collection</div>
                 </div>
               </header>
             </div>
 
-            <div className="flex-1 px-4 sm:px-6 lg:px-8 pb-48 max-w-5xl">
+            <div className="px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
                 {error ? (
                     <div className="py-16 text-center text-brand-text-muted text-sm">{error}</div>
                 ) : items === null ? (

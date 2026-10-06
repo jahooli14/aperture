@@ -72,8 +72,7 @@ export function Breadcrumb(p: Props) {
           onChange={e => { const v = e.target.value; p.onText(() => v) }}
           placeholder={p.placeholder}
           rows={3}
-          className="w-full rounded-2xl px-4 py-3 text-[14px] bg-transparent resize-none outline-none"
-          style={{ border: '1px solid rgba(255,255,255,0.12)', color: 'var(--brand-text-primary)' }}
+          className="field w-full px-4 py-3 text-[14px] resize-none"
         />
         <button
           type="button"

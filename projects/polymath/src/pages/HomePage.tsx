@@ -128,16 +128,16 @@ export function HomePage() {
   if (error) {
     return (
       <div className="min-h-screen py-12 px-4 flex items-center justify-center" style={{ backgroundColor: 'var(--brand-bg)' }}>
-        <div className="max-w-2xl w-full p-8 border-red-500/20 bg-brand-primary/5">
+        <div className="glass-card max-w-2xl w-full p-8">
           <div className="flex items-center gap-3 mb-6">
-            <div className="h-12 w-12 rounded-xl bg-brand-primary/20 flex items-center justify-center text-brand-text-secondary">
+            <div className="h-12 w-12 rounded-xl bg-red-500/10 flex items-center justify-center text-red-400">
               <AlertCircle className="h-6 w-6" />
             </div>
-            <h2 className="text-2xl font-bold premium-text-platinum">Something went wrong</h2>
+            <h2 className="section-title text-2xl">Something went wrong</h2>
           </div>
           <p className="text-brand-text-secondary mb-8 font-mono text-sm p-4 bg-black/30 rounded-lg border border-red-500/10">{error}</p>
-          <button onClick={() => window.location.reload()} className="px-6 py-2.5 rounded-lg bg-brand-primary text-[var(--brand-text-primary)] font-bold hover:bg-brand-primary transition-colors">
-            Try Again
+          <button onClick={() => window.location.reload()} className="neon-button px-6 py-2.5 rounded-xl font-semibold">
+            Try again
           </button>
         </div>
       </div>

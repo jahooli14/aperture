@@ -15,6 +15,7 @@ import { useToast } from '../components/ui/toast'
 import { useConfirmDialog } from '../components/ui/confirm-dialog'
 import { FeedSearchSheet } from '../components/reading/FeedSearchSheet'
 import { SubtleBackground } from '../components/SubtleBackground'
+import { EmptyState } from '../components/ui/empty-state'
 import { format } from 'date-fns'
 
 export function FeedsPage() {
@@ -85,12 +86,12 @@ export function FeedsPage() {
     <>
       <SubtleBackground />
       <div className="min-h-screen page-bottom">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 flex flex-col gap-3">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col gap-3">
           <header className="page-masthead">
             <div className="page-masthead-text">
               <button
                 onClick={() => navigate(-1)}
-                className="flex items-center gap-2 text-[11px] uppercase tracking-[0.1em] text-[var(--brand-text-muted)] hover:text-[var(--brand-text-secondary)] transition-colors mb-2"
+                className="back-link"
               >
                 <ArrowLeft className="h-3.5 w-3.5" />
                 Back
@@ -132,24 +133,24 @@ export function FeedsPage() {
           )}
 
           {!loading && feeds.length === 0 && (
-            <div className="text-center py-16 px-4">
-              <Rss className="h-10 w-10 mx-auto text-[var(--brand-text-muted)] opacity-70 mb-4" />
-              <h3 className="page-hero-sm mb-2">No feeds yet.</h3>
-              <p className="text-sm text-[var(--brand-text-muted)] leading-relaxed mb-6">
-                Subscribe to a few sources and they'll show up in <em>now consuming</em> on the home.
-              </p>
-              <button
-                onClick={() => setSheetOpen(true)}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-brand-primary text-[var(--brand-text-primary)] font-medium"
-              >
-                <Plus className="h-4 w-4" />
-                Add your first feed
-              </button>
-            </div>
+            <EmptyState
+              icon={Rss}
+              title="No feeds yet"
+              description="Subscribe to a few sources and they'll show up in now consuming on the home."
+              action={
+                <button
+                  onClick={() => setSheetOpen(true)}
+                  className="neon-button inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium"
+                >
+                  <Plus className="h-4 w-4" />
+                  Add your first feed
+                </button>
+              }
+            />
           )}
 
           {feeds.length > 0 && (
-            <ul className="space-y-2 mt-4">
+            <ul className="space-y-2 mt-4 max-w-3xl">
               {feeds.map(feed => {
                 const isPending = pendingId === feed.id
                 const lastFetched = feed.last_fetched_at
@@ -158,7 +159,7 @@ export function FeedsPage() {
                 return (
                   <li
                     key={feed.id}
-                    className="flex items-start gap-3 p-4 rounded-xl bg-white/[0.025] border border-white/[0.05]"
+                    className="glass-card-subtle flex items-start gap-3 p-4"
                   >
                     <div className="flex-1 min-w-0">
                       <p className={`text-[15px] font-medium truncate ${feed.enabled ? 'text-[var(--brand-text-primary)]' : 'text-[var(--brand-text-muted)] line-through'}`}>

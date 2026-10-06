@@ -258,7 +258,7 @@ export function VoiceSearch({
         {isListening ? (
           <span className="flex items-center justify-center gap-2">
             <Loader2 className="h-4 w-4 animate-spin" />
-            Listening...
+            Listening…
           </span>
         ) : transcript ? (
           'Tap microphone to continue or search'

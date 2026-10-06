@@ -29,7 +29,7 @@ export function CreateMenuModal({ isOpen, onClose, onAction }: CreateMenuModalPr
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         transition={{ duration: 0.2 }}
-                        className="absolute inset-0 bg-black/70 backdrop-blur-md"
+                        className="absolute inset-0 modal-backdrop"
                         onClick={onClose}
                     />
 
@@ -39,13 +39,8 @@ export function CreateMenuModal({ isOpen, onClose, onAction }: CreateMenuModalPr
                         animate={{ y: 0 }}
                         exit={{ y: '100%' }}
                         transition={{ type: 'spring', damping: 36, stiffness: 520, mass: 0.45 }}
-                        className="relative w-full z-10 overflow-hidden"
-                        style={{
-                            background: 'var(--brand-bg)',
-                            borderTop: '1px solid rgba(255,255,255,0.08)',
-                            borderRadius: '24px 24px 0 0',
-                            paddingBottom: 'env(safe-area-inset-bottom, 20px)',
-                        }}
+                        className="sheet-surface relative w-full z-10 overflow-hidden"
+                        style={{ paddingBottom: 'env(safe-area-inset-bottom, 20px)' }}
                     >
                         {/* Drag handle */}
                         <div className="flex justify-center pt-3 pb-1">

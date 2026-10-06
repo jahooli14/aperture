@@ -197,6 +197,68 @@
 .masthead-action:hover { background: var(--glass-surface-hover); }
 .masthead-action:active { transform: scale(0.96); }
 
+/* ─── Back link ─────────────────────────────────────────────────── */
+/* The way back from a sub-page (Feeds, Favourites, a list, completed
+   projects). Sits above the .page-hero inside .page-masthead-text.
+   One look everywhere — don't rebuild it inline. */
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  min-height: 28px;
+  font-family: var(--brand-font-body);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--brand-text-muted);
+  transition: color 0.18s ease;
+}
+.back-link:hover { color: var(--brand-text-secondary); }
+
+/* ─── Text field ────────────────────────────────────────────────── */
+/* Boxed input / textarea. Surface, border, corner and focus only —
+   padding and font size stay on the element, since they depend on
+   where it sits. */
+.field {
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: var(--brand-text-primary);
+  outline: none;
+  transition: border-color 0.18s ease, background 0.18s ease;
+}
+.field::placeholder { color: var(--brand-text-muted); }
+.field:focus {
+  border-color: rgba(var(--brand-primary-rgb), 0.5);
+  background: rgba(255, 255, 255, 0.07);
+}
+
+/* ─── Modal surfaces ────────────────────────────────────────────── */
+/* Hand-rolled sheets and dialogs use these so they match the shared
+   BottomSheet / Dialog components: same backdrop, same panel, same
+   corner. Don't invent a new radius or blur per modal. */
+.modal-backdrop {
+  background: rgba(0, 0, 0, 0.7);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+}
+
+.sheet-surface {
+  background: rgb(15, 22, 36);
+  border-top: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 -28px 80px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  border-radius: 24px 24px 0 0;
+}
+
+.dialog-surface {
+  background: rgb(20, 27, 38);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+}
+
 /* ─── Page hero ─────────────────────────────────────────────────── */
 /* Serif editorial title used at the top of most full-page surfaces. */
 

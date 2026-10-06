@@ -278,10 +278,10 @@ export function ProjectDetailPage() {
           <div className="page-masthead-text">
             <button
               onClick={() => navigate('/projects')}
-              className="flex items-center gap-2 text-[11px] uppercase tracking-[0.1em] text-[var(--brand-text-muted)] hover:text-[var(--brand-text-secondary)] transition-colors"
+              className="back-link"
             >
               <ArrowLeft className="h-3.5 w-3.5" />
-              Back
+              Your projects
             </button>
           </div>
           <div className="page-masthead-actions">
@@ -293,7 +293,7 @@ export function ProjectDetailPage() {
               {showMenu && (
                 <>
                   <div className="fixed inset-0 z-50" onClick={() => setShowMenu(false)} />
-                  <div className="absolute right-0 top-full mt-2 w-52 max-w-[calc(100vw-2rem)] rounded-2xl p-1.5 z-[60] bg-[#1a1a24] border border-white/[0.08] shadow-2xl">
+                  <div className="absolute right-0 top-full mt-2 w-52 max-w-[calc(100vw-2rem)] p-1.5 z-[60] dialog-surface">
                     <button
                       onClick={() => { setShowMenu(false); setShowEditDialog(true) }}
                       className="w-full px-3.5 py-3 text-left text-[14px] font-medium transition-colors hover:bg-white/[0.05] rounded-xl min-h-[44px]"
@@ -460,8 +460,7 @@ export function ProjectDetailPage() {
                       onChange={(e) => setTempGoal(e.target.value)}
                       rows={3}
                       placeholder="What does done look like?"
-                      className="w-full bg-black/20 rounded-xl p-3 resize-none focus:outline-none border text-base"
-                      style={{ color: 'var(--brand-text-primary)', borderColor: 'var(--glass-border-bold)' }}
+                      className="field w-full p-3 resize-none text-base"
                       onKeyDown={(e) => {
                         if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void saveGoal() }
                         else if (e.key === 'Escape') setEditingGoal(false)

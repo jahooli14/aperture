@@ -97,15 +97,16 @@ export function SaveArticleDialog({ isOpen, onOpenChange }: SaveArticleDialogPro
                     <Button
                         onClick={() => handleSubmit()}
                         disabled={!url.trim() || saving}
+                        variant="tinted"
                         className="w-full"
                     >
                         {saving ? (
                             <>
                                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                Saving...
+                                Saving…
                             </>
                         ) : (
-                            'Save Article'
+                            'Save article'
                         )}
                     </Button>
                 </BottomSheetFooter>

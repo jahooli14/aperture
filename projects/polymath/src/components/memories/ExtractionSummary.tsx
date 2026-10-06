@@ -117,7 +117,7 @@ export function ExtractionSummary() {
             transition={{ type: 'spring', damping: 20, stiffness: 300 }}
             className="fixed bottom-24 left-4 right-4 z-50 md:left-1/2 md:-translate-x-1/2 md:w-auto md:max-w-sm"
           >
-            <div className="px-4 py-3 rounded-2xl bg-[#1a1f35]/95 backdrop-blur-xl border border-[var(--glass-surface-hover)] shadow-2xl flex items-center gap-2 flex-wrap">
+            <div className="dialog-surface px-4 py-3 flex items-center gap-2 flex-wrap">
               {line}
               <button
                 onClick={() => setVisible(false)}

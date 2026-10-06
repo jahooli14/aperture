@@ -87,7 +87,7 @@ export function MorningFollowUp({ onDismiss, onCapture }: MorningFollowUpProps) 
               onChange={e => setResponse(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleSubmit()}
               placeholder="A thought, connection, or nothing at all..."
-              className="flex-1 bg-[var(--glass-surface)] border border-[var(--glass-surface-hover)] rounded-xl px-3 py-2 text-sm text-[var(--brand-text-primary)] placeholder-gray-500 focus:outline-none focus:border-brand-primary/30"
+              className="field flex-1 px-3 py-2 text-sm"
               autoFocus
             />
             <button

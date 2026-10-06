@@ -125,7 +125,7 @@ export function VoiceInput({
     return (
       <div className="p-6 text-center glass-card border-red-500/30 bg-brand-primary/10">
         <Mic className="h-10 w-10 mx-auto mb-4 text-brand-text-secondary opacity-75" />
-        <p className="text-brand-primary font-medium mb-1">Recording Unsupported</p>
+        <p className="text-brand-primary font-medium mb-1">Recording unsupported</p>
         <p className="text-sm text-brand-primary/70">
           Your browser doesn't support voice recording. Try using Chrome, Firefox or a recent Safari.
         </p>
