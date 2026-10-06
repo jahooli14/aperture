@@ -33,6 +33,10 @@ import type { ArticleStatus, Article } from '../types/reading'
 import type { RSSFeedItem as RSSItem } from '../types/rss'
 
 // Lazy load heavy dialog components to reduce initial bundle size
+// Dev builds, or `localStorage.polymath-debug = 1` to see it on a phone.
+const SHOW_PROCESSING_DEBUG = import.meta.env.DEV || (() => {
+  try { return localStorage.getItem('polymath-debug') === '1' } catch { return false }
+})()
 const ProcessingDebugPanel = lazy(lazyRetry(() => import('../components/reading/ProcessingDebugPanel').then(m => ({ default: m.ProcessingDebugPanel }))))
 
 // 'good' is the shelf of articles the reader's end-of-article verdict kept
@@ -814,7 +818,7 @@ export function ReadingPage() {
             {/* Inline URL save bar */}
             <form onSubmit={handleInlineSave} className="flex items-center gap-2 w-full md:w-auto md:min-w-[400px] max-w-full">
               <div
-                className="flex items-center gap-2 flex-1 rounded-lg px-3 h-10 transition-all duration-200"
+                className="flex items-center gap-2 flex-1 min-w-0 rounded-lg px-3 h-10 transition-all duration-200"
                 style={{
                   backgroundColor: 'var(--brand-glass-bg)',
                   border: inlineUrlFocused ? '2px solid rgba(var(--brand-primary-rgb),0.5)' : '2px solid var(--glass-surface-hover)',
@@ -830,7 +834,7 @@ export function ReadingPage() {
                   onFocus={() => setInlineUrlFocused(true)}
                   onBlur={() => setInlineUrlFocused(false)}
                   autoComplete="off"
-                  className="flex-1 h-full border-0 text-sm focus:outline-none focus:ring-0 placeholder:text-[var(--brand-text-primary)]/20 appearance-none bg-transparent"
+                  className="flex-1 min-w-0 h-full border-0 text-sm focus:outline-none focus:ring-0 placeholder:text-[var(--brand-text-primary)]/20 appearance-none bg-transparent"
                   style={{ color: "var(--brand-text-secondary)" }}
                 />
               </div>
@@ -1215,8 +1219,10 @@ export function ReadingPage() {
           ]}
         />
 
-        {/* Processing Debug Panel */}
-        <Suspense fallback={null}>
+        {/* Processing Debug Panel -- a developer tool (poll counts, backend
+            stage, activity log). It used to pop up, red-bordered, over the
+            page for anyone whose saved article was still being fetched. */}
+        {SHOW_PROCESSING_DEBUG && <Suspense fallback={null}>
           <ProcessingDebugPanel
             articles={safeArticles}
             onRetry={(articleId, url) => {
@@ -1284,7 +1290,7 @@ export function ReadingPage() {
             }
           }}
           />
-        </Suspense>
+        </Suspense>}
       </PullToRefresh>
     </>
   )

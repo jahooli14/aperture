@@ -61,7 +61,7 @@ export function WorkView({
             {formatClock(clockSeconds)}
           </p>
           <p className="text-[11px] uppercase tracking-[0.14em] mt-1" style={faint(0.4)}>
-            {timeUp ? 'over' : hasWindow ? 'left' : 'in'}
+            {timeUp ? 'over' : hasWindow ? 'left' : 'so far'}
           </p>
         </div>
       </div>

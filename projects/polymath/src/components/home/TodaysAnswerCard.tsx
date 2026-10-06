@@ -27,6 +27,7 @@ import {
 import { useHomeAnswerStore } from '../../stores/useHomeAnswerStore'
 import { formatRelativeTime, KeepGoingEmpty } from './KeepGoingEmpty'
 import { StandingQuestion } from './StandingQuestion'
+import { MoveTweak } from './MoveTweak'
 import { SessionContract, type Phase } from '../session/SessionContract'
 import { useSessionStore, readStoredMove } from '../../stores/useSessionStore'
 import { splitDoneWhen } from '../session/sessionRunOps'
@@ -84,6 +85,8 @@ export function TodaysAnswerCard() {
   // reason. Every other phase (window/planning/closeout/receipt/done) is
   // brief, so it keeps the richer look.
   const [sessionPhase, setSessionPhase] = useState<Phase | null>(null)
+  // "Not this — change it" opens too big / wrong thing right here.
+  const [tweaking, setTweaking] = useState(false)
 
 
   // "Work on this one, now" arriving from elsewhere on the page — the ▶ on
@@ -393,8 +396,8 @@ export function TodaysAnswerCard() {
         ) : null}
 
         {/* One button. The move is already written, so Go starts the
-            session straight away; "change it" opens the same box without
-            starting, for "too big" / "wrong thing". */}
+            session straight away; "change it" opens "too big" / "wrong
+            thing" inline under it (MoveTweak). */}
         <div className="space-y-1" onClick={e => e.stopPropagation()}>
           <button
             onClick={() => handleStartSession(!!nextMove)}
@@ -405,12 +408,15 @@ export function TodaysAnswerCard() {
           </button>
           {nextMove && (
             <button
-              onClick={() => handleStartSession(false)}
+              onClick={() => setTweaking(t => !t)}
               className="w-full text-[12px] py-0.5"
               style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.85 }}
             >
-              Not this — change it
+              {tweaking ? 'Keep this one' : 'Not this — change it'}
             </button>
+          )}
+          {nextMove && tweaking && (
+            <MoveTweak projectId={focusProject.id} onClose={() => setTweaking(false)} />
           )}
         </div>
       </div>

@@ -106,14 +106,20 @@ export function Breadcrumb(p: Props) {
 
       <div className="flex-1" />
       <div className="space-y-3">
-        <button
-          className="w-full py-4 rounded-2xl text-[15px] font-semibold disabled:opacity-50"
-          style={primaryButton}
-          disabled={p.saving}
-          onClick={p.onSave}
-        >
-          {p.saving ? 'Saving…' : p.text.trim() ? 'Save note' : 'Skip the note'}
-        </button>
+        {/* The note writes next time's move, so skipping it is never the
+            big lit button -- it's there, just quiet. */}
+        {p.text.trim() || p.saving ? (
+          <button
+            className="w-full py-4 rounded-2xl text-[15px] font-semibold disabled:opacity-50"
+            style={primaryButton}
+            disabled={p.saving}
+            onClick={p.onSave}
+          >
+            {p.saving ? 'Saving…' : 'Save note'}
+          </button>
+        ) : (
+          <button className="w-full py-2 text-[13px]" style={faint(0.65)} onClick={p.onSave}>Skip the note</button>
+        )}
         <button className="w-full text-[12.5px]" style={faint(0.5)} onClick={p.onBack}>Not done yet — back to it</button>
         {p.error && <p className="text-xs text-red-400 text-center">{p.error}</p>}
       </div>
