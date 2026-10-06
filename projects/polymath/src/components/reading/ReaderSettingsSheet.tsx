@@ -80,7 +80,7 @@ export function ReaderSettingsSheet({ open, prefs, onChange, onClose }: ReaderSe
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            className="absolute inset-0 modal-backdrop"
             onClick={onClose}
           />
           <motion.div
@@ -88,13 +88,7 @@ export function ReaderSettingsSheet({ open, prefs, onChange, onClose }: ReaderSe
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
             transition={{ type: 'spring', damping: 28, stiffness: 320 }}
-            className="relative w-full md:w-[420px] z-10 rounded-t-[2rem] md:rounded-[2rem] overflow-hidden"
-            style={{
-              background: 'rgba(12, 17, 25, 0.96)',
-              backdropFilter: 'blur(24px)',
-              WebkitBackdropFilter: 'blur(24px)',
-              border: '1px solid rgba(255,255,255,0.08)',
-            }}
+            className="sheet-surface relative w-full md:w-[420px] md:!rounded-2xl md:!border md:!border-white/15 z-10 overflow-hidden"
           >
             <div style={{ paddingBottom: 'env(safe-area-inset-bottom, 16px)' }}>
               <div className="flex justify-center pt-3 pb-1 md:hidden">

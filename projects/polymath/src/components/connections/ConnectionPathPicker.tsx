@@ -139,7 +139,7 @@ export function ConnectionPathPicker({ sourceId, sourceType, open, onClose, onSe
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           onClick={onClose}
-          className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+          className="absolute inset-0 modal-backdrop"
         />
 
         {/* Picker */}
@@ -148,13 +148,7 @@ export function ConnectionPathPicker({ sourceId, sourceType, open, onClose, onSe
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: -10 }}
           transition={{ type: 'spring', damping: 30, stiffness: 500 }}
-          className="relative w-full max-w-lg rounded-2xl overflow-hidden"
-          style={{
-            background: 'rgba(20, 27, 38, 0.95)',
-            backdropFilter: 'blur(32px)',
-            border: '1px solid rgba(255,255,255,0.1)',
-            boxShadow: '0 24px 80px rgba(0,0,0,0.5)',
-          }}
+          className="dialog-surface relative w-full max-w-lg overflow-hidden"
         >
           {/* Search input */}
           <div className="flex items-center gap-3 px-5 py-4 border-b border-white/5">

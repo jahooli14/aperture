@@ -316,7 +316,7 @@ export function BedtimePage() {
             <div className="flex items-center gap-3 min-w-0 flex-1">
               <div className="min-w-0">
                 <p className="text-sm font-semibold premium-text-platinum">
-                  {prompts.length > 0 ? "Tonight's Prompts Ready" : "Waiting for 9:30pm"}
+                  {prompts.length > 0 ? "Tonight's prompts ready" : "Waiting for 9:30pm"}
                 </p>
                 {message && (
                   <p className="text-xs mt-0.5 text-[var(--brand-text-secondary)]">

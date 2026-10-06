@@ -157,7 +157,7 @@ const [bridges, setBridges] = useState<BridgeWithMemories[]>([])
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md"
+            className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 modal-backdrop"
             onClick={onClose}
           >
             <motion.div
@@ -165,11 +165,7 @@ const [bridges, setBridges] = useState<BridgeWithMemories[]>([])
               animate={{ y: 0, opacity: 1, scale: 1 }}
               exit={{ y: 20, opacity: 0, scale: 0.95 }}
               transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-              className="relative w-full max-w-2xl max-h-[calc(100vh-4rem)] sm:max-h-[calc(100vh-8rem)] rounded-2xl p-5 sm:p-6 overflow-y-auto overscroll-contain"
-              style={{
-                backgroundColor: 'var(--brand-bg)',
-                boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.12), 0 20px 60px rgba(0,0,0,0.6)',
-              }}
+              className="dialog-surface relative w-full max-w-2xl max-h-[calc(100vh-4rem)] sm:max-h-[calc(100vh-8rem)] p-5 sm:p-6 overflow-y-auto overscroll-contain"
               onClick={(e) => e.stopPropagation()} // Prevent modal from closing when clicking inside
             >
               <button
@@ -230,12 +226,7 @@ const [bridges, setBridges] = useState<BridgeWithMemories[]>([])
                     <>
                       <div className="fixed inset-0 z-[60]" onClick={() => setMenuOpen(false)} />
                       <div
-                        className="absolute left-0 top-full mt-2 w-56 max-w-[calc(100vw-3rem)] rounded-2xl p-1.5 z-[70]"
-                        style={{
-                          background: '#1a1a24',
-                          border: '1px solid rgba(255,255,255,0.08)',
-                          boxShadow: '0 20px 40px rgba(0,0,0,0.6)',
-                        }}
+                        className="dialog-surface absolute left-0 top-full mt-2 w-56 max-w-[calc(100vw-3rem)] p-1.5 z-[70]"
                       >
                         {/* "What connects here" used to live in this menu,
                             opening the Context Engine sidebar — removed

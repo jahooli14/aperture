@@ -190,15 +190,15 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
             {article.title?.startsWith('http') ? (
               <div className="flex items-center gap-2 mb-1">
                 <Loader2 className="h-4 w-4 animate-spin text-[var(--brand-primary)]" />
-                <span className="text-sm font-medium text-brand-primary">Extracting...</span>
+                <span className="text-sm font-medium text-brand-primary">Extracting…</span>
               </div>
             ) : (
-              <h3 className="text-lg font-black leading-tight text-[var(--brand-text-primary)] block break-words">
+              <h3 className="card-title-lg block break-words">
                 {article.title || 'Untitled'}
               </h3>
             )}
             {is_rotting && (
-              <span className="text-[11px] px-2 py-0.5 rounded-lg font-black uppercase tracking-wide ml-2 align-middle" style={{ background: 'rgba(239,68,68,0.18)', color: "var(--brand-text-secondary)" }}>Rotting</span>
+              <span className="text-[11px] px-2 py-0.5 rounded-lg font-semibold uppercase tracking-wide ml-2 align-middle" style={{ background: 'rgba(239,68,68,0.18)', color: "var(--brand-text-secondary)" }}>Rotting</span>
             )}
             {/* The end-of-article verdict, visible from the list — this is
                 what decides whether the piece counts towards project ideas,

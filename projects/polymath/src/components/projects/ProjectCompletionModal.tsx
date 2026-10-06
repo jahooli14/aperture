@@ -96,7 +96,7 @@ export function ProjectCompletionModal({ project, sparkedByMemories, isOpen, onC
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/80 z-[9000] backdrop-blur-sm"
+            className="fixed inset-0 modal-backdrop z-[9000]"
             onClick={onClose}
           />
           <motion.div
@@ -108,12 +108,7 @@ export function ProjectCompletionModal({ project, sparkedByMemories, isOpen, onC
             className="fixed inset-x-4 bottom-8 sm:inset-auto sm:left-1/2 sm:bottom-auto sm:top-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-full sm:max-w-md z-[9001]"
           >
             <div
-              className="relative p-8 rounded-2xl border border-[var(--glass-surface-hover)] overflow-hidden"
-              style={{
-                background: 'var(--brand-glass-bg)',
-                backdropFilter: 'blur(24px)',
-                boxShadow: '0 0 60px rgba(52, 211, 153, 0.15), 0 4px 16px rgba(0,0,0,0.5)',
-              }}
+              className="dialog-surface relative p-8 overflow-hidden"
             >
               {/* Close button */}
               <button
@@ -152,7 +147,7 @@ export function ProjectCompletionModal({ project, sparkedByMemories, isOpen, onC
                       >
                         <div className="flex items-center gap-2 mb-2">
                           <Sprout className="h-3.5 w-3.5" style={{ color: 'rgb(var(--color-accent-light-rgb))' }} />
-                          <span className="text-[11px] font-black uppercase tracking-[0.14em]" style={{ color: 'rgb(var(--color-accent-light-rgb))' }}>
+                          <span className="text-[11px] font-semibold uppercase tracking-[0.14em]" style={{ color: 'rgb(var(--color-accent-light-rgb))' }}>
                             This started as a thought
                           </span>
                         </div>
@@ -167,7 +162,7 @@ export function ProjectCompletionModal({ project, sparkedByMemories, isOpen, onC
 
                     <button
                       onClick={handleDone}
-                      className="mt-6 w-full py-3 rounded-xl font-black uppercase text-xs tracking-widest transition-all"
+                      className="mt-6 w-full py-3 rounded-xl font-semibold uppercase text-xs tracking-widest transition-all"
                       style={{
                         background: 'rgba(var(--brand-primary-rgb), 0.15)',
                         border: '1px solid rgba(var(--brand-primary-rgb), 0.3)',
@@ -191,18 +186,18 @@ export function ProjectCompletionModal({ project, sparkedByMemories, isOpen, onC
                       value={reflection}
                       onChange={handleReflectionChange}
                       placeholder="What worked, what surprised you, what you'd do differently..."
-                      className="w-full rounded-xl px-4 py-3 text-sm text-[var(--brand-text-primary)] placeholder:text-[var(--brand-text-primary)]/20 resize-none focus:outline-none mb-4 text-left"
-                      style={{ backgroundColor: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', minHeight: '90px' }}
+                      className="field w-full px-4 py-3 text-sm resize-none mb-4 text-left"
+                      style={{ minHeight: '90px' }}
                       onKeyDown={e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) handleSaveReflection() }}
                     />
                     <div className="flex gap-2">
                       <button
                         onClick={handleSaveReflection}
                         disabled={saving}
-                        className="flex-1 py-2.5 rounded-xl font-black uppercase text-xs tracking-widest transition-all"
+                        className="flex-1 py-2.5 rounded-xl font-semibold uppercase text-xs tracking-widest transition-all"
                         style={{ background: 'rgba(var(--brand-primary-rgb), 0.15)', border: '1px solid rgba(var(--brand-primary-rgb), 0.3)', color: 'rgb(var(--color-accent-light-rgb))' }}
                       >
-                        {saving ? 'Saving...' : reflection.trim() ? 'Save reflection' : 'Done'}
+                        {saving ? 'Saving…' : reflection.trim() ? 'Save reflection' : 'Done'}
                       </button>
                       <button
                         onClick={onClose}

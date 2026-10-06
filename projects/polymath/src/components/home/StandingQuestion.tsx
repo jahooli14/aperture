@@ -408,8 +408,7 @@ export function StandingQuestion() {
             onChange={e => setFollowUpText(e.target.value)}
             placeholder="Or type it..."
             rows={2}
-            className="w-full mt-2 rounded-xl px-3 py-2 text-sm bg-transparent border resize-none outline-none"
-            style={{ borderColor: 'var(--glass-border-bold)', color: 'var(--brand-text-primary)' }}
+            className="field w-full mt-2 px-3 py-2 text-sm resize-none"
           />
           <div className="flex items-center gap-3 mt-2">
             <button
@@ -453,8 +452,7 @@ export function StandingQuestion() {
             onChange={e => setText(e.target.value)}
             placeholder={STANCES.find(st => st.id === stance)?.hint ?? 'Or type it...'}
             rows={2}
-            className="w-full mt-2 rounded-xl px-3 py-2 text-sm bg-transparent border resize-none outline-none"
-            style={{ borderColor: 'var(--glass-border-bold)', color: 'var(--brand-text-primary)' }}
+            className="field w-full mt-2 px-3 py-2 text-sm resize-none"
           />
           <div className="flex items-center gap-3 mt-2">
             {(text || stance) && (

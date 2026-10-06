@@ -57,8 +57,7 @@ export function EmptyState({
 
       {/* Title */}
       <h3
-        className="text-lg font-black uppercase tracking-tight mb-2"
-        style={{ color: 'var(--brand-text-primary)' }}
+        className="card-title-lg mb-2"
       >
         {title}
       </h3>

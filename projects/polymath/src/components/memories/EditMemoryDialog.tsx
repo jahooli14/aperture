@@ -412,21 +412,17 @@ export function EditMemoryDialog({ memory, open, onOpenChange, onMemoryUpdated }
             <Button
               type="submit"
               disabled={loading || !body.trim() || uploading}
-              className="w-full h-11 font-semibold text-sm touch-manipulation"
-              style={{
-                background: 'rgba(255,255,255,0.08)',
-                border: '1px solid rgba(255,255,255,0.15)',
-                color: 'var(--brand-text-primary)',
-              }}
+              variant="tinted"
+              className="w-full touch-manipulation"
             >
-              {uploading ? 'Uploading...' : loading ? 'Saving...' : 'Save Changes'}
+              {uploading ? 'Uploading…' : loading ? 'Saving…' : 'Save changes'}
             </Button>
             <Button
               type="button"
               variant="ghost"
               onClick={() => onOpenChange(false)}
               disabled={loading}
-              className="w-full h-10 touch-manipulation opacity-40 hover:opacity-70 text-sm"
+              className="w-full touch-manipulation"
             >
               Cancel
             </Button>

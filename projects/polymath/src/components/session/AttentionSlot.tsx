@@ -26,7 +26,6 @@ import { VoiceInput } from '../VoiceInput'
 import { api } from '../../lib/apiClient'
 
 const secondaryTextStyle = { color: 'var(--brand-text-secondary)', opacity: 0.7 }
-const borderStyle = { borderColor: 'var(--glass-border-bold)' }
 /**
  * The quiet way out.
  *
@@ -143,8 +142,7 @@ function MirrorSlot({ rows, onDismiss }: { rows: MirrorRow[]; onDismiss: () => v
         onChange={e => setMissingText(e.target.value)}
         placeholder="Or type it..."
         rows={2}
-        className="w-full rounded-xl px-3 py-2 text-sm bg-transparent border resize-none outline-none"
-        style={{ ...borderStyle, color: 'var(--brand-text-primary)' }}
+        className="field w-full px-3 py-2 text-sm resize-none"
       />
       <div className="flex gap-2">
         <button
@@ -224,8 +222,7 @@ export function AttentionSlot() {
           onChange={e => setCloseoutText(e.target.value)}
           placeholder="Did: ... Next: ..."
           rows={2}
-          className="w-full rounded-xl px-3 py-2 text-sm bg-transparent border resize-none outline-none"
-          style={{ ...borderStyle, color: 'var(--brand-text-primary)' }}
+          className="field w-full px-3 py-2 text-sm resize-none"
         />
         <div className="space-y-1">
           <button

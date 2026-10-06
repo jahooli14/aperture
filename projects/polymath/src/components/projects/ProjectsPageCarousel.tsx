@@ -289,7 +289,7 @@ function ProjectCard({ project, prominent = false }: { project: Project, promine
 
         <div className="flex items-center gap-1.5 flex-shrink-0">
           {project.status === 'dormant' && (
-            <span className="flex items-center gap-0.5 text-[11px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-md"
+            <span className="flex items-center gap-0.5 text-[11px] font-semibold uppercase tracking-widest px-1.5 py-0.5 rounded-md"
               style={{ color: 'rgba(203,213,225,0.9)', background: 'rgba(148,163,184,0.12)', border: '1px solid rgba(148,163,184,0.25)' }}>
               <Snowflake className="h-2.5 w-2.5" />
             </span>
@@ -358,7 +358,7 @@ function ArchivesSpotlightCard({ project }: { project: Project }) {
       </div>
 
       <Link to={`/projects/${project.id}`} className="flex-1 min-w-0 hover:opacity-80 transition-opacity">
-        <p className="text-[11px] font-black uppercase tracking-[0.14em] mb-0.5" style={{ color: 'rgba(148,163,184,0.5)' }}>
+        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] mb-0.5 text-[var(--brand-text-muted)]">
           From the archives · {daysBuried}d ago
         </p>
         <p className="text-sm font-bold text-[var(--brand-text-primary)] truncate">{project.title}</p>

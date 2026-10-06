@@ -356,36 +356,24 @@ export function SettingsPage() {
     >
       <SubtleBackground />
 
-      {/* Fixed Header Bar */}
-      <div
-        className="fixed top-0 left-0 right-0 z-40 backdrop-blur-md"
-        style={{
-          backgroundColor: 'rgba(15, 24, 41, 0.85)',
-          paddingTop: 'env(safe-area-inset-top)',
-          borderBottom: '1px solid rgba(255,255,255,0.06)'
-        }}
-      >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
-          <div className="min-w-0 flex-1">
-            <h1
-              className="page-hero-sm truncate"
-              style={{ fontSize: 'clamp(1.5rem, 4.5vw, 1.875rem)' }}
-            >
-              Settings.
-            </h1>
-          </div>
-          <button
-            onClick={() => navigate('/search')}
-            className="h-11 w-11 rounded-xl flex items-center justify-center transition-all hover:bg-[var(--glass-surface)] bg-[var(--glass-surface)] press-spring flex-shrink-0"
-            style={{ color: 'rgb(var(--page-accent-rgb, var(--brand-primary-rgb)))', border: '1px solid rgba(255,255,255,0.1)' }}
-            title="Search everything"
-          >
-            <Search className="h-5 w-5" />
-          </button>
+      <div className="min-h-screen page-bottom">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <header className="page-masthead">
+            <div className="page-masthead-text">
+              <h1 className="page-hero">Settings.</h1>
+            </div>
+            <div className="page-masthead-actions">
+              <button
+                onClick={() => navigate('/search')}
+                className="masthead-action press-spring"
+                aria-label="Search everything"
+                title="Search everything"
+              >
+                <Search className="h-5 w-5" />
+              </button>
+            </div>
+          </header>
         </div>
-      </div>
-
-      <div className="min-h-screen page-bottom" style={{ paddingTop: 'calc(5.5rem + env(safe-area-inset-top))' }}>
 
         {/* Appearance Section */}
         <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mb-10">
@@ -396,7 +384,7 @@ export function SettingsPage() {
                 tone used in the background atmosphere. */}
             <div className="mb-8">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-semibold uppercase tracking-wider opacity-60" style={{ color: 'var(--brand-text-muted)' }}>
+                <h3 className="text-sm font-semibold uppercase tracking-wider" style={{ color: 'var(--brand-text-muted)' }}>
                   Colours
                 </h3>
                 <button
@@ -431,7 +419,7 @@ export function SettingsPage() {
 
             {/* Intensity */}
             <div className="mb-8">
-              <h3 className="text-sm font-semibold mb-4 uppercase tracking-wider opacity-60 flex items-center gap-2" style={{ color: "var(--brand-text-muted)" }}>
+              <h3 className="text-sm font-semibold mb-4 uppercase tracking-wider flex items-center gap-2" style={{ color: "var(--brand-text-muted)" }}>
                 Visual style
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -448,7 +436,7 @@ export function SettingsPage() {
                         boxShadow: isSelected ? '0 0 15px rgba(var(--color-accent-dark-rgb), 0.1)' : 'none'
                       }}
                     >
-                      <div className={`font-semibold mb-1 ${isSelected ? '' : 'premium-text-platinum'}`} style={{ color: isSelected ? 'var(--brand-primary)' : undefined }}>
+                      <div className={`font-semibold mb-1 ${isSelected ? '' : 'text-[var(--brand-text-primary)]'}`} style={{ color: isSelected ? 'var(--brand-primary)' : undefined }}>
                         {option.label}
                       </div>
                       <div className="text-xs" style={{ color: "var(--brand-text-muted)" }}>
@@ -462,7 +450,7 @@ export function SettingsPage() {
 
             {/* Font Size */}
             <div>
-              <h3 className="text-sm font-semibold mb-4 uppercase tracking-wider opacity-60 flex items-center gap-2" style={{ color: "var(--brand-text-muted)" }}>
+              <h3 className="text-sm font-semibold mb-4 uppercase tracking-wider flex items-center gap-2" style={{ color: "var(--brand-text-muted)" }}>
                 <Type className="h-4 w-4" /> Text size
               </h3>
               <div className="grid grid-cols-3 gap-3">
@@ -479,7 +467,7 @@ export function SettingsPage() {
                         fontSize: option.value === 'small' ? '14px' : option.value === 'large' ? '18px' : '16px'
                       }}
                     >
-                      <div className={`font-medium ${isSelected ? '' : 'premium-text-platinum'}`} style={{ color: isSelected ? 'var(--brand-primary)' : undefined }}>
+                      <div className={`font-medium ${isSelected ? '' : 'text-[var(--brand-text-primary)]'}`} style={{ color: isSelected ? 'var(--brand-primary)' : undefined }}>
                         {option.label}
                       </div>
                     </button>
@@ -568,7 +556,7 @@ export function SettingsPage() {
             <div className="space-y-3">
 
               {/* Bedtime reflection */}
-              <div className="rounded-xl" style={{ background: 'var(--premium-surface-1)', border: '1px solid var(--glass-surface-hover)' }}>
+              <div className="glass-card-subtle">
                 <div className="flex items-center justify-between px-4 py-3.5">
                   <div>
                     <p className="text-[15px]" style={{ color: "var(--brand-text-secondary)" }}>Bedtime reflection</p>
@@ -615,7 +603,7 @@ export function SettingsPage() {
               </div>
 
               {/* Daily voice note */}
-              <div className="rounded-xl" style={{ background: 'var(--premium-surface-1)', border: '1px solid var(--glass-surface-hover)' }}>
+              <div className="glass-card-subtle">
                 <div className="flex items-center justify-between px-4 py-3.5">
                   <div>
                     <p className="text-[15px]" style={{ color: "var(--brand-text-secondary)" }}>Daily voice note</p>
@@ -696,7 +684,7 @@ export function SettingsPage() {
                   <Check className="w-5 h-5" style={{ color: 'var(--brand-primary)' }} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold premium-text-platinum text-sm">
+                  <h3 className="card-title">
                     {onboardingCompletedAt ? 'Setup complete' : 'Finish setup'}
                   </h3>
                   <p className="text-xs" style={{ color: 'var(--brand-text-secondary)' }}>
@@ -732,7 +720,7 @@ export function SettingsPage() {
                   <Bug className="w-5 h-5" style={{ color: "var(--brand-primary)" }} />
                 </div>
                 <div className="flex-1">
-                  <h3 className="font-semibold premium-text-platinum text-sm">
+                  <h3 className="card-title">
                     Bug Tracker / Debug Panel
                   </h3>
                   <p className="text-xs" style={{ color: 'var(--brand-text-secondary)' }}>
@@ -766,7 +754,7 @@ export function SettingsPage() {
                   <RefreshCw className={`w-5 h-5 ${regenerating ? 'animate-spin' : ''}`} style={{ color: "var(--brand-primary)" }} />
                 </div>
                 <div className="flex-1">
-                  <h3 className="font-semibold premium-text-platinum text-sm">
+                  <h3 className="card-title">
                     Find new connections
                   </h3>
                   <p className="text-xs" style={{ color: 'var(--brand-text-secondary)' }}>
@@ -791,7 +779,7 @@ export function SettingsPage() {
                   <RefreshCw className={`w-5 h-5 ${tidying ? 'animate-spin' : ''}`} style={{ color: "var(--brand-primary)" }} />
                 </div>
                 <div className="flex-1">
-                  <h3 className="font-semibold premium-text-platinum text-sm">
+                  <h3 className="card-title">
                     Tidy old thoughts
                   </h3>
                   <p className="text-xs" style={{ color: 'var(--brand-text-secondary)' }}>
@@ -818,7 +806,7 @@ export function SettingsPage() {
                   <RefreshCw className={`w-5 h-5 ${rescanningTags ? 'animate-spin' : ''}`} style={{ color: "var(--brand-primary)" }} />
                 </div>
                 <div className="flex-1">
-                  <h3 className="font-semibold premium-text-platinum text-sm">
+                  <h3 className="card-title">
                     Rescan tags
                   </h3>
                   <p className="text-xs" style={{ color: 'var(--brand-text-secondary)' }}>
@@ -842,7 +830,7 @@ export function SettingsPage() {
                     <RotateCcw className="w-5 h-5" style={{ color: 'var(--brand-primary)' }} />
                   </div>
                   <div className="flex-1">
-                    <h3 className="font-semibold premium-text-platinum text-sm">
+                    <h3 className="card-title">
                       Reset onboarding
                     </h3>
                     <p className="text-xs" style={{ color: 'var(--brand-text-secondary)' }}>
@@ -864,7 +852,7 @@ export function SettingsPage() {
                       <RotateCcw className="w-5 h-5" style={{ color: 'var(--brand-primary)' }} />
                     </div>
                     <div className="flex-1">
-                      <h3 className="font-semibold premium-text-platinum text-sm mb-1">
+                      <h3 className="card-title mb-1">
                         Reset onboarding?
                       </h3>
                       <p className="text-xs" style={{ color: 'var(--brand-text-secondary)' }}>
@@ -956,7 +944,7 @@ function ColorSwatchRow({ label, description, value, onChange }: ColorSwatchRowP
       }}
     >
       <div className="mb-3">
-        <div className="text-sm font-semibold premium-text-platinum">{label}</div>
+        <div className="card-title">{label}</div>
         <div className="text-xs" style={{ color: 'var(--brand-text-secondary)' }}>{description}</div>
       </div>
       <div className="flex flex-wrap gap-2.5">

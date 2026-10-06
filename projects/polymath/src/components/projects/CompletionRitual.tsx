@@ -56,23 +56,17 @@ export function CompletionRitual({ project, isOpen, onClose }: CompletionRitualP
     <AnimatePresence>
       {isOpen && (
         <motion.div
-          className="fixed inset-0 z-[85] flex items-center justify-center p-4"
+          className="fixed inset-0 z-[85] flex items-center justify-center p-4 modal-backdrop"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          style={{ background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(6px)' }}
           onClick={reset}
         >
           <motion.div
             initial={{ opacity: 0, y: 20, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 10, scale: 0.98 }}
-            className="relative w-full max-w-lg rounded-2xl border p-4 sm:p-6 max-h-[88vh] overflow-y-auto"
-            style={{
-              background: 'var(--brand-bg)',
-              borderColor: 'rgba(255,255,255,0.12)',
-              boxShadow: '0 24px 80px rgba(0,0,0,0.6)',
-            }}
+            className="dialog-surface relative w-full max-w-lg p-4 sm:p-6 max-h-[88vh] overflow-y-auto"
             onClick={e => e.stopPropagation()}
           >
             <button
@@ -85,10 +79,10 @@ export function CompletionRitual({ project, isOpen, onClose }: CompletionRitualP
             {!sparks && (
               <>
                 <div className="mb-5">
-                  <p className="text-[11px] font-black uppercase tracking-widest mb-2" style={{ color: 'rgb(var(--color-accent-light-rgb))' }}>
+                  <p className="text-[11px] font-semibold uppercase tracking-widest mb-2" style={{ color: 'rgb(var(--color-accent-light-rgb))' }}>
                     Finished · {project.title}
                   </p>
-                  <h2 className="text-2xl font-black italic uppercase tracking-tight text-[var(--brand-text-primary)]">
+                  <h2 className="section-title text-2xl">
                     Three questions
                   </h2>
                   <p className="text-xs text-[var(--brand-text-muted)] leading-relaxed mt-2 italic">
@@ -105,8 +99,7 @@ export function CompletionRitual({ project, isOpen, onClose }: CompletionRitualP
                       value={whatWorked}
                       onChange={e => setWhatWorked(e.target.value)}
                       rows={2}
-                      className="w-full px-3 py-2.5 rounded-lg border text-[15px] text-[var(--brand-text-primary)] focus:outline-none focus:border-brand-primary transition-colors"
-                      style={{ background: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.12)' }}
+                      className="field w-full px-3 py-2.5 text-[15px]"
                       placeholder="The thing you'd do again without thinking."
                     />
                   </div>
@@ -119,8 +112,7 @@ export function CompletionRitual({ project, isOpen, onClose }: CompletionRitualP
                       value={whatSurprised}
                       onChange={e => setWhatSurprised(e.target.value)}
                       rows={2}
-                      className="w-full px-3 py-2.5 rounded-lg border text-[15px] text-[var(--brand-text-primary)] focus:outline-none focus:border-brand-primary transition-colors"
-                      style={{ background: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.12)' }}
+                      className="field w-full px-3 py-2.5 text-[15px]"
                       placeholder="Something you didn't expect when you started."
                     />
                   </div>
@@ -133,8 +125,7 @@ export function CompletionRitual({ project, isOpen, onClose }: CompletionRitualP
                       value={whatNext}
                       onChange={e => setWhatNext(e.target.value)}
                       rows={2}
-                      className="w-full px-3 py-2.5 rounded-lg border text-[15px] text-[var(--brand-text-primary)] focus:outline-none focus:border-brand-primary transition-colors"
-                      style={{ background: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.12)' }}
+                      className="field w-full px-3 py-2.5 text-[15px]"
                       placeholder="A thread worth pulling on."
                     />
                   </div>
@@ -172,10 +163,10 @@ export function CompletionRitual({ project, isOpen, onClose }: CompletionRitualP
                     <Check className="h-5 w-5" style={{ color: 'rgb(var(--color-accent-light-rgb))' }} />
                   </div>
                   <div>
-                    <p className="text-[11px] font-black uppercase tracking-widest" style={{ color: 'rgb(var(--color-accent-light-rgb))' }}>
+                    <p className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: 'rgb(var(--color-accent-light-rgb))' }}>
                       Retrospective saved
                     </p>
-                    <h3 className="text-lg font-black italic uppercase tracking-tight text-[var(--brand-text-primary)]">
+                    <h3 className="card-title-lg">
                       {sparks.length > 0 ? `${sparks.length} new spark${sparks.length === 1 ? '' : 's'}` : 'Filed for later'}
                     </h3>
                   </div>

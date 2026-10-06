@@ -792,6 +792,7 @@ export function ReadingPage() {
               <button
                 onClick={() => navigate('/search')}
                 className="masthead-action press-spring"
+                aria-label="Search everything"
                 title="Search everything"
               >
                 <Search className="h-5 w-5" />
@@ -836,7 +837,7 @@ export function ReadingPage() {
               <button
                 type="submit"
                 disabled={inlineSaving || !inlineUrl.trim()}
-                className="h-10 px-4 rounded-lg text-[11px] font-black uppercase tracking-wide flex-shrink-0 flex items-center gap-1.5 transition-all disabled:opacity-40"
+                className="h-10 px-4 rounded-lg text-[11px] font-semibold uppercase tracking-wide flex-shrink-0 flex items-center gap-1.5 transition-all disabled:opacity-40"
                 style={{
                   backgroundColor: 'rgba(var(--brand-primary-rgb), 0.1)',
                   color: "var(--brand-text-secondary)",
@@ -857,11 +858,11 @@ export function ReadingPage() {
           </div>
         </div>
 
-      <PullToRefresh onRefresh={handlePullToRefresh} className="min-h-screen pb-24 relative z-10 pt-[7.5rem]">
+      <PullToRefresh onRefresh={handlePullToRefresh} className="min-h-screen page-bottom relative z-10">
 
         {/* Processing Indicator */}
         {processingArticles.size > 0 && (
-          <div className="fixed top-24 left-0 right-0 z-30 px-4 sm:px-6">
+          <div className="px-4 sm:px-6 pt-2">
             <div className="max-w-4xl mx-auto">
               {Array.from(processingArticles.entries()).map(([articleId, { status, url }]) => (
                 <div
@@ -910,7 +911,7 @@ export function ReadingPage() {
                         variant: 'default',
                       })
                     }}
-                    className="text-[11px] font-black uppercase tracking-wide px-3 py-1 rounded-lg transition-colors"
+                    className="text-[11px] font-semibold uppercase tracking-wide px-3 py-1 rounded-lg transition-colors"
                     style={{ color: "var(--brand-primary)" }}
                   >
                     Cancel
@@ -930,7 +931,6 @@ export function ReadingPage() {
               exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.2 }}
               className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-2 pt-2"
-              style={{ marginTop: processingArticles.size > 0 ? `${processingArticles.size * 72}px` : '0' }}
             >
               <div
                 className="rounded-lg p-4"
@@ -943,10 +943,10 @@ export function ReadingPage() {
               >
                 <div className="flex items-center gap-2 mb-3">
                   <Play className="h-4 w-4 fill-current" style={{ color: "var(--brand-primary)" }} />
-                  <span className="text-[11px] font-black uppercase tracking-widest" style={{ color: "var(--brand-primary)" }}>
+                  <span className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: "var(--brand-primary)" }}>
                     Continue Reading
                   </span>
-                  <span className="text-[11px] font-black px-1.5 py-0.5 rounded-lg" style={{ background: 'rgba(var(--brand-primary-rgb),0.15)', color: "var(--brand-text-secondary)" }}>
+                  <span className="text-[11px] font-semibold px-1.5 py-0.5 rounded-lg" style={{ background: 'rgba(var(--brand-primary-rgb),0.15)', color: "var(--brand-text-secondary)" }}>
                     {continueReadingArticles.length}
                   </span>
                 </div>
@@ -986,7 +986,7 @@ export function ReadingPage() {
         </AnimatePresence>
 
         {/* Open spread — content breathes on the page background */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-6 pt-2" style={{ marginTop: continueReadingArticles.length > 0 && activeTab !== 'reading' ? '0' : (processingArticles.size > 0 ? `${processingArticles.size * 72}px` : '0') }}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-6 pt-2">
           <div className="mb-6">
             {/* Title Section */}
             <div className="mb-6 flex items-center justify-between">
@@ -1022,7 +1022,7 @@ export function ReadingPage() {
                   </button>
                   <button
                     onClick={() => navigate('/rss')}
-                    className="px-3 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-wide transition-all flex items-center gap-1.5"
+                    className="px-3 py-1.5 rounded-lg text-[11px] font-semibold uppercase tracking-wide transition-all flex items-center gap-1.5"
                     style={{
                       color: "var(--brand-text-secondary)",
                       border: '1px solid rgba(255,255,255,0.15)',
@@ -1068,7 +1068,7 @@ export function ReadingPage() {
                           }}
                         >
                           <RefreshCw className={`h-5 w-5 ${syncing ? 'animate-spin' : ''}`} />
-                          {syncing ? 'Syncing...' : 'Sync feeds'}
+                          {syncing ? 'Syncing…' : 'Sync feeds'}
                         </button>
                       }
                     />

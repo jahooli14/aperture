@@ -78,7 +78,7 @@ export function RSSFeedItem({ item, onSave, onRead, onDismiss }: RSSFeedItemProp
               )}
             </div>
 
-            <h3 className="text-sm font-bold leading-snug group-hover:text-brand-primary transition-colors" style={{ color: "var(--brand-text-primary)" }}>
+            <h3 className="card-title group-hover:text-brand-primary transition-colors">
               {item.title}
             </h3>
           </div>

@@ -181,7 +181,7 @@ export function ConnectionRevealOverlay({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           onClick={onClose}
-          className="absolute inset-0 bg-black/80 backdrop-blur-md"
+          className="absolute inset-0 modal-backdrop"
         />
 
         {/* Overlay content */}
@@ -201,7 +201,7 @@ export function ConnectionRevealOverlay({
           <div className="flex items-center justify-between px-6 py-4 border-b border-white/5">
             <div className="flex items-center gap-2">
               <Layers className="w-4 h-4 text-brand-primary" />
-              <span className="text-sm font-semibold text-[var(--brand-text-secondary)]">Connection Path</span>
+              <span className="text-sm font-semibold text-[var(--brand-text-secondary)]">Connection path</span>
             </div>
             <button
               onClick={onClose}

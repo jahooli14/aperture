@@ -62,11 +62,8 @@ export function ContextMenu({ items, isOpen, onClose, title }: ContextMenuProps)
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
             transition={{ type: 'spring', damping: 32, stiffness: 420, mass: 0.6 }}
-            className="relative w-full z-10 overflow-hidden"
+            className="sheet-surface relative w-full z-10 overflow-hidden"
             style={{
-              background: 'var(--brand-bg)',
-              borderTop: '1px solid rgba(255,255,255,0.08)',
-              borderRadius: '24px 24px 0 0',
               paddingBottom: 'env(safe-area-inset-bottom, 16px)',
               maxHeight: '85vh',
             }}
@@ -80,7 +77,7 @@ export function ContextMenu({ items, isOpen, onClose, title }: ContextMenuProps)
             {title && (
               <div className="px-5 pt-3 pb-3">
                 <p
-                  className="text-[11px] font-black uppercase tracking-[0.14em] mb-1"
+                  className="text-[11px] font-semibold uppercase tracking-[0.14em] mb-1"
                   style={{ color: 'var(--brand-text-muted)', opacity: 0.81 }}
                 >
                   Actions

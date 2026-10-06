@@ -124,7 +124,7 @@ function ShelfRow({ project, position, onOpen, onUnpin, onDragEnd }: ShelfRowPro
           onClick={(e) => e.stopPropagation()}
         >
           <span
-            className="text-[11px] font-black tracking-widest mb-0.5 aperture-header"
+            className="text-[11px] font-semibold tracking-widest mb-0.5 aperture-header"
             style={{ color: theme.text }}
           >
             {position}

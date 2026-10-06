@@ -138,7 +138,7 @@ export function EditArticleDialog({ article, open, onOpenChange }: EditArticleDi
           </div>
 
           <div className="space-y-2 pb-4">
-            <Label htmlFor="notes" className="font-bold text-xs uppercase tracking-widest text-[var(--brand-text-muted)]">Personal Notes</Label>
+            <Label htmlFor="notes" className="font-bold text-xs uppercase tracking-widest text-[var(--brand-text-muted)]">Personal notes</Label>
             <RichTextEditor
               value={formData.notes}
               onChange={(md) => setFormData({ ...formData, notes: md })}
@@ -153,16 +153,10 @@ export function EditArticleDialog({ article, open, onOpenChange }: EditArticleDi
             <Button
               type="submit"
               disabled={loading || !formData.title}
-              className="w-full h-14 font-black uppercase tracking-widest touch-manipulation"
-              style={{
-                background: 'rgba(var(--brand-primary-rgb),0.15)',
-                border: '1px solid rgba(var(--brand-primary-rgb),0.5)',
-                borderRadius: '4px',
-                boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
-                color: 'var(--brand-primary)',
-              }}
+              variant="tinted"
+              className="w-full touch-manipulation"
             >
-              {loading ? 'Saving...' : 'Save Changes'}
+              {loading ? 'Saving…' : 'Save changes'}
             </Button>
           </BottomSheetFooter>
         </form>

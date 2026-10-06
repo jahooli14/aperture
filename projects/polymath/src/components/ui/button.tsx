@@ -18,6 +18,9 @@ const buttonVariants = cva(
           "bg-secondary text-secondary-foreground hover:bg-secondary/80",
         ghost: "hover:bg-brand-surface text-brand-text-primary/70 hover:text-brand-text-primary",
         link: "text-primary underline-offset-4 hover:underline",
+        // The accent-tinted save button every edit sheet ends on.
+        tinted:
+          "bg-[rgba(var(--brand-primary-rgb),0.15)] border border-[rgba(var(--brand-primary-rgb),0.45)] text-[rgb(var(--brand-primary-rgb))] font-semibold hover:bg-[rgba(var(--brand-primary-rgb),0.22)]",
       },
       size: {
         default: "h-12 px-6 py-3",

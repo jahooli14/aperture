@@ -778,8 +778,7 @@ export function ReaderPage() {
             for, and nagging would only produce votes that mean nothing. */}
         {askingVerdict && (
           <div
-            className="fixed inset-0 z-50 flex items-end justify-center"
-            style={{ background: 'rgba(0,0,0,0.55)' }}
+            className="fixed inset-0 z-50 flex items-end justify-center modal-backdrop"
             onClick={() => { setAskingVerdict(false); navigate(-1) }}
           >
             <div
@@ -840,7 +839,7 @@ export function ReaderPage() {
               initial={{ opacity: 0, scale: 0.9, y: 10 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 10 }}
-              className="fixed z-[100] bg-[#161618] border border-[var(--glass-surface-hover)] rounded-2xl p-2 shadow-2xl flex items-center gap-1"
+              className="dialog-surface fixed z-[100] p-2 flex items-center gap-1"
               style={{
                 left: menuPosition.x,
                 top: menuPosition.y,
@@ -870,7 +869,7 @@ export function ReaderPage() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="absolute inset-0 bg-black/80 backdrop-blur-md"
+                className="absolute inset-0 modal-backdrop"
                 onClick={() => setShowVoiceNote(false)}
               />
               <motion.div
@@ -879,7 +878,7 @@ export function ReaderPage() {
                 animate={{ y: 0, opacity: 1 }}
                 exit={{ y: '100%', opacity: 0 }}
                 transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-                className="relative w-full md:w-[500px] bg-[#0A0A0B] border border-[var(--glass-surface-hover)] rounded-t-[2.5rem] md:rounded-[2.5rem] shadow-2xl z-10 overflow-hidden mb-0 md:mb-12"
+                className="sheet-surface relative w-full md:w-[500px] md:!rounded-2xl md:!border md:!border-white/15 z-10 overflow-hidden mb-0 md:mb-12"
               >
                 <div style={{ paddingBottom: 'env(safe-area-inset-bottom, 20px)' }}>
                   <div className="flex justify-center pt-4 pb-2 md:hidden">
@@ -910,8 +909,7 @@ export function ReaderPage() {
                       autoFocus
                       rows={4}
                       placeholder="What did this spark? Type, or tap the mic to talk."
-                      className="w-full resize-none rounded-2xl p-4 text-[15px] leading-relaxed text-[var(--brand-text-primary)] bg-[var(--glass-surface)] placeholder:text-[var(--brand-text-muted)] focus:outline-none"
-                      style={{ boxShadow: 'inset 0 0 0 1px var(--glass-surface-hover)' }}
+                      className="field w-full resize-none p-4 text-[15px] leading-relaxed"
                     />
 
                     <button

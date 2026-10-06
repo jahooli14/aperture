@@ -426,7 +426,7 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
               <div className="absolute inset-0 bg-brand-primary/20 blur-3xl rounded-full" />
               <div className="relative p-4 sm:p-6 rounded-2xl bg-[var(--glass-surface)] border border-white/10">
                 <Zap className="h-12 w-12 text-brand-text-secondary mx-auto mb-4" />
-                <h2 className="text-3xl font-display text-[var(--brand-text-secondary)] mb-2">Session Complete</h2>
+                <h2 className="text-3xl font-display text-[var(--brand-text-secondary)] mb-2">Session complete</h2>
                 <p className="text-[var(--brand-text-secondary)]">Your subconscious has been primed.</p>
               </div>
             </div>
@@ -444,7 +444,7 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
               )}
 
               <div className="p-4 rounded-xl bg-brand-primary/5 border border-brand-primary/10 text-left">
-                <p className="text-xs uppercase tracking-widest text-brand-primary font-bold mb-2">Closing Reflection</p>
+                <p className="text-xs uppercase tracking-widest text-brand-primary font-bold mb-2">Closing reflection</p>
                 <p className="text-sm italic text-[var(--brand-text-secondary)] leading-relaxed">
                   "The most profound connections often emerge when we stop looking for them. Sleep well, let these seeds grow."
                 </p>

@@ -186,7 +186,7 @@ export function PromptModal({
             color: 'white'
           }}
         >
-          {submitting ? 'Saving...' : 'Save '}
+          {submitting ? 'Saving…' : 'Save '}
         </Button>
         <button
           onClick={handleSkip}

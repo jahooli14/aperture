@@ -318,7 +318,7 @@ export function SearchPage() {
       <SubtleBackground />
 
         {/* Dia-leaning search — single big soft input, page is mostly air */}
-        <div className="min-h-screen pb-24">
+        <div className="min-h-screen page-bottom">
           <div className="max-w-2xl mx-auto px-4 sm:px-6">
 
             <header className="page-masthead">
@@ -394,7 +394,7 @@ export function SearchPage() {
             }}>
               <div className="text-center py-20">
                 <Loader2 className="h-12 w-12 animate-spin mx-auto mb-4" style={{ color: "var(--brand-primary)" }} />
-                <p style={{ color: "var(--brand-text-secondary)" }}>Searching...</p>
+                <p style={{ color: "var(--brand-text-secondary)" }}>Searching…</p>
               </div>
             </div>
           )}

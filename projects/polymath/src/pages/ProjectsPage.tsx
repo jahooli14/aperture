@@ -9,6 +9,7 @@ import { CreateProjectDialog } from '../components/projects/CreateProjectDialog'
 import { Search, Check, ArrowLeft, Skull, Sprout } from 'lucide-react'
 import { useConfirmDialog } from '../components/ui/confirm-dialog'
 import { SubtleBackground } from '../components/SubtleBackground'
+import { EmptyState } from '../components/ui/empty-state'
 import { useToast } from '../components/ui/toast'
 import { isGraveyard, isRetired } from '../utils/projectStatus'
 import type { Project } from '../types'
@@ -66,14 +67,10 @@ function GraveyardSection({ projects, onNavigate, onRevive }: { projects: Projec
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: i * 0.06 }}
-                className="flex items-center gap-3 p-4 rounded-xl"
-                style={{
-                  background: 'rgba(255,255,255,0.02)',
-                  border: '1px solid rgba(255,255,255,0.06)',
-                }}
+                className="glass-card-subtle flex items-center gap-3 p-4"
               >
                 <button onClick={() => onNavigate(project.id)} className="flex-1 min-w-0 text-left">
-                  <h3 className="font-black uppercase tracking-tight text-sm text-[var(--brand-text-primary)] line-clamp-1 mb-1">
+                  <h3 className="card-title line-clamp-1 mb-1">
                     {project.title}
                   </h3>
                   {buriedDate && (
@@ -106,24 +103,22 @@ function CompletedProjectsTimeline({ projects, graveyardProjects, onNavigate, on
 
   if (sorted.length === 0) {
     return (
-      <div className="max-w-2xl mx-auto px-4 py-6 pb-32">
-        <div className="text-center py-24">
-          <Check className="w-12 h-12 mb-4 mx-auto" style={{ color: '#34d399' }} />
-          <p className="text-[var(--brand-text-primary)] font-black uppercase tracking-tight text-lg mb-2">No completed projects yet</p>
-          <p className="text-sm" style={{ color: 'var(--brand-text-secondary)' }}>When you finish something, it'll live here.</p>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6">
+        <EmptyState
+          icon={Check}
+          title="No completed projects yet"
+          description="When you finish something, it'll live here."
+        />
+        <div className="max-w-2xl">
+          <GraveyardSection projects={graveyardProjects} onNavigate={onNavigate} onRevive={onRevive} />
         </div>
-        <GraveyardSection projects={graveyardProjects} onNavigate={onNavigate} onRevive={onRevive} />
       </div>
     )
   }
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-6 pb-32">
-      <div className="mb-8">
-        <h2 className="page-hero-sm">What you’ve built.</h2>
-        <div className="page-eyebrow">{sorted.length} finished</div>
-      </div>
-
+    <div className="max-w-7xl mx-auto px-4 sm:px-6">
+    <div className="max-w-2xl">
       <div className="relative">
         {/* Vertical timeline line */}
         <div className="absolute left-5 top-0 bottom-0 w-px" style={{ background: 'rgba(var(--brand-primary-rgb), 0.15)' }} />
@@ -153,19 +148,14 @@ function CompletedProjectsTimeline({ projects, graveyardProjects, onNavigate, on
                 {/* Card */}
                 <button
                   onClick={() => onNavigate(project.id)}
-                  className="flex-1 text-left p-4 rounded-xl transition-all hover:scale-[1.01]"
-                  style={{
-                    background: 'rgba(var(--brand-primary-rgb), 0.04)',
-                    border: '1px solid rgba(var(--brand-primary-rgb), 0.15)',
-                    boxShadow: '0 4px 16px rgba(0,0,0,0.4)'
-                  }}
+                  className="glass-card-subtle flex-1 text-left p-4 transition-all hover:scale-[1.01]"
                 >
                   <div className="flex items-start justify-between gap-2 mb-1">
-                    <h3 className="font-black uppercase tracking-tight text-sm text-[var(--brand-text-primary)] line-clamp-1">
+                    <h3 className="card-title line-clamp-1">
                       {project.title}
                     </h3>
                     {project.type && (
-                      <span className="text-[11px] font-black uppercase tracking-widest px-2 py-0.5 rounded-lg flex-shrink-0"
+                      <span className="text-[11px] font-semibold uppercase tracking-widest px-2 py-0.5 rounded-lg flex-shrink-0"
                         style={{ background: 'rgba(255,255,255,0.06)', color: 'var(--brand-text-secondary)' }}>
                         {project.type}
                       </span>
@@ -193,6 +183,7 @@ function CompletedProjectsTimeline({ projects, graveyardProjects, onNavigate, on
       </div>
 
       <GraveyardSection projects={graveyardProjects} onNavigate={onNavigate} onRevive={onRevive} />
+    </div>
     </div>
   )
 }
@@ -278,15 +269,11 @@ function ProjectsPageInner() {
       <div className="min-h-screen">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <header className="page-masthead">
-            <div className="page-masthead-text flex items-start gap-2 min-w-0">
+            <div className="page-masthead-text min-w-0">
               {view !== 'active' && (
-                <button
-                  onClick={() => setView('active')}
-                  className="masthead-action press-spring flex-shrink-0"
-                  aria-label="Back to projects"
-                  title="Back to projects"
-                >
-                  <ArrowLeft className="h-5 w-5" />
+                <button onClick={() => setView('active')} className="back-link">
+                  <ArrowLeft className="h-3.5 w-3.5" />
+                  Your projects
                 </button>
               )}
               <div className="min-w-0">
@@ -327,7 +314,7 @@ function ProjectsPageInner() {
         </div>
 
         <motion.div
-          className="pb-24 relative z-10"
+          className="page-bottom relative z-10"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -20 }}
