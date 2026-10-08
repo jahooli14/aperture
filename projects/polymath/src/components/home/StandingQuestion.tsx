@@ -312,7 +312,7 @@ export function StandingQuestion() {
           .mull-line in theme.css). It settles sharp and still, so it's
           dreamy on arrival and readable at rest. Keyed on the spark so a
           new question arrives the same way. */}
-      <p key={spark.id} className="mull-text text-[16px] leading-[1.45] mt-0.5 line-clamp-5">
+      <p key={spark.id} className="mull-text text-[16px] leading-[1.45] mt-0.5">
         {splitSentences(spark.text).map((line, i) => (
           <span key={i} className="mull-line" style={{ animationDelay: `${0.2 + i * 0.9}s` }}>
             {line}{' '}
@@ -333,7 +333,7 @@ export function StandingQuestion() {
           box only appears once you've got something to say, so the resting
           state of this whole block is three lines. */}
       {!answering && (
-        <div className="flex items-center gap-3 mt-1.5">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5">
           {isTake(spark.text) ? (
             // A claim gets a reaction first: one tap, then optionally why.
             STANCES.map((st, i) => (
@@ -347,7 +347,20 @@ export function StandingQuestion() {
                   {st.label}
                 </button>
               </span>
-            ))
+            )).concat(
+              // Something to add that isn't a yes or no -- open the box
+              // without picking a side.
+              <span key="more" className="flex items-center gap-3">
+                <span style={{ color: 'var(--brand-text-secondary)', opacity: 0.6 }}>·</span>
+                <button
+                  className="text-[13px] font-medium transition-opacity hover:opacity-90"
+                  style={quietActionStyle}
+                  onClick={() => { setStance(null); setAnswering(true) }}
+                >
+                  say more
+                </button>
+              </span>
+            )
           ) : (
             <button
               className="text-[12px] transition-opacity hover:opacity-90"
