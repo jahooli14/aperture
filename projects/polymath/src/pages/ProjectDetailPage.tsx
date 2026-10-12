@@ -24,6 +24,8 @@ import { ProjectNotes } from '../components/projects/ProjectNotes'
 import { ProjectArc } from '../components/projects/ProjectArc'
 import { MadeWall } from '../components/projects/MadeWall'
 import { NextMovePanel } from '../components/projects/NextMovePanel'
+import { ProjectThemes } from '../components/projects/ProjectThemes'
+import { UpToSpeed } from '../components/projects/UpToSpeed'
 import { Button } from '../components/ui/button'
 import { useToast } from '../components/ui/toast'
 import { useConfirmDialog } from '../components/ui/confirm-dialog'
@@ -431,6 +433,16 @@ export function ProjectDetailPage() {
             screen, exactly as the home clears around a session. */}
         {!sessionOpen && (
           <>
+            {/* Back after a while: where things stand, from your own notes.
+                The move panel under it is the way back in. */}
+            <UpToSpeed project={project} />
+
+            {/* What it's steering by — weeks, not one session. Shown on the
+                home card while you're working on it. */}
+            {project.status !== 'completed' && project.status !== 'graveyard' && (
+              <ProjectThemes project={project} />
+            )}
+
             <NextMovePanel
               project={project}
               onGo={() => { setSessionAutoStart(true); setSessionOpen(true) }}

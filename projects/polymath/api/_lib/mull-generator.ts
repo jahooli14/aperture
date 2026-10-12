@@ -29,6 +29,7 @@
  * score with its reason.
  */
 
+import { readThemes } from './project-themes.js'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { generateText } from './gemini-chat.js'
 import { parseModelJson } from './schemas.js'
@@ -283,6 +284,10 @@ async function readFocus(supabase: SupabaseClient, userId: string): Promise<stri
   if (notesErr) console.warn('[mull] focus: memories query failed:', notesErr.message)
   const p = (proj ?? [])[0] as { title?: string; metadata?: { next_move?: { text?: string } } } | undefined
   const move = p?.metadata?.next_move?.text
+  // What the live project is steering by (project-themes.ts): weeks-long,
+  // in their own words, so a question can point at where the work is
+  // actually heading rather than at one step of it.
+  const themes = readThemes(p?.metadata).map(t => t.text)
   // Notes the app elicited (spark answers, corrections) aren't fresh
   // capture -- same rule as the corpus. Filtered in JS: `tags` is nullable.
   const recent = (notes ?? [])
@@ -293,7 +298,7 @@ async function readFocus(supabase: SupabaseClient, userId: string): Promise<stri
   if (!p?.title && recent.length === 0) return ''
   return `
 WHERE THEY ARE RIGHT NOW (context -- never quote it, evidence still comes from rows):
-${p?.title ? `- Live project: "${p.title}"${move ? `. Next move: ${move}` : ''}\n` : ''}${recent.length ? `- Just captured: ${recent.map(t => `"${t}"`).join('; ')}\n` : ''}Use these as one half of a collision, not as a filter. The best question puts
+${p?.title ? `- Live project: "${p.title}"${move ? `. Next move: ${move}` : ''}\n` : ''}${p?.title && themes.length ? `- What it's steering by (their words): ${themes.map(t => `"${t}"`).join('; ')}\n` : ''}${recent.length ? `- Just captured: ${recent.map(t => `"${t}"`).join('; ')}\n` : ''}Use these as one half of a collision, not as a filter. The best question puts
 something from here next to something that looks unrelated -- a person or
 occasion in their life beside a material, skill or old project. Don't stay inside
 the live project; reach out from it.

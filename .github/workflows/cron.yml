@@ -148,6 +148,7 @@ jobs:
             hit "/api/idea-engine?action=generate" &
             # Daily voice-note reminder push — checked every 2h; fires once
             # local time reaches the user's configured hour (see api/cron/jobs.ts).
+            # Also sends the opt-in Saturday pick-up (api/_lib/weekend-nudge.ts).
             hit "/api/cron/jobs?job=voice-reminder" &
           fi
 
