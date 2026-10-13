@@ -69,15 +69,13 @@ export function ArticleVerdict({
         </button>
 
         <div className="mt-4 flex items-center gap-5">
-          {resonance === 'good' && (
-            <button
-              onClick={onCaptureThought}
-              className="text-[13px] inline-flex items-center gap-1.5 opacity-70 hover:opacity-100 transition-opacity press-spring py-2"
-              style={{ color: 'var(--brand-text-secondary)' }}
-            >
-              <Mic className="h-3.5 w-3.5" /> Say what stuck
-            </button>
-          )}
+          <button
+            onClick={onCaptureThought}
+            className="text-[13px] inline-flex items-center gap-1.5 opacity-70 hover:opacity-100 transition-opacity press-spring py-2"
+            style={{ color: 'var(--brand-text-secondary)' }}
+          >
+            <Mic className="h-3.5 w-3.5" /> Sparked something? Say it
+          </button>
           <button
             onClick={onUndo}
             className="text-[13px] opacity-45 hover:opacity-80 transition-opacity press-spring py-2"
@@ -104,8 +102,21 @@ export function ArticleVerdict({
       >
         You reached the end
       </span>
+      {/* The note comes first. What the app builds on is what you say, so
+          anything that sparked an idea should be said now, while it's warm. */}
+      <button
+        onClick={onCaptureThought}
+        className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-full font-semibold transition-all press-spring"
+        style={{
+          background: 'rgba(var(--brand-primary-rgb), 0.14)',
+          border: '1px solid rgba(var(--brand-primary-rgb), 0.4)',
+          color: 'rgb(var(--brand-primary-rgb))',
+        }}
+      >
+        <Mic className="h-4 w-4" /> Sparked something? Say it
+      </button>
       <p
-        className="text-[15px] mb-7 max-w-sm"
+        className="text-[15px] mt-10 mb-5 max-w-sm"
         style={{ fontFamily: 'var(--brand-font-body)', color: 'rgba(255,255,255,0.6)' }}
       >
         Worth keeping? Only the good ones feed into what the app suggests you make.
