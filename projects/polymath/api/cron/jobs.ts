@@ -502,6 +502,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(200).json(results)
       }
 
+      // The Saturday "here's one that's been waiting" push rides on this
+      // job's 2-hourly schedule (api/_lib/weekend-nudge.ts). Its own
+      // failure is reported, never allowed to stop the voice reminder.
+      try {
+        const { runWeekendNudges } = await import('../_lib/weekend-nudge.js')
+        results.weekend_nudge = await runWeekendNudges(supabase, (sub, payload) =>
+          webpush.sendNotification({ endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } }, payload).then(() => undefined))
+      } catch (e) {
+        results.weekend_nudge = { error: e instanceof Error ? e.message : String(e) }
+      }
+
       const { data: schedules, error: schedulesError } = await supabase
         .from('voice_reminder_settings')
         .select('user_id, hour, minute, timezone, last_sent_date')

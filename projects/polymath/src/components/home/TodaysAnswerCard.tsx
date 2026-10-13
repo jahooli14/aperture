@@ -3,7 +3,9 @@
  *
  * Top half: something to think about while you're NOT working — the standing
  * question (StandingQuestion). Bottom half: the project to pick up right now,
- * its one next move, your last note in your own words, and Go.
+ * its one next move, your last note in your own words, and Go. While the
+ * project is being worked on and has themes, the themes take the move's
+ * place (they stay true for weeks; the move goes stale off-app).
  *
  * Changing project is the "everything else" row underneath (tap a project to
  * look, ▶ to start it now); the card itself no longer carries a second way to
@@ -32,6 +34,8 @@ import { SessionContract, type Phase } from '../session/SessionContract'
 import { useSessionStore, readStoredMove } from '../../stores/useSessionStore'
 import { splitDoneWhen } from '../session/sessionRunOps'
 import { haptic } from '../../utils/haptics'
+import { isActivelyWorked, readThemes } from '../../lib/projectThemes'
+import { ThemeList } from '../projects/ProjectThemes'
 
 export function TodaysAnswerCard() {
   const navigate = useNavigate()
@@ -202,6 +206,14 @@ export function TodaysAnswerCard() {
   const nextMove = storedMove?.kind === 'move' ? splitDoneWhen(storedMove.text) : null
   const fork = storedMove?.kind === 'fork' ? storedMove.text : null
 
+  // While a project is being worked on, its themes lead instead of the
+  // move (api/_lib/project-themes.ts). The move is rewritten only at an
+  // in-app close-out, so on work done off-app it goes stale after one
+  // session; themes stay true for weeks. Gone quiet, the move comes back:
+  // a way back in is what a cold project needs.
+  const themes = readThemes(focusProject.metadata)
+  const steering = themes.length > 0 && isActivelyWorked(focusProject)
+
   // No timestamp at all means never touched, not touched in 1970 — the
   // `|| 0` fallback here dated the project to the epoch and stamped a
   // brand-new one "long quiet" next to its own "not started yet".
@@ -354,7 +366,19 @@ export function TodaysAnswerCard() {
             not something you can act on. Every 1px rectangle at the same
             weight is what made the page read as a stack of outlined
             boxes; fill alone separates it from the card behind it. */}
-        {nextMove ? (
+        {steering ? (
+          <div className="p-3 rounded-xl mb-2.5" style={{ background: 'rgba(255,255,255,0.055)' }}>
+            <p className="text-[11px] font-medium uppercase tracking-[0.14em] mb-2" style={{ color: 'var(--brand-text-muted)' }}>
+              steering by
+            </p>
+            <ThemeList themes={themes} compact />
+            {reEntry && (
+              <p className="text-[12px] mt-2 line-clamp-2" style={{ color: 'var(--brand-text-secondary)' }}>
+                You stopped with “{reEntry}”
+              </p>
+            )}
+          </div>
+        ) : nextMove ? (
           <div className="p-3 rounded-xl mb-2.5" style={{ background: 'rgba(255,255,255,0.055)' }}>
             <p className="text-[11px] font-medium uppercase tracking-[0.14em] mb-1" style={{ color: 'var(--brand-text-muted)' }}>
               next move
@@ -404,9 +428,9 @@ export function TodaysAnswerCard() {
             className="neon-button w-full py-3 rounded-xl font-semibold text-[15px] flex items-center justify-center gap-2"
           >
             <Play className="h-3.5 w-3.5 fill-current" />
-            {nextMove ? 'Go' : fork ? 'Answer it' : 'Find the first move'}
+            {nextMove || steering ? 'Go' : fork ? 'Answer it' : 'Find the first move'}
           </button>
-          {nextMove && (
+          {nextMove && !steering && (
             <button
               onClick={() => setTweaking(t => !t)}
               className="w-full text-[12px] py-0.5"
@@ -415,7 +439,7 @@ export function TodaysAnswerCard() {
               {tweaking ? 'Keep this one' : 'Not this — change it'}
             </button>
           )}
-          {nextMove && tweaking && (
+          {nextMove && !steering && tweaking && (
             <MoveTweak projectId={focusProject.id} onClose={() => setTweaking(false)} />
           )}
         </div>

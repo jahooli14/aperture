@@ -4,6 +4,8 @@
  * GET  /api/push                 -> { publicKey } (VAPID public key for pushManager.subscribe)
  * POST /api/push                 -> upsert a push subscription for the signed-in user
  * POST /api/push?resource=settings -> upsert voice_reminder_settings (enabled/hour/minute/timezone)
+ * GET  /api/push?resource=weekend  -> { available, enabled } (the Saturday nudge, api/_lib/weekend-nudge.ts)
+ * POST /api/push?resource=weekend  -> upsert weekend_nudge_settings (enabled/timezone)
  * DELETE /api/push               -> remove a subscription (body: { endpoint })
  */
 import type { VercelRequest, VercelResponse } from '@vercel/node'
@@ -23,6 +25,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const supabase = getSupabaseClient()
 
   try {
+    if (req.query.resource === 'weekend') {
+      if (req.method === 'GET') {
+        const { data, error } = await supabase
+          .from('weekend_nudge_settings').select('enabled').eq('user_id', userId).maybeSingle()
+        // Migration not run yet: say so and let the UI hide the toggle.
+        if (error) return res.status(200).json({ available: false, enabled: false })
+        return res.status(200).json({ available: true, enabled: !!data?.enabled })
+      }
+      if (req.method === 'POST') {
+        const { enabled, timezone } = req.body || {}
+        if (typeof enabled !== 'boolean') return res.status(400).json({ error: 'enabled (boolean) is required' })
+        const { error } = await supabase
+          .from('weekend_nudge_settings')
+          .upsert({
+            user_id: userId,
+            enabled,
+            timezone: typeof timezone === 'string' && timezone ? timezone : 'UTC',
+            updated_at: new Date().toISOString(),
+          }, { onConflict: 'user_id' })
+        if (error) throw error
+        return res.status(200).json({ success: true })
+      }
+    }
+
     if (req.method === 'POST' && req.query.resource === 'settings') {
       const { enabled, hour, minute, timezone } = req.body || {}
       if (typeof enabled !== 'boolean' || typeof hour !== 'number' || typeof minute !== 'number') {

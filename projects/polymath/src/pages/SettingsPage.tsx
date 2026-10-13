@@ -9,6 +9,7 @@ import { SubtleBackground } from '../components/SubtleBackground'
 import { useToast } from '../components/ui/toast'
 import { useNotificationSettings } from '../stores/useNotificationSettings'
 import { useJourneyStore } from '../stores/useJourneyStore'
+import { WeekendNudgeRow } from '../components/settings/WeekendNudgeRow'
 
 const intensityOptions = [
   { value: 'subtle' as const, label: 'Subtle', description: 'Quiet — less glow, less motion' },
@@ -653,6 +654,8 @@ export function SettingsPage() {
                   </div>
                 )}
               </div>
+
+              <WeekendNudgeRow />
 
             </div>
           </div>

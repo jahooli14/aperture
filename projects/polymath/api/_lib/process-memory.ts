@@ -291,33 +291,21 @@ export async function processMemory(memoryId: string, opts: ProcessOptions = {})
     if (metadata.triage) {
       const { category, project_id } = metadata.triage
       if (category === 'task_update' && project_id) {
-        logger.info({ project_id }, '🔄 Adding task to project from triage...')
-        // Fetch project to get current tasks
-        const { data: project } = await supabase
+        // A note about an existing project. It used to be appended to
+        // metadata.tasks as an OPEN step, but tasks are a log of done work
+        // now (next-move.ts) — so "finished chapter four" turned up as a
+        // thing still to do. The note itself is already linked by
+        // triage.project_id, which is where the catch-up and the themes
+        // draft read it from (project-material.ts). All that's left to do
+        // here is mark the project as touched: saying something about it
+        // counts as working on it.
+        const { error: touchErr } = await supabase
           .from('projects')
-          .select('metadata')
+          .update({ last_active: new Date().toISOString() })
           .eq('id', project_id)
-          .single()
-
-        if (project) {
-          const currentTasks = project.metadata?.tasks || []
-          const newTask = {
-            id: crypto.randomUUID(),
-            text: metadata.summary_title,
-            done: false,
-            created_at: new Date().toISOString(),
-            order: currentTasks.length
-          }
-          const updatedMetadata = {
-            ...project.metadata,
-            tasks: [...currentTasks, newTask]
-          }
-          await supabase
-            .from('projects')
-            .update({ metadata: updatedMetadata, last_active: new Date().toISOString() })
-            .eq('id', project_id)
-          logger.info({ project_id }, '✅ Task added to project')
-        }
+          .eq('user_id', userId)
+        if (touchErr) logger.warn({ project_id, error: touchErr.message }, 'Could not mark project active from triage')
+        else logger.info({ project_id }, '✅ Project marked active from a note about it')
       } else if (category === 'list_item') {
         logger.info('🔄 Adding to appropriate list from triage...')
         // Find or create a "Triage" list if no specific list is found

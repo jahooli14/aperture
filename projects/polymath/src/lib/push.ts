@@ -23,14 +23,10 @@ async function getSubscription(): Promise<PushSubscription | null> {
 }
 
 /**
- * Requests notification permission, subscribes this browser to push, and
- * saves the subscription + schedule server-side. Throws if permission is
- * denied or push isn't supported — callers should catch and surface it.
+ * Asks for permission, subscribes this browser to push and saves the
+ * subscription server-side. Shared by every push the app sends.
  */
-export async function subscribeToVoiceReminder(schedule: {
-  hour: number
-  minute: number
-}): Promise<void> {
+async function ensurePushSubscription(): Promise<void> {
   if (!isPushSupported()) throw new Error('Push notifications are not supported in this browser')
 
   const permission = await Notification.requestPermission()
@@ -56,6 +52,18 @@ export async function subscribeToVoiceReminder(schedule: {
     body: JSON.stringify({ endpoint: json.endpoint, keys: json.keys }),
   })
   if (!subRes.ok) throw new Error('Failed to save push subscription')
+}
+
+/**
+ * Requests notification permission, subscribes this browser to push, and
+ * saves the subscription + schedule server-side. Throws if permission is
+ * denied or push isn't supported — callers should catch and surface it.
+ */
+export async function subscribeToVoiceReminder(schedule: {
+  hour: number
+  minute: number
+}): Promise<void> {
+  await ensurePushSubscription()
 
   const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
   const settingsRes = await fetch('/api/push?resource=settings', {
@@ -90,6 +98,10 @@ export async function unsubscribeFromVoiceReminder(schedule: { hour: number; min
   await updateVoiceReminderSchedule({ enabled: false, hour: schedule.hour, minute: schedule.minute }).catch(() => {})
 
   if (!isPushSupported()) return
+  // The weekend nudge shares this subscription; dropping it would silence
+  // that too.
+  const weekend = await getWeekendNudge().catch(() => ({ enabled: false }))
+  if (weekend.enabled) return
   const subscription = await getSubscription()
   if (!subscription) return
 
@@ -101,4 +113,25 @@ export async function unsubscribeFromVoiceReminder(schedule: { hour: number; min
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ endpoint }),
   }).catch(() => {})
+}
+
+/** The Saturday nudge (api/_lib/weekend-nudge.ts). `available: false` means
+ *  the server table isn't there yet; the toggle hides itself. */
+export async function getWeekendNudge(): Promise<{ available: boolean; enabled: boolean }> {
+  const res = await fetch('/api/push?resource=weekend')
+  if (!res.ok) return { available: false, enabled: false }
+  return res.json()
+}
+
+export async function setWeekendNudge(enabled: boolean): Promise<void> {
+  // Turning it off leaves the browser subscribed: the daily voice reminder
+  // may be using the same subscription. The server just stops sending.
+  if (enabled) await ensurePushSubscription()
+  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
+  const res = await fetch('/api/push?resource=weekend', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ enabled, timezone }),
+  })
+  if (!res.ok) throw new Error('Failed to save the weekend nudge')
 }
