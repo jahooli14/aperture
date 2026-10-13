@@ -36,6 +36,8 @@ export interface DraftContext {
   corrections: string
   /** Live project and latest captures. Context, not corpus. */
   focus?: string
+  /** The project they're deep in, by exact title. Drives the crossing. */
+  liveTitle?: string | null
 }
 
 export function draftPrompt(ctx: DraftContext): string {
@@ -85,7 +87,7 @@ WHAT A REVELATION IS
 A claim that restates one note is a summary. One they already say every day is
 a quote. One nobody could disagree with is a platitude. None of those.
 
-WHERE TO LOOK -- read everything first, then look for:
+${ctx.liveTitle ? crossingBlock(ctx.liveTitle) : ''}WHERE TO LOOK -- read everything first, then look for:
 - The same stall: two projects that stopped at the same kind of step.
 - The survivors: what the things they keep going back to share, that the
   dropped ones don't.
@@ -164,12 +166,35 @@ JSON only:
 { "candidates": [ { "noticing": "", "doubt": "", "evidence": [ { "ref": "", "quote": "" } ], "take": "", "stake": "", "project": null } ] }`
 }
 
+/** The Venn: each person is a different overlap of things, and the middle is
+ *  what only they can see. The best take here is the live project met with
+ *  something else of theirs. */
+function crossingBlock(title: string): string {
+  return `THE ONE THAT MATTERS MOST -- THE CROSSING
+They are deep in "${title}" right now. A take from inside it only tells them
+what they already know. The thing nobody else could say is where it overlaps with
+the rest of them. Make your FIRST candidate a crossing:
+- Put something they did or said about "${title}" next to a note of theirs about
+  something else: another project, a person, a place, a habit, something that
+  annoyed them. Neither note mentions the other.
+- The claim is about "${title}": what it needs, what it's doing, what it is
+  really about. They should be able to use it the next time they sit down to it.
+- The other note must not be about "${title}" at all. If it is, it isn't a
+  crossing.
+- Someone else with the same project would have different notes, so a crossing
+  can only be theirs. That is the test.
+Only if no crossing holds up, write the best take you honestly can. Never force
+one: a false crossing is worse than none.
+
+`
+}
+
 function rowForJudge(r: CorpusRow): string {
   const text = r.text.length > 700 ? `${r.text.slice(0, 700)}…` : r.text
   return `    [${r.ref}] ${r.title ? `"${r.title}" ` : ''}(${r.meta}): ${text}`
 }
 
-export function judgePrompt(candidates: Grounded[], loose: boolean): string {
+export function judgePrompt(candidates: Grounded[], loose: boolean, liveTitle?: string | null): string {
   const list = candidates.map((c, i) =>
     `#${i + 1}\n  SHOWN TO THEM: "${c.question}"\n  CLAIMED PATTERN: ${c.noticing || '(none given)'}\n` +
     `  THE WRITER'S OWN DOUBT: ${c.doubt || '(none given)'}\n  BUILT ON:\n${c.rows.map(rowForJudge).join('\n')}`,
@@ -201,12 +226,16 @@ Score each from 0 to 10:
   be wrong. An overreaching take is always a kill, however sharp.
 Kill it outright if all its evidence is one project's own plan or next steps,
 even from two notes: that is a summary, not something side by side.
-Then "verdict": "ship" or "kill", and "reason": one plain sentence.
+${liveTitle ? `- "crosses": true only if the take puts "${liveTitle}" next to a note of theirs about
+  something ELSE, with neither mentioning the other. A take built from notes all
+  about "${liveTitle}", or all about one other thing, is false. This only decides
+  the order; it never makes a take ship.
+` : ''}Then "verdict": "ship" or "kill", and "reason": one plain sentence.
 
 ${loose
     ? 'This is a second pass after nothing better was found, so ship anything true and reactable -- but never anything false.'
     : 'Be harsh: they would rather see nothing than a clever-sounding claim that doesn\'t land. But judge each on its own. A take that is true, specific and sharp ships, even if it is the only one here.'}
 
 JSON only:
-{ "scores": [ { "n": 1, "revelation": 0, "truth": 0, "specific": 0, "answerable": 0, "overreach": false, "verdict": "kill", "reason": "" } ] }`
+{ "scores": [ { "n": 1, "revelation": 0, "truth": 0, "specific": 0, "answerable": 0, "overreach": false, "crosses": false, "verdict": "kill", "reason": "" } ] }`
 }

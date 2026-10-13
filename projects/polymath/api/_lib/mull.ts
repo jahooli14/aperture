@@ -316,6 +316,9 @@ export interface JudgeScore {
   overreach?: boolean
   verdict: 'ship' | 'kill'
   reason: string
+  /** The judge's own read of whether the take puts the live project next
+   *  to a note about something else. Only ever a rank bonus. */
+  crosses?: boolean
 }
 
 /**
@@ -336,6 +339,35 @@ export function judgeRank(s: JudgeScore): number {
   return 2 * s.revelation + s.truth + s.specific + s.answerable
 }
 
+/**
+ * The Venn. A take that puts the live project next to a note about
+ * something else is the one thing only this person could be shown: the
+ * overlap of their own work and the rest of their life. It outranks a
+ * sharper take that stays inside one project, but only by this much, so a
+ * weak crossing never beats a strong one that doesn't.
+ */
+export const CROSSING_BONUS = 12
+
+/**
+ * Does this take cross the live project? It leans on something filed under
+ * it AND on a note that isn't about it. A note counts as outside when it is
+ * a voice note or fragment of their own, not part of the live project's
+ * captures (a fragment and the note it was cut from are one capture), and
+ * not filed under it. Descriptions and plans of other projects don't count:
+ * they're what they mean to make, not something they said.
+ */
+export function crossesLiveProject(
+  rows: CorpusRow[], corpus: Corpus, liveProjectId: string | null | undefined,
+): boolean {
+  if (!liveProjectId) return false
+  const isLive = (r: CorpusRow) => (r.kind === 'project' && r.id === liveProjectId) || r.projectId === liveProjectId
+  const liveCaptures = new Set(corpus.rows.filter(isLive).map(r => r.captureId))
+  const inside = rows.some(isLive)
+  const outside = rows.some(r =>
+    (r.kind === 'memory' || r.kind === 'fragment') && !isLive(r) && !liveCaptures.has(r.captureId))
+  return inside && outside
+}
+
 /** Read the judge's JSON, refusing anything malformed rather than
  *  inventing a score nobody gave. */
 export function parseJudgeScores(raw: unknown, count: number): Map<number, JudgeScore> {
@@ -353,6 +385,7 @@ export function parseJudgeScores(raw: unknown, count: number): Map<number, Judge
       overreach: s.overreach === true,
       verdict: s.verdict === 'ship' ? 'ship' : 'kill',
       reason: typeof s.reason === 'string' ? s.reason : '',
+      crosses: s.crosses === true,
     })
   }
   return out
