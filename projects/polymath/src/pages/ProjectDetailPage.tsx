@@ -26,6 +26,7 @@ import { MadeWall } from '../components/projects/MadeWall'
 import { NextMovePanel } from '../components/projects/NextMovePanel'
 import { ProjectThemes } from '../components/projects/ProjectThemes'
 import { UpToSpeed } from '../components/projects/UpToSpeed'
+import { ProgressFold } from '../components/projects/ProgressFold'
 import { isActivelyWorked, readThemes } from '../lib/projectThemes'
 import { Button } from '../components/ui/button'
 import { useToast } from '../components/ui/toast'
@@ -272,6 +273,12 @@ export function ProjectDetailPage() {
   const description = project.description?.trim() || ''
   const endGoal = (project.metadata?.end_goal as string | undefined) || ''
   const hasCycle = !!(project.metadata as { cycle?: unknown } | undefined)?.cycle
+  // Being worked on and has themes: the page leads with them (see
+  // ProjectThemes), then notes, with history folded away.
+  const steering = project.status !== 'completed' && project.status !== 'graveyard'
+    && readThemes(project.metadata).length > 0 && isActivelyWorked(project)
+  const doneCount = (Array.isArray(project.metadata?.tasks) ? project.metadata!.tasks as Array<{ done?: boolean }> : [])
+    .filter(t => t?.done).length
 
   return (
     <div className="min-h-screen page-bottom relative" style={{ backgroundColor: 'var(--brand-bg)' }}>
@@ -447,9 +454,18 @@ export function ProjectDetailPage() {
               />
             )}
 
+            {steering ? (
+              <>
+                {/* Being worked on: themes, then your notes. History is one
+                    folded row, not four differently-styled blocks. */}
+                <div data-notes-section className="pt-2">
+                  <ProjectNotes projectId={project.id} notesDoc={project.notes_doc} />
+                </div>
+                <div className="pb-32">
+                  <ProgressFold doneCount={doneCount}>
             <NextMovePanel
               project={project}
-              hideMove={readThemes(project.metadata).length > 0 && isActivelyWorked(project)}
+              hideMove={steering}
               onGo={() => { setSessionAutoStart(true); setSessionOpen(true) }}
               onChange={() => { setSessionAutoStart(false); setSessionOpen(true) }}
               onFinish={() => handleStatusChange('completed')}
@@ -517,10 +533,86 @@ export function ProjectDetailPage() {
             )}
 
             <MadeWall projectId={project.id} />
+                  </ProgressFold>
+                </div>
+              </>
+            ) : (
+              <>
+            <NextMovePanel
+              project={project}
+              hideMove={steering}
+              onGo={() => { setSessionAutoStart(true); setSessionOpen(true) }}
+              onChange={() => { setSessionAutoStart(false); setSessionOpen(true) }}
+              onFinish={() => handleStatusChange('completed')}
+            />
 
+            {/* What done looks like — only when the user has actually said.
+                An empty "What does done look like?" box on every project is
+                the question this app doesn't ask: plenty of real projects are
+                ongoing and have no end. */}
+            {(endGoal || editingGoal) && (
+              <div
+                data-finish-line
+                className="rounded-2xl p-5 cursor-pointer"
+                style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}
+                onClick={!editingGoal ? startEditGoal : undefined}
+              >
+                <span className="text-[11px] font-medium tracking-wide mb-2 flex items-center gap-1.5 lowercase" style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.85 }}>
+                  <Target className="h-3 w-3" /> done when
+                </span>
+                {editingGoal ? (
+                  <div className="space-y-3">
+                    <textarea
+                      ref={goalInputRef}
+                      value={tempGoal}
+                      onChange={(e) => setTempGoal(e.target.value)}
+                      rows={3}
+                      placeholder="What does done look like?"
+                      className="field w-full p-3 resize-none text-base"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void saveGoal() }
+                        else if (e.key === 'Escape') setEditingGoal(false)
+                      }}
+                    />
+                    <div className="flex gap-2 justify-end">
+                      <button onClick={(e) => { e.stopPropagation(); setEditingGoal(false) }} className="px-3 py-1.5 text-[11px] font-medium rounded-lg hover:bg-white/[0.05]" style={{ color: 'var(--brand-text-secondary)' }}>Cancel</button>
+                      <button onClick={(e) => { e.stopPropagation(); void saveGoal() }} className="px-3 py-1.5 text-[11px] font-medium rounded-lg" style={{ background: 'rgba(var(--brand-primary-rgb),0.12)', color: 'rgb(var(--brand-primary-rgb))' }}>Save</button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-1.5">
+                    <p className="text-[15px] sm:text-base font-medium leading-relaxed italic font-serif text-center" style={{ color: 'var(--brand-text-primary)', opacity: 0.92 }}>
+                      {endGoal}
+                    </p>
+                    {/* On a repeating project the finish line is ONE of them,
+                        so the count says how far this has actually got. A
+                        number of real things made — never a streak. */}
+                    {cycleCount && (
+                      <p className="text-[11px] uppercase tracking-wide text-center" style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.81 }}>
+                        {cycleCount}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Not on a repeating project — metadata.cycle has its own version
+                of this (the count above), and the backend never writes
+                milestones for one. */}
+            {!hasCycle && (
+              <ProjectArc
+                milestones={(project.metadata?.milestones as never[] | undefined) || []}
+                targetDate={project.metadata?.target_date as string | undefined}
+              />
+            )}
+
+            <MadeWall projectId={project.id} />
             <div data-notes-section className="pb-32 pt-2">
               <ProjectNotes projectId={project.id} notesDoc={project.notes_doc} />
             </div>
+              </>
+            )}
           </>
         )}
       </div>
