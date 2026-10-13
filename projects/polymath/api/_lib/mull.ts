@@ -349,24 +349,40 @@ export function judgeRank(s: JudgeScore): number {
 export const CROSSING_BONUS = 12
 
 /**
- * Does this take cross the live project? It leans on something filed under
- * it AND on a note that isn't about it. A note counts as outside when it is
- * a voice note or fragment of their own, not part of the live project's
- * captures (a fragment and the note it was cut from are one capture), and
- * not filed under it. Descriptions and plans of other projects don't count:
- * they're what they mean to make, not something they said.
+ * How far a take crosses the live project: 0 = stays inside it, 1 = a
+ * crossing, 2 = the whole trifecta.
+ *
+ * A crossing leans on something filed under the live project AND on
+ * something of theirs from outside it: a voice note or fragment that isn't
+ * about it (a fragment and the note it was cut from are one capture), or an
+ * item from one of their lists, which is taste they chose. Another
+ * project's description doesn't count: it's what they mean to make, not
+ * something they said or picked.
+ *
+ * The trifecta is all three at once -- the live project, a note of theirs
+ * about something else, and something from a list. Three unlike things that
+ * only meet in one person is the overlap nobody else could be shown.
  */
-export function crossesLiveProject(
+export function crossingDepth(
   rows: CorpusRow[], corpus: Corpus, liveProjectId: string | null | undefined,
-): boolean {
-  if (!liveProjectId) return false
+): 0 | 1 | 2 {
+  if (!liveProjectId) return 0
   const isLive = (r: CorpusRow) => (r.kind === 'project' && r.id === liveProjectId) || r.projectId === liveProjectId
   const liveCaptures = new Set(corpus.rows.filter(isLive).map(r => r.captureId))
-  const inside = rows.some(isLive)
-  const outside = rows.some(r =>
+  if (!rows.some(isLive)) return 0
+  const outsideNote = rows.some(r =>
     (r.kind === 'memory' || r.kind === 'fragment') && !isLive(r) && !liveCaptures.has(r.captureId))
-  return inside && outside
+  const fromAList = rows.some(r => r.kind === 'list_item')
+  if (outsideNote && fromAList) return 2
+  return outsideNote || fromAList ? 1 : 0
 }
+
+export const crossesLiveProject = (
+  rows: CorpusRow[], corpus: Corpus, liveProjectId: string | null | undefined,
+): boolean => crossingDepth(rows, corpus, liveProjectId) > 0
+
+/** On top of CROSSING_BONUS: all three kinds of thing in one take. */
+export const TRIFECTA_BONUS = 8
 
 /** Read the judge's JSON, refusing anything malformed rather than
  *  inventing a score nobody gave. */

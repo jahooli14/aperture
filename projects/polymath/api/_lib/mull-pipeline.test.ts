@@ -262,6 +262,29 @@ describe('the mull channel, end to end', () => {
       expect(trace.join('\n')).toMatch(/crossing: 1 of 2 shipped candidates cross "The book"/)
     })
 
+    it('the trifecta -- the project, a note about something else, a list item -- goes first', async () => {
+      const TRIFECTA = {
+        noticing: 'The book wants the same patience the greenhouse and the soldering list ask for.',
+        doubt: 'Three unrelated things can look related if you want them to.',
+        evidence: [
+          { ref: 'F1', quote: 'rewrote chapter nine for the fourth time' },
+          { ref: 'N1', quote: 'we spend them on the greenhouse' },
+          { ref: 'L1', quote: 'Learn to solder properly' },
+        ],
+        question: 'You rewrote chapter nine for the fourth time. You spend the conversations with dad on the greenhouse. Learning to solder properly has sat on your list for years. I think chapter nine needs one slow sitting, not a fifth rewrite.',
+        stake: 'Chapter nine gets one slow sitting.',
+        project: null,
+      }
+      respond({ draft: [ONE_TAKE, TRIFECTA], judge: [ship(1), ship(2)] })
+      const trace: string[] = []
+      const baked = await bakeMull(fakeSupabase(withLiveBook()).client, 'u1', undefined, trace)
+      // Both lean on the chapter, so only the deeper one is banked.
+      expect(baked.map(b => b.text)).toEqual([TRIFECTA.question])
+      expect(baked[0].project_id).toBe('p-book')
+      expect(trace.join('\n')).toMatch(/TRIFECTA/)
+      expect(trace.join('\n')).toMatch(/crossing: 2 of 2 shipped candidates cross "The book" \(1 with a note and a list item\)/)
+    })
+
     it('without a judge, a crossing is the one that ships', async () => {
       respond({ draft: [GREENHOUSE, ONE_TAKE], judge: new Error('timeout') })
       const baked = await bakeMull(fakeSupabase(withLiveBook()).client, 'u1')

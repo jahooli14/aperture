@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   quoteIsReal, resolveEvidence, specifics, unsupportedSpecifics, ordinalSupported,
-  offersAChoice, isClosed, checkCandidate, crossesLiveProject, judgeShips, judgeRank, parseJudgeScores, readsAnInnerState,
+  offersAChoice, isClosed, checkCandidate, crossesLiveProject, crossingDepth, judgeShips, judgeRank, parseJudgeScores, readsAnInnerState,
   type Candidate, type JudgeScore,
 } from './mull.js'
 import type { Corpus, CorpusRow } from './mull-corpus.js'
@@ -217,9 +217,21 @@ describe('crossesLiveProject', () => {
     expect(crossesLiveProject([chapter, cutFrom], corpus, 'p-book')).toBe(false)
   })
 
-  it('does not cross on a plan or a list: only their own notes are the outside half', () => {
+  it('a list item is an outside half too: taste they chose', () => {
+    expect(crossesLiveProject([chapter, film], corpus, 'p-book')).toBe(true)
+  })
+
+  it("another project's plan is not an outside half: it's what they mean to make", () => {
     expect(crossesLiveProject([chapter, mural], corpus, 'p-book')).toBe(false)
-    expect(crossesLiveProject([chapter, film], corpus, 'p-book')).toBe(false)
+  })
+
+  it('the trifecta is the live project, a note about something else AND a list item', () => {
+    expect(crossingDepth([chapter, dad, film], corpus, 'p-book')).toBe(2)
+    expect(crossingDepth([book, otherFrag, film], corpus, 'p-book')).toBe(2)
+    expect(crossingDepth([chapter, dad], corpus, 'p-book')).toBe(1)
+    expect(crossingDepth([chapter, film], corpus, 'p-book')).toBe(1)
+    expect(crossingDepth([chapter, cutFrom, film], corpus, 'p-book')).toBe(1)
+    expect(crossingDepth([chapter, book], corpus, 'p-book')).toBe(0)
   })
 
   it('never crosses without the live project in it', () => {

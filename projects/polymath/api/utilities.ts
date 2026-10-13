@@ -2649,8 +2649,15 @@ async function handleExecutionSparks(req: VercelRequest, res: VercelResponse) {
       .order('expires_at', { ascending: true })
       .limit(1)
     const BASE_COLS = 'id, type, text, project_id, shown_at, answered_at, expires_at, projects(title)'
-    let { data, error } = (await standing(`${BASE_COLS}, sources`)) as { data: any[] | null; error: { code?: string; message: string } | null }
-    if (error?.code === '42703') ({ data, error } = (await standing(BASE_COLS)) as { data: any[] | null; error: { code?: string; message: string } | null })
+    // `stake` (20260916_spark_stake.sql) rides along so a "yes" can offer to
+    // keep it in mind. Each optional column is dropped, in turn, if it
+    // isn't there yet.
+    let data: any[] | null = null
+    let error: { code?: string; message: string } | null = null
+    for (const cols of [`${BASE_COLS}, sources, stake`, `${BASE_COLS}, sources`, BASE_COLS]) {
+      ;({ data, error } = (await standing(cols)) as { data: any[] | null; error: { code?: string; message: string } | null })
+      if (error?.code !== '42703') break
+    }
 
     if (error) {
       console.error('[utilities/sparks] today query failed:', error)

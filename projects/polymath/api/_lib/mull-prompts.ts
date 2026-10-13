@@ -174,15 +174,20 @@ function crossingBlock(title: string): string {
 They are deep in "${title}" right now. A take from inside it only tells them
 what they already know. The thing nobody else could say is where it overlaps with
 the rest of them. Make your FIRST candidate a crossing:
-- Put something they did or said about "${title}" next to a note of theirs about
-  something else: another project, a person, a place, a habit, something that
-  annoyed them. Neither note mentions the other.
+- Put something they did or said about "${title}" next to something else of
+  theirs: a note about another project, a person, a place, a habit, something
+  that annoyed them. Neither mentions the other.
+- Something from one of their lists counts too -- a film, book, album or place
+  they chose. Name it; don't quote it as something they said.
+- The best one is all three: the project, a note about something else, and a
+  list item. Three unlike things that only meet in this one person. Look for that
+  first, and settle for two only when three don't hold together.
 - The claim is about "${title}": what it needs, what it's doing, what it is
   really about. They should be able to use it the next time they sit down to it.
-- The other note must not be about "${title}" at all. If it is, it isn't a
+- The other things must not be about "${title}" at all. If they are, it isn't a
   crossing.
-- Someone else with the same project would have different notes, so a crossing
-  can only be theirs. That is the test.
+- Someone else with the same project would have different notes and lists, so a
+  crossing can only be theirs. That is the test.
 Only if no crossing holds up, write the best take you honestly can. Never force
 one: a false crossing is worse than none.
 
@@ -226,10 +231,10 @@ Score each from 0 to 10:
   be wrong. An overreaching take is always a kill, however sharp.
 Kill it outright if all its evidence is one project's own plan or next steps,
 even from two notes: that is a summary, not something side by side.
-${liveTitle ? `- "crosses": true only if the take puts "${liveTitle}" next to a note of theirs about
-  something ELSE, with neither mentioning the other. A take built from notes all
-  about "${liveTitle}", or all about one other thing, is false. This only decides
-  the order; it never makes a take ship.
+${liveTitle ? `- "crosses": true only if the take puts "${liveTitle}" next to a note or list item
+  of theirs about something ELSE, with neither mentioning the other. A take built
+  from things all about "${liveTitle}", or all about one other thing, is false.
+  This only decides the order; it never makes a take ship.
 ` : ''}Then "verdict": "ship" or "kill", and "reason": one plain sentence.
 
 ${loose
