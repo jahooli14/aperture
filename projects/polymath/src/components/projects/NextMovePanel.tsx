@@ -32,12 +32,14 @@ interface SayResult {
   project_done?: boolean
 }
 
-export function NextMovePanel({ project, onGo, onChange, onFinish }: {
+export function NextMovePanel({ project, onGo, onChange, onFinish, hideMove = false }: {
   project: Project
   onGo: () => void
   onChange: () => void
   /** They said the whole project is finished and confirmed it. */
   onFinish: () => void
+  /** Themes lead the page instead (ProjectThemes): keep only the log. */
+  hideMove?: boolean
 }) {
   const stored = readStoredMove(project.metadata)
   const hasStoredMove = stored !== null
@@ -63,9 +65,9 @@ export function NextMovePanel({ project, onGo, onChange, onFinish }: {
   // first move for a new project, a way back in for an old one — rather than
   // a card that says "No move yet" and waits for a tap.
   useEffect(() => {
-    if (!live || hasStoredMove) return
+    if (!live || hasStoredMove || hideMove) return
     void useSessionStore.getState().loadMove(project.id)
-  }, [project.id, live, hasStoredMove])
+  }, [project.id, live, hasStoredMove, hideMove])
 
   const send = async () => {
     const text = said.trim()
@@ -91,7 +93,7 @@ export function NextMovePanel({ project, onGo, onChange, onFinish }: {
 
   return (
     <div className="space-y-6">
-      {live && (
+      {live && !hideMove && (
         <div
           className="rounded-2xl p-5 space-y-3"
           style={{

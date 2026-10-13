@@ -14,7 +14,7 @@ import { api } from '../../lib/apiClient'
 import { daysQuiet, isLiveStatus, UP_TO_SPEED_AFTER_DAYS, type UpToSpeed as UpToSpeedData } from '../../lib/projectThemes'
 import type { Project } from '../../types'
 
-const label = 'text-[11px] font-bold uppercase tracking-[0.14em]'
+const label = 'text-[11px] font-medium uppercase tracking-[0.14em]'
 
 function awayFor(days: number): string {
   if (days >= 60) return `${Math.round(days / 30)} months away`
@@ -51,10 +51,10 @@ export function UpToSpeed({ project }: { project: Project }) {
     <section
       aria-label="Bring me up to speed"
       className="rounded-2xl p-5 space-y-4"
-      style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(245,158,11,0.28)' }}
+      style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}
     >
       <div className="flex items-baseline justify-between gap-3">
-        <p className={label} style={{ color: 'rgba(245,158,11,0.9)' }}>Up to speed</p>
+        <p className={label} style={{ color: 'var(--brand-text-muted)' }}>Up to speed</p>
         {quiet != null && <p className="text-[11px]" style={{ color: 'var(--brand-text-muted)' }}>{awayFor(quiet)}</p>}
       </div>
 

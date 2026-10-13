@@ -1,6 +1,7 @@
 /**
- * Themes on the project page: the 2-3 big things this project is steering
- * by, which stay true for weeks (api/_lib/project-themes.ts).
+ * Themes on the project page, shown to the user as "Keep in mind": the 2-3
+ * big things about this project that stay true for weeks
+ * (api/_lib/project-themes.ts).
  *
  * Set by the user, or drafted from their notes and then kept or edited.
  * Nothing updates them behind their back and nothing asks if they're still
@@ -8,15 +9,15 @@
  */
 
 import { useState } from 'react'
-import { Loader2, Pencil, Sparkles } from 'lucide-react'
+import { Loader2, Play, Sparkles } from 'lucide-react'
 import { api } from '../../lib/apiClient'
 import { useProjectStore } from '../../stores/useProjectStore'
-import { MAX_THEMES, readThemes, themeDate, type ProjectTheme } from '../../lib/projectThemes'
+import { MAX_THEMES, isActivelyWorked, readThemes, type ProjectTheme } from '../../lib/projectThemes'
 import type { Project } from '../../types'
 
-const label = 'text-[11px] font-bold uppercase tracking-[0.14em]'
+const label = 'text-[11px] font-medium uppercase tracking-[0.14em]'
 
-export function ProjectThemes({ project }: { project: Project }) {
+export function ProjectThemes({ project, onGo }: { project: Project; onGo?: () => void }) {
   const themes = readThemes(project.metadata)
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState<string[]>([])
@@ -72,9 +73,9 @@ export function ProjectThemes({ project }: { project: Project }) {
   if (editing) {
     return (
       <div className="rounded-2xl p-5 space-y-3" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(var(--brand-primary-rgb),0.22)' }}>
-        <p className={label} style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.85 }}>Steering by</p>
+        <p className={label} style={{ color: 'var(--brand-text-muted)' }}>Keep in mind</p>
         <p className="text-[13px] leading-snug" style={{ color: 'var(--brand-text-secondary)' }}>
-          Two or three big things that stay true for weeks. Not today's step.
+          Two or three things to hold onto while you work on this. They stay until you change them.
         </p>
         {draft.map((value, i) => (
           <input
@@ -117,9 +118,9 @@ export function ProjectThemes({ project }: { project: Project }) {
   if (themes.length === 0) {
     return (
       <div className="rounded-2xl p-5 space-y-2" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}>
-        <p className={label} style={{ color: 'var(--brand-text-muted)' }}>Steering by</p>
+        <p className={label} style={{ color: 'var(--brand-text-muted)' }}>Keep in mind</p>
         <p className="text-[14px] leading-snug" style={{ color: 'var(--brand-text-secondary)' }}>
-          The big things this project is about right now. They stay on the home card while you're working on it.
+          Two or three things to hold onto while you work on this. They show on the home card instead of a next step.
         </p>
         {note && <p className="text-[12px]" style={{ color: 'var(--brand-text-secondary)' }}>{note}</p>}
         <div className="flex gap-4 pt-1">
@@ -141,37 +142,45 @@ export function ProjectThemes({ project }: { project: Project }) {
   }
 
   return (
-    <div className="rounded-2xl p-5 space-y-3" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+    <div
+      className="rounded-2xl p-5 space-y-4"
+      style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}
+    >
       <div className="flex items-center justify-between">
-        <p className={label} style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.85 }}>Steering by</p>
+        <p className={label} style={{ color: 'var(--brand-text-muted)' }}>Keep in mind</p>
         <button
           onClick={() => open(themes.map(t => t.text))}
-          aria-label="Change themes"
-          className="p-2 -m-2 rounded-lg"
+          className="text-[13px] py-1 px-2 -mr-2"
           style={{ color: 'var(--brand-text-secondary)' }}
         >
-          <Pencil size={14} />
+          Edit
         </button>
       </div>
       <ThemeList themes={themes} />
+      {onGo && isActivelyWorked(project) && (
+        <button
+          onClick={onGo}
+          className="neon-button w-full py-3 rounded-xl font-semibold text-[15px] flex items-center justify-center gap-2"
+        >
+          <Play className="h-3.5 w-3.5 fill-current" />
+          Go
+        </button>
+      )}
     </div>
   )
 }
 
-export function ThemeList({ themes, compact = false }: { themes: ProjectTheme[]; compact?: boolean }) {
+/** One text style, no decoration: the lines are the content. */
+export function ThemeList({ themes }: { themes: ProjectTheme[] }) {
   return (
-    <ul className={compact ? 'space-y-1.5' : 'space-y-2.5'}>
+    <ul className="space-y-2">
       {themes.map(t => (
-        <li key={t.text} className="pl-3" style={{ borderLeft: '2px solid rgba(var(--brand-primary-rgb),0.45)' }}>
-          <p
-            className={compact ? 'text-[15px] leading-[1.35]' : 'text-[16px] leading-[1.35]'}
-            style={{ color: 'var(--brand-text-primary)', fontFamily: 'var(--brand-font-body)' }}
-          >
-            {t.text}
-          </p>
-          {!compact && themeDate(t.at) && (
-            <p className="text-[11px] mt-0.5" style={{ color: 'var(--brand-text-muted)' }}>since {themeDate(t.at)}</p>
-          )}
+        <li
+          key={t.text}
+          className="text-[15px] leading-[1.4] font-medium"
+          style={{ color: 'var(--brand-text-primary)', fontFamily: 'var(--brand-font-body)' }}
+        >
+          {t.text}
         </li>
       ))}
     </ul>
