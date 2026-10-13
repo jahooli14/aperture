@@ -26,6 +26,7 @@ import { MadeWall } from '../components/projects/MadeWall'
 import { NextMovePanel } from '../components/projects/NextMovePanel'
 import { ProjectThemes } from '../components/projects/ProjectThemes'
 import { UpToSpeed } from '../components/projects/UpToSpeed'
+import { isActivelyWorked, readThemes } from '../lib/projectThemes'
 import { Button } from '../components/ui/button'
 import { useToast } from '../components/ui/toast'
 import { useConfirmDialog } from '../components/ui/confirm-dialog'
@@ -440,11 +441,15 @@ export function ProjectDetailPage() {
             {/* What it's steering by — weeks, not one session. Shown on the
                 home card while you're working on it. */}
             {project.status !== 'completed' && project.status !== 'graveyard' && (
-              <ProjectThemes project={project} />
+              <ProjectThemes
+                project={project}
+                onGo={() => { setSessionAutoStart(true); setSessionOpen(true) }}
+              />
             )}
 
             <NextMovePanel
               project={project}
+              hideMove={readThemes(project.metadata).length > 0 && isActivelyWorked(project)}
               onGo={() => { setSessionAutoStart(true); setSessionOpen(true) }}
               onChange={() => { setSessionAutoStart(false); setSessionOpen(true) }}
               onFinish={() => handleStatusChange('completed')}

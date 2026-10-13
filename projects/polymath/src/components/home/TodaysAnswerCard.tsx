@@ -225,14 +225,10 @@ export function TodaysAnswerCard() {
   // everywhere else in the app, so outlining the hero in it made the one
   // thing you're meant to act on read as something that had gone wrong.
   // The badge carries how long it's been; the card just warms slightly.
-  const dormancyColor = dormancyDays >= 28
-    ? 'rgba(245,158,11,0.45)'
-    : dormancyDays >= 7
-    ? 'rgba(245,158,11,0.28)'
-    : null
+  const dormancyColor: string | null = null
   // The badge is the signal, so it stays legible; the card's border is
   // only atmosphere and sits far softer.
-  const dormancyBadgeColor = dormancyColor ? 'rgba(245,158,11,0.9)' : null
+  const dormancyBadgeColor: string | null = null
   const dormancyLabel = dormancyDays >= 28
     ? 'long quiet'
     : dormancyDays >= 7
@@ -343,10 +339,9 @@ export function TodaysAnswerCard() {
             <span
               className="text-[11px] font-medium uppercase tracking-[0.14em] px-2 py-0.5 rounded-full flex-shrink-0 mt-0.5"
               style={{
-                color: dormancyBadgeColor ?? undefined,
-                border: `1px solid rgba(245,158,11,0.4)`,
+                color: 'var(--brand-text-muted)',
+                border: '1px solid rgba(255,255,255,0.18)',
                 background: 'rgba(0,0,0,0.3)',
-                boxShadow: dormancyColor ? `0 0 8px ${dormancyColor.replace('0.55', '0.25')}` : undefined,
               }}
             >
               {dormancyLabel}
@@ -368,10 +363,10 @@ export function TodaysAnswerCard() {
             boxes; fill alone separates it from the card behind it. */}
         {steering ? (
           <div className="p-3 rounded-xl mb-2.5" style={{ background: 'rgba(255,255,255,0.055)' }}>
-            <p className="text-[11px] font-medium uppercase tracking-[0.14em] mb-2" style={{ color: 'var(--brand-text-muted)' }}>
-              steering by
+            <p className="text-[11px] font-medium uppercase tracking-[0.14em] mb-1.5" style={{ color: 'var(--brand-text-muted)' }}>
+              keep in mind
             </p>
-            <ThemeList themes={themes} compact />
+            <ThemeList themes={themes} />
             {reEntry && (
               <p className="text-[12px] mt-2 line-clamp-2" style={{ color: 'var(--brand-text-secondary)' }}>
                 You stopped with “{reEntry}”
