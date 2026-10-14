@@ -16,13 +16,11 @@
 
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Loader2, MoreVertical, Target, Star, Sprout, ArrowLeft } from 'lucide-react'
+import { Loader2, MoreVertical, Star, Sprout, ArrowLeft } from 'lucide-react'
 import { useProjectStore } from '../stores/useProjectStore'
 import { useSessionStore } from '../stores/useSessionStore'
 import { SessionContract } from '../components/session/SessionContract'
 import { ProjectNotes } from '../components/projects/ProjectNotes'
-import { ProjectArc } from '../components/projects/ProjectArc'
-import { MadeWall } from '../components/projects/MadeWall'
 import { NextMovePanel } from '../components/projects/NextMovePanel'
 import { ProjectThemes } from '../components/projects/ProjectThemes'
 import { UpToSpeed } from '../components/projects/UpToSpeed'
@@ -62,19 +60,6 @@ export function ProjectDetailPage() {
 
   const project = useProjectStore(state => state.allProjects.find(p => p.id === id))
 
-  // "5 mixes so far" on a project whose finish line repeats. Computed here
-  // rather than imported from api/_lib/project-cycles.ts, which is the source
-  // of truth for the shape but is server-side — shipped src code never reaches
-  // across into api/. Kept trivial so the duplication is a plural rule.
-  const cycleCount = (() => {
-    const cycle = (project?.metadata as { cycle?: { unit?: unknown; done?: unknown } } | undefined)?.cycle
-    const unit = typeof cycle?.unit === 'string' ? cycle.unit.trim() : ''
-    const done = typeof cycle?.done === 'number' ? cycle.done : 0
-    if (!unit || done <= 0) return null
-    const plural = done === 1 ? unit : (/(s|x|z|ch|sh)$/i.test(unit) ? `${unit}es` : `${unit}s`)
-    return `${done} ${plural} so far`
-  })()
-
   const [sparkedByMemories, setSparkedByMemories] = useState<Memory[]>([])
 
   // Local-first: only block on a loader when the project isn't in the store.
@@ -85,9 +70,6 @@ export function ProjectDetailPage() {
   const [showRetroRitual, setShowRetroRitual] = useState(false)
   const [showAbout, setShowAbout] = useState(false)
 
-  const [editingGoal, setEditingGoal] = useState(false)
-  const [tempGoal, setTempGoal] = useState('')
-  const goalInputRef = useRef<HTMLTextAreaElement>(null)
   const { addToast } = useToast()
   const { confirm, dialog: confirmDialog } = useConfirmDialog()
   // The project currently in view. A fetch for a previous project (after
@@ -180,29 +162,6 @@ export function ProjectDetailPage() {
     }
   }
 
-  const saveGoal = async () => {
-    if (!project) { setEditingGoal(false); return }
-    setEditingGoal(false)
-    try {
-      await updateProject(project.id, {
-        metadata: { ...project.metadata, end_goal: tempGoal.trim(), end_goal_source: 'manual' },
-      })
-      addToast({ title: 'Goal updated', variant: 'success' })
-    } catch (error) {
-      addToast({
-        title: 'Failed to update goal',
-        description: error instanceof Error ? error.message : 'Try again in a moment.',
-        variant: 'destructive',
-      })
-    }
-  }
-
-  const startEditGoal = () => {
-    setTempGoal((project?.metadata?.end_goal as string | undefined) || '')
-    setEditingGoal(true)
-    setTimeout(() => goalInputRef.current?.focus(), 0)
-  }
-
   const handleStatusChange = async (newStatus: Project['status']) => {
     if (!project) return
     try {
@@ -270,8 +229,10 @@ export function ProjectDetailPage() {
   const parked = project.status === 'dormant'
   const lastTouched = project.last_active || project.updated_at || null
   const description = project.description?.trim() || ''
-  const endGoal = (project.metadata?.end_goal as string | undefined) || ''
-  const hasCycle = !!(project.metadata as { cycle?: unknown } | undefined)?.cycle
+  // Being worked on and has themes: they lead (with Go) and the move steps
+  // aside. Otherwise the move is the way back in. Either way: notes below.
+  const steering = project.status !== 'completed' && project.status !== 'graveyard'
+    && readThemes(project.metadata).length > 0 && isActivelyWorked(project)
 
   return (
     <div className="min-h-screen page-bottom relative" style={{ backgroundColor: 'var(--brand-bg)' }}>
@@ -438,8 +399,8 @@ export function ProjectDetailPage() {
                 The move panel under it is the way back in. */}
             <UpToSpeed project={project} />
 
-            {/* What it's steering by — weeks, not one session. Shown on the
-                home card while you're working on it. */}
+            {/* Keep in mind — weeks, not one session. Shown on the home card
+                while you're working on it. */}
             {project.status !== 'completed' && project.status !== 'graveyard' && (
               <ProjectThemes
                 project={project}
@@ -447,76 +408,15 @@ export function ProjectDetailPage() {
               />
             )}
 
-            <NextMovePanel
-              project={project}
-              hideMove={readThemes(project.metadata).length > 0 && isActivelyWorked(project)}
-              onGo={() => { setSessionAutoStart(true); setSessionOpen(true) }}
-              onChange={() => { setSessionAutoStart(false); setSessionOpen(true) }}
-              onFinish={() => handleStatusChange('completed')}
-            />
-
-            {/* What done looks like — only when the user has actually said.
-                An empty "What does done look like?" box on every project is
-                the question this app doesn't ask: plenty of real projects are
-                ongoing and have no end. */}
-            {(endGoal || editingGoal) && (
-              <div
-                data-finish-line
-                className="rounded-2xl p-5 cursor-pointer"
-                style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}
-                onClick={!editingGoal ? startEditGoal : undefined}
-              >
-                <span className="text-[11px] font-medium tracking-wide mb-2 flex items-center gap-1.5 lowercase" style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.85 }}>
-                  <Target className="h-3 w-3" /> done when
-                </span>
-                {editingGoal ? (
-                  <div className="space-y-3">
-                    <textarea
-                      ref={goalInputRef}
-                      value={tempGoal}
-                      onChange={(e) => setTempGoal(e.target.value)}
-                      rows={3}
-                      placeholder="What does done look like?"
-                      className="field w-full p-3 resize-none text-base"
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void saveGoal() }
-                        else if (e.key === 'Escape') setEditingGoal(false)
-                      }}
-                    />
-                    <div className="flex gap-2 justify-end">
-                      <button onClick={(e) => { e.stopPropagation(); setEditingGoal(false) }} className="px-3 py-1.5 text-[11px] font-medium rounded-lg hover:bg-white/[0.05]" style={{ color: 'var(--brand-text-secondary)' }}>Cancel</button>
-                      <button onClick={(e) => { e.stopPropagation(); void saveGoal() }} className="px-3 py-1.5 text-[11px] font-medium rounded-lg" style={{ background: 'rgba(var(--brand-primary-rgb),0.12)', color: 'rgb(var(--brand-primary-rgb))' }}>Save</button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="space-y-1.5">
-                    <p className="text-[15px] sm:text-base font-medium leading-relaxed italic font-serif text-center" style={{ color: 'var(--brand-text-primary)', opacity: 0.92 }}>
-                      {endGoal}
-                    </p>
-                    {/* On a repeating project the finish line is ONE of them,
-                        so the count says how far this has actually got. A
-                        number of real things made — never a streak. */}
-                    {cycleCount && (
-                      <p className="text-[11px] uppercase tracking-wide text-center" style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.81 }}>
-                        {cycleCount}
-                      </p>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Not on a repeating project — metadata.cycle has its own version
-                of this (the count above), and the backend never writes
-                milestones for one. */}
-            {!hasCycle && (
-              <ProjectArc
-                milestones={(project.metadata?.milestones as never[] | undefined) || []}
-                targetDate={project.metadata?.target_date as string | undefined}
+            {/* The way back in: the move, unless themes are leading. */}
+            {!steering && (
+              <NextMovePanel
+                project={project}
+                onGo={() => { setSessionAutoStart(true); setSessionOpen(true) }}
+                onChange={() => { setSessionAutoStart(false); setSessionOpen(true) }}
+                onFinish={() => handleStatusChange('completed')}
               />
             )}
-
-            <MadeWall projectId={project.id} />
 
             <div data-notes-section className="pb-32 pt-2">
               <ProjectNotes projectId={project.id} notesDoc={project.notes_doc} />

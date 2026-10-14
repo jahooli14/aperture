@@ -42,6 +42,26 @@ export interface MullExample {
 
 export const GOOD_EXAMPLES: readonly MullExample[] = [
   {
+    move: 'the trifecta -- the project they are deep in, a note about something else, and a film they rate',
+    evidence: [
+      { where: 'note, 14 January 2026, filed under "The ferry play"', text: 'the second act keeps explaining itself' },
+      { where: 'note, 9 July 2025', text: "I can't stand it when a friend narrates their own jokes" },
+      { where: 'list "Films", rated 5', text: 'Rear Window' },
+    ],
+    question: "Your ferry play's second act keeps explaining itself. In July you said you can't stand a friend narrating their own jokes. The film you rate highest is Rear Window. I think act two should show the captain watching, not explaining.",
+    stake: 'Act two is rewritten so the captain watches and says nothing.',
+  },
+  {
+    move: 'the crossing -- the project they are deep in, met by notes about something else',
+    evidence: [
+      { where: 'note, 14 January 2026, filed under "The ferry play"', text: 'the second act keeps explaining itself' },
+      { where: 'note, 9 July 2025', text: "I can't stand it when a friend narrates their own jokes" },
+      { where: 'note, 2 November 2025', text: 'the best bit of the pottery class was when the teacher said nothing' },
+    ],
+    question: "Your ferry play's second act keeps explaining itself. In July you said you can't stand a friend narrating their own jokes. In November the best bit of the class was when the teacher said nothing. I think the second act needs the captain to say nothing.",
+    stake: 'The captain loses her speech in act two and the scene is played without it.',
+  },
+  {
     move: 'the same stall, in two projects that have nothing else in common',
     evidence: [
       { where: 'project "Letterpress wedding invites", paused, last touched 3 May 2025', text: 'stopped once the proofs came back' },

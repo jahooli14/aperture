@@ -316,6 +316,9 @@ export interface JudgeScore {
   overreach?: boolean
   verdict: 'ship' | 'kill'
   reason: string
+  /** The judge's own read of whether the take puts the live project next
+   *  to a note about something else. Only ever a rank bonus. */
+  crosses?: boolean
 }
 
 /**
@@ -336,6 +339,51 @@ export function judgeRank(s: JudgeScore): number {
   return 2 * s.revelation + s.truth + s.specific + s.answerable
 }
 
+/**
+ * The Venn. A take that puts the live project next to a note about
+ * something else is the one thing only this person could be shown: the
+ * overlap of their own work and the rest of their life. It outranks a
+ * sharper take that stays inside one project, but only by this much, so a
+ * weak crossing never beats a strong one that doesn't.
+ */
+export const CROSSING_BONUS = 12
+
+/**
+ * How far a take crosses the live project: 0 = stays inside it, 1 = a
+ * crossing, 2 = the whole trifecta.
+ *
+ * A crossing leans on something filed under the live project AND on
+ * something of theirs from outside it: a voice note or fragment that isn't
+ * about it (a fragment and the note it was cut from are one capture), or an
+ * item from one of their lists, which is taste they chose. Another
+ * project's description doesn't count: it's what they mean to make, not
+ * something they said or picked.
+ *
+ * The trifecta is all three at once -- the live project, a note of theirs
+ * about something else, and something from a list. Three unlike things that
+ * only meet in one person is the overlap nobody else could be shown.
+ */
+export function crossingDepth(
+  rows: CorpusRow[], corpus: Corpus, liveProjectId: string | null | undefined,
+): 0 | 1 | 2 {
+  if (!liveProjectId) return 0
+  const isLive = (r: CorpusRow) => (r.kind === 'project' && r.id === liveProjectId) || r.projectId === liveProjectId
+  const liveCaptures = new Set(corpus.rows.filter(isLive).map(r => r.captureId))
+  if (!rows.some(isLive)) return 0
+  const outsideNote = rows.some(r =>
+    (r.kind === 'memory' || r.kind === 'fragment') && !isLive(r) && !liveCaptures.has(r.captureId))
+  const fromAList = rows.some(r => r.kind === 'list_item')
+  if (outsideNote && fromAList) return 2
+  return outsideNote || fromAList ? 1 : 0
+}
+
+export const crossesLiveProject = (
+  rows: CorpusRow[], corpus: Corpus, liveProjectId: string | null | undefined,
+): boolean => crossingDepth(rows, corpus, liveProjectId) > 0
+
+/** On top of CROSSING_BONUS: all three kinds of thing in one take. */
+export const TRIFECTA_BONUS = 8
+
 /** Read the judge's JSON, refusing anything malformed rather than
  *  inventing a score nobody gave. */
 export function parseJudgeScores(raw: unknown, count: number): Map<number, JudgeScore> {
@@ -353,6 +401,7 @@ export function parseJudgeScores(raw: unknown, count: number): Map<number, Judge
       overreach: s.overreach === true,
       verdict: s.verdict === 'ship' ? 'ship' : 'kill',
       reason: typeof s.reason === 'string' ? s.reason : '',
+      crosses: s.crosses === true,
     })
   }
   return out

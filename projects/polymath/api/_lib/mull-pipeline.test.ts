@@ -81,6 +81,11 @@ function fakeSupabase(data: Record<string, Row[]>) {
       lt: (c: string, v: string) => { rows = rows.filter(r => String(r[c]) < v); return chain },
       is: (c: string, v: null) => { rows = rows.filter(r => (v === null ? r[c] == null : r[c] === v)); return chain },
       not: (c: string, _op: string, v: null) => { rows = rows.filter(r => (v === null ? r[c] != null : true)); return chain },
+      or: (expr: string) => {
+        const clauses = expr.split(',').map(x => x.split('.'))
+        rows = rows.filter(r => clauses.some(([c, op, v]) => op === 'eq' && String(r[c]) === v))
+        return chain
+      },
       contains: (c: string, v: unknown[]) => { rows = rows.filter(r => Array.isArray(r[c]) && v.every(x => r[c].includes(x))); return chain },
       order: () => chain,
       limit: () => chain,
@@ -222,6 +227,75 @@ describe('the mull channel, end to end', () => {
     expect(baked.map(b => b.text)).toEqual([ONE_TAKE.question, GREENHOUSE.question])
     expect(baked[1].banked).toBe(true)
     expect(new Date(baked[1].expires_at).getTime()).toBeGreaterThan(new Date(baked[0].expires_at).getTime())
+  })
+
+  describe('the crossing (the Venn)', () => {
+    const withLiveBook = () => {
+      const data = corpus() as any
+      data.projects[0].state = 'live'
+      return data
+    }
+
+    it('asks the drafter for a crossing, naming the live project', async () => {
+      respond({ draft: [ONE_TAKE], judge: [ship(1)] })
+      await bakeMull(fakeSupabase(withLiveBook()).client, 'u1')
+      expect(draftPromptSent()).toMatch(/THE ONE THAT MATTERS MOST -- THE CROSSING/)
+      expect(draftPromptSent()).toMatch(/deep in "The book" right now/)
+    })
+
+    it('asks for nothing of the kind when nothing is live', async () => {
+      respond({ draft: [ONE_TAKE], judge: [ship(1)] })
+      await bakeMull(fakeSupabase(corpus()).client, 'u1')
+      expect(draftPromptSent()).not.toMatch(/THE CROSSING/)
+    })
+
+    it('a take that crosses the live project beats a sharper one that stays inside', async () => {
+      // GREENHOUSE (dad + a list item) never touches the book; ONE_TAKE puts
+      // a recording note next to a chapter of the book. The judge scores the
+      // greenhouse higher, and the crossing still goes first.
+      respond({ draft: [GREENHOUSE, ONE_TAKE], judge: [ship(1, { revelation: 10 }), ship(2, { revelation: 7 })] })
+      const trace: string[] = []
+      const baked = await bakeMull(fakeSupabase(withLiveBook()).client, 'u1', undefined, trace)
+      expect(baked.map(b => b.text)).toEqual([ONE_TAKE.question, GREENHOUSE.question])
+      expect(baked[0].project_id).toBe('p-book')
+      expect(trace.join('\n')).toMatch(/CROSSES/)
+      expect(trace.join('\n')).toMatch(/crossing: 1 of 2 shipped candidates cross "The book"/)
+    })
+
+    it('the trifecta -- the project, a note about something else, a list item -- goes first', async () => {
+      const TRIFECTA = {
+        noticing: 'The book wants the same patience the greenhouse and the soldering list ask for.',
+        doubt: 'Three unrelated things can look related if you want them to.',
+        evidence: [
+          { ref: 'F1', quote: 'rewrote chapter nine for the fourth time' },
+          { ref: 'N1', quote: 'we spend them on the greenhouse' },
+          { ref: 'L1', quote: 'Learn to solder properly' },
+        ],
+        question: 'You rewrote chapter nine for the fourth time. You spend the conversations with dad on the greenhouse. Learning to solder properly has sat on your list for years. I think chapter nine needs one slow sitting, not a fifth rewrite.',
+        stake: 'Chapter nine gets one slow sitting.',
+        project: null,
+      }
+      respond({ draft: [ONE_TAKE, TRIFECTA], judge: [ship(1), ship(2)] })
+      const trace: string[] = []
+      const baked = await bakeMull(fakeSupabase(withLiveBook()).client, 'u1', undefined, trace)
+      // Both lean on the chapter, so only the deeper one is banked.
+      expect(baked.map(b => b.text)).toEqual([TRIFECTA.question])
+      expect(baked[0].project_id).toBe('p-book')
+      expect(trace.join('\n')).toMatch(/TRIFECTA/)
+      expect(trace.join('\n')).toMatch(/crossing: 2 of 2 shipped candidates cross "The book" \(1 with a note and a list item\)/)
+    })
+
+    it('without a judge, a crossing is the one that ships', async () => {
+      respond({ draft: [GREENHOUSE, ONE_TAKE], judge: new Error('timeout') })
+      const baked = await bakeMull(fakeSupabase(withLiveBook()).client, 'u1')
+      expect(baked.map(b => b.text)).toEqual([ONE_TAKE.question])
+    })
+
+    it('a weak crossing does not beat a much stronger take', async () => {
+      respond({ draft: [GREENHOUSE, ONE_TAKE], judge: [ship(1, { revelation: 10, truth: 10, specific: 10, answerable: 10 }), ship(2, { revelation: 7, truth: 7, specific: 6, answerable: 6 })] })
+      const baked = await bakeMull(fakeSupabase(withLiveBook()).client, 'u1')
+      expect(baked[0].text).toBe(GREENHOUSE.question)
+    })
   })
 
   it('without a judge, ships only the first honest candidate', async () => {

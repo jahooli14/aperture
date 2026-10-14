@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   quoteIsReal, resolveEvidence, specifics, unsupportedSpecifics, ordinalSupported,
-  offersAChoice, isClosed, checkCandidate, judgeShips, judgeRank, parseJudgeScores, readsAnInnerState,
+  offersAChoice, isClosed, checkCandidate, crossesLiveProject, crossingDepth, judgeShips, judgeRank, parseJudgeScores, readsAnInnerState,
   type Candidate, type JudgeScore,
 } from './mull.js'
 import type { Corpus, CorpusRow } from './mull-corpus.js'
@@ -185,5 +185,56 @@ describe('readsAnInnerState', () => {
   })
   it('leaves behaviour alone', () => {
     expect(readsAnInnerState('I think your projects stop the moment someone could see them.', [])).toBeNull()
+  })
+})
+
+
+describe('crossesLiveProject', () => {
+  const row = (over: Partial<CorpusRow> & { ref: string }): CorpusRow => ({
+    kind: 'memory', id: over.ref, captureId: over.ref, projectId: null, title: '', text: 'x', meta: '', ...over,
+  })
+  const book = row({ ref: 'P1', kind: 'project', id: 'p-book', captureId: 'p-book', projectId: 'p-book' })
+  const chapter = row({ ref: 'F1', kind: 'fragment', projectId: 'p-book' })
+  const cutFrom = row({ ref: 'N9', captureId: 'F1' }) // the note chapter was cut from
+  const dad = row({ ref: 'N1' })
+  const otherFrag = row({ ref: 'F2', kind: 'fragment', projectId: 'p-mural' })
+  const mural = row({ ref: 'P2', kind: 'project', id: 'p-mural', captureId: 'p-mural', projectId: 'p-mural' })
+  const film = row({ ref: 'L1', kind: 'list_item' })
+  const all = [book, chapter, cutFrom, dad, otherFrag, mural, film]
+  const corpus: Corpus = { rows: all, byRef: new Map(all.map(r => [r.ref, r])), projectIdByTitle: new Map(), text: '' }
+
+  it('crosses when it leans on the live project and a note about something else', () => {
+    expect(crossesLiveProject([chapter, dad], corpus, 'p-book')).toBe(true)
+    expect(crossesLiveProject([book, otherFrag], corpus, 'p-book')).toBe(true)
+  })
+
+  it('does not cross with nothing live, or staying inside the live project', () => {
+    expect(crossesLiveProject([chapter, dad], corpus, null)).toBe(false)
+    expect(crossesLiveProject([book, chapter], corpus, 'p-book')).toBe(false)
+  })
+
+  it('a note cut into the live project is not "outside" it', () => {
+    expect(crossesLiveProject([chapter, cutFrom], corpus, 'p-book')).toBe(false)
+  })
+
+  it('a list item is an outside half too: taste they chose', () => {
+    expect(crossesLiveProject([chapter, film], corpus, 'p-book')).toBe(true)
+  })
+
+  it("another project's plan is not an outside half: it's what they mean to make", () => {
+    expect(crossesLiveProject([chapter, mural], corpus, 'p-book')).toBe(false)
+  })
+
+  it('the trifecta is the live project, a note about something else AND a list item', () => {
+    expect(crossingDepth([chapter, dad, film], corpus, 'p-book')).toBe(2)
+    expect(crossingDepth([book, otherFrag, film], corpus, 'p-book')).toBe(2)
+    expect(crossingDepth([chapter, dad], corpus, 'p-book')).toBe(1)
+    expect(crossingDepth([chapter, film], corpus, 'p-book')).toBe(1)
+    expect(crossingDepth([chapter, cutFrom, film], corpus, 'p-book')).toBe(1)
+    expect(crossingDepth([chapter, book], corpus, 'p-book')).toBe(0)
+  })
+
+  it('never crosses without the live project in it', () => {
+    expect(crossesLiveProject([dad, otherFrag], corpus, 'p-book')).toBe(false)
   })
 })

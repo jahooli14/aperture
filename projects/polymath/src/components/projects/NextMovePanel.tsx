@@ -1,6 +1,7 @@
 /**
- * The project page's lead: the one next move, a box to tell it what changed,
- * and what you've actually done.
+ * The project page's way back in: the one next move and a box to tell it
+ * what changed. (The log of what you've done used to sit under it; the page
+ * is deliberately short now — see ProjectDetailPage.)
  *
  * Not a to-do list. The move is written from the last session's note
  * (api/_lib/next-move.ts); the record of work is built from what got done,
@@ -19,12 +20,9 @@ import { VoiceInput } from '../VoiceInput'
 import { api } from '../../lib/apiClient'
 import type { Project } from '../../types'
 
-const LOG_PREVIEW = 6
 /** Same floor the home card uses: "Done." is an acknowledgement, not a note
  *  worth playing back. */
 const MIN_USEFUL_NOTE = 25
-
-interface LoggedTask { text: string; done?: boolean; completed_at?: string; created_at?: string }
 
 interface SayResult {
   move?: { text: string; kind: 'move' | 'fork' }
@@ -32,24 +30,17 @@ interface SayResult {
   project_done?: boolean
 }
 
-export function NextMovePanel({ project, onGo, onChange, onFinish, hideMove = false }: {
+export function NextMovePanel({ project, onGo, onChange, onFinish }: {
   project: Project
   onGo: () => void
   onChange: () => void
   /** They said the whole project is finished and confirmed it. */
   onFinish: () => void
-  /** Themes lead the page instead (ProjectThemes): keep only the log. */
-  hideMove?: boolean
 }) {
   const stored = readStoredMove(project.metadata)
   const hasStoredMove = stored !== null
   const move = stored?.kind === 'move' ? splitDoneWhen(stored.text) : null
   const fork = stored?.kind === 'fork' ? stored.text : null
-  const tasks: LoggedTask[] = Array.isArray(project.metadata?.tasks) ? (project.metadata!.tasks as LoggedTask[]) : []
-  const done = tasks
-    .filter(t => t?.done && typeof t.text === 'string')
-    .sort((a, b) => String(b.completed_at ?? b.created_at ?? '').localeCompare(String(a.completed_at ?? a.created_at ?? '')))
-  const [showAll, setShowAll] = useState(false)
   const live = project.status !== 'completed' && project.status !== 'graveyard'
   const note = project.last_closeout_text?.trim() ?? ''
   const lastNote = note.length >= MIN_USEFUL_NOTE ? note : null
@@ -65,9 +56,9 @@ export function NextMovePanel({ project, onGo, onChange, onFinish, hideMove = fa
   // first move for a new project, a way back in for an old one — rather than
   // a card that says "No move yet" and waits for a tap.
   useEffect(() => {
-    if (!live || hasStoredMove || hideMove) return
+    if (!live || hasStoredMove) return
     void useSessionStore.getState().loadMove(project.id)
-  }, [project.id, live, hasStoredMove, hideMove])
+  }, [project.id, live, hasStoredMove])
 
   const send = async () => {
     const text = said.trim()
@@ -93,7 +84,7 @@ export function NextMovePanel({ project, onGo, onChange, onFinish, hideMove = fa
 
   return (
     <div className="space-y-6">
-      {live && !hideMove && (
+      {live && (
         <div
           className="rounded-2xl p-5 space-y-3"
           style={{
@@ -194,30 +185,6 @@ export function NextMovePanel({ project, onGo, onChange, onFinish, hideMove = fa
               </div>
             )}
           </div>
-        </div>
-      )}
-
-      {done.length > 0 && (
-        <div className="space-y-2">
-          <p className="text-[11px] font-medium tracking-wide lowercase" style={{ color: 'var(--brand-text-secondary)', opacity: 0.78 }}>
-            what you’ve done
-          </p>
-          {(showAll ? done : done.slice(0, LOG_PREVIEW)).map((t, i) => (
-            <div key={i} className="flex items-start gap-2.5 text-[14px] leading-snug">
-              <Check size={14} className="mt-0.5 flex-shrink-0" style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.9 }} />
-              <span className="flex-1" style={{ color: 'var(--brand-text-secondary)' }}>{splitDoneWhen(t.text).move}</span>
-              {t.completed_at && (
-                <span className="text-[11px] flex-shrink-0 tabular-nums" style={{ color: 'var(--brand-text-secondary)', opacity: 0.69 }}>
-                  {new Date(t.completed_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
-                </span>
-              )}
-            </div>
-          ))}
-          {done.length > LOG_PREVIEW && (
-            <button onClick={() => setShowAll(v => !v)} className="text-[12px]" style={{ color: 'var(--brand-text-secondary)', opacity: 0.75 }}>
-              {showAll ? 'Show less' : `Show all ${done.length}`}
-            </button>
-          )}
         </div>
       )}
     </div>

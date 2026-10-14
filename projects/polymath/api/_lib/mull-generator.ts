@@ -36,7 +36,7 @@ import { parseModelJson } from './schemas.js'
 import { echoesRecent, fetchRecentSparkTexts, fetchRecentSparkProjectIds, fetchRecentSparkSubjectIds } from './spark-echo.js'
 import { SPARK_CORRECTION_TAG, isAppAuthored } from './corpus-provenance.js'
 import { loadCorpus, normaliseTitle, type Corpus, type CorpusRow } from './mull-corpus.js'
-import { checkCandidate, judgeShips, judgeRank, parseJudgeScores, type Candidate, type Grounded, type JudgeScore } from './mull.js'
+import { checkCandidate, crossingDepth, CROSSING_BONUS, TRIFECTA_BONUS, judgeShips, judgeRank, parseJudgeScores, type Candidate, type Grounded, type JudgeScore } from './mull.js'
 import { draftPrompt, judgePrompt } from './mull-prompts.js'
 
 /**
@@ -118,6 +118,8 @@ export interface EchoContext {
   corrections: string
   /** Where they are now; see loadFocus. */
   focus?: string
+  /** The project they're working on, for the crossing (mull.ts). */
+  live?: { id: string; title: string } | null
 }
 
 /**
@@ -305,18 +307,42 @@ the live project; reach out from it.
 `
 }
 
+/** The project they're deep in. Same pick as loadFocus: live or starred,
+ *  active, most recently touched. Null is fine: no crossing is asked for. */
+export async function loadLiveProject(
+  supabase: SupabaseClient, userId: string,
+): Promise<{ id: string; title: string } | null> {
+  try {
+    const { data, error } = await supabase.from('projects').select('id, title')
+      .eq('user_id', userId).eq('status', 'active')
+      .or('state.eq.live,is_priority.eq.true')
+      .order('last_active', { ascending: false }).limit(1)
+    if (error) {
+      console.warn('[mull] could not read the live project:', error.message)
+      return null
+    }
+    const p = (data ?? [])[0] as { id?: string; title?: string } | undefined
+    return p?.id && p?.title ? { id: p.id, title: p.title } : null
+  } catch (e) {
+    // A garnish: never costs the run.
+    console.warn('[mull] could not read the live project:', e instanceof Error ? e.message : String(e))
+    return null
+  }
+}
+
 export async function loadEchoContext(
   supabase: SupabaseClient, userId: string,
 ): Promise<EchoContext> {
-  const [recentTexts, recentProjectIds, recentSubjectIds, resonance, corrections, focus] = await Promise.all([
+  const [recentTexts, recentProjectIds, recentSubjectIds, resonance, corrections, focus, live] = await Promise.all([
     fetchRecentSparkTexts(supabase, userId),
     fetchRecentSparkProjectIds(supabase, userId),
     fetchRecentSparkSubjectIds(supabase, userId),
     loadResonance(supabase, userId),
     loadCorrections(supabase, userId),
     loadFocus(supabase, userId),
+    loadLiveProject(supabase, userId),
   ])
-  return { recentTexts, recentProjectIds, recentSubjectIds, resonance, corrections, focus }
+  return { recentTexts, recentProjectIds, recentSubjectIds, resonance, corrections, focus, live }
 }
 
 function expiresAt(hours: number): string {
@@ -367,11 +393,11 @@ async function draft(prompt: string, timeoutMs: number, trace: MullTrace): Promi
   }
 }
 
-async function judge(grounded: Grounded[], loose: boolean, timeoutMs: number, trace: MullTrace): Promise<Map<number, JudgeScore> | null> {
+async function judge(grounded: Grounded[], loose: boolean, timeoutMs: number, trace: MullTrace, liveTitle?: string | null): Promise<Map<number, JudgeScore> | null> {
   const start = Date.now()
   let usage: Usage = null
   try {
-    const raw = await generateText(judgePrompt(grounded, loose), {
+    const raw = await generateText(judgePrompt(grounded, loose, liveTitle), {
       responseFormat: 'json', model: MODEL, maxTokens: 8192,
       thinkingLevel: 'low', timeoutMs, onUsage: u => { usage = u },
     })
@@ -448,6 +474,7 @@ export async function generateMull(
     resonance: echo.resonance,
     corrections: echo.corrections,
     focus: echo.focus ?? '',
+    liveTitle: echo.live?.title ?? null,
   })
   trace.push(`draft prompt: ${prompt.length} chars`)
 
@@ -492,26 +519,51 @@ export async function generateMull(
 
   const judgeBudget = deadline - Date.now() - TAIL_MS
   const scores = judgeBudget >= MIN_JUDGE_MS
-    ? await judge(grounded, creative, judgeBudget, trace)
+    ? await judge(grounded, creative, judgeBudget, trace, echo.live?.title ?? null)
     : (trace.push(`judge skipped: ${judgeBudget}ms left`), null)
+  // The Venn: a take that crosses the live project outranks one that stays
+  // inside it (mull.ts, CROSSING_BONUS). Judged by the rows it cites, and
+  // by the judge's own read as a second opinion.
+  const liveId = echo.live?.id ?? null
+  const depths = new Map<Grounded, 0 | 1 | 2>()
+  // The judge's own read ("crosses") can lift a 0 to a 1, never past it:
+  // only the cited rows can prove the trifecta.
+  const depthOf = (g: Grounded, s?: JudgeScore): 0 | 1 | 2 => {
+    const d = crossingDepth(g.rows, corpus, liveId)
+    return d === 0 && liveId && s?.crosses === true ? 1 : d
+  }
+  const bonus = (d: 0 | 1 | 2) => (d >= 1 ? CROSSING_BONUS : 0) + (d === 2 ? TRIFECTA_BONUS : 0)
+  const mark = (d: 0 | 1 | 2) => (d === 2 ? ' TRIFECTA' : d === 1 ? ' CROSSES' : '')
   let ranked: Grounded[]
   if (scores) {
     grounded.forEach((g, i) => {
       const s = scores.get(i + 1)
       trace.push(s
-        ? `judge ${s.verdict.toUpperCase()} r${s.revelation} t${s.truth} s${s.specific} a${s.answerable}${s.overreach ? ' OVERREACH' : ''}: ${s.reason} -- ${label(g)}`
+        ? `judge ${s.verdict.toUpperCase()} r${s.revelation} t${s.truth} s${s.specific} a${s.answerable}${s.overreach ? ' OVERREACH' : ''}${mark(depthOf(g, s))}: ${s.reason} -- ${label(g)}`
         : `judge: no score -- ${label(g)}`)
     })
     ranked = grounded
       .map((g, i) => ({ g, s: scores.get(i + 1) }))
       .filter((x): x is { g: Grounded; s: JudgeScore } => !!x.s && judgeShips(x.s, creative))
-      .sort((a, b) => judgeRank(b.s) - judgeRank(a.s))
+      .map(x => {
+        const d = depthOf(x.g, x.s)
+        depths.set(x.g, d)
+        return { ...x, rank: judgeRank(x.s) + bonus(d) }
+      })
+      .sort((a, b) => b.rank - a.rank)
       .map(x => x.g)
   } else {
     // No judge, no taste check -- so only the drafter's own first choice,
-    // never a queue of unjudged ones banked for days.
+    // never a queue of unjudged ones banked for days. The deepest crossing
+    // goes first.
     trace.push('judge unavailable -- shipping the first honest candidate only')
-    ranked = grounded.slice(0, 1)
+    const best = [...grounded].sort((a, b) => depthOf(b) - depthOf(a))[0]
+    depths.set(best, depthOf(best))
+    ranked = [best]
+  }
+  if (liveId) {
+    const n = (d: number) => ranked.filter(g => (depths.get(g) ?? 0) >= d).length
+    trace.push(`crossing: ${n(1)} of ${ranked.length} shipped candidates cross "${echo.live?.title}" (${n(2)} with a note and a list item)`)
   }
 
   const baked: BakedSpark[] = []
@@ -523,7 +575,8 @@ export async function generateMull(
     baked.push({
       type: 'mull',
       text: g.question,
-      project_id: projectFor(g, corpus),
+      // A crossing is about the live project, whatever else it leans on.
+      project_id: (depths.get(g) ?? 0) > 0 && liveId ? liveId : projectFor(g, corpus),
       // Each banked one lives a shelf-life longer than the one in front of
       // it, so the queue order is carried by expiry and nothing expires
       // unseen while it waits.

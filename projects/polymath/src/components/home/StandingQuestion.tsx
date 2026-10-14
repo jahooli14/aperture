@@ -19,6 +19,8 @@ import { VoiceInput } from '../VoiceInput'
 import { haptic } from '../../utils/haptics'
 import { api } from '../../lib/apiClient'
 import { isTake, splitSentences } from '../../lib/takeText'
+import { useProjectStore } from '../../stores/useProjectStore'
+import { MAX_THEMES, readThemes } from '../../lib/projectThemes'
 
 export interface StandingQuestionSpark {
   id: string
@@ -28,6 +30,8 @@ export interface StandingQuestionSpark {
   projects?: { title: string } | null
   /** What the question was built from -- what was put next to what. */
   sources?: { kind: string; title: string }[] | null
+  /** What they'd do differently if it's right (sparks.stake). */
+  stake?: string | null
 }
 
 /** Every spark is a question now. The one kind that wasn't -- the
@@ -85,6 +89,11 @@ export function StandingQuestion() {
   // future questions (spark-followup.ts, mull-generator.ts's loadCorrections).
   const [followUpReason, setFollowUpReason] = useState<'correction' | 'next_step' | null>(null)
   const [loaded, setLoaded] = useState(false)
+  // After a yes, the line it suggests doing can be kept on the project:
+  // the take goes from something read on a walk to something it is steering
+  // by (ProjectThemes). One tap, only when there is room.
+  const [kept, setKept] = useState<'idle' | 'saving' | 'kept' | 'failed'>('idle')
+  const keptProject = useProjectStore(st => st.allProjects.find(p => p.id === spark?.project_id))
   // The block loads after the card has already painted, so it used to snap in
   // and shove the project section down in one frame. It now mounts closed and
   // opens a beat later (.reveal in theme.css), so everything below slides down.
@@ -215,6 +224,7 @@ export function StandingQuestion() {
         setFollowUp(null)
         setFollowUpText('')
         setFollowUpReason(null)
+        setKept('idle')
       } else if (!creative) {
         // Honest about silence rather than pretending to think — and the
         // question you had is still there. Offer the looser pass instead
@@ -288,10 +298,47 @@ export function StandingQuestion() {
     )
   }
 
+  // A yes (or "sort of") on a take about a project can be kept: the line
+  // it suggests becomes one of that project's Keep in mind lines.
+  const keepLine = (spark.stake ?? '').replace(/\s+/g, ' ').trim().replace(/\.$/, '')
+  const keptThemes = readThemes(keptProject?.metadata)
+  const canKeep = !!keptProject && !!keepLine && (stance === 'yes' || stance === 'sort_of')
+    && keptThemes.length < MAX_THEMES && !keptThemes.some(t => t.text.toLowerCase() === keepLine.toLowerCase())
+
+  const keepIt = async () => {
+    if (!keptProject) return
+    setKept('saving')
+    try {
+      await api.post('utilities?resource=themes', {
+        project_id: keptProject.id, action: 'set', themes: [...keptThemes.map(t => t.text), keepLine],
+      })
+      await useProjectStore.getState().fetchProjects()
+      haptic.success()
+      setKept('kept')
+    } catch {
+      setKept('failed')
+    }
+  }
+
   if (receipt) {
     return reveal(
       <div className="pb-3 mb-4">
         <p className="text-[12px]" style={{ color: 'var(--brand-text-secondary)', opacity: 0.81 }}>{receipt}</p>
+        {kept === 'kept' ? (
+          <p className="text-[12px] mt-1.5" style={{ color: 'var(--brand-text-secondary)' }}>
+            Kept. It's on {keptProject?.title} now.
+          </p>
+        ) : canKeep ? (
+          <button
+            className="text-left text-[13px] mt-1.5 leading-snug transition-opacity hover:opacity-90 disabled:opacity-40"
+            style={quietActionStyle}
+            disabled={kept === 'saving'}
+            onClick={() => { void keepIt() }}
+          >
+            {kept === 'saving' ? 'Keeping…' : kept === 'failed' ? "Couldn't keep that. Try again: " : 'Keep in mind: '}
+            <span className="font-medium">{keepLine}</span>
+          </button>
+        ) : null}
       </div>
     )
   }
