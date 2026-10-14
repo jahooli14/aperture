@@ -31,6 +31,8 @@ interface Props {
   /** The project's "Keep in mind" lines. When set, they are the screen: no
    *  task to tick, just them and a way to stop. */
   themes?: string[]
+  /** Your own words from the last close-out, shown under the lines. */
+  lastNote?: string | null
   onToggle: (index: number) => void
   onStop: () => void
   onMinimise: () => void
@@ -38,7 +40,7 @@ interface Props {
 
 export function WorkView({
   projectId, title, shapes, workIndexes, ticked, clockSeconds, hasWindow, timeUp,
-  online, stuckSignal, themes, onToggle, onStop, onMinimise,
+  online, stuckSignal, themes, lastNote, onToggle, onStop, onMinimise,
 }: Props) {
   const themed = !!themes && themes.length > 0
   const currentIndex = workIndexes.find(i => !ticked.has(i)) ?? -1
@@ -90,6 +92,11 @@ export function WorkView({
             <ul className="space-y-3">
               {themes!.map(t => <li key={t} className="type-lead">{t}</li>)}
             </ul>
+            {lastNote && (
+              <p className="text-[15px] italic leading-snug pt-2 line-clamp-4" style={faint(0.7)}>
+                You stopped with “{lastNote}”
+              </p>
+            )}
           </div>
         ) : (
         <AnimatePresence mode="wait">

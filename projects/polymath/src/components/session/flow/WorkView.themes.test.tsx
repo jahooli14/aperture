@@ -25,6 +25,12 @@ describe('WorkView with Keep in mind lines', () => {
     expect(onStop).toHaveBeenCalled()
   })
 
+  it('shows your own last note under the lines', () => {
+    render(<WorkView {...base} themes={['Do the full trim']} lastNote="Next is the voice pass on chapter three." />)
+    expect(screen.getByText(/You stopped with/)).toBeTruthy()
+    expect(screen.getByText(/voice pass on chapter three/)).toBeTruthy()
+  })
+
   it('still shows the task and Done when there are no lines', () => {
     render(<WorkView {...base} />)
     expect(screen.getByText('Keep going on Going Analogue')).toBeTruthy()

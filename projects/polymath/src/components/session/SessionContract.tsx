@@ -286,6 +286,7 @@ export function SessionContract({
                   online={online}
                   stuckSignal={stuckSignal}
                   themes={themeLed ? themeLines : undefined}
+                  lastNote={themeLed ? project.last_closeout_text?.trim().slice(0, 240) || null : null}
                   onToggle={toggle}
                   onStop={stop}
                   onMinimise={() => setFocusOpen(false)}
@@ -311,7 +312,9 @@ export function SessionContract({
               ) : closeResult ? (
                 <Handoff
                   result={closeResult}
-                  nextMove={moveHere ?? closeResult.nextMove}
+                  // With Keep in mind lines, next time opens on those lines and your
+                  // note, not on a move -- so don't promise one.
+                  nextMove={themeLed ? null : moveHere ?? closeResult.nextMove}
                   onSetMove={(text: string) => { void reworkMove(project.id, { action: 'set', text }) }}
                   note={savedNote}
                   minutes={closeResult.duration_minutes}
