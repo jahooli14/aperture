@@ -471,7 +471,10 @@ export async function generateMull(
 
   const prompt = draftPrompt({
     corpusText: corpus.text,
-    howMany: echo.season?.active ? CANDIDATES_PER_RUN + 2 : CANDIDATES_PER_RUN,
+    // Never more, season or not: every extra candidate is output the model
+    // has to write inside the ten-second ceiling. Six of them timed the
+    // draft out live (6.8s allowed, aborted) and nothing shipped at all.
+    howMany: CANDIDATES_PER_RUN,
     recentQuestions: recentTexts,
     recentRefs: corpus.rows.filter(r => recentIds.has(r.id)).map(r => r.ref),
     resonance: echo.resonance,
