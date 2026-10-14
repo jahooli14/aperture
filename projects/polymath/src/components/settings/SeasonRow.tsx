@@ -15,8 +15,20 @@ import { VoiceInput } from '../VoiceInput'
 import { useProjectStore } from '../../stores/useProjectStore'
 
 interface Pick { id: string; title: string }
-interface Season { main: Pick | null; also: Pick[]; until: string | null; label: string | null; active?: boolean }
-interface Proposal { main: Pick | null; also: Pick[]; until: string | null; label: string | null }
+type Size = 'hours' | 'weekend' | null
+interface Small extends Pick { size?: Size; blocked?: boolean; waiting?: string | null; from?: string | null }
+interface Season { main: Pick | null; also: Small[]; until: string | null; label: string | null; active?: boolean }
+interface Proposal { main: Pick | null; also: Small[]; until: string | null; label: string | null }
+/** One row of the form: a project, how big, what it's waiting on. */
+interface Row { id: string; size: Size; waiting: string; from: string | null }
+
+const SLOTS = 3
+const blankRow = (): Row => ({ id: '', size: null, waiting: '', from: null })
+const toRows = (list: Small[]): Row[] =>
+  Array.from({ length: SLOTS }, (_, i) => {
+    const a = list[i]
+    return a ? { id: a.id, size: a.size ?? null, waiting: a.waiting ?? '', from: a.from ?? null } : blankRow()
+  })
 
 const label = 'text-[11px] font-medium uppercase tracking-[0.14em]'
 const field = 'field w-full px-3 py-2.5 text-[15px]'
@@ -35,7 +47,7 @@ export function SeasonRow() {
   const [saving, setSaving] = useState(false)
   const [note, setNote] = useState<string | null>(null)
   const [main, setMain] = useState('')
-  const [also, setAlso] = useState<[string, string]>(['', ''])
+  const [also, setAlso] = useState<Row[]>(toRows([]))
   const [until, setUntil] = useState('')
   const [name, setName] = useState('')
 
@@ -49,7 +61,7 @@ export function SeasonRow() {
 
   const open = () => {
     setMain(season?.main?.id ?? '')
-    setAlso([season?.also[0]?.id ?? '', season?.also[1]?.id ?? ''])
+    setAlso(toRows(season?.also ?? []))
     setUntil(season?.until ?? '')
     setName(season?.label ?? '')
     setNote(null)
@@ -68,7 +80,7 @@ export function SeasonRow() {
       } else {
         // Keep the current main when they only named others.
         if (r.proposal.main) setMain(r.proposal.main.id)
-        setAlso([r.proposal.also[0]?.id ?? '', r.proposal.also[1]?.id ?? ''])
+        setAlso(toRows(r.proposal.also))
         setUntil(r.proposal.until ?? '')
         setName(r.proposal.label ?? '')
         setNote('Here\'s what I heard. Fix anything, then save.')
@@ -85,11 +97,26 @@ export function SeasonRow() {
     setSaving(true)
     try {
       const r = await api.post('utilities?resource=season', {
-        action: 'apply', main_id: main, also_ids: also.filter(Boolean), until: until || null, label: name || null,
+        action: 'apply', main_id: main, until: until || null, label: name || null,
+        also: also.filter(a => a.id).map(a => ({
+          id: a.id, size: a.size, waiting: a.waiting.trim() || null, from: a.from,
+        })),
       }) as { season: Season }
       setSeason(r.season)
       await useProjectStore.getState().fetchProjects()
       setEditing(false)
+    } catch {
+      setNote("Couldn't save that. Try again.")
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const gotIt = async (id: string) => {
+    setSaving(true)
+    try {
+      const r = await api.post('utilities?resource=season', { action: 'unblock', project_id: id }) as { season: Season }
+      setSeason(r.season)
     } catch {
       setNote("Couldn't save that. Try again.")
     } finally {
@@ -114,6 +141,8 @@ export function SeasonRow() {
   if (!season) return null
 
   const options = (skip: string[]) => projects.filter(p => !skip.includes(p.id))
+  const setRow = (i: number, patch: Partial<Row>) => setAlso(rows => rows.map((r, j) => (j === i ? { ...r, ...patch } : r)))
+  const waitingOn = (season?.also ?? []).filter(a => a.waiting)
 
   return (
     <div className="glass-card-subtle">
@@ -126,6 +155,14 @@ export function SeasonRow() {
                 ? `${season.main.title} is main${season.also.length ? `, then ${season.also.map(p => p.title).join(' and ')}` : ''}${season.until ? `, until ${season.label ?? niceDate(season.until)}` : ''}. The rest is for fun.`
                 : 'Say what matters for a stretch of time, and the takes will aim at it. The rest stays for fun.'}
             </p>
+            {season.active !== false && waitingOn.map(a => (
+              <p key={a.id} className="text-[13px] mt-1 leading-snug flex items-center gap-2" style={{ color: 'var(--brand-text-muted)' }}>
+                <span>{a.title} is waiting for {a.waiting}.</span>
+                <button onClick={() => { void gotIt(a.id) }} disabled={saving} className="py-1 disabled:opacity-40" style={{ color: 'rgb(var(--brand-primary-rgb))' }}>
+                  Got it
+                </button>
+              </p>
+            ))}
             <button onClick={open} className="text-[13px] mt-2 py-1" style={{ color: 'rgb(var(--brand-primary-rgb))' }}>
               {season.main && season.active !== false ? 'Change it' : 'Set it'}
             </button>
@@ -165,21 +202,46 @@ export function SeasonRow() {
             <span className={label} style={{ color: 'var(--brand-text-muted)' }}>Main</span>
             <select value={main} onChange={e => setMain(e.target.value)} className={`${field} mt-1`}>
               <option value="">Pick one</option>
-              {options(also).map(p => <option key={p.id} value={p.id}>{p.title}</option>)}
+              {options(also.map(r => r.id)).map(p => <option key={p.id} value={p.id}>{p.title}</option>)}
             </select>
           </label>
-          {[0, 1].map(i => (
-            <label key={i} className="block">
-              <span className={label} style={{ color: 'var(--brand-text-muted)' }}>{i === 0 ? 'Also' : 'And'}</span>
-              <select
-                value={also[i]}
-                onChange={e => setAlso(a => (i === 0 ? [e.target.value, a[1]] : [a[0], e.target.value]))}
-                className={`${field} mt-1`}
-              >
-                <option value="">None</option>
-                {options([main, also[1 - i]]).map(p => <option key={p.id} value={p.id}>{p.title}</option>)}
-              </select>
-            </label>
+          {also.map((row, i) => (
+            <div key={i} className="space-y-2">
+              <label className="block">
+                <span className={label} style={{ color: 'var(--brand-text-muted)' }}>{i === 0 ? 'Also finish' : 'And'}</span>
+                <select
+                  value={row.id}
+                  onChange={e => setRow(i, { id: e.target.value })}
+                  className={`${field} mt-1`}
+                  aria-label={`Also finish ${i + 1}`}
+                >
+                  <option value="">None</option>
+                  {options([main, ...also.filter((_, j) => j !== i).map(r => r.id)]).map(p => <option key={p.id} value={p.id}>{p.title}</option>)}
+                </select>
+              </label>
+              {row.id && (
+                <div className="flex gap-2">
+                  <select
+                    value={row.size ?? ''}
+                    onChange={e => setRow(i, { size: (e.target.value || null) as Size })}
+                    className={`${field} flex-1`}
+                    aria-label={`How big is finish ${i + 1}`}
+                  >
+                    <option value="">How big?</option>
+                    <option value="hours">A few hours</option>
+                    <option value="weekend">A weekend</option>
+                  </select>
+                  <input
+                    value={row.waiting}
+                    maxLength={40}
+                    onChange={e => setRow(i, { waiting: e.target.value })}
+                    placeholder="Waiting for…"
+                    aria-label={`What finish ${i + 1} is waiting for`}
+                    className={`${field} flex-1`}
+                  />
+                </div>
+              )}
+            </div>
           ))}
           <div className="flex gap-3">
             <label className="block flex-1">
