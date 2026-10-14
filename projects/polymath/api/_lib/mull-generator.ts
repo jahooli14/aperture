@@ -73,6 +73,11 @@ const MODEL = 'gemini-flash-latest'
  * first honest candidate ships alone.
  */
 export const TOTAL_BUDGET_MS = 10_000
+/** The nightly bake and the cron retire-and-rebake have nobody waiting on
+ *  them, so they get room to finish: the draft is the slow part and a bigger
+ *  corpus plus a season made it miss ten seconds. The reroll button keeps
+ *  the ten-second ceiling. Vercel's limit for the route is 90s. */
+export const NIGHTLY_BUDGET_MS = 30_000
 /** The judge needs about this long; below it, it isn't started. */
 const MIN_JUDGE_MS = 1_200
 /** Left for everything after the judge: gates, ranking, the insert. */
@@ -653,8 +658,12 @@ export async function bakeMull(
   echo?: EchoContext,
   trace: MullTrace = [],
   creative = false,
+  /** Whole-run budget. Defaults to the reroll's ten seconds. */
+  budgetMs = TOTAL_BUDGET_MS,
 ): Promise<BakedSpark[]> {
-  const mulls = await generateMull(supabase, userId, echo ?? loadEchoContext(supabase, userId), trace, creative)
+  const mulls = await generateMull(
+    supabase, userId, echo ?? loadEchoContext(supabase, userId), trace, creative, Date.now() + budgetMs,
+  )
   if (mulls.length === 0) trace.push('nothing worth asking -- empty slot')
   return mulls
 }

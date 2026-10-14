@@ -75,3 +75,15 @@ describe('keeping a yes', () => {
     expect(screen.getByText('Chapter nine gets one slow sitting')).toBeTruthy()
   })
 })
+
+describe('when the reroll runs out of time', () => {
+  it('says it took too long, not that there is nothing to work with', async () => {
+    get.mockResolvedValue({ spark: null })
+    post.mockResolvedValue({ rerolled: false, reason: 'took too long', slow: true })
+    render(<StandingQuestion />)
+    fireEvent.click(await screen.findByText('give me something to think about'))
+    expect(await screen.findByText('That took too long. Try again.')).toBeTruthy()
+    expect(screen.queryByText(/Really nothing to work with/)).toBeNull()
+    expect(screen.queryByText('get more creative')).toBeNull()
+  })
+})
