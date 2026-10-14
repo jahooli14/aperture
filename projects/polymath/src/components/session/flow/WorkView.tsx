@@ -71,7 +71,7 @@ export function WorkView({
       </div>
 
       {/* Progress as dots. Tap one to un-tick it if you jumped the gun. */}
-      <div className="flex gap-1.5 mt-3" hidden={themed}>
+      {!themed && <div className="flex gap-1.5 mt-3">
         {workIndexes.map(i => (
           <button
             key={i}
@@ -81,7 +81,7 @@ export function WorkView({
             style={{ background: ticked.has(i) ? accentA(0.85) : i === currentIndex ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.1)' }}
           />
         ))}
-      </div>
+      </div>}
 
       <div className="flex-1 flex flex-col justify-center py-10">
         {themed ? (

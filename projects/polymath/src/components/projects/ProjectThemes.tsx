@@ -118,7 +118,7 @@ export function ProjectThemes({ project, onGo }: { project: Project; onGo?: () =
       <div className="glass-card-subtle p-5 space-y-2">
         <p className="eyebrow">Keep in mind</p>
         <p className="text-[15px] leading-snug" style={{ color: 'var(--brand-text-secondary)' }}>
-          Two or three things to hold onto while you work on this. They show on the home card instead of a next step.
+          Two or three things to hold onto while you work on this.
         </p>
         {note && <p className="text-[13px]" style={{ color: 'var(--brand-text-secondary)' }}>{note}</p>}
         <div className="flex gap-4 pt-1">

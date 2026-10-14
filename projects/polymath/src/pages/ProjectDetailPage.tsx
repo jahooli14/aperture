@@ -29,6 +29,7 @@ import { Button } from '../components/ui/button'
 import { useToast } from '../components/ui/toast'
 import { useConfirmDialog } from '../components/ui/confirm-dialog'
 import { EditProjectDialog } from '../components/projects/EditProjectDialog'
+import { blockedReason } from '../lib/season'
 import { FinishedItButton } from '../components/projects/FinishedItButton'
 import { ProjectCompletionModal } from '../components/projects/ProjectCompletionModal'
 import { CompletionRitual } from '../components/projects/CompletionRitual'
@@ -396,18 +397,20 @@ export function ProjectDetailPage() {
             <UpToSpeed project={project} />
 
             {/* Keep in mind — weeks, not one session. Shown on the home card
-                while you're working on it. */}
-            {project.status !== 'completed' && project.status !== 'graveyard' && (
+                while you're working on it. A project you haven't touched and
+                never wrote lines for doesn't get an empty prompt: its way
+                back in is the move below. */}
+            {project.status !== 'completed' && project.status !== 'graveyard'
+              && (readThemes(project.metadata).length > 0 || project.is_priority || isActivelyWorked(project)) && (
               <ProjectThemes
                 project={project}
                 onGo={() => { setSessionAutoStart(true); setSessionOpen(true) }}
               />
             )}
 
-            <FinishedItButton project={project} />
-
-            {/* The way back in: the move, unless themes are leading. */}
-            {!steering && (
+            {/* The way back in: the move, unless themes are leading, or it
+                can't be started yet (nothing to write a move for). */}
+            {!steering && !blockedReason(project) && (
               <NextMovePanel
                 project={project}
                 onGo={() => { setSessionAutoStart(true); setSessionOpen(true) }}
@@ -415,6 +418,8 @@ export function ProjectDetailPage() {
                 onFinish={() => handleStatusChange('completed')}
               />
             )}
+
+            <FinishedItButton project={project} />
 
             <div data-notes-section className="pb-32 pt-2">
               <ProjectNotes projectId={project.id} notesDoc={project.notes_doc} />

@@ -6,7 +6,10 @@
 
 import type { Project } from '../types'
 
-export interface SeasonTag { role: 'main' | 'also'; until: string | null; label: string | null }
+export interface SeasonTag {
+  role: 'main' | 'also'; until: string | null; label: string | null
+  size?: 'hours' | 'weekend' | null; from?: string | null; waiting?: string | null
+}
 
 export function readSeasonTag(metadata: Project['metadata']): SeasonTag | null {
   const raw = (metadata as { season?: Partial<SeasonTag> } | undefined)?.season
@@ -15,7 +18,23 @@ export function readSeasonTag(metadata: Project['metadata']): SeasonTag | null {
     role: raw.role,
     until: typeof raw.until === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(raw.until) ? raw.until : null,
     label: typeof raw.label === 'string' && raw.label.trim() ? raw.label.trim() : null,
+    size: raw.size === 'hours' || raw.size === 'weekend' ? raw.size : null,
+    from: typeof raw.from === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(raw.from) ? raw.from : null,
+    waiting: typeof raw.waiting === 'string' && raw.waiting.trim() ? raw.waiting.trim() : null,
   }
+}
+
+/** A small finish that can't be started yet: what it waits on, or a start
+ *  day still ahead. Same rule as the server (api/_lib/season.ts). */
+export function blockedReason(
+  project: Pick<Project, 'metadata'>, now = new Date(),
+): { waiting: string | null; from: string | null } | null {
+  const tag = readSeasonTag(project.metadata)
+  if (!tag || tag.role !== 'also') return null
+  const today = new Date(now.getTime() - now.getTimezoneOffset() * 60_000).toISOString().slice(0, 10)
+  if (tag.waiting) return { waiting: tag.waiting, from: tag.from ?? null }
+  if (tag.from && tag.from > today) return { waiting: null, from: tag.from }
+  return null
 }
 
 /** A small thing to finish this season, still running and not yet done. The

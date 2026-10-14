@@ -386,7 +386,8 @@ export function StandingQuestion() {
           box only appears once you've got something to say, so the resting
           state of this whole block is three lines. */}
       {!answering && (
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5">
+        <div className="mt-1.5 space-y-1.5">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
           {isTake(spark.text) ? (
             // A claim gets a reaction first: one tap, then optionally why.
             STANCES.map((st, i) => (
@@ -423,10 +424,13 @@ export function StandingQuestion() {
               answer it
             </button>
           )}
-          <span style={{ color: 'var(--brand-text-muted)' }}>·</span>
+        </div>
+        {/* The way out, on its own line so the reactions above never wrap
+            around a dangling dot. */}
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
           <button
             className="text-[13px] transition-opacity hover:opacity-90 disabled:opacity-30"
-            style={quietActionStyle}
+            style={{ color: 'var(--brand-text-muted)' }}
             disabled={rerolling}
             onClick={() => reroll()}
           >
@@ -445,6 +449,7 @@ export function StandingQuestion() {
               </button>
             </>
           )}
+        </div>
         </div>
       )}
 

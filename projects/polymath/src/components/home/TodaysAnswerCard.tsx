@@ -420,7 +420,7 @@ export function TodaysAnswerCard() {
             thing" inline under it (MoveTweak). */}
         <div className="space-y-1" onClick={e => e.stopPropagation()}>
           <button
-            onClick={() => handleStartSession(!!nextMove)}
+            onClick={() => handleStartSession(!!nextMove || steering)}
             className="neon-button w-full py-3 rounded-xl font-semibold text-[15px] flex items-center justify-center gap-2"
           >
             <Play className="h-3.5 w-3.5 fill-current" />
