@@ -28,6 +28,9 @@ interface Props {
   timeUp: boolean
   online: boolean
   stuckSignal: number
+  /** The project's "Keep in mind" lines. When set, they are the screen: no
+   *  task to tick, just them and a way to stop. */
+  themes?: string[]
   onToggle: (index: number) => void
   onStop: () => void
   onMinimise: () => void
@@ -35,8 +38,9 @@ interface Props {
 
 export function WorkView({
   projectId, title, shapes, workIndexes, ticked, clockSeconds, hasWindow, timeUp,
-  online, stuckSignal, onToggle, onStop, onMinimise,
+  online, stuckSignal, themes, onToggle, onStop, onMinimise,
 }: Props) {
+  const themed = !!themes && themes.length > 0
   const currentIndex = workIndexes.find(i => !ticked.has(i)) ?? -1
   const current = currentIndex >= 0 ? shapes[currentIndex] : null
   const nextIndex = workIndexes.find(i => i !== currentIndex && !ticked.has(i) && workIndexes.indexOf(i) > workIndexes.indexOf(currentIndex))
@@ -67,7 +71,7 @@ export function WorkView({
       </div>
 
       {/* Progress as dots. Tap one to un-tick it if you jumped the gun. */}
-      <div className="flex gap-1.5 mt-3">
+      <div className="flex gap-1.5 mt-3" hidden={themed}>
         {workIndexes.map(i => (
           <button
             key={i}
@@ -80,6 +84,14 @@ export function WorkView({
       </div>
 
       <div className="flex-1 flex flex-col justify-center py-10">
+        {themed ? (
+          <div className="space-y-4">
+            <p className="eyebrow">Keep in mind</p>
+            <ul className="space-y-3">
+              {themes!.map(t => <li key={t} className="type-lead">{t}</li>)}
+            </ul>
+          </div>
+        ) : (
         <AnimatePresence mode="wait">
           {current ? (
             <motion.div
@@ -115,9 +127,10 @@ export function WorkView({
             </motion.div>
           )}
         </AnimatePresence>
+        )}
       </div>
 
-      {next && (
+      {next && !themed && (
         <p className="text-[12.5px] leading-snug mb-4 truncate" style={faint(0.45)}>
           <span className="uppercase tracking-[0.1em] text-[11px] mr-2">Then</span>
           {splitDoneWhen(next.text).move}
@@ -125,7 +138,7 @@ export function WorkView({
       )}
 
       <div className="space-y-3">
-        {current && !timeUp && (
+        {current && !timeUp && !themed && (
           <button
             className="w-full py-4 rounded-2xl text-[16px] font-semibold flex items-center justify-center gap-2 transition-transform active:scale-[0.98]"
             style={primaryButton}
@@ -134,15 +147,15 @@ export function WorkView({
             <Check size={18} strokeWidth={3} /> Done
           </button>
         )}
-        {current && (
+        {current && !themed && (
           <StuckMove projectId={projectId} step={current.source === 'friction' ? null : current.text} online={online} askSignal={stuckSignal} />
         )}
         <button
           className="w-full py-3 rounded-2xl text-[14px] font-medium flex items-center justify-center gap-2 transition-transform active:scale-[0.98]"
-          style={stopIsTheMove ? primaryButton : quietButton}
+          style={stopIsTheMove || themed ? primaryButton : quietButton}
           onClick={onStop}
         >
-          <Square size={13} /> {timeUp ? 'Time’s up — stop here' : allDone ? 'Stop here' : 'Stop'}
+          <Square size={13} /> {themed ? 'Done for now' : timeUp ? 'Time’s up — stop here' : allDone ? 'Stop here' : 'Stop'}
         </button>
       </div>
     </div>
