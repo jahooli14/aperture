@@ -15,6 +15,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { isGraveyarded } from './project-state.js'
 import { UP_TO_SPEED_AFTER_DAYS } from './up-to-speed.js'
+import { inSeason, isBlocked, isoDay, readSeasonTag, type SeasonTag } from './season.js'
 
 /** Local hour from which Saturday's push may go. The cron runs every 2h,
  *  so it lands at the first run on or after this. */
@@ -30,6 +31,7 @@ export interface NudgeProject {
   is_priority?: boolean | null
   last_active: string | null
   last_session_ended_at?: string | null
+  metadata?: unknown
 }
 
 const DONE_STATUSES = new Set(['completed', 'archived', 'abandoned', 'graveyard'])
@@ -61,6 +63,45 @@ export function pickWeekendProject(
       c.days != null && c.days >= UP_TO_SPEED_AFTER_DAYS && c.days <= MAX_QUIET_DAYS)
     .sort((a, b) => a.days - b.days)
   return candidates[0] ?? null
+}
+
+/** Don't offer a weekend-sized job with less than this left in the season:
+ *  it would only be a worry. */
+export const WEEKEND_JOB_MIN_DAYS = 21
+
+/**
+ * A small thing from this season that can be finished: tagged, in date,
+ * not waiting on anything, not named last week. A few hours (or unsized)
+ * come before a weekend job, and a weekend job only while there is enough
+ * season left for it. Nothing qualifying is a fine answer: the caller falls
+ * back to the usual pick-up.
+ */
+export function pickSmallFinish(
+  projects: NudgeProject[],
+  lastPickedId: string | null,
+  now = new Date(),
+): { project: NudgeProject; size: 'hours' | 'weekend' } | null {
+  const day = (iso: string) => Math.floor(new Date(`${iso}T00:00:00Z`).getTime() / 86_400_000)
+  const today = day(isoDay(now))
+  const found: { project: NudgeProject; size: 'hours' | 'weekend'; tag: SeasonTag }[] = []
+  for (const p of projects) {
+    if (DONE_STATUSES.has(p.status ?? '') || isGraveyarded(p) || p.id === lastPickedId) continue
+    if (p.state === 'live' || p.is_priority) continue
+    const tag = readSeasonTag(p.metadata)
+    if (!tag || tag.role !== 'also' || !inSeason(tag, now) || isBlocked(tag, now)) continue
+    const size = tag.size ?? 'hours'
+    if (size === 'weekend' && tag.until && day(tag.until) - today < WEEKEND_JOB_MIN_DAYS) continue
+    found.push({ project: p, size, tag })
+  }
+  // Quick ones first; then the one with the nearest end date.
+  found.sort((a, b) =>
+    (a.size === b.size ? 0 : a.size === 'hours' ? -1 : 1) ||
+    (a.tag.until ?? '9999').localeCompare(b.tag.until ?? '9999'))
+  return found[0] ? { project: found[0].project, size: found[0].size } : null
+}
+
+export function smallFinishMessage(title: string, size: 'hours' | 'weekend'): { title: string; body: string } {
+  return { title, body: size === 'hours' ? "A few hours, and it's done." : 'A weekend job, and this one is free.' }
 }
 
 export function nudgeMessage(title: string, days: number): { title: string; body: string } {
@@ -109,13 +150,19 @@ export async function runWeekendNudges(
 
     const { data: projects, error: projErr } = await supabase
       .from('projects')
-      .select('id, title, status, state, is_priority, last_active, last_session_ended_at')
+      .select('id, title, status, state, is_priority, last_active, last_session_ended_at, metadata')
       .eq('user_id', s.user_id)
     if (projErr) {
       console.error('[weekend-nudge] projects failed:', projErr.message)
       continue
     }
-    const pick = pickWeekendProject((projects ?? []) as NudgeProject[], s.last_project_id ?? null, now)
+    const list = (projects ?? []) as NudgeProject[]
+    // A small thing from this season comes first: finishing one gives
+    // energy for the big one. Otherwise the usual pick-up.
+    const small = pickSmallFinish(list, s.last_project_id ?? null, now)
+    const pick = small
+      ? { project: small.project, days: 0 }
+      : pickWeekendProject(list, s.last_project_id ?? null, now)
     // Nothing waiting is a fine answer: stamp the day so we don't re-check
     // every two hours, and send nothing.
     if (!pick) {
@@ -130,7 +177,7 @@ export async function runWeekendNudges(
       console.error('[weekend-nudge] subscriptions failed:', subErr.message)
       continue
     }
-    const msg = nudgeMessage(pick.project.title, pick.days)
+    const msg = small ? smallFinishMessage(small.project.title, small.size) : nudgeMessage(pick.project.title, pick.days)
     const payload = JSON.stringify({ ...msg, url: `/projects/${pick.project.id}` })
     for (const sub of subs ?? []) {
       try {

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { pickWeekendProject, isSendTime, nudgeMessage, type NudgeProject } from './weekend-nudge'
+import { pickWeekendProject, pickSmallFinish, smallFinishMessage, isSendTime, nudgeMessage, type NudgeProject } from './weekend-nudge'
 
 const now = new Date('2026-10-17T10:30:00Z') // a Saturday
 const daysAgo = (n: number) => new Date(now.getTime() - n * 86_400_000).toISOString()
@@ -33,6 +33,41 @@ describe('pickWeekendProject', () => {
 
   it('says nothing when nothing is waiting', () => {
     expect(pickWeekendProject([p({ last_active: daysAgo(2) }), p({ last_active: daysAgo(500) })], null, now)).toBeNull()
+  })
+})
+
+describe('pickSmallFinish', () => {
+  const now = new Date('2026-10-17T10:00:00Z') // a Saturday
+  const tag = (extra: object) => ({ season: { role: 'also', until: '2026-12-25', label: 'Christmas', ...extra } })
+  const small = (id: string, extra: object, over: object = {}) =>
+    ({ id, title: id, status: 'active', state: 'on-deck', is_priority: false, last_active: null, metadata: tag(extra), ...over }) as any
+
+  it('offers a quick one before a weekend job, and skips one that is waiting', () => {
+    const list = [
+      small('toy', { size: 'weekend' }),
+      small('stencil', { size: 'hours' }),
+      small('blocked', { size: 'hours', waiting: 'the wood' }),
+    ]
+    expect(pickSmallFinish(list, null, now)?.project.id).toBe('stencil')
+    expect(pickSmallFinish(list, 'stencil', now)?.project.id).toBe('toy')
+  })
+  it('names a weekend job only while there is season left for it', () => {
+    const late = new Date('2026-12-10T10:00:00Z')
+    expect(pickSmallFinish([small('toy', { size: 'weekend' })], null, late)).toBeNull()
+    expect(pickSmallFinish([small('stencil', { size: 'hours' })], null, late)?.project.id).toBe('stencil')
+  })
+  it('ignores the live project, a finished one, a season that ended and a start day ahead', () => {
+    const list = [
+      small('live', {}, { state: 'live' }),
+      small('done', {}, { status: 'completed' }),
+      small('over', { until: '2026-09-01' }),
+      small('later', { from: '2026-11-01' }),
+    ]
+    expect(pickSmallFinish(list, null, now)).toBeNull()
+  })
+  it('says what it is in plain words', () => {
+    expect(smallFinishMessage('Stencil', 'hours').body).toMatch(/few hours/)
+    expect(smallFinishMessage('Toy', 'weekend').body).toMatch(/weekend/)
   })
 })
 
