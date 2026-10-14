@@ -356,7 +356,7 @@ export function TodaysAnswerCard() {
           }}
         >
           {formatRelativeTime(focusProject.last_active || focusProject.updated_at)}
-          {seasonLine(focusProject.metadata) ? ` · ${seasonLine(focusProject.metadata)}` : ''}
+          {seasonLine(focusProject) ? ` · ${seasonLine(focusProject)}` : ''}
         </span>
 
         {/* The readout below carries no border — it's a passive surface,

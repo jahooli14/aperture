@@ -18,17 +18,21 @@ export function readSeasonTag(metadata: Project['metadata']): SeasonTag | null {
   }
 }
 
-/** "10 weeks to Christmas", "5 days to Christmas", "Christmas is today",
- *  or null: no season, no date, or it's over. */
-export function seasonLine(metadata: Project['metadata'], now = new Date()): string | null {
-  const tag = readSeasonTag(metadata)
+/** "10 weeks to Christmas", "5 days to Christmas", "Christmas is today", or
+ *  without a name "10 weeks left" / "Last day"; or null: no season, no date,
+ *  it's over, or this isn't the live project (a stale tag on a project that
+ *  has since stopped being the main one). */
+export function seasonLine(
+  project: Pick<Project, 'metadata' | 'state' | 'is_priority'>, now = new Date(),
+): string | null {
+  if (project.state !== 'live' && !project.is_priority) return null
+  const tag = readSeasonTag(project.metadata)
   if (!tag || tag.role !== 'main' || !tag.until) return null
   const end = Date.UTC(+tag.until.slice(0, 4), +tag.until.slice(5, 7) - 1, +tag.until.slice(8, 10))
   const today = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate())
   const days = Math.round((end - today) / 86_400_000)
   if (days < 0) return null
-  const name = tag.label ?? 'the end'
-  if (days === 0) return `${name} is today`
-  if (days < 14) return `${days} ${days === 1 ? 'day' : 'days'} to ${name}`
-  return `${Math.round(days / 7)} weeks to ${name}`
+  if (days === 0) return tag.label ? `${tag.label} is today` : 'Last day'
+  const span = days < 14 ? `${days} ${days === 1 ? 'day' : 'days'}` : `${Math.round(days / 7)} weeks`
+  return tag.label ? `${span} to ${tag.label}` : `${span} left`
 }

@@ -15,7 +15,7 @@ import { VoiceInput } from '../VoiceInput'
 import { useProjectStore } from '../../stores/useProjectStore'
 
 interface Pick { id: string; title: string }
-interface Season { main: Pick | null; also: Pick[]; until: string | null; label: string | null }
+interface Season { main: Pick | null; also: Pick[]; until: string | null; label: string | null; active?: boolean }
 interface Proposal { main: Pick | null; also: Pick[]; until: string | null; label: string | null }
 
 const label = 'text-[11px] font-medium uppercase tracking-[0.14em]'
@@ -66,6 +66,7 @@ export function SeasonRow() {
       if (!r.proposal) {
         setNote("Couldn't match that to your projects. Pick them below.")
       } else {
+        // Keep the current main when they only named others.
         if (r.proposal.main) setMain(r.proposal.main.id)
         setAlso([r.proposal.also[0]?.id ?? '', r.proposal.also[1]?.id ?? ''])
         setUntil(r.proposal.until ?? '')
@@ -121,12 +122,12 @@ export function SeasonRow() {
         {!editing && (
           <>
             <p className="text-[13px] mt-0.5 leading-snug" style={{ color: 'var(--brand-text-muted)' }}>
-              {season.main
+              {season.main && season.active !== false
                 ? `${season.main.title} is main${season.also.length ? `, then ${season.also.map(p => p.title).join(' and ')}` : ''}${season.until ? `, until ${season.label ?? niceDate(season.until)}` : ''}. The rest is for fun.`
                 : 'Say what matters for a stretch of time, and the takes will aim at it. The rest stays for fun.'}
             </p>
             <button onClick={open} className="text-[13px] mt-2 py-1" style={{ color: 'rgb(var(--brand-primary-rgb))' }}>
-              {season.main ? 'Change it' : 'Set it'}
+              {season.main && season.active !== false ? 'Change it' : 'Set it'}
             </button>
           </>
         )}
@@ -150,7 +151,7 @@ export function SeasonRow() {
           </div>
           <button
             onClick={() => { void readIt() }}
-            disabled={reading || !said.trim()}
+            disabled={reading || saving || !said.trim()}
             className="text-[13px] py-1 flex items-center gap-1.5 disabled:opacity-40"
             style={{ color: 'rgb(var(--brand-primary-rgb))' }}
           >
@@ -158,7 +159,7 @@ export function SeasonRow() {
             {reading ? 'Reading…' : 'Read it'}
           </button>
 
-          {note && <p className="text-[12px]" style={{ color: 'var(--brand-text-secondary)' }}>{note}</p>}
+          {note && <p role="status" aria-live="polite" className="text-[12px]" style={{ color: 'var(--brand-text-secondary)' }}>{note}</p>}
 
           <label className="block">
             <span className={label} style={{ color: 'var(--brand-text-muted)' }}>Main</span>
@@ -192,11 +193,11 @@ export function SeasonRow() {
           </div>
 
           <div className="flex items-center justify-between pt-1">
-            {season.main
+            {season.main && season.active !== false
               ? <button onClick={() => { void end() }} disabled={saving} className="text-[13px] py-2" style={{ color: 'var(--brand-text-secondary)' }}>End the season</button>
               : <span />}
             <div className="flex gap-2">
-              <button onClick={() => setEditing(false)} className="px-3 py-2 text-[13px] rounded-lg" style={{ color: 'var(--brand-text-secondary)' }}>Cancel</button>
+              <button onClick={() => setEditing(false)} disabled={saving} className="px-3 py-2 text-[13px] rounded-lg disabled:opacity-40" style={{ color: 'var(--brand-text-secondary)' }}>Cancel</button>
               <button
                 onClick={() => { void save() }}
                 disabled={saving}

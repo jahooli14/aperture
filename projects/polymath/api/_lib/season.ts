@@ -38,6 +38,10 @@ export interface Season {
   also: { id: string; title: string }[]
   until: string | null
   label: string | null
+  /** A season has actually been set and is still running. A live project
+   *  with no season is just a live project: nothing season-shaped (the
+   *  order of takes, the wild one) applies to it. */
+  active: boolean
 }
 
 export const MAX_ALSO = 2
@@ -57,9 +61,18 @@ export function isoDay(d: Date): string {
   return d.toISOString().slice(0, 10)
 }
 
-/** Still running: no end date, or the end date hasn't passed. */
+/** A real calendar date, not just something shaped like one ("2026-02-31"). */
+export function isRealDate(s: unknown): s is string {
+  if (typeof s !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(s)) return false
+  const d = new Date(`${s}T00:00:00Z`)
+  return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === s
+}
+
+/** Still running: no end date, or the end date hasn't passed. The server
+ *  counts days in UTC and the person lives in a timezone, so the last day
+ *  gets a 14-hour grace: it is never cut short anywhere on earth. */
 export function inSeason(tag: SeasonTag | null, now: Date): boolean {
-  return !!tag && (!tag.until || tag.until >= isoDay(now))
+  return !!tag && (!tag.until || tag.until >= isoDay(new Date(now.getTime() - 14 * 3_600_000)))
 }
 
 /**
@@ -70,7 +83,7 @@ export function inSeason(tag: SeasonTag | null, now: Date): boolean {
 export function readSeason(projects: SeasonProject[], now = new Date()): Season {
   const open = projects.filter(p => !DONE.has(p.status ?? '') && p.state !== 'harvested')
   const live = open.find(p => p.state === 'live') ?? open.find(p => p.is_priority) ?? null
-  if (!live) return { main: null, also: [], until: null, label: null }
+  if (!live) return { main: null, also: [], until: null, label: null, active: false }
   const mainTag = readSeasonTag(live.metadata)
   const running = inSeason(mainTag, now)
   const also = open
@@ -83,6 +96,7 @@ export function readSeason(projects: SeasonProject[], now = new Date()): Season 
     also,
     until: running && mainTag ? mainTag.until : null,
     label: running && mainTag ? mainTag.label : null,
+    active: (!!mainTag && running) || also.length > 0,
   }
 }
 
@@ -147,9 +161,7 @@ export function parseSeasonProposal(raw: string, projects: { id: string; title: 
     if (p && p.id !== main?.id && !also.some(a => a.id === p.id)) also.push({ id: p.id, title: p.title })
     if (also.length >= MAX_ALSO) break
   }
-  const until = typeof parsed.until === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(parsed.until)
-    && !Number.isNaN(new Date(parsed.until).getTime()) && parsed.until >= today
-    ? parsed.until : null
+  const until = isRealDate(parsed.until) && parsed.until >= today ? parsed.until : null
   const label = typeof parsed.label === 'string' && parsed.label.trim() ? parsed.label.trim().slice(0, 30) : null
 
   if (!main && also.length === 0) return null

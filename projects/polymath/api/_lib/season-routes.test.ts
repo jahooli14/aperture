@@ -7,7 +7,7 @@ const { handleSeason } = await import('./season-routes.js')
 type Row = Record<string, any>
 
 /** Just enough PostgREST for this route: filters by eq/neq, update, select. */
-function fakeDb(projects: Row[]) {
+function fakeDb(projects: Row[], failWritesOn: string | null = null) {
   const builder = () => {
     let rows = projects
     let patch: Row | null = null
@@ -15,10 +15,15 @@ function fakeDb(projects: Row[]) {
       select: () => chain,
       order: () => chain,
       limit: () => chain,
-      eq: (c: string, v: unknown) => { rows = rows.filter(r => r[c] === v); return chain },
+      eq: (c: string, v: unknown) => { rows = rows.filter(r => r[c] === v); if (c === 'id') chain.__failIf = v as string; return chain },
       neq: (c: string, v: unknown) => { rows = rows.filter(r => r[c] !== v); return chain },
       update: (p: Row) => { patch = p; return chain },
-      then: (resolve: (v: { data: Row[] | null; error: null }) => unknown) => {
+      __failIf: null as string | null,
+      single: async () => ({ data: rows[0] ? { ...rows[0] } : null, error: null }),
+      then: (resolve: (v: { data: Row[] | null; error: { message: string } | null }) => unknown) => {
+        if (patch && failWritesOn && chain.__failIf === failWritesOn && patch.metadata) {
+          return resolve({ data: null, error: { message: 'write failed' } })
+        }
         if (patch) rows.forEach(r => Object.assign(r, patch))
         return resolve({ data: rows.map(r => ({ ...r })), error: null })
       },
@@ -68,10 +73,29 @@ describe('applying a season', () => {
     expect((await call(fakeDb(projects), { action: 'apply', main_id: 'nope' })).status).toBe(400)
   })
 
-  it('drops unknown or repeated others, keeps two at most, and ignores a past date', async () => {
-    await call(fakeDb(projects), { action: 'apply', main_id: 'book', also_ids: ['ghost', 'book', 'toy', 'toy', 'paint', 'dead'], until: '2001-01-01' })
+  it('drops unknown or repeated others and keeps two at most', async () => {
+    await call(fakeDb(projects), { action: 'apply', main_id: 'book', also_ids: ['ghost', 'book', 'toy', 'toy', 'paint', 'dead', 'extra'], until: '2999-12-25' })
     const tagged = projects.filter(p => p.metadata.season?.role === 'also').map(p => p.id)
     expect(tagged).toEqual(['toy', 'paint'])
+  })
+
+  it('says so about a date that has passed or is not real, instead of quietly making it open-ended', async () => {
+    const past = await call(fakeDb(projects), { action: 'apply', main_id: 'book', until: '2001-01-01' })
+    expect(past.status).toBe(400)
+    expect(past.json.error).toMatch(/passed/)
+    const fake = await call(fakeDb(projects), { action: 'apply', main_id: 'book', until: '2026-02-31' })
+    expect(fake.status).toBe(400)
+    expect(projects.every(p => !p.metadata.season?.role || p.id === 'paint')).toBe(true) // nothing was written
+  })
+
+  it('a failed tag write says so instead of returning a half-written season', async () => {
+    const { status, json } = await call(fakeDb(projects, 'toy'), { action: 'apply', main_id: 'book', also_ids: ['toy'], until: '2999-12-25' })
+    expect(status).toBe(500)
+    expect(json.error).toMatch(/Couldn't save/)
+  })
+
+  it('no date means open-ended, on purpose', async () => {
+    await call(fakeDb(projects), { action: 'apply', main_id: 'book' })
     expect(projects.find(p => p.id === 'book')!.metadata.season.until).toBeNull()
   })
 

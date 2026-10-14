@@ -317,7 +317,9 @@ export async function loadSeason(supabase: SupabaseClient, userId: string): Prom
     const { data, error } = await supabase.from('projects')
       .select('id, title, state, status, is_priority, metadata')
       .eq('user_id', userId)
-      .order('last_active', { ascending: false }).limit(60)
+      // Not just the newest: declare-live doesn't touch last_active, so a
+      // live but idle project could fall off a short list.
+      .order('created_at', { ascending: false }).limit(500)
     if (error) {
       console.warn('[mull] could not read the season:', error.message)
       return null
@@ -469,14 +471,15 @@ export async function generateMull(
 
   const prompt = draftPrompt({
     corpusText: corpus.text,
-    howMany: (echo.season?.also.length ?? 0) > 0 ? CANDIDATES_PER_RUN + 2 : CANDIDATES_PER_RUN,
+    howMany: echo.season?.active ? CANDIDATES_PER_RUN + 2 : CANDIDATES_PER_RUN,
     recentQuestions: recentTexts,
     recentRefs: corpus.rows.filter(r => recentIds.has(r.id)).map(r => r.ref),
     resonance: echo.resonance,
     corrections: echo.corrections,
     focus: echo.focus ?? '',
     liveTitle: echo.season?.main?.title ?? echo.live?.title ?? null,
-    alsoTitles: echo.season?.also.map(p => p.title) ?? [],
+    alsoTitles: echo.season?.active ? echo.season.also.map(p => p.title) : [],
+    seasonActive: !!echo.season?.active,
   })
   trace.push(`draft prompt: ${prompt.length} chars`)
 
@@ -527,14 +530,22 @@ export async function generateMull(
   // inside it (mull.ts, CROSSING_BONUS). Judged by the rows it cites, and
   // by the judge's own read as a second opinion.
   const mainId = echo.season?.main?.id ?? echo.live?.id ?? null
-  const alsoIds = echo.season?.also.map(p => p.id) ?? []
   const liveId = mainId
+  // Season-shaped behaviour (the order, the others, the wild one) only when
+  // a season has actually been set. A live project alone is just that.
+  const seasonOn = !!echo.season?.active
+  const alsoIds = seasonOn ? echo.season!.also.map(p => p.id) : []
+  const slotFor = (g: Grounded) => slotOf(
+    g.rows, mainId, alsoIds, g.project ? corpus.projectIdByTitle.get(normaliseTitle(g.project)) ?? null : null,
+  )
   const depths = new Map<Grounded, 0 | 1 | 2>()
-  // The judge's own read ("crosses") can lift a 0 to a 1, never past it:
-  // only the cited rows can prove the trifecta.
+  const ranks = new Map<Grounded, number>()
+  // The judge's own read ("crosses") can lift a 0 to a 1 -- and only for a
+  // take about the main project, never past it. Only the cited rows can
+  // prove the trifecta.
   const depthOf = (g: Grounded, s?: JudgeScore): 0 | 1 | 2 => {
     const d = crossingDepth(g.rows, corpus, liveId)
-    return d === 0 && liveId && s?.crosses === true ? 1 : d
+    return d === 0 && liveId && s?.crosses === true && slotFor(g).slot === 'main' ? 1 : d
   }
   const bonus = (d: 0 | 1 | 2) => (d >= 1 ? CROSSING_BONUS : 0) + (d === 2 ? TRIFECTA_BONUS : 0)
   const mark = (d: 0 | 1 | 2) => (d === 2 ? ' TRIFECTA' : d === 1 ? ' CROSSES' : '')
@@ -552,7 +563,9 @@ export async function generateMull(
       .map(x => {
         const d = depthOf(x.g, x.s)
         depths.set(x.g, d)
-        return { ...x, rank: judgeRank(x.s) + bonus(d) }
+        const rank = judgeRank(x.s) + bonus(d)
+        ranks.set(x.g, rank)
+        return { ...x, rank }
       })
       .sort((a, b) => b.rank - a.rank)
       .map(x => x.g)
@@ -565,26 +578,38 @@ export async function generateMull(
     depths.set(best, depthOf(best))
     ranked = [best]
   }
-  // The season decides the order: main, then the others, then the wild one
-  // (or the wild one first about one run in three). Only when there is a
-  // season to aim at.
+
+  // Shipped questions never share a row. Settled in rank order, BEFORE the
+  // season reorders anything, so a wild take that shares a row with a
+  // better one can't bury it.
+  const used = new Set<string>()
+  ranked = ranked.filter(g => {
+    if (g.rows.some(r => used.has(r.id))) return false
+    g.rows.forEach(r => used.add(r.id))
+    return true
+  })
+
+  // The season decides the order, but never over quality (mull.ts,
+  // orderBySlots): main, then the others, then the wild one; the wild one
+  // first about one run in three.
   const slots = new Map<Grounded, { slot: Slot; projectId: string | null }>()
-  if (mainId) {
-    for (const g of ranked) slots.set(g, slotOf(g.rows, mainId, alsoIds))
-    ranked = orderBySlots(ranked, g => slots.get(g)!.slot, leadsWithFun(new Date(Date.now())))
+  if (seasonOn) {
+    for (const g of ranked) slots.set(g, slotFor(g))
+    ranked = orderBySlots(ranked, g => slots.get(g)!.slot, leadsWithFun(new Date(Date.now())), g => ranks.get(g) ?? 0)
     trace.push(`season: ${ranked.map(g => slots.get(g)!.slot).join(' > ') || 'nothing shipped'}`)
+  } else if (!echo.season) {
+    trace.push('season: no live project found, so nothing is aimed at')
   }
   if (liveId) {
     const n = (d: number) => ranked.filter(g => (depths.get(g) ?? 0) >= d).length
-    trace.push(`crossing: ${n(1)} of ${ranked.length} shipped candidates cross "${echo.live?.title}" (${n(2)} with a note and a list item)`)
+    trace.push(`crossing: ${n(1)} of ${ranked.length} shipped candidates cross "${echo.season?.main?.title ?? echo.live?.title}" (${n(2)} with a note and a list item)`)
   }
 
+  // Four slots (main, two others, wild) need four takes; otherwise three.
+  const perRun = seasonOn && alsoIds.length > 1 ? QUESTIONS_PER_RUN + 1 : QUESTIONS_PER_RUN
   const baked: BakedSpark[] = []
-  const usedRows = new Set<string>()
   for (const g of ranked) {
-    if (baked.length >= QUESTIONS_PER_RUN) break
-    if (g.rows.some(r => usedRows.has(r.id))) continue
-    g.rows.forEach(r => usedRows.add(r.id))
+    if (baked.length >= perRun) break
     baked.push({
       type: 'mull',
       text: g.question,

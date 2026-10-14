@@ -16,7 +16,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { generateText } from './gemini-chat.js'
 import { MODELS } from './models.js'
 import {
-  buildSeasonPrompt, parseSeasonProposal, readSeason, isoDay, MAX_ALSO,
+  buildSeasonPrompt, parseSeasonProposal, readSeason, isoDay, isRealDate, MAX_ALSO,
   type SeasonProject, type SeasonTag,
 } from './season.js'
 
@@ -35,15 +35,22 @@ async function loadProjects(supabase: SupabaseClient, userId: string): Promise<S
   return (data ?? []) as SeasonProject[]
 }
 
-/** Write one project's season tag (or remove it), reading its metadata
- *  fresh so nothing else on it is wiped. */
+/** Write one project's season tag (or remove it). Metadata is read FRESH
+ *  for every write, never from an earlier snapshot, so a next move or a
+ *  theme saved a moment ago on the same project isn't overwritten. */
 async function setTag(
-  supabase: SupabaseClient, userId: string, project: SeasonProject, tag: SeasonTag | null,
+  supabase: SupabaseClient, userId: string, projectId: string, tag: SeasonTag | null,
 ): Promise<boolean> {
-  const metadata = { ...((project.metadata as Record<string, unknown>) ?? {}) }
+  const { data, error: readErr } = await supabase.from('projects')
+    .select('metadata').eq('id', projectId).eq('user_id', userId).single()
+  if (readErr || !data) {
+    console.error('[season] could not read the project before tagging it:', readErr?.message)
+    return false
+  }
+  const metadata = { ...((data.metadata as Record<string, unknown>) ?? {}) }
   if (tag) metadata.season = tag
   else delete metadata.season
-  const { error } = await supabase.from('projects').update({ metadata }).eq('id', project.id).eq('user_id', userId)
+  const { error } = await supabase.from('projects').update({ metadata }).eq('id', projectId).eq('user_id', userId)
   if (error) console.error('[season] could not write the tag:', error.message)
   return !error
 }
@@ -83,7 +90,9 @@ export async function handleSeason(
 
   if (action === 'clear') {
     for (const p of projects) {
-      if ((p.metadata as { season?: unknown } | null)?.season) await setTag(supabase, userId, p, null)
+      if ((p.metadata as { season?: unknown } | null)?.season && !(await setTag(supabase, userId, p.id, null))) {
+        return res.status(500).json({ error: "Couldn't end it" })
+      }
     }
     const fresh = await loadProjects(supabase, userId)
     return res.status(200).json({ season: readSeason(fresh ?? projects, now) })
@@ -99,13 +108,16 @@ export async function handleSeason(
       .filter((id: string, i: number, all: string[]) => all.indexOf(id) === i)
       .slice(0, MAX_ALSO)
       .map((id: string) => mine.get(id)!)
-    const day = typeof until === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(until) && until >= isoDay(now) ? until : null
-    const name = typeof label === 'string' && label.trim() ? label.trim().slice(0, 30) : null
-
-    // A new season replaces the old one, so every old tag goes first.
-    for (const p of projects) {
-      if ((p.metadata as { season?: unknown } | null)?.season) await setTag(supabase, userId, p, null)
+    let day: string | null = null
+    if (typeof until === 'string' && until.trim()) {
+      if (!isRealDate(until)) return res.status(400).json({ error: "That isn't a real date" })
+      // Same grace as inSeason: the last day is never cut short by a timezone.
+      if (until < isoDay(new Date(now.getTime() - 14 * 3_600_000))) {
+        return res.status(400).json({ error: 'That date has already passed' })
+      }
+      day = until
     }
+    const name = typeof label === 'string' && label.trim() ? label.trim().slice(0, 30) : null
 
     // Main means live: the same gesture as declare-live (the home card, the
     // spark channel and the session all already follow the live project).
@@ -119,13 +131,22 @@ export async function handleSeason(
       return res.status(500).json({ error: "Couldn't set that" })
     }
 
-    const fresh = (await loadProjects(supabase, userId)) ?? projects
-    const byId = new Map(fresh.map(p => [p.id, p]))
-    await setTag(supabase, userId, byId.get(main.id) ?? main, { role: 'main', until: day, label: name })
-    for (const a of alsoList) await setTag(supabase, userId, byId.get(a.id) ?? a, { role: 'also', until: day, label: name })
+    // New tags first, then remove only the stale ones, checking every
+    // write. A failure part-way says so instead of returning a
+    // half-written season with a 200.
+    const tags = new Map<string, SeasonTag>([[main.id, { role: 'main', until: day, label: name }]])
+    for (const a of alsoList) tags.set(a.id, { role: 'also', until: day, label: name })
+    for (const [id, tag] of tags) {
+      if (!(await setTag(supabase, userId, id, tag))) return res.status(500).json({ error: "Couldn't save that" })
+    }
+    for (const p of projects) {
+      if (!tags.has(p.id) && (p.metadata as { season?: unknown } | null)?.season) {
+        if (!(await setTag(supabase, userId, p.id, null))) return res.status(500).json({ error: "Couldn't save that" })
+      }
+    }
 
     const after = await loadProjects(supabase, userId)
-    return res.status(200).json({ season: readSeason(after ?? fresh, now) })
+    return res.status(200).json({ season: readSeason(after ?? projects, now) })
   }
 
   return res.status(400).json({ error: "action must be 'get', 'read', 'apply' or 'clear'" })

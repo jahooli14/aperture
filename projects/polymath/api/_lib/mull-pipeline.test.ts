@@ -282,7 +282,8 @@ describe('the mull channel, end to end', () => {
       expect(baked.map(b => b.text)).toEqual([TRIFECTA.question])
       expect(baked[0].project_id).toBe('p-book')
       expect(trace.join('\n')).toMatch(/TRIFECTA/)
-      expect(trace.join('\n')).toMatch(/crossing: 2 of 2 shipped candidates cross "The book" \(1 with a note and a list item\)/)
+      // The shallower one shared the chapter and was dropped; only the deeper ships.
+      expect(trace.join('\n')).toMatch(/crossing: 1 of 1 shipped candidates cross "The book" \(1 with a note and a list item\)/)
     })
 
     it('without a judge, a crossing is the one that ships', async () => {
@@ -291,10 +292,18 @@ describe('the mull channel, end to end', () => {
       expect(baked.map(b => b.text)).toEqual([ONE_TAKE.question])
     })
 
-    it('the main project leads even when a take about something else scores higher', async () => {
+    it('a crossing does not beat a much stronger take', async () => {
       respond({ draft: [GREENHOUSE, ONE_TAKE], judge: [ship(1, { revelation: 10, truth: 10, specific: 10, answerable: 10 }), ship(2, { revelation: 7, truth: 7, specific: 6, answerable: 6 })] })
       const baked = await bakeMull(fakeSupabase(withLiveBook()).client, 'u1')
-      expect(baked[0].text).toBe(ONE_TAKE.question)
+      expect(baked[0].text).toBe(GREENHOUSE.question)
+    })
+
+    it('a live project with no season sets nothing season-shaped', async () => {
+      respond({ draft: [ONE_TAKE], judge: [ship(1)] })
+      const trace: string[] = []
+      await bakeMull(fakeSupabase(withLiveBook()).client, 'u1', undefined, trace)
+      expect(draftPromptSent()).not.toMatch(/THE WILD ONE|ALSO THIS SEASON/)
+      expect(trace.join('\n')).not.toMatch(/season: /)
     })
   })
 
@@ -353,6 +362,80 @@ describe('the mull channel, end to end', () => {
       respond({ draft: [ONE_TAKE, ALSO_TAKE, WILD], judge: [ship(1), ship(2), ship(3)] })
       const baked = await bakeMull(fakeSupabase(withSeason()).client, 'u1')
       expect(baked.map(b => b.text)).toEqual([WILD.question, ONE_TAKE.question, ALSO_TAKE.question])
+    })
+
+    it('counts a take on notes that never attached when the draft names the project', async () => {
+      onDay(false)
+      const TOY_BY_NAME = {
+        noticing: 'Two unfiled notes both point at making it in one go.',
+        doubt: 'The toy may have nothing to do with a recording.',
+        evidence: [
+          { ref: 'N1', quote: 'the only tidy room in a messy house' },
+          { ref: 'N2', quote: 'The second take is always worse' },
+        ],
+        question: 'You said the greenhouse is the only tidy room in a messy house. You said the second take is always worse. I think the toy should be made in one take.',
+        stake: 'The toy is made in one sitting.',
+        project: "Oscar's toy",
+      }
+      respond({ draft: [TOY_BY_NAME], judge: [ship(1)] })
+      const trace: string[] = []
+      const baked = await bakeMull(fakeSupabase(withSeason()).client, 'u1', undefined, trace)
+      expect(trace.join('\n')).toMatch(/season: also/)
+      expect(baked[0].project_id).toBe('p-toy')
+    })
+
+    it('ships all four when there are two others: main, also, wild, also', async () => {
+      onDay(false)
+      const data = withSeason()
+      data.projects.push({ user_id: 'u1', id: 'p-st', title: 'Graham stencil', description: 'A stencil for a friend', state: 'on-deck', status: 'active', is_priority: false, metadata: { season: { role: 'also', until: '2999-12-25', label: 'Christmas' } }, created_at: ago(30), last_active: ago(3) })
+      data.memories.push({ user_id: 'u1', id: 'm3', title: 'Glue', body: 'The glue never sets when it is cold.', created_at: ago(50), tags: [], source_reference: null })
+      data.fragments.push({ user_id: 'u1', id: 'f-st', text: 'masked the stencil edges twice', created_at: ago(4), memory_id: null, project_id: 'p-st', projects: { title: 'Graham stencil', state: 'on-deck', status: 'active' } })
+      const ALSO2 = {
+        noticing: 'Cold glue and the stencil both want a warm room.',
+        doubt: 'Glue and paint may be unrelated.',
+        evidence: [
+          { ref: 'N3', quote: 'The glue never sets when it is cold' },
+          { ref: 'F3', quote: 'masked the stencil edges twice' },
+        ],
+        question: 'You said the glue never sets when it is cold. You masked the stencil edges twice. I think the stencil wants a warm room.',
+        stake: 'The stencil gets done in a warm room.',
+        project: null,
+      }
+      respond({ draft: [ONE_TAKE, ALSO_TAKE, ALSO2, WILD], judge: [ship(1), ship(2), ship(3), ship(4)] })
+      const trace: string[] = []
+      const baked = await bakeMull(fakeSupabase(data).client, 'u1', undefined, trace)
+      expect(baked).toHaveLength(4)
+      expect(baked.map(b => b.project_id)).toEqual(['p-book', 'p-toy', null, 'p-st'])
+      expect(trace.join('\n')).toMatch(/season: main > also > wild > also/)
+    })
+
+    it('a wild take that shares a row with a better one cannot bury it', async () => {
+      onDay(true)
+      const WILD_SHARING = {
+        noticing: 'Doing it once links the recording note and the soldering list.',
+        doubt: 'The list item may just be aspiration.',
+        evidence: [
+          { ref: 'N2', quote: 'It only works if it is one take' },
+          { ref: 'L1', quote: 'Learn to solder properly' },
+        ],
+        question: 'You said it only works if it is one take. Learning to solder properly has sat on your list for years. I think you start the things you can finish in one go.',
+        stake: 'Solder one thing in one sitting.',
+        project: null,
+      }
+      respond({ draft: [WILD_SHARING, ONE_TAKE], judge: [ship(1), ship(2)] })
+      const baked = await bakeMull(fakeSupabase(withSeason()).client, 'u1')
+      expect(baked.map(b => b.text)).toEqual([ONE_TAKE.question])
+    })
+
+    it('what you finished stays in the corpus; what you buried does not', async () => {
+      onDay(false)
+      const data = withSeason()
+      data.projects.push({ user_id: 'u1', id: 'p-done', title: 'Mix for Ben', description: 'A mix as a present', state: 'harvested', status: 'completed', is_priority: false, metadata: {}, created_at: ago(90), last_active: ago(12) })
+      data.fragments.push({ user_id: 'u1', id: 'f-done', text: 'recorded the whole mix in one sitting', created_at: ago(12), memory_id: null, project_id: 'p-done', projects: { title: 'Mix for Ben', state: 'harvested', status: 'completed' } })
+      respond({ draft: [ONE_TAKE], judge: [ship(1)] })
+      await bakeMull(fakeSupabase(data).client, 'u1')
+      expect(draftPromptSent()).toMatch(/recorded the whole mix in one sitting/)
+      expect(draftPromptSent()).not.toMatch(/blue really should dominate/) // the abandoned mural stays out
     })
 
     it('asks the drafter for the other project and for a wild one', async () => {

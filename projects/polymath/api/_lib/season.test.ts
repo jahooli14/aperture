@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { readSeason, readSeasonTag, inSeason, leadsWithFun, parseSeasonProposal, MAX_ALSO, type SeasonProject } from './season'
+import { readSeason, readSeasonTag, inSeason, isRealDate, leadsWithFun, parseSeasonProposal, MAX_ALSO, type SeasonProject } from './season'
 import { orderBySlots, slotOf } from './mull'
 import type { CorpusRow } from './mull-corpus'
 
@@ -44,6 +44,16 @@ describe('readSeason', () => {
     expect(readSeason([p({ id: 'book', state: 'live' }), p({ id: 'old', status: 'abandoned', metadata: also(null) })], now).also).toEqual([])
   })
 
+  it('a live project with no season is not a season', () => {
+    expect(readSeason([p({ id: 'book', state: 'live' })], now).active).toBe(false)
+    expect(readSeason([p({ id: 'book', state: 'live', metadata: { season: { role: 'main', until: '2026-10-01', label: null } } })], now).active).toBe(false)
+  })
+
+  it('is active once the main has an in-date tag, or others are tagged', () => {
+    expect(readSeason([p({ id: 'book', state: 'live', metadata: { season: { role: 'main', until: '2026-12-25', label: null } } })], now).active).toBe(true)
+    expect(readSeason([p({ id: 'book', state: 'live' }), p({ id: 'toy', metadata: also('2026-12-25') })], now).active).toBe(true)
+  })
+
   it('falls back to the starred project when none is live', () => {
     expect(readSeason([p({ id: 'star', is_priority: true })], now).main?.id).toBe('star')
   })
@@ -55,9 +65,17 @@ describe('tags and days', () => {
     expect(readSeasonTag({ season: { role: 'boss' } })).toBeNull()
     expect(readSeasonTag(null)).toBeNull()
   })
-  it('a season runs through its last day', () => {
+  it('a season runs through its last day, with a grace for timezones', () => {
     expect(inSeason({ role: 'also', until: '2026-10-14', label: null }, now)).toBe(true)
-    expect(inSeason({ role: 'also', until: '2026-10-13', label: null }, now)).toBe(false)
+    // 22:00 on the 13th somewhere in the Pacific: still the last day there.
+    expect(inSeason({ role: 'also', until: '2026-10-13', label: null }, now)).toBe(true)
+    expect(inSeason({ role: 'also', until: '2026-10-12', label: null }, now)).toBe(false)
+  })
+  it('only a real calendar date counts', () => {
+    expect(isRealDate('2026-12-25')).toBe(true)
+    expect(isRealDate('2026-02-31')).toBe(false)
+    expect(isRealDate('2999-99-99')).toBe(false)
+    expect(isRealDate('Christmas')).toBe(false)
   })
   it('leads with something fun about one day in three', () => {
     const days = Array.from({ length: 30 }, (_, i) => leadsWithFun(new Date(Date.UTC(2026, 9, 1 + i, 9)))).filter(Boolean)
@@ -94,10 +112,25 @@ describe('slots', () => {
     expect(slotOf([row('F2', { kind: 'fragment', projectId: 'toy' }), row('N1')], 'book', ['toy'])).toEqual({ slot: 'also', projectId: 'toy' })
     expect(slotOf([row('N1'), row('N2')], 'book', ['toy']).slot).toBe('wild')
   })
-  it('orders main, also, wild; or wild first; and skips a slot nobody filled', () => {
+  it('the declared project counts when the rows alone do not show it', () => {
+    expect(slotOf([row('N1'), row('N2')], 'book', ['toy'], 'toy')).toEqual({ slot: 'also', projectId: 'toy' })
+    expect(slotOf([row('N1')], 'book', ['toy'], 'book').slot).toBe('main')
+    expect(slotOf([row('N1')], 'book', ['toy'], 'mural').slot).toBe('wild')
+  })
+  it('never puts a weak take ahead of a far better one just for its slot', () => {
+    const items = [{ n: 'wild', s: 'wild', r: 50 }, { n: 'main', s: 'main', r: 20 }, { n: 'also', s: 'also', r: 45 }] as const
+    const out = orderBySlots([...items], t => t.s, false, t => t.r)
+    expect(out.map(t => t.n)).toEqual(['also', 'wild', 'main'])
+    // Close enough, and the slot order holds.
+    const close = [{ n: 'wild', s: 'wild', r: 50 }, { n: 'main', s: 'main', r: 42 }] as const
+    expect(orderBySlots([...close], t => t.s, false, t => t.r).map(t => t.n)).toEqual(['main', 'wild'])
+  })
+  it('orders main, also, wild, also; or wild first; and skips a slot nobody filled', () => {
     const items = [{ n: 'w', s: 'wild' }, { n: 'a', s: 'also' }, { n: 'm', s: 'main' }, { n: 'm2', s: 'main' }] as const
     const slot = (t: (typeof items)[number]) => t.s
     expect(orderBySlots([...items], slot, false).map(t => t.n)).toEqual(['m', 'a', 'w', 'm2'])
+    const two: { n: string; s: 'main' | 'also' | 'wild' }[] = [...items, { n: 'a2', s: 'also' }]
+    expect(orderBySlots(two, t => t.s, false).map(t => t.n)).toEqual(['m', 'a', 'w', 'a2', 'm2'])
     expect(orderBySlots([...items], slot, true).map(t => t.n)).toEqual(['w', 'm', 'a', 'm2'])
     expect(orderBySlots([items[2], items[3]], slot, false).map(t => t.n)).toEqual(['m', 'm2'])
   })

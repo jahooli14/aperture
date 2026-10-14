@@ -20,3 +20,19 @@
 export function isGraveyarded(project: { state?: string | null; status?: string | null }): boolean {
   return project.state === 'harvested' || project.status === 'abandoned'
 }
+
+/**
+ * Finished, not dead. Completing a project sets `state = 'harvested'` (to
+ * release every pointer that could still surface it as today's answer), so
+ * `isGraveyarded` reads a finished project as buried. For the mull channel
+ * that is wrong: what someone finished is the best evidence they have, and
+ * its notes should stay quotable.
+ */
+export function isFinished(project: { status?: string | null }): boolean {
+  return project.status === 'completed'
+}
+
+/** Out of the mull corpus: buried, but not merely finished. */
+export function isOutOfCorpus(project: { state?: string | null; status?: string | null }): boolean {
+  return isGraveyarded(project) && !isFinished(project)
+}

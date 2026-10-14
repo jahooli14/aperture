@@ -18,6 +18,7 @@ import { identifyRottingProjects, generateZebraReport, buryProject, resurrectPro
 import { updateItemConnections } from './_lib/connection-logic.js'
 import { backfillProjectTags } from './_lib/project-tags.js'
 import { isGraveyarded } from './_lib/project-state.js'
+import { preserveServerOwned } from './_lib/server-owned-metadata.js'
 
 // Validation schema for rating suggestions
 const RateRequestSchema = z.object({
@@ -1311,6 +1312,12 @@ Return JSON only:
       // 'abandoned' is the same state under the name the database knows,
       // and nothing else writes it.
       if (updates.status === 'graveyard') updates.status = 'abandoned'
+
+      // The client's metadata is a cached copy; keep what only the server
+      // writes (the season, the themes) so a stale device can't wipe it.
+      if (updates.metadata && typeof updates.metadata === 'object') {
+        updates.metadata = preserveServerOwned(updates.metadata, existingProject.metadata)
+      }
 
       const { data, error } = await supabase
         .from('projects')
