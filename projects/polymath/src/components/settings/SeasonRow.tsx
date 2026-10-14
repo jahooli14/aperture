@@ -30,7 +30,7 @@ const toRows = (list: Small[]): Row[] =>
     return a ? { id: a.id, size: a.size ?? null, waiting: a.waiting ?? '', from: a.from ?? null } : blankRow()
   })
 
-const label = 'text-[11px] font-medium uppercase tracking-[0.14em]'
+const label = 'eyebrow'
 const field = 'field w-full px-3 py-2.5 text-[15px]'
 
 function niceDate(iso: string): string {
@@ -196,10 +196,10 @@ export function SeasonRow() {
             {reading ? 'Reading…' : 'Read it'}
           </button>
 
-          {note && <p role="status" aria-live="polite" className="text-[12px]" style={{ color: 'var(--brand-text-secondary)' }}>{note}</p>}
+          {note && <p role="status" aria-live="polite" className="text-[13px]" style={{ color: 'var(--brand-text-secondary)' }}>{note}</p>}
 
           <label className="block">
-            <span className={label} style={{ color: 'var(--brand-text-muted)' }}>Main</span>
+            <span className={label}>Main</span>
             <select value={main} onChange={e => setMain(e.target.value)} className={`${field} mt-1`}>
               <option value="">Pick one</option>
               {options(also.map(r => r.id)).map(p => <option key={p.id} value={p.id}>{p.title}</option>)}
@@ -208,7 +208,7 @@ export function SeasonRow() {
           {also.map((row, i) => (
             <div key={i} className="space-y-2">
               <label className="block">
-                <span className={label} style={{ color: 'var(--brand-text-muted)' }}>{i === 0 ? 'Also finish' : 'And'}</span>
+                <span className={label}>{i === 0 ? 'Also finish' : 'And'}</span>
                 <select
                   value={row.id}
                   onChange={e => setRow(i, { id: e.target.value })}
@@ -245,11 +245,11 @@ export function SeasonRow() {
           ))}
           <div className="flex gap-3">
             <label className="block flex-1">
-              <span className={label} style={{ color: 'var(--brand-text-muted)' }}>Until</span>
+              <span className={label}>Until</span>
               <input type="date" value={until} onChange={e => setUntil(e.target.value)} className={`${field} mt-1`} />
             </label>
             <label className="block flex-1">
-              <span className={label} style={{ color: 'var(--brand-text-muted)' }}>Called</span>
+              <span className={label}>Called</span>
               <input value={name} maxLength={30} onChange={e => setName(e.target.value)} placeholder="Christmas" className={`${field} mt-1`} />
             </label>
           </div>

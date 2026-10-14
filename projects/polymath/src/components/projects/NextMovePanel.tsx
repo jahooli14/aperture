@@ -85,48 +85,41 @@ export function NextMovePanel({ project, onGo, onChange, onFinish }: {
   return (
     <div className="space-y-6">
       {live && (
-        <div
-          className="rounded-2xl p-5 space-y-3"
-          style={{
-            background: 'linear-gradient(160deg, rgba(var(--brand-primary-rgb),0.12), rgba(255,255,255,0.02))',
-            border: '1px solid rgba(var(--brand-primary-rgb),0.28)',
-          }}
-        >
-          <p className="text-[11px] font-bold uppercase tracking-[0.14em]" style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.85 }}>
+        <div className="glass-card p-5 space-y-3">
+          <p className="eyebrow">
             {fork ? 'First, decide' : 'Next move'}
           </p>
           {move || fork ? (
-            <p className="text-[21px] leading-[1.25]" style={{ fontFamily: 'var(--brand-font-serif)', color: 'var(--brand-text-primary)' }}>
+            <p className="type-lead">
               {move ? move.move : fork}
             </p>
           ) : (
-            <p className="flex items-center gap-2 text-[14px]" style={{ color: 'var(--brand-text-secondary)', opacity: 0.87 }}>
+            <p className="flex items-center gap-2 text-[15px]" style={{ color: 'var(--brand-text-secondary)' }}>
               {moveBusy && <Loader2 size={14} className="animate-spin" />}
               {moveBusy ? 'Working out where to start…' : 'No move yet.'}
             </p>
           )}
           {move?.doneWhen && (
-            <p className="flex items-start gap-2 text-[13px] leading-snug" style={{ color: 'var(--brand-text-secondary)', opacity: 0.9 }}>
+            <p className="flex items-start gap-2 text-[13px] leading-snug" style={{ color: 'var(--brand-text-secondary)' }}>
               <Flag size={13} className="mt-0.5 flex-shrink-0" style={{ color: 'rgba(var(--brand-primary-rgb),0.8)' }} />
               {move.doneWhen}
             </p>
           )}
           {lastNote && (
-            <p className="text-[12.5px] italic leading-snug line-clamp-3" style={{ color: 'var(--brand-text-secondary)', opacity: 0.8 }}>
+            <p className="text-[13px] italic leading-snug line-clamp-3" style={{ color: 'var(--brand-text-secondary)' }}>
               You stopped with “{lastNote}”
             </p>
           )}
           <button
             onClick={move ? onGo : onChange}
             disabled={!move && !fork && moveBusy}
-            className="w-full py-3 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-transform active:scale-[0.99] disabled:opacity-50"
-            style={{ background: 'rgba(var(--brand-primary-rgb),0.9)', color: '#0b1220' }}
+            className="neon-button w-full py-3 rounded-xl text-[15px] font-semibold flex items-center justify-center gap-2 disabled:opacity-50"
           >
             <Play className="h-3.5 w-3.5 fill-current" />
             {move ? 'Go' : fork ? 'Answer it' : 'Find the first move'}
           </button>
           {move && (
-            <button onClick={onChange} className="w-full text-[11.5px]" style={{ color: 'var(--brand-text-secondary)', opacity: 0.75 }}>
+            <button onClick={onChange} className="w-full text-[13px] py-1" style={{ color: 'var(--brand-text-muted)' }}>
               Not this — change it
             </button>
           )}
@@ -143,7 +136,7 @@ export function NextMovePanel({ project, onGo, onChange, onFinish }: {
                 onKeyDown={e => { if (e.key === 'Enter') void send() }}
                 placeholder="What changed, or what’s next?"
                 aria-label="Tell this project what changed"
-                className="flex-1 min-w-0 bg-transparent outline-none text-[14px] py-2"
+                className="flex-1 min-w-0 bg-transparent outline-none text-[15px] py-2"
                 style={{ color: 'var(--brand-text-primary)' }}
                 disabled={sending}
               />
@@ -159,22 +152,21 @@ export function NextMovePanel({ project, onGo, onChange, onFinish }: {
               </button>
             </div>
             {receipt && (
-              <p className="mt-2 flex items-start gap-1.5 text-[12.5px]" style={{ color: 'var(--brand-text-secondary)' }}>
+              <p className="mt-2 flex items-start gap-1.5 text-[13px]" style={{ color: 'var(--brand-text-secondary)' }}>
                 <Check size={13} className="mt-0.5 flex-shrink-0" style={{ color: 'rgb(var(--brand-primary-rgb))' }} />
                 {receipt}
               </p>
             )}
-            {error && <p className="mt-2 text-[12.5px]" style={{ color: 'var(--brand-text-secondary)' }}>{error}</p>}
+            {error && <p className="mt-2 text-[13px]" style={{ color: 'var(--brand-text-secondary)' }}>{error}</p>}
             {askFinish && (
               <div className="mt-3 rounded-xl p-3 space-y-2" style={{ background: 'rgba(255,255,255,0.05)' }}>
-                <p className="text-[14px]" style={{ color: 'var(--brand-text-primary)' }}>
+                <p className="text-[15px]" style={{ color: 'var(--brand-text-primary)' }}>
                   Sounds like the whole thing is finished. Mark {project.title} as done?
                 </p>
                 <div className="flex gap-3">
                   <button
                     onClick={() => { setAskFinish(false); onFinish() }}
-                    className="px-4 py-2 rounded-lg text-[13px] font-semibold"
-                    style={{ background: 'rgba(var(--brand-primary-rgb),0.9)', color: '#0b1220' }}
+                    className="neon-button px-4 py-2 rounded-lg text-[13px] font-semibold"
                   >
                     Mark it done
                   </button>

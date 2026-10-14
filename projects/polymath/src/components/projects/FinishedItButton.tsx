@@ -33,8 +33,7 @@ export function FinishedItButton({ project }: { project: Project }) {
     <button
       onClick={() => { void finish() }}
       disabled={saving}
-      className="w-full py-3 rounded-xl text-[15px] font-semibold flex items-center justify-center gap-2 disabled:opacity-50"
-      style={{ background: 'rgba(var(--brand-primary-rgb),0.12)', color: 'rgb(var(--brand-primary-rgb))' }}
+      className="neon-button w-full py-3 rounded-xl text-[15px] font-semibold flex items-center justify-center gap-2 disabled:opacity-50"
     >
       <Check className="h-4 w-4" />
       {saving ? 'Saving…' : 'Finished it'}

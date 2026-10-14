@@ -315,27 +315,22 @@ export function ProjectDetailPage() {
             <button
               onClick={handleToggleLive}
               title={project.is_priority ? 'Take this off live' : 'Make this your live project'}
-              className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-colors"
-              style={
-                project.is_priority
-                  ? { color: 'rgb(var(--brand-primary-rgb))', background: 'rgba(var(--brand-primary-rgb),0.08)' }
-                  : { color: 'var(--brand-text-secondary)', background: 'rgba(255,255,255,0.03)', opacity: 0.7 }
-              }
+              className="quiet-pill transition-colors"
+              data-on={project.is_priority ? 'true' : 'false'}
             >
               <Star className={`h-3 w-3 ${project.is_priority ? 'fill-current' : ''}`} />
               {project.is_priority ? 'Live' : 'Make it live'}
             </button>
           )}
           {(parked || project.status === 'completed') && (
-            <span className="px-2.5 py-1 rounded-lg text-[11px] font-semibold" style={{ background: 'rgba(255,255,255,0.03)', color: 'var(--brand-text-secondary)', opacity: 0.85 }}>
+            <span className="quiet-pill">
               {parked ? 'Parked' : 'Finished'}
             </span>
           )}
           {((project.metadata?.tags as string[] | undefined) ?? []).slice(0, 3).map((tag) => (
             <span
               key={tag}
-              className="text-[11px] font-medium px-2.5 py-1 rounded-lg"
-              style={{ color: 'var(--brand-text-secondary)', opacity: 0.78, background: 'rgba(255,255,255,0.04)' }}
+              className="quiet-pill"
             >
               {tag}
             </span>

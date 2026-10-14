@@ -14,8 +14,6 @@ import { api } from '../../lib/apiClient'
 import { daysQuiet, isLiveStatus, UP_TO_SPEED_AFTER_DAYS, type UpToSpeed as UpToSpeedData } from '../../lib/projectThemes'
 import type { Project } from '../../types'
 
-const label = 'text-[11px] font-medium uppercase tracking-[0.14em]'
-
 function awayFor(days: number): string {
   if (days >= 60) return `${Math.round(days / 30)} months away`
   return `${Math.floor(days / 7)} weeks away`
@@ -50,16 +48,15 @@ export function UpToSpeed({ project }: { project: Project }) {
   return (
     <section
       aria-label="Bring me up to speed"
-      className="rounded-2xl p-5 space-y-4"
-      style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}
+      className="glass-card-subtle p-5 space-y-4"
     >
       <div className="flex items-baseline justify-between gap-3">
-        <p className={label} style={{ color: 'var(--brand-text-muted)' }}>Up to speed</p>
+        <p className="eyebrow">Up to speed</p>
         {quiet != null && <p className="text-[11px]" style={{ color: 'var(--brand-text-muted)' }}>{awayFor(quiet)}</p>}
       </div>
 
       {state === 'loading' && !data && (
-        <p className="flex items-center gap-2 text-[14px]" style={{ color: 'var(--brand-text-secondary)' }}>
+        <p className="flex items-center gap-2 text-[15px]" style={{ color: 'var(--brand-text-secondary)' }}>
           <Loader2 size={14} className="animate-spin" /> Reading your notes on this…
         </p>
       )}
@@ -67,14 +64,14 @@ export function UpToSpeed({ project }: { project: Project }) {
       {data && (
         <>
           {data.what && (
-            <p className="text-[15px] leading-relaxed" style={{ color: 'var(--brand-text-secondary)', fontFamily: 'var(--brand-font-body)' }}>
+            <p className="text-[15px] leading-relaxed font-serif" style={{ color: 'var(--brand-text-secondary)' }}>
               {data.what}
             </p>
           )}
           {data.where && (
             <div className="space-y-1">
-              <p className={label} style={{ color: 'var(--brand-text-muted)' }}>Where you got to</p>
-              <p className="text-[17px] leading-[1.4]" style={{ color: 'var(--brand-text-primary)', fontFamily: 'var(--brand-font-body)' }}>
+              <p className="eyebrow">Where you got to</p>
+              <p className="type-lead">
                 {data.where.text}
               </p>
               <p className="text-[11px]" style={{ color: 'var(--brand-text-muted)' }}>from your {data.where.from}</p>
@@ -82,10 +79,10 @@ export function UpToSpeed({ project }: { project: Project }) {
           )}
           {data.open.length > 0 && (
             <div className="space-y-2">
-              <p className={label} style={{ color: 'var(--brand-text-muted)' }}>Still up in the air</p>
+              <p className="eyebrow">Still up in the air</p>
               {data.open.map(o => (
                 <div key={o.text}>
-                  <p className="text-[15px] leading-[1.4]" style={{ color: 'var(--brand-text-primary)', fontFamily: 'var(--brand-font-body)' }}>
+                  <p className="text-[15px] leading-[1.45] font-serif" style={{ color: 'var(--brand-text-primary)' }}>
                     {o.text}
                   </p>
                   <p className="text-[11px]" style={{ color: 'var(--brand-text-muted)' }}>from your {o.from}</p>

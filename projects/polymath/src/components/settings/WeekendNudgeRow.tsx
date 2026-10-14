@@ -42,7 +42,7 @@ export function WeekendNudgeRow() {
       <div className="flex items-center justify-between px-4 py-3.5 gap-3">
         <div>
           <p className="text-[15px]" style={{ color: 'var(--brand-text-secondary)' }}>Saturday pick-up</p>
-          <p className="text-[12px]" style={{ color: 'var(--brand-text-muted)' }}>
+          <p className="text-[13px]" style={{ color: 'var(--brand-text-muted)' }}>
             One push on Saturday morning naming a project that's been waiting, and where you got to
           </p>
         </div>
@@ -59,7 +59,7 @@ export function WeekendNudgeRow() {
       </div>
       {error && (
         <div className="px-4 pb-3.5">
-          <p className="text-[12px]" style={{ color: 'rgba(var(--color-error-rgb), 1)' }}>{error}</p>
+          <p className="text-[13px]" style={{ color: 'rgba(var(--color-error-rgb), 1)' }}>{error}</p>
         </div>
       )}
     </div>

@@ -15,8 +15,6 @@ import { useProjectStore } from '../../stores/useProjectStore'
 import { MAX_THEMES, isActivelyWorked, readThemes, type ProjectTheme } from '../../lib/projectThemes'
 import type { Project } from '../../types'
 
-const label = 'text-[11px] font-medium uppercase tracking-[0.14em]'
-
 export function ProjectThemes({ project, onGo }: { project: Project; onGo?: () => void }) {
   const themes = readThemes(project.metadata)
   const [editing, setEditing] = useState(false)
@@ -72,8 +70,8 @@ export function ProjectThemes({ project, onGo }: { project: Project; onGo?: () =
 
   if (editing) {
     return (
-      <div className="rounded-2xl p-5 space-y-3" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(var(--brand-primary-rgb),0.22)' }}>
-        <p className={label} style={{ color: 'var(--brand-text-muted)' }}>Keep in mind</p>
+      <div className="glass-card p-5 space-y-3">
+        <p className="eyebrow">Keep in mind</p>
         <p className="text-[13px] leading-snug" style={{ color: 'var(--brand-text-secondary)' }}>
           Two or three things to hold onto while you work on this. They stay until you change them.
         </p>
@@ -88,7 +86,7 @@ export function ProjectThemes({ project, onGo }: { project: Project; onGo?: () =
             className="field w-full px-3 py-2.5 text-[15px]"
           />
         ))}
-        {note && <p className="text-[12px]" style={{ color: 'var(--brand-text-secondary)' }}>{note}</p>}
+        {note && <p className="text-[13px]" style={{ color: 'var(--brand-text-secondary)' }}>{note}</p>}
         <div className="flex items-center justify-between gap-2 pt-1">
           <button
             onClick={() => { void fromNotes() }}
@@ -117,12 +115,12 @@ export function ProjectThemes({ project, onGo }: { project: Project; onGo?: () =
 
   if (themes.length === 0) {
     return (
-      <div className="rounded-2xl p-5 space-y-2" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}>
-        <p className={label} style={{ color: 'var(--brand-text-muted)' }}>Keep in mind</p>
-        <p className="text-[14px] leading-snug" style={{ color: 'var(--brand-text-secondary)' }}>
+      <div className="glass-card-subtle p-5 space-y-2">
+        <p className="eyebrow">Keep in mind</p>
+        <p className="text-[15px] leading-snug" style={{ color: 'var(--brand-text-secondary)' }}>
           Two or three things to hold onto while you work on this. They show on the home card instead of a next step.
         </p>
-        {note && <p className="text-[12px]" style={{ color: 'var(--brand-text-secondary)' }}>{note}</p>}
+        {note && <p className="text-[13px]" style={{ color: 'var(--brand-text-secondary)' }}>{note}</p>}
         <div className="flex gap-4 pt-1">
           <button
             onClick={() => { void fromNotes() }}
@@ -142,12 +140,9 @@ export function ProjectThemes({ project, onGo }: { project: Project; onGo?: () =
   }
 
   return (
-    <div
-      className="rounded-2xl p-5 space-y-4"
-      style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}
-    >
+    <div className="glass-card p-5 space-y-4">
       <div className="flex items-center justify-between">
-        <p className={label} style={{ color: 'var(--brand-text-muted)' }}>Keep in mind</p>
+        <p className="eyebrow">Keep in mind</p>
         <button
           onClick={() => open(themes.map(t => t.text))}
           className="text-[13px] py-1 px-2 -mr-2"
@@ -170,16 +165,12 @@ export function ProjectThemes({ project, onGo }: { project: Project; onGo?: () =
   )
 }
 
-/** One text style, no decoration: the lines are the content. */
+/** The lead style, no decoration: the lines are the content. */
 export function ThemeList({ themes }: { themes: ProjectTheme[] }) {
   return (
     <ul className="space-y-2">
       {themes.map(t => (
-        <li
-          key={t.text}
-          className="text-[15px] leading-[1.4] font-medium"
-          style={{ color: 'var(--brand-text-primary)', fontFamily: 'var(--brand-font-body)' }}
-        >
+        <li key={t.text} className="type-lead">
           {t.text}
         </li>
       ))}
