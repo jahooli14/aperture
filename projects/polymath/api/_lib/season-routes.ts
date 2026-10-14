@@ -5,8 +5,11 @@
  *        -> { season, projects }            what's set, and the projects to pick from
  *   POST ?resource=season { action: 'read', text }
  *        -> { proposal | null }             what they said, matched to real projects. Not saved.
- *   POST ?resource=season { action: 'apply', main_id, also_ids, until, label }
+ *   POST ?resource=season { action: 'apply', main_id, also: [{ id, size?, waiting?, from? }], until, label }
  *        -> { season }                      saved: the main one made live, the tags written
+ *                                           (also_ids: string[] still works)
+ *   POST ?resource=season { action: 'unblock', project_id }
+ *        -> { season }                      "got it": the waiting note and start date cleared
  *   POST ?resource=season { action: 'clear' }
  *        -> { season }                      the tags removed; the live project stays live
  */
@@ -16,8 +19,8 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { generateText } from './gemini-chat.js'
 import { MODELS } from './models.js'
 import {
-  buildSeasonPrompt, parseSeasonProposal, readSeason, isoDay, isRealDate, MAX_ALSO,
-  type SeasonProject, type SeasonTag,
+  buildSeasonPrompt, parseSeasonProposal, readSeason, readSeasonTag, isoDay, isRealDate, MAX_ALSO,
+  type SeasonProject, type SeasonTag, type SmallSize,
 } from './season.js'
 
 const MODEL_TIMEOUT_MS = 20_000
@@ -98,16 +101,32 @@ export async function handleSeason(
     return res.status(200).json({ season: readSeason(fresh ?? projects, now) })
   }
 
+  if (action === 'unblock') {
+    const id = typeof req.body?.project_id === 'string' ? req.body.project_id : ''
+    const target = projects.find(p => p.id === id)
+    const tag = readSeasonTag(target?.metadata)
+    if (!target || !tag) return res.status(400).json({ error: 'That is not part of the season' })
+    if (!(await setTag(supabase, userId, id, { ...tag, waiting: null, from: null }))) {
+      return res.status(500).json({ error: "Couldn't save that" })
+    }
+    const fresh = await loadProjects(supabase, userId)
+    return res.status(200).json({ season: readSeason(fresh ?? projects, now) })
+  }
+
   if (action === 'apply') {
     const { main_id, also_ids, until, label } = req.body || {}
     const mine = new Map(pickable.map(p => [p.id, p]))
     const main = typeof main_id === 'string' ? mine.get(main_id) : undefined
     if (!main) return res.status(400).json({ error: 'main_id must be one of your projects' })
-    const alsoList = (Array.isArray(also_ids) ? also_ids : [])
-      .filter((id: unknown): id is string => typeof id === 'string' && id !== main.id && mine.has(id))
-      .filter((id: string, i: number, all: string[]) => all.indexOf(id) === i)
-      .slice(0, MAX_ALSO)
-      .map((id: string) => mine.get(id)!)
+    // Each one is an id, or { id, size, waiting, from }.
+    const wanted: { id: string; size?: unknown; waiting?: unknown; from?: unknown }[] = []
+    const asked = Array.isArray(req.body?.also) ? req.body.also : (Array.isArray(also_ids) ? also_ids : [])
+    for (const e of asked) {
+      const o = typeof e === 'string' ? { id: e } : e
+      if (!o || typeof o.id !== 'string' || o.id === main.id || !mine.has(o.id) || wanted.some(w => w.id === o.id)) continue
+      wanted.push(o)
+      if (wanted.length >= MAX_ALSO) break
+    }
     let day: string | null = null
     if (typeof until === 'string' && until.trim()) {
       if (!isRealDate(until)) return res.status(400).json({ error: "That isn't a real date" })
@@ -135,7 +154,12 @@ export async function handleSeason(
     // write. A failure part-way says so instead of returning a
     // half-written season with a 200.
     const tags = new Map<string, SeasonTag>([[main.id, { role: 'main', until: day, label: name }]])
-    for (const a of alsoList) tags.set(a.id, { role: 'also', until: day, label: name })
+    for (const w of wanted) {
+      const size: SmallSize | null = w.size === 'hours' || w.size === 'weekend' ? w.size : null
+      const waiting = typeof w.waiting === 'string' && w.waiting.trim() ? w.waiting.trim().slice(0, 40) : null
+      const from = isRealDate(w.from) ? w.from : null
+      tags.set(w.id, { role: 'also', until: day, label: name, size, waiting, from })
+    }
     for (const [id, tag] of tags) {
       if (!(await setTag(supabase, userId, id, tag))) return res.status(500).json({ error: "Couldn't save that" })
     }

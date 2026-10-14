@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { readSeason, readSeasonTag, inSeason, isRealDate, leadsWithFun, parseSeasonProposal, MAX_ALSO, type SeasonProject } from './season'
+import { readSeason, readSeasonTag, isBlocked, inSeason, isRealDate, leadsWithFun, parseSeasonProposal, MAX_ALSO, type SeasonProject } from './season'
 import { orderBySlots, slotOf } from './mull'
 import type { CorpusRow } from './mull-corpus'
 
@@ -16,7 +16,7 @@ describe('readSeason', () => {
       p({ id: 'paint', metadata: {} }),
     ], now)
     expect(s.main).toEqual({ id: 'book', title: 'Going Analogue' })
-    expect(s.also).toEqual([{ id: 'toy', title: "Oscar's toy" }])
+    expect(s.also).toEqual([{ id: 'toy', title: "Oscar's toy", size: null, blocked: false, waiting: null, from: null }])
     expect(s.until).toBe('2026-12-25')
     expect(s.label).toBe('Christmas')
   })
@@ -61,7 +61,7 @@ describe('readSeason', () => {
 
 describe('tags and days', () => {
   it('reads only a well-formed tag', () => {
-    expect(readSeasonTag({ season: { role: 'main', until: 'soon', label: ' Xmas ' } })).toEqual({ role: 'main', until: null, label: 'Xmas' })
+    expect(readSeasonTag({ season: { role: 'main', until: 'soon', label: ' Xmas ' } })).toEqual({ role: 'main', until: null, label: 'Xmas', size: null, from: null, waiting: null })
     expect(readSeasonTag({ season: { role: 'boss' } })).toBeNull()
     expect(readSeasonTag(null)).toBeNull()
   })
@@ -83,18 +83,65 @@ describe('tags and days', () => {
   })
 })
 
+describe('small finishes', () => {
+  const small = (extra: object) => ({ season: { role: 'also', until: '2026-12-25', label: 'Christmas', ...extra } })
+
+  it('reads size, a waiting note and a start date, and nothing else', () => {
+    expect(readSeasonTag(small({ size: 'weekend', waiting: ' the wood ', from: '2026-11-01' })))
+      .toMatchObject({ size: 'weekend', waiting: 'the wood', from: '2026-11-01' })
+    expect(readSeasonTag(small({ size: 'huge', from: 'soon' }))).toMatchObject({ size: null, from: null })
+  })
+  it('is blocked while it waits on something or its start day is ahead, and frees itself', () => {
+    const tag = (extra: object) => readSeasonTag(small(extra))
+    expect(isBlocked(tag({ waiting: 'the wood' }), now)).toBe(true)
+    expect(isBlocked(tag({ from: '2026-11-01' }), now)).toBe(true)
+    expect(isBlocked(tag({ from: '2026-10-14' }), now)).toBe(false)
+    expect(isBlocked(tag({ from: '2026-10-01' }), now)).toBe(false)
+    expect(isBlocked(tag({}), now)).toBe(false)
+    expect(isBlocked(null, now)).toBe(false)
+  })
+  it('shows up on the season with its state worked out', () => {
+    const s = readSeason([
+      p({ id: 'book', state: 'live' }),
+      p({ id: 'toy', metadata: small({ size: 'weekend', waiting: 'the wood' }) }),
+      p({ id: 'stencil', metadata: small({ size: 'hours' }) }),
+    ], now)
+    expect(s.also).toEqual([
+      { id: 'toy', title: 'toy', size: 'weekend', blocked: true, waiting: 'the wood', from: null },
+      { id: 'stencil', title: 'stencil', size: 'hours', blocked: false, waiting: null, from: null },
+    ])
+  })
+  it('allows three alongside the main one', () => {
+    expect(MAX_ALSO).toBe(3)
+  })
+  it('hears size, waiting and a start day, and refuses a day that has passed', () => {
+    const projects = [{ id: 'book', title: 'Going Analogue' }, { id: 'toy', title: "Oscar's toy" }, { id: 'st', title: 'Stencil' }]
+    const r = parseSeasonProposal(JSON.stringify({
+      main: 'Going Analogue',
+      also: [
+        { title: "Oscar's toy", size: 'weekend', waiting: 'the wood', from: null },
+        { title: 'Stencil', size: 'hours', from: '2026-01-01' },
+      ],
+    }), projects, '2026-10-14')
+    expect(r?.also).toEqual([
+      { id: 'toy', title: "Oscar's toy", size: 'weekend', waiting: 'the wood', from: null },
+      { id: 'st', title: 'Stencil', size: 'hours', waiting: null, from: null },
+    ])
+  })
+})
+
 describe('saying it out loud', () => {
   const projects = [{ id: 'book', title: 'Going Analogue' }, { id: 'toy', title: "Oscar's toy" }, { id: 'paint', title: 'Paint pouring' }]
   const ok = (o: object) => parseSeasonProposal(JSON.stringify(o), projects, '2026-10-14')
 
   it('keeps titles that match, a date that holds and a short label', () => {
     expect(ok({ main: 'Going Analogue', also: ["oscar's toy"], until: '2026-12-25', label: 'Christmas' })).toEqual({
-      main: { id: 'book', title: 'Going Analogue' }, also: [{ id: 'toy', title: "Oscar's toy" }], until: '2026-12-25', label: 'Christmas',
+      main: { id: 'book', title: 'Going Analogue' }, also: [{ id: 'toy', title: "Oscar's toy", size: null, waiting: null, from: null }], until: '2026-12-25', label: 'Christmas',
     })
   })
   it('drops a title that is not a project, a date that has passed, and a repeat of the main', () => {
     const r = ok({ main: 'Going Analogue', also: ['A film script', 'Going Analogue', 'Paint pouring'], until: '2026-01-01', label: '' })
-    expect(r?.also).toEqual([{ id: 'paint', title: 'Paint pouring' }])
+    expect(r?.also).toEqual([{ id: 'paint', title: 'Paint pouring', size: null, waiting: null, from: null }])
     expect(r?.until).toBeNull()
     expect(r?.label).toBeNull()
   })

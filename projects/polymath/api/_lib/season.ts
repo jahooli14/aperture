@@ -17,11 +17,29 @@ import { normaliseTitle } from './mull-corpus.js'
 
 export type SeasonRole = 'main' | 'also'
 
+export type SmallSize = 'hours' | 'weekend'
+
 export interface SeasonTag {
   role: SeasonRole
   /** ISO date (YYYY-MM-DD) the season ends, or null for open-ended. */
   until: string | null
   label: string | null
+  /** A small finish: "a few hours" or "a weekend". Never asked for. */
+  size?: SmallSize | null
+  /** Can't start until this day ("when the wood arrives"). */
+  from?: string | null
+  /** What it's waiting on, in their words. Cleared with one tap. */
+  waiting?: string | null
+}
+
+export interface SeasonAlso {
+  id: string
+  title: string
+  size: SmallSize | null
+  /** Can't be started yet. Worked out when read, never stored. */
+  blocked: boolean
+  waiting: string | null
+  from: string | null
 }
 
 export interface SeasonProject {
@@ -35,7 +53,7 @@ export interface SeasonProject {
 
 export interface Season {
   main: { id: string; title: string } | null
-  also: { id: string; title: string }[]
+  also: SeasonAlso[]
   until: string | null
   label: string | null
   /** A season has actually been set and is still running. A live project
@@ -44,17 +62,31 @@ export interface Season {
   active: boolean
 }
 
-export const MAX_ALSO = 2
+export const MAX_ALSO = 3
 const DONE = new Set(['completed', 'archived', 'abandoned', 'graveyard'])
 
 export function readSeasonTag(metadata: unknown): SeasonTag | null {
   const raw = (metadata as { season?: Partial<SeasonTag> } | null)?.season
   if (!raw || (raw.role !== 'main' && raw.role !== 'also')) return null
+  const day = (v: unknown) => (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null)
+  const waiting = typeof raw.waiting === 'string' && raw.waiting.trim() ? raw.waiting.trim().slice(0, 40) : null
   return {
     role: raw.role,
-    until: typeof raw.until === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(raw.until) ? raw.until : null,
+    until: day(raw.until),
     label: typeof raw.label === 'string' && raw.label.trim() ? raw.label.trim().slice(0, 30) : null,
+    size: raw.size === 'hours' || raw.size === 'weekend' ? raw.size : null,
+    from: day(raw.from),
+    waiting,
   }
+}
+
+/** Can't be started yet: it names something it's waiting on, or its start
+ *  date hasn't come. Worked out each time it's read, so nothing has to be
+ *  cleared when the day arrives. */
+export function isBlocked(tag: SeasonTag | null, now: Date): boolean {
+  if (!tag) return false
+  if (tag.waiting) return true
+  return !!tag.from && tag.from > isoDay(now)
 }
 
 export function isoDay(d: Date): string {
@@ -78,7 +110,7 @@ export function inSeason(tag: SeasonTag | null, now: Date): boolean {
 /**
  * The season as it stands today. The main project is the live one, so
  * this always agrees with the home card. Projects tagged `also` count only
- * while their date holds, and only the first two.
+ * while their date holds, and only the first three.
  */
 export function readSeason(projects: SeasonProject[], now = new Date()): Season {
   const open = projects.filter(p => !DONE.has(p.status ?? '') && p.state !== 'harvested')
@@ -90,7 +122,13 @@ export function readSeason(projects: SeasonProject[], now = new Date()): Season 
     .filter(p => p.id !== live.id)
     .filter(p => { const t = readSeasonTag(p.metadata); return t?.role === 'also' && inSeason(t, now) })
     .slice(0, MAX_ALSO)
-    .map(p => ({ id: p.id, title: p.title }))
+    .map((p): SeasonAlso => {
+      const t = readSeasonTag(p.metadata)
+      return {
+        id: p.id, title: p.title, size: t?.size ?? null,
+        blocked: isBlocked(t, now), waiting: t?.waiting ?? null, from: t?.from ?? null,
+      }
+    })
   return {
     main: { id: live.id, title: live.title },
     also,
@@ -110,9 +148,17 @@ export function leadsWithFun(now: Date): boolean {
 
 // ─── Saying it out loud ───────────────────────────────────────────────
 
+export interface ProposalAlso {
+  id: string
+  title: string
+  size: SmallSize | null
+  waiting: string | null
+  from: string | null
+}
+
 export interface Proposal {
   main: { id: string; title: string } | null
-  also: { id: string; title: string }[]
+  also: ProposalAlso[]
   until: string | null
   label: string | null
 }
@@ -120,7 +166,7 @@ export interface Proposal {
 export function buildSeasonPrompt(said: string, projects: { title: string }[], today: string): string {
   return `Someone is telling their creative app what matters for the next stretch of time.
 Read what they said and pull out: which project is the MAIN one, up to ${MAX_ALSO}
-others that matter too, and when the stretch ends.
+smaller ones to finish too, and when the stretch ends.
 
 Today is ${today}.
 
@@ -131,7 +177,9 @@ What they said:
 "${said.replace(/"/g, "'").slice(0, 1200)}"
 
 Return JSON only:
-{ "main": "exact title or null", "also": ["exact title"], "until": "YYYY-MM-DD or null", "label": "2-3 words or null" }
+{ "main": "exact title or null",
+  "also": [{ "title": "exact title", "size": "hours | weekend | null", "waiting": "short phrase or null", "from": "YYYY-MM-DD or null" }],
+  "until": "YYYY-MM-DD or null", "label": "2-3 words or null" }
 
 Rules:
 - Only titles from the list. If they name something that isn't there, leave it out.
@@ -139,6 +187,9 @@ Rules:
 - "until": turn "Christmas" into 25 December, "end of the year" into 31 December, "the summer" into 31 August,
   using the next one that hasn't passed. null if they gave no time.
 - "label": what they'd call the stretch, like "Christmas". null if they didn't.
+- "size": "hours" if they say it takes a few hours or an evening; "weekend" if it takes a weekend or longer. null if they didn't say.
+- "waiting": only if they say they can't start yet, in their words, like "the wood". null otherwise.
+- "from": only if they give a day it can start. Use the next one that hasn't passed. "In a few weeks" is not a day: leave it null and put the reason in "waiting".
 - Don't add anything they didn't say.`
 }
 
@@ -155,10 +206,18 @@ export function parseSeasonProposal(raw: string, projects: { id: string; title: 
   const find = (t: unknown) => (typeof t === 'string' ? byTitle.get(normaliseTitle(t)) : undefined)
 
   const main = find(parsed.main) ?? null
-  const also: { id: string; title: string }[] = []
-  for (const t of Array.isArray(parsed.also) ? parsed.also : []) {
-    const p = find(t)
-    if (p && p.id !== main?.id && !also.some(a => a.id === p.id)) also.push({ id: p.id, title: p.title })
+  const also: ProposalAlso[] = []
+  for (const entry of Array.isArray(parsed.also) ? parsed.also : []) {
+    // A bare title is still fine: older answers and shorter sentences.
+    const obj = entry && typeof entry === 'object' ? entry : { title: entry }
+    const p = find(obj.title)
+    if (!p || p.id === main?.id || also.some(a => a.id === p.id)) continue
+    also.push({
+      id: p.id, title: p.title,
+      size: obj.size === 'hours' || obj.size === 'weekend' ? obj.size : null,
+      waiting: typeof obj.waiting === 'string' && obj.waiting.trim() ? obj.waiting.trim().slice(0, 40) : null,
+      from: isRealDate(obj.from) && obj.from >= today ? obj.from : null,
+    })
     if (also.length >= MAX_ALSO) break
   }
   const until = isRealDate(parsed.until) && parsed.until >= today ? parsed.until : null

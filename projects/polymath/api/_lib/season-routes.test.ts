@@ -54,6 +54,31 @@ beforeEach(() => {
   ]
 })
 
+describe('small finishes', () => {
+  it('saves size, what it waits on and a start day, and "got it" clears the wait', async () => {
+    const db = fakeDb(projects)
+    await call(db, {
+      action: 'apply', main_id: 'book', until: '2999-12-25',
+      also: [{ id: 'toy', size: 'weekend', waiting: 'the wood' }, { id: 'paint', size: 'hours', from: '2999-01-01' }],
+    })
+    const meta = (id: string) => projects.find(p => p.id === id)!.metadata.season
+    expect(meta('toy')).toMatchObject({ role: 'also', size: 'weekend', waiting: 'the wood' })
+    expect(meta('paint')).toMatchObject({ size: 'hours', from: '2999-01-01' })
+
+    const { json } = await call(db, { action: 'unblock', project_id: 'toy' })
+    expect(meta('toy')).toMatchObject({ waiting: null, from: null, size: 'weekend' })
+    expect(json.season.also.find((a: any) => a.id === 'toy').blocked).toBe(false)
+  })
+  it('refuses to unblock something that is not in the season', async () => {
+    const { status } = await call(fakeDb(projects), { action: 'unblock', project_id: 'toy' })
+    expect(status).toBe(400)
+  })
+  it('drops a start day that is not a real date', async () => {
+    await call(fakeDb(projects), { action: 'apply', main_id: 'book', also: [{ id: 'toy', from: '2026-02-31' }] })
+    expect(projects.find(p => p.id === 'toy')!.metadata.season.from).toBeNull()
+  })
+})
+
 describe('applying a season', () => {
   it('makes the main one live, tags the others, and clears the old season', async () => {
     const { json } = await call(fakeDb(projects), { action: 'apply', main_id: 'toy', also_ids: ['book'], until: '2999-12-25', label: 'Christmas' })
