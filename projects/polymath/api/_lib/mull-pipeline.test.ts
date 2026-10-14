@@ -10,7 +10,7 @@
  * judge's say-so.
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 const generateText = vi.fn()
 vi.mock('./gemini-chat.js', () => ({ generateText: (...a: unknown[]) => generateText(...a) }))
@@ -28,8 +28,8 @@ const ago = (days: number) => new Date(Date.now() - days * DAY).toISOString()
 function corpus() {
   return {
     projects: [
-      { user_id: 'u1', id: 'p-book', title: 'The book', description: 'A novel where characters get swapped out partway through', state: 'mull', status: 'active', created_at: ago(600), last_active: ago(20) },
-      { user_id: 'u1', id: 'p-dead', title: 'Abandoned mural', description: 'A wall mural nobody finished', state: 'mull', status: 'abandoned', created_at: ago(500), last_active: ago(400) },
+      { user_id: 'u1', id: 'p-book', title: 'The book', description: 'A novel where characters get swapped out partway through', state: 'mull', status: 'active', is_priority: false, metadata: {}, created_at: ago(600), last_active: ago(20) },
+      { user_id: 'u1', id: 'p-dead', title: 'Abandoned mural', description: 'A wall mural nobody finished', state: 'mull', status: 'abandoned', is_priority: false, metadata: {}, created_at: ago(500), last_active: ago(400) },
     ],
     memories: [
       { user_id: 'u1', id: 'm1', title: 'Dad', body: 'Ten more proper conversations with dad, probably, and we spend them on the greenhouse. It is the only tidy room in a messy house.', created_at: ago(280), tags: [], source_reference: null },
@@ -291,10 +291,85 @@ describe('the mull channel, end to end', () => {
       expect(baked.map(b => b.text)).toEqual([ONE_TAKE.question])
     })
 
-    it('a weak crossing does not beat a much stronger take', async () => {
+    it('the main project leads even when a take about something else scores higher', async () => {
       respond({ draft: [GREENHOUSE, ONE_TAKE], judge: [ship(1, { revelation: 10, truth: 10, specific: 10, answerable: 10 }), ship(2, { revelation: 7, truth: 7, specific: 6, answerable: 6 })] })
       const baked = await bakeMull(fakeSupabase(withLiveBook()).client, 'u1')
-      expect(baked[0].text).toBe(GREENHOUSE.question)
+      expect(baked[0].text).toBe(ONE_TAKE.question)
+    })
+  })
+
+  describe('the season: main, then the others, then something wild', () => {
+    const TOY_FRAGMENT = { user_id: 'u1', id: 'f-toy', text: 'sanded the wheel arches twice', created_at: ago(10), memory_id: null, project_id: 'p-toy', projects: { title: "Oscar's toy", state: 'mull', status: 'active' } }
+    const ALSO_TAKE = {
+      noticing: 'The only tidy room and the toy both want one clear space.',
+      doubt: 'A greenhouse and a toy may just be two unrelated things.',
+      evidence: [
+        { ref: 'N1', quote: 'the only tidy room in a messy house' },
+        { ref: 'F2', quote: 'sanded the wheel arches twice' },
+      ],
+      question: "You said the greenhouse is the only tidy room in a messy house. You sanded the wheel arches twice. I think Oscar's toy needs one clear room, not a messy bench.",
+      stake: 'The toy gets made on a cleared table.',
+      project: null,
+    }
+    const WILD = {
+      noticing: 'An article and a list item both circle doing it once.',
+      doubt: 'It may be only two things that share a theme in my reading.',
+      evidence: [
+        { ref: 'A1', quote: 'The recording is not a document of the performance' },
+        { ref: 'L1', quote: 'Learn to solder properly' },
+      ],
+      question: 'The article On first takes says the recording is the performance. Learning to solder properly has sat on your list for years. I think the thing you keep circling is doing it once and leaving it.',
+      stake: 'Solder one thing in one sitting.',
+      project: null,
+    }
+    const withSeason = () => {
+      const data = corpus() as any
+      data.projects[0].state = 'live'
+      data.projects.push({ user_id: 'u1', id: 'p-toy', title: "Oscar's toy", description: 'A wooden toy for his first birthday', state: 'on-deck', status: 'active', is_priority: false, metadata: { season: { role: 'also', until: '2999-12-25', label: 'Christmas' } }, created_at: ago(60), last_active: ago(5) })
+      data.fragments.push(TOY_FRAGMENT)
+      return data
+    }
+    /** A day on which the run does NOT lead with the wild one, or does. */
+    const onDay = (funFirst: boolean) => {
+      const real = Math.floor(Date.now() / DAY)
+      let d = real
+      while ((d % 3 === 2) !== funFirst) d++
+      vi.spyOn(Date, 'now').mockReturnValue(d * DAY + 3_600_000)
+    }
+    afterEach(() => { vi.restoreAllMocks() })
+
+    it('puts the main project first, then the other, then the wild one', async () => {
+      onDay(false)
+      respond({ draft: [WILD, ALSO_TAKE, ONE_TAKE], judge: [ship(1), ship(2), ship(3)] })
+      const trace: string[] = []
+      const baked = await bakeMull(fakeSupabase(withSeason()).client, 'u1', undefined, trace)
+      expect(baked.map(b => b.text)).toEqual([ONE_TAKE.question, ALSO_TAKE.question, WILD.question])
+      expect(baked.map(b => b.project_id)).toEqual(['p-book', 'p-toy', null])
+      expect(trace.join('\n')).toMatch(/season: main > also > wild/)
+    })
+
+    it('about one run in three leads with the wild one', async () => {
+      onDay(true)
+      respond({ draft: [ONE_TAKE, ALSO_TAKE, WILD], judge: [ship(1), ship(2), ship(3)] })
+      const baked = await bakeMull(fakeSupabase(withSeason()).client, 'u1')
+      expect(baked.map(b => b.text)).toEqual([WILD.question, ONE_TAKE.question, ALSO_TAKE.question])
+    })
+
+    it('asks the drafter for the other project and for a wild one', async () => {
+      onDay(false)
+      respond({ draft: [ONE_TAKE], judge: [ship(1)] })
+      await bakeMull(fakeSupabase(withSeason()).client, 'u1')
+      expect(draftPromptSent()).toMatch(/ALSO THIS SEASON: "Oscar's toy"/)
+      expect(draftPromptSent()).toMatch(/THE WILD ONE/)
+    })
+
+    it('ignores the other project once its date has passed', async () => {
+      onDay(false)
+      const data = withSeason()
+      data.projects[2].metadata = { season: { role: 'also', until: '2000-01-01', label: 'Christmas' } }
+      respond({ draft: [ONE_TAKE], judge: [ship(1)] })
+      await bakeMull(fakeSupabase(data).client, 'u1')
+      expect(draftPromptSent()).not.toMatch(/ALSO THIS SEASON/)
     })
   })
 

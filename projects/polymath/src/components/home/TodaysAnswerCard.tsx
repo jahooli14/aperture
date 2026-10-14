@@ -35,6 +35,7 @@ import { useSessionStore, readStoredMove } from '../../stores/useSessionStore'
 import { splitDoneWhen } from '../session/sessionRunOps'
 import { haptic } from '../../utils/haptics'
 import { isActivelyWorked, readThemes } from '../../lib/projectThemes'
+import { seasonLine } from '../../lib/season'
 import { ThemeList } from '../projects/ProjectThemes'
 
 export function TodaysAnswerCard() {
@@ -355,6 +356,7 @@ export function TodaysAnswerCard() {
           }}
         >
           {formatRelativeTime(focusProject.last_active || focusProject.updated_at)}
+          {seasonLine(focusProject.metadata) ? ` · ${seasonLine(focusProject.metadata)}` : ''}
         </span>
 
         {/* The readout below carries no border — it's a passive surface,

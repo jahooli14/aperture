@@ -144,6 +144,15 @@ Why: the owner rarely opened the app during a creative session. On the live proj
 - **Saturday pick-up** (`api/_lib/weekend-nudge.ts`, `WeekendNudgeRow.tsx`). Opt-in, off by default. One push from 10am local on Saturday naming the warmest project quiet 14–365 days — never the live one, never last week's — opening on its catch-up. Rides the 2-hourly `job=voice-reminder`. Needs `20261012_weekend_nudge.sql`; until then the toggle hides.
 - **Triage no longer adds open tasks.** A note triaged `task_update` used to be appended to `metadata.tasks` as an open step, so "finished chapter four" showed as still to do. It now only bumps `last_active`; the note stays linked by `triage.project_id`.
 
+### The season — what matters for a stretch of time (Oct 2026)
+
+The owner says it once, out loud or typed, in Settings → "what matters now": *"Until Christmas, Going Analogue is main, Oscar's toy is second, the rest is for fun."* It's read back as a form (`SeasonRow.tsx`, `resource=season` → `season-routes.ts`; `read` matches only real project titles, `apply` saves) and the corpus aims at it (`season.ts`, pure).
+
+- **No new table.** The main project is the live one (`state = 'live'`, same gesture as `declare-live`, so the home card, sessions and sparks already follow it). A project's `metadata.season = { role: 'main' | 'also', until, label }` says what it's doing; at most two `also`. A season is over when its date passes — nothing is asked or deleted, the projects just stop being weighted. Applying a new season clears the old tags first.
+- **Takes follow it** (`mull-generator.ts`): the draft is asked for a crossing for the main project, one for each `also`, and always one **wild** candidate about none of them — two or three things of theirs meeting somewhere else, for fun. After judging, `orderBySlots` (`mull.ts`) orders main → also → wild, and **about one run in three leads with the wild one** (`leadsWithFun`, decided by the day number, nothing stored). A take filed under an `also` project gets that project's id. No season → exactly the old behaviour.
+- **One muted line on the home card** (`src/lib/season.ts`): "10 weeks to Christmas" — day arithmetic, never a pace or a warning.
+- Only one period at a time. A sequence of periods ("then in January the toy is main") isn't modelled yet.
+
 ### The new-project chat (`CreateProjectDialog`, `api/_lib/shaping-seeds.ts`)
 
 Its job is to help someone find the version of an idea that only they would make — not to plan it, and not to prove it remembers their notes. The old reply read a note back ("that course gave you a good start") under a row of nearest-neighbour chips; naively fixed, it would offer what any chatbot offers (a stacking set, a rattle). Neither is original.

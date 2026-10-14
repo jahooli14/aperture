@@ -10,6 +10,7 @@ import { useToast } from '../components/ui/toast'
 import { useNotificationSettings } from '../stores/useNotificationSettings'
 import { useJourneyStore } from '../stores/useJourneyStore'
 import { WeekendNudgeRow } from '../components/settings/WeekendNudgeRow'
+import { SeasonRow } from '../components/settings/SeasonRow'
 
 const intensityOptions = [
   { value: 'subtle' as const, label: 'Subtle', description: 'Quiet — less glow, less motion' },
@@ -546,6 +547,14 @@ export function SettingsPage() {
                 </button>
               </div>
             </div>
+          </div>
+        </section>
+
+        {/* The season: what matters for a stretch of time. */}
+        <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mb-10">
+          <div>
+            <h2 className="section-heading">what <span className="accent">matters now</span></h2>
+            <SeasonRow />
           </div>
         </section>
 

@@ -381,6 +381,40 @@ export const crossesLiveProject = (
   rows: CorpusRow[], corpus: Corpus, liveProjectId: string | null | undefined,
 ): boolean => crossingDepth(rows, corpus, liveProjectId) > 0
 
+/**
+ * Which part of the season a take serves. "main" if it leans on the main
+ * project, "also" if it leans on one of the others that matter this
+ * season, "wild" if it's about neither: two things of theirs meeting
+ * somewhere else, for fun.
+ */
+export type Slot = 'main' | 'also' | 'wild'
+
+export function slotOf(
+  rows: CorpusRow[], mainId: string | null | undefined, alsoIds: string[],
+): { slot: Slot; projectId: string | null } {
+  const touches = (id: string) => rows.some(r => (r.kind === 'project' && r.id === id) || r.projectId === id)
+  if (mainId && touches(mainId)) return { slot: 'main', projectId: mainId }
+  const also = alsoIds.find(touches)
+  if (also) return { slot: 'also', projectId: also }
+  return { slot: 'wild', projectId: null }
+}
+
+/**
+ * The season decides the order. Normally main, then also, then the wild
+ * one; roughly one run in three leads with the wild one instead, so the
+ * fun is never only an afterthought. A slot nobody filled is skipped, and
+ * whatever's left follows in the order it already had.
+ */
+export function orderBySlots<T>(ranked: T[], slotFor: (t: T) => Slot, funFirst: boolean): T[] {
+  const order: Slot[] = funFirst ? ['wild', 'main', 'also'] : ['main', 'also', 'wild']
+  const out: T[] = []
+  for (const slot of order) {
+    const pick = ranked.find(t => !out.includes(t) && slotFor(t) === slot)
+    if (pick) out.push(pick)
+  }
+  return [...out, ...ranked.filter(t => !out.includes(t))]
+}
+
 /** On top of CROSSING_BONUS: all three kinds of thing in one take. */
 export const TRIFECTA_BONUS = 8
 

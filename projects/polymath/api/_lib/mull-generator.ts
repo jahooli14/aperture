@@ -30,13 +30,14 @@
  */
 
 import { readThemes } from './project-themes.js'
+import { readSeason, leadsWithFun, type Season, type SeasonProject } from './season.js'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { generateText } from './gemini-chat.js'
 import { parseModelJson } from './schemas.js'
 import { echoesRecent, fetchRecentSparkTexts, fetchRecentSparkProjectIds, fetchRecentSparkSubjectIds } from './spark-echo.js'
 import { SPARK_CORRECTION_TAG, isAppAuthored } from './corpus-provenance.js'
 import { loadCorpus, normaliseTitle, type Corpus, type CorpusRow } from './mull-corpus.js'
-import { checkCandidate, crossingDepth, CROSSING_BONUS, TRIFECTA_BONUS, judgeShips, judgeRank, parseJudgeScores, type Candidate, type Grounded, type JudgeScore } from './mull.js'
+import { checkCandidate, crossingDepth, CROSSING_BONUS, TRIFECTA_BONUS, slotOf, orderBySlots, type Slot, judgeShips, judgeRank, parseJudgeScores, type Candidate, type Grounded, type JudgeScore } from './mull.js'
 import { draftPrompt, judgePrompt } from './mull-prompts.js'
 
 /**
@@ -120,6 +121,8 @@ export interface EchoContext {
   focus?: string
   /** The project they're working on, for the crossing (mull.ts). */
   live?: { id: string; title: string } | null
+  /** What matters this stretch (season.ts): the main project, the others, the date. */
+  season?: Season | null
 }
 
 /**
@@ -307,25 +310,23 @@ the live project; reach out from it.
 `
 }
 
-/** The project they're deep in. Same pick as loadFocus: live or starred,
- *  active, most recently touched. Null is fine: no crossing is asked for. */
-export async function loadLiveProject(
-  supabase: SupabaseClient, userId: string,
-): Promise<{ id: string; title: string } | null> {
+/** What matters this stretch (season.ts). The main project is the live
+ *  one, the same pick as the home card. Null is fine: no aim is asked for. */
+export async function loadSeason(supabase: SupabaseClient, userId: string): Promise<Season | null> {
   try {
-    const { data, error } = await supabase.from('projects').select('id, title')
-      .eq('user_id', userId).eq('status', 'active')
-      .or('state.eq.live,is_priority.eq.true')
-      .order('last_active', { ascending: false }).limit(1)
+    const { data, error } = await supabase.from('projects')
+      .select('id, title, state, status, is_priority, metadata')
+      .eq('user_id', userId)
+      .order('last_active', { ascending: false }).limit(60)
     if (error) {
-      console.warn('[mull] could not read the live project:', error.message)
+      console.warn('[mull] could not read the season:', error.message)
       return null
     }
-    const p = (data ?? [])[0] as { id?: string; title?: string } | undefined
-    return p?.id && p?.title ? { id: p.id, title: p.title } : null
+    const season = readSeason((data ?? []) as SeasonProject[])
+    return season.main ? season : null
   } catch (e) {
     // A garnish: never costs the run.
-    console.warn('[mull] could not read the live project:', e instanceof Error ? e.message : String(e))
+    console.warn('[mull] could not read the season:', e instanceof Error ? e.message : String(e))
     return null
   }
 }
@@ -333,16 +334,16 @@ export async function loadLiveProject(
 export async function loadEchoContext(
   supabase: SupabaseClient, userId: string,
 ): Promise<EchoContext> {
-  const [recentTexts, recentProjectIds, recentSubjectIds, resonance, corrections, focus, live] = await Promise.all([
+  const [recentTexts, recentProjectIds, recentSubjectIds, resonance, corrections, focus, season] = await Promise.all([
     fetchRecentSparkTexts(supabase, userId),
     fetchRecentSparkProjectIds(supabase, userId),
     fetchRecentSparkSubjectIds(supabase, userId),
     loadResonance(supabase, userId),
     loadCorrections(supabase, userId),
     loadFocus(supabase, userId),
-    loadLiveProject(supabase, userId),
+    loadSeason(supabase, userId),
   ])
-  return { recentTexts, recentProjectIds, recentSubjectIds, resonance, corrections, focus, live }
+  return { recentTexts, recentProjectIds, recentSubjectIds, resonance, corrections, focus, live: season?.main ?? null, season }
 }
 
 function expiresAt(hours: number): string {
@@ -468,13 +469,14 @@ export async function generateMull(
 
   const prompt = draftPrompt({
     corpusText: corpus.text,
-    howMany: CANDIDATES_PER_RUN,
+    howMany: (echo.season?.also.length ?? 0) > 0 ? CANDIDATES_PER_RUN + 2 : CANDIDATES_PER_RUN,
     recentQuestions: recentTexts,
     recentRefs: corpus.rows.filter(r => recentIds.has(r.id)).map(r => r.ref),
     resonance: echo.resonance,
     corrections: echo.corrections,
     focus: echo.focus ?? '',
-    liveTitle: echo.live?.title ?? null,
+    liveTitle: echo.season?.main?.title ?? echo.live?.title ?? null,
+    alsoTitles: echo.season?.also.map(p => p.title) ?? [],
   })
   trace.push(`draft prompt: ${prompt.length} chars`)
 
@@ -524,7 +526,9 @@ export async function generateMull(
   // The Venn: a take that crosses the live project outranks one that stays
   // inside it (mull.ts, CROSSING_BONUS). Judged by the rows it cites, and
   // by the judge's own read as a second opinion.
-  const liveId = echo.live?.id ?? null
+  const mainId = echo.season?.main?.id ?? echo.live?.id ?? null
+  const alsoIds = echo.season?.also.map(p => p.id) ?? []
+  const liveId = mainId
   const depths = new Map<Grounded, 0 | 1 | 2>()
   // The judge's own read ("crosses") can lift a 0 to a 1, never past it:
   // only the cited rows can prove the trifecta.
@@ -561,6 +565,15 @@ export async function generateMull(
     depths.set(best, depthOf(best))
     ranked = [best]
   }
+  // The season decides the order: main, then the others, then the wild one
+  // (or the wild one first about one run in three). Only when there is a
+  // season to aim at.
+  const slots = new Map<Grounded, { slot: Slot; projectId: string | null }>()
+  if (mainId) {
+    for (const g of ranked) slots.set(g, slotOf(g.rows, mainId, alsoIds))
+    ranked = orderBySlots(ranked, g => slots.get(g)!.slot, leadsWithFun(new Date(Date.now())))
+    trace.push(`season: ${ranked.map(g => slots.get(g)!.slot).join(' > ') || 'nothing shipped'}`)
+  }
   if (liveId) {
     const n = (d: number) => ranked.filter(g => (depths.get(g) ?? 0) >= d).length
     trace.push(`crossing: ${n(1)} of ${ranked.length} shipped candidates cross "${echo.live?.title}" (${n(2)} with a note and a list item)`)
@@ -576,7 +589,9 @@ export async function generateMull(
       type: 'mull',
       text: g.question,
       // A crossing is about the live project, whatever else it leans on.
-      project_id: (depths.get(g) ?? 0) > 0 && liveId ? liveId : projectFor(g, corpus),
+      project_id: slots.get(g)?.slot === 'also'
+        ? slots.get(g)!.projectId
+        : (depths.get(g) ?? 0) > 0 && liveId ? liveId : projectFor(g, corpus),
       // Each banked one lives a shelf-life longer than the one in front of
       // it, so the queue order is carried by expiry and nothing expires
       // unseen while it waits.
