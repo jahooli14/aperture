@@ -895,3 +895,38 @@ h6 {
     .neon-button::after { animation: none; }
     .mull-line { animation: none; opacity: 1; filter: none; }
 }
+
+/* ─── Four text styles ───────────────────────────────────────
+   Cards on the home, project and settings pages use only these:
+   .eyebrow (11) · small (13) · body (15) · .type-lead (19).
+   Nothing else, and no fading text with opacity: quieter means a
+   smaller size or --brand-text-muted. */
+.eyebrow {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--brand-text-muted);
+}
+.type-lead {
+    font-family: var(--brand-font-serif);
+    font-size: 19px;
+    line-height: 1.3;
+    color: var(--brand-text-primary);
+}
+/* A small state chip (Live, Parked, a label). Quiet, never faded. */
+.quiet-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--brand-text-secondary);
+    background: rgba(255, 255, 255, 0.05);
+}
+.quiet-pill[data-on='true'] {
+    color: rgb(var(--brand-primary-rgb));
+    background: rgba(var(--brand-primary-rgb), 0.1);
+}

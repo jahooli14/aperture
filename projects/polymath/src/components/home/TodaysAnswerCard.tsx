@@ -35,6 +35,7 @@ import { useSessionStore, readStoredMove } from '../../stores/useSessionStore'
 import { splitDoneWhen } from '../session/sessionRunOps'
 import { haptic } from '../../utils/haptics'
 import { isActivelyWorked, readThemes } from '../../lib/projectThemes'
+import { seasonLine } from '../../lib/season'
 import { ThemeList } from '../projects/ProjectThemes'
 
 export function TodaysAnswerCard() {
@@ -149,8 +150,7 @@ export function TodaysAnswerCard() {
     if (projects.length === 0 && (projectsLoading || !projectsInitialized)) {
       return (
         <div
-          className="rounded-2xl p-5 h-[132px]"
-          style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}
+          className="glass-card-subtle p-5 h-[132px]"
           aria-hidden
         />
       )
@@ -355,6 +355,7 @@ export function TodaysAnswerCard() {
           }}
         >
           {formatRelativeTime(focusProject.last_active || focusProject.updated_at)}
+          {seasonLine(focusProject) ? ` · ${seasonLine(focusProject)}` : ''}
         </span>
 
         {/* The readout below carries no border — it's a passive surface,
@@ -368,7 +369,7 @@ export function TodaysAnswerCard() {
             </p>
             <ThemeList themes={themes} />
             {reEntry && (
-              <p className="text-[12px] mt-2 line-clamp-2" style={{ color: 'var(--brand-text-secondary)' }}>
+              <p className="text-[13px] mt-2 line-clamp-2" style={{ color: 'var(--brand-text-secondary)' }}>
                 You stopped with “{reEntry}”
               </p>
             )}
@@ -385,10 +386,10 @@ export function TodaysAnswerCard() {
               {nextMove.move}
             </p>
             {nextMove.doneWhen && (
-              <p className="text-[12px] mt-1" style={{ color: 'var(--brand-text-secondary)' }}>{nextMove.doneWhen}</p>
+              <p className="text-[13px] mt-1" style={{ color: 'var(--brand-text-secondary)' }}>{nextMove.doneWhen}</p>
             )}
             {reEntry && (
-              <p className="text-[12px] mt-1.5 line-clamp-1" style={{ color: 'var(--brand-text-secondary)' }}>
+              <p className="text-[13px] mt-1.5 line-clamp-1" style={{ color: 'var(--brand-text-secondary)' }}>
                 You stopped with “{reEntry}”
               </p>
             )}
@@ -406,7 +407,7 @@ export function TodaysAnswerCard() {
               where you left off
             </p>
             <p
-              className="text-[14px] leading-[1.4] line-clamp-3"
+              className="text-[15px] leading-[1.4] line-clamp-3"
               style={{ color: 'var(--brand-text-primary)', fontFamily: 'var(--brand-font-body)' }}
             >
               “{reEntry}”
@@ -428,8 +429,8 @@ export function TodaysAnswerCard() {
           {nextMove && !steering && (
             <button
               onClick={() => setTweaking(t => !t)}
-              className="w-full text-[12px] py-0.5"
-              style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.85 }}
+              className="w-full text-[13px] py-0.5"
+              style={{ color: 'rgb(var(--brand-primary-rgb))' }}
             >
               {tweaking ? 'Keep this one' : 'Not this — change it'}
             </button>

@@ -53,7 +53,7 @@ const STANCES: { id: Stance; label: string; hint: string }[] = [
   { id: 'sort_of', label: 'sort of', hint: 'Where does it break?' },
 ]
 
-const quietActionStyle = { color: 'rgb(var(--brand-primary-rgb))', opacity: 0.85 }
+const quietActionStyle = { color: 'rgb(var(--brand-primary-rgb))' }
 
 export function StandingQuestion() {
   const [spark, setSpark] = useState<StandingQuestionSpark | null>(null)
@@ -273,21 +273,21 @@ export function StandingQuestion() {
         </p>
         <button
           className="text-[13px] italic transition-opacity hover:opacity-80 disabled:opacity-35"
-          style={{ color: 'var(--brand-text-secondary)', opacity: 0.75, fontFamily: 'var(--brand-font-serif)' }}
+          style={{ color: 'var(--brand-text-muted)', fontFamily: 'var(--brand-font-serif)' }}
           disabled={rerolling}
           onClick={() => reroll()}
         >
           {rerolling && rerollKind === 'plain' ? 'thinking…' : 'give me something to think about'}
         </button>
         {note && (
-          <p className="text-[11px] mt-1.5" style={{ color: 'var(--brand-text-secondary)', opacity: 0.69 }}>
+          <p className="text-[11px] mt-1.5" style={{ color: 'var(--brand-text-muted)' }}>
             {note}
           </p>
         )}
         {offerCreative && (
           <button
-            className="text-[12px] mt-1.5 transition-opacity hover:opacity-90 disabled:opacity-40"
-            style={{ color: 'var(--brand-text-secondary)', opacity: 0.81, textDecoration: 'underline' }}
+            className="text-[13px] mt-1.5 transition-opacity hover:opacity-90 disabled:opacity-40"
+            style={{ color: 'var(--brand-text-muted)', textDecoration: 'underline' }}
             disabled={rerolling}
             onClick={() => reroll(true)}
           >
@@ -323,9 +323,9 @@ export function StandingQuestion() {
   if (receipt) {
     return reveal(
       <div className="pb-3 mb-4">
-        <p className="text-[12px]" style={{ color: 'var(--brand-text-secondary)', opacity: 0.81 }}>{receipt}</p>
+        <p className="text-[13px]" style={{ color: 'var(--brand-text-muted)' }}>{receipt}</p>
         {kept === 'kept' ? (
-          <p className="text-[12px] mt-1.5" style={{ color: 'var(--brand-text-secondary)' }}>
+          <p className="text-[13px] mt-1.5" style={{ color: 'var(--brand-text-secondary)' }}>
             Kept. It's on {keptProject?.title} now.
           </p>
         ) : canKeep ? (
@@ -368,7 +368,7 @@ export function StandingQuestion() {
       </p>
 
       {(spark.sources?.length ?? 0) >= 2 && (
-        <p className="text-[12px] mt-1 leading-snug line-clamp-1" style={{ color: 'var(--brand-text-secondary)' }}>
+        <p className="text-[13px] mt-1 leading-snug line-clamp-1" style={{ color: 'var(--brand-text-secondary)' }}>
           <span className="text-[11px] uppercase tracking-[0.14em] font-medium mr-1.5" style={{ color: 'var(--brand-text-muted)' }}>
             from
           </span>
@@ -385,7 +385,7 @@ export function StandingQuestion() {
             // A claim gets a reaction first: one tap, then optionally why.
             STANCES.map((st, i) => (
               <span key={st.id} className="flex items-center gap-3">
-                {i > 0 && <span style={{ color: 'var(--brand-text-secondary)', opacity: 0.6 }}>·</span>}
+                {i > 0 && <span style={{ color: 'var(--brand-text-muted)' }}>·</span>}
                 <button
                   className="text-[13px] font-medium transition-opacity hover:opacity-90"
                   style={quietActionStyle}
@@ -398,7 +398,7 @@ export function StandingQuestion() {
               // Something to add that isn't a yes or no -- open the box
               // without picking a side.
               <span key="more" className="flex items-center gap-3">
-                <span style={{ color: 'var(--brand-text-secondary)', opacity: 0.6 }}>·</span>
+                <span style={{ color: 'var(--brand-text-muted)' }}>·</span>
                 <button
                   className="text-[13px] font-medium transition-opacity hover:opacity-90"
                   style={quietActionStyle}
@@ -410,16 +410,16 @@ export function StandingQuestion() {
             )
           ) : (
             <button
-              className="text-[12px] transition-opacity hover:opacity-90"
+              className="text-[13px] transition-opacity hover:opacity-90"
               style={quietActionStyle}
               onClick={() => setAnswering(true)}
             >
               answer it
             </button>
           )}
-          <span style={{ color: 'var(--brand-text-secondary)', opacity: 0.6 }}>·</span>
+          <span style={{ color: 'var(--brand-text-muted)' }}>·</span>
           <button
-            className="text-[12px] transition-opacity hover:opacity-90 disabled:opacity-30"
+            className="text-[13px] transition-opacity hover:opacity-90 disabled:opacity-30"
             style={quietActionStyle}
             disabled={rerolling}
             onClick={() => reroll()}
@@ -428,9 +428,9 @@ export function StandingQuestion() {
           </button>
           {offerCreative && (
             <>
-              <span style={{ color: 'var(--brand-text-secondary)', opacity: 0.6 }}>·</span>
+              <span style={{ color: 'var(--brand-text-muted)' }}>·</span>
               <button
-                className="text-[12px] transition-opacity hover:opacity-90 disabled:opacity-30"
+                className="text-[13px] transition-opacity hover:opacity-90 disabled:opacity-30"
                 style={quietActionStyle}
                 disabled={rerolling}
                 onClick={() => reroll(true)}
@@ -443,7 +443,7 @@ export function StandingQuestion() {
       )}
 
       {note && (
-        <p className="text-[11px] mt-1.5" style={{ color: 'var(--brand-text-secondary)', opacity: 0.72 }}>
+        <p className="text-[11px] mt-1.5" style={{ color: 'var(--brand-text-muted)' }}>
           {note}
         </p>
       )}
@@ -472,7 +472,7 @@ export function StandingQuestion() {
           />
           <div className="flex items-center gap-3 mt-2">
             <button
-              className="px-3 py-1.5 rounded-lg text-[12px] font-medium disabled:opacity-50"
+              className="px-3 py-1.5 rounded-lg text-[13px] font-medium disabled:opacity-50"
               style={{
                 background: 'rgba(var(--brand-primary-rgb), 0.12)',
                 border: '1px solid rgba(var(--brand-primary-rgb), 0.32)',
@@ -484,7 +484,7 @@ export function StandingQuestion() {
               {submitting ? 'Saving…' : 'Done'}
             </button>
             <button
-              className="text-[12px] transition-opacity hover:opacity-90 disabled:opacity-30"
+              className="text-[13px] transition-opacity hover:opacity-90 disabled:opacity-30"
               style={quietActionStyle}
               disabled={submitting}
               onClick={() => save([text])}
@@ -498,7 +498,7 @@ export function StandingQuestion() {
       {answering && !followUp && (
         <div className="mt-2.5">
           {stance && (
-            <p className="text-[12px] mb-1.5" style={{ color: 'var(--brand-text-secondary)' }}>
+            <p className="text-[13px] mb-1.5" style={{ color: 'var(--brand-text-secondary)' }}>
               You said <span className="font-medium" style={{ color: 'rgb(var(--brand-primary-rgb))' }}>
                 {STANCES.find(st => st.id === stance)?.label}
               </span>. Say why, or just save it.
@@ -517,7 +517,7 @@ export function StandingQuestion() {
           <div className="flex items-center gap-3 mt-2">
             {(text || stance) && (
               <button
-                className="px-3 py-1.5 rounded-lg text-[12px] font-medium disabled:opacity-50"
+                className="px-3 py-1.5 rounded-lg text-[13px] font-medium disabled:opacity-50"
                 style={{
                   background: 'rgba(var(--brand-primary-rgb), 0.12)',
                   border: '1px solid rgba(var(--brand-primary-rgb), 0.32)',
@@ -530,7 +530,7 @@ export function StandingQuestion() {
               </button>
             )}
             <button
-              className="text-[12px] transition-opacity hover:opacity-90"
+              className="text-[13px] transition-opacity hover:opacity-90"
               style={quietActionStyle}
               onClick={() => { setAnswering(false); setText(''); setStance(null) }}
             >

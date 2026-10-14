@@ -17,7 +17,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { userSaid } from './corpus-provenance.js'
-import { isGraveyarded } from './project-state.js'
+import { isOutOfCorpus } from './project-state.js'
 import { isCorpusEligible, type CorpusArticle } from './reading-corpus.js'
 import { articleBody } from './article-text.js'
 
@@ -124,19 +124,19 @@ export async function loadCorpus(
   const memoryDateById = new Map<string, string>()
   for (const m of memories) if (m.created_at) memoryDateById.set(m.id, m.created_at)
 
-  const projects = ((projectsRes.data ?? []) as any[]).filter(p => !isGraveyarded(p))
+  const projects = ((projectsRes.data ?? []) as any[]).filter(p => !isOutOfCorpus(p))
   const projectIdByTitle = new Map(projects.map((p: any) => [normaliseTitle(p.title), p.id as string]))
 
   // A fragment under a graveyarded project doesn't count as live either --
   // the project's own description is excluded above, but a fragment filed
-  // under it slips through unless it's checked too. `isGraveyarded` above
+  // under it slips through unless it's checked too. `isOutOfCorpus` above
   // ran on the fetched project list, but a fragment can reference a
   // project already filtered out of `projects` -- so it's re-checked from
   // the fragment's own embedded join, not by membership in the array above.
   const fragments = ((fragmentsRes.data ?? []) as any[]).filter(f =>
     f.text?.trim() &&
     !(f.memory_id && appAuthoredMemoryIds.has(f.memory_id)) &&
-    !(f.projects && isGraveyarded(f.projects)),
+    !(f.projects && isOutOfCorpus(f.projects)),
   )
 
   const articles = ((readingRes.data ?? []) as (CorpusArticle & {

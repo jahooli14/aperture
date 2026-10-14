@@ -66,6 +66,7 @@ import { SPARK_RESPONSE_TAG, SPARK_CORRECTION_TAG } from './_lib/corpus-provenan
 import { handleProjectOutputs } from './_lib/project-outputs.js'
 import { findOutside, handleOutsideFind } from './_lib/outside-find.js'
 import { handleThemes, handleUpToSpeed } from './_lib/project-catchup-routes.js'
+import { handleSeason } from './_lib/season-routes.js'
 
 /** Bearer-token cron auth, duplicated per-file to match this codebase's
  *  existing convention (projects.ts and idea-engine.ts each keep their own
@@ -126,6 +127,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // Themes (what an active project steers by) and the catch-up for a
   // project you've put down. See project-themes.ts / up-to-speed.ts.
+  if (resource === 'season') {
+    const userId = await getUserId(req)
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' })
+    return handleSeason(req, res, getSupabaseClient(), userId)
+  }
   if (resource === 'themes' || resource === 'up-to-speed') {
     const userId = await getUserId(req)
     if (!userId) return res.status(401).json({ error: 'Unauthorized' })
