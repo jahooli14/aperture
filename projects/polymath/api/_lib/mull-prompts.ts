@@ -40,6 +40,8 @@ export interface DraftContext {
   liveTitle?: string | null
   /** Others that matter this season, by exact title. */
   alsoTitles?: string[]
+  /** Among those, the ones that can't be started yet. Thinking only. */
+  waitingTitles?: string[]
   /** A season has been set (season.ts). Without one, no season-shaped
    *  instructions (the others, the wild one) are sent at all. */
   seasonActive?: boolean
@@ -92,7 +94,7 @@ WHAT A REVELATION IS
 A claim that restates one note is a summary. One they already say every day is
 a quote. One nobody could disagree with is a platitude. None of those.
 
-${ctx.liveTitle ? crossingBlock(ctx.liveTitle, ctx.alsoTitles ?? [], !!ctx.seasonActive) : ''}WHERE TO LOOK -- read everything first, then look for:
+${ctx.liveTitle ? crossingBlock(ctx.liveTitle, ctx.alsoTitles ?? [], !!ctx.seasonActive, ctx.waitingTitles ?? []) : ''}WHERE TO LOOK -- read everything first, then look for:
 - The same stall: two projects that stopped at the same kind of step.
 - The survivors: what the things they keep going back to share, that the
   dropped ones don't.
@@ -174,7 +176,7 @@ JSON only:
 /** The Venn: each person is a different overlap of things, and the middle is
  *  what only they can see. The best take here is the live project met with
  *  something else of theirs. */
-function crossingBlock(title: string, also: string[], seasonActive: boolean): string {
+function crossingBlock(title: string, also: string[], seasonActive: boolean, waiting: string[]): string {
   return `THE ONE THAT MATTERS MOST -- THE CROSSING
 They are deep in "${title}" right now. A take from inside it only tells them
 what they already know. The thing nobody else could say is where it overlaps with
@@ -199,7 +201,9 @@ ${seasonActive && also.length > 0 ? `
 ALSO THIS SEASON: ${also.map(t => `"${t}"`).join(' and ')}. They matter too, just less. Where a real
 one holds, make a candidate a crossing for each, built the same way (that project
 next to something else of theirs). Leave one out rather than force it.
-` : ''}${seasonActive ? `
+${waiting.length ? `They can't start ${waiting.map(t => `"${t}"`).join(' or ')} yet. A take about ${waiting.length > 1 ? 'those' : 'it'} is for thinking, never for doing: it
+must not tell them to make, start, cut, buy or try anything, and its "stake" must not either.
+` : ''}` : ''}${seasonActive ? `
 THE WILD ONE: if one holds, include a candidate that is about NONE of the projects named
 above. Two or three things of theirs that meet somewhere else entirely, cited from
 rows that are not about those projects. It doesn't have to help anything, but it has to be

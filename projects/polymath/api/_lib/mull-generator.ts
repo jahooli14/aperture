@@ -30,7 +30,7 @@
  */
 
 import { readThemes } from './project-themes.js'
-import { readSeason, leadsWithFun, type Season, type SeasonProject } from './season.js'
+import { readSeason, leadsWithFun, tellsToStartNow, type Season, type SeasonProject } from './season.js'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { generateText } from './gemini-chat.js'
 import { parseModelJson } from './schemas.js'
@@ -479,6 +479,7 @@ export async function generateMull(
     focus: echo.focus ?? '',
     liveTitle: echo.season?.main?.title ?? echo.live?.title ?? null,
     alsoTitles: echo.season?.active ? echo.season.also.map(p => p.title) : [],
+    waitingTitles: echo.season?.active ? echo.season.also.filter(p => p.blocked).map(p => p.title) : [],
     seasonActive: !!echo.season?.active,
   })
   trace.push(`draft prompt: ${prompt.length} chars`)
@@ -582,6 +583,17 @@ export async function generateMull(
   // Shipped questions never share a row. Settled in rank order, BEFORE the
   // season reorders anything, so a wild take that shares a row with a
   // better one can't bury it.
+  // A project that can't be started yet gets thinking, never "go and make it".
+  const blockedIds = new Set(seasonOn ? echo.season!.also.filter(p => p.blocked).map(p => p.id) : [])
+  if (blockedIds.size > 0) {
+    ranked = ranked.filter(g => {
+      const sl = slotFor(g)
+      if (sl.slot !== 'also' || !sl.projectId || !blockedIds.has(sl.projectId)) return true
+      const bad = tellsToStartNow(g.stake, g.question)
+      if (bad) trace.push(`dropped, tells you to start something that is still waiting -- ${label(g)}`)
+      return !bad
+    })
+  }
   const used = new Set<string>()
   ranked = ranked.filter(g => {
     if (g.rows.some(r => used.has(r.id))) return false

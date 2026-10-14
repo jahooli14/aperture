@@ -107,6 +107,14 @@ export function inSeason(tag: SeasonTag | null, now: Date): boolean {
   return !!tag && (!tag.until || tag.until >= isoDay(new Date(now.getTime() - 14 * 3_600_000)))
 }
 
+/** Words that tell someone to go and make the thing. A project that can't be
+ *  started yet (waiting on wood, on a person) can be thought about, never
+ *  "start on it tonight". Checked, not just asked for. */
+const MAKING = /\b(cut|saw|sand|drill|glue|paint|build|make|start|begin|finish|do|try|test|print|order|buy|tonight|today|this weekend|right now|next session)\b/i
+export function tellsToStartNow(stake: string, take: string): boolean {
+  return MAKING.test(stake) || MAKING.test(take)
+}
+
 /**
  * The season as it stands today. The main project is the live one, so
  * this always agrees with the home card. Projects tagged `also` count only

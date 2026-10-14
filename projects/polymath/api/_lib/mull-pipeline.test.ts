@@ -357,6 +357,24 @@ describe('the mull channel, end to end', () => {
       expect(trace.join('\n')).toMatch(/season: main > also > wild/)
     })
 
+    it('a project that is still waiting gets thinking, never "start tonight"', async () => {
+      onDay(false)
+      const waiting = () => {
+        const data = withSeason()
+        data.projects.find((p: any) => p.id === 'p-toy').metadata.season.waiting = 'the wood'
+        return data
+      }
+      respond({ draft: [{ ...ALSO_TAKE, stake: 'Start on the toy tonight.' }, ONE_TAKE], judge: [ship(1), ship(2)] })
+      const trace: string[] = []
+      const baked = await bakeMull(fakeSupabase(waiting()).client, 'u1', undefined, trace)
+      expect(baked.map(b => b.text)).toEqual([ONE_TAKE.question])
+      expect(trace.join('\n')).toMatch(/still waiting/)
+
+      respond({ draft: [{ ...ALSO_TAKE, stake: 'It gets one clear room to be thought about in.' }, ONE_TAKE], judge: [ship(1), ship(2)] })
+      const kept = await bakeMull(fakeSupabase(waiting()).client, 'u1')
+      expect(kept.map(b => b.text)).toContain(ALSO_TAKE.question)
+    })
+
     it('about one run in three leads with the wild one', async () => {
       onDay(true)
       respond({ draft: [ONE_TAKE, ALSO_TAKE, WILD], judge: [ship(1), ship(2), ship(3)] })
