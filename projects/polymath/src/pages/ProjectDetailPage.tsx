@@ -29,6 +29,7 @@ import { Button } from '../components/ui/button'
 import { useToast } from '../components/ui/toast'
 import { useConfirmDialog } from '../components/ui/confirm-dialog'
 import { EditProjectDialog } from '../components/projects/EditProjectDialog'
+import { FinishedItButton } from '../components/projects/FinishedItButton'
 import { ProjectCompletionModal } from '../components/projects/ProjectCompletionModal'
 import { CompletionRitual } from '../components/projects/CompletionRitual'
 import type { Project, Memory } from '../types'
@@ -407,6 +408,8 @@ export function ProjectDetailPage() {
                 onGo={() => { setSessionAutoStart(true); setSessionOpen(true) }}
               />
             )}
+
+            <FinishedItButton project={project} />
 
             {/* The way back in: the move, unless themes are leading. */}
             {!steering && (

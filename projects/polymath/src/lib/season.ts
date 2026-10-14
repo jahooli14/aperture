@@ -18,6 +18,19 @@ export function readSeasonTag(metadata: Project['metadata']): SeasonTag | null {
   }
 }
 
+/** A small thing to finish this season, still running and not yet done. The
+ *  page offers it a quiet one-tap "Finished it", no ceremony. */
+export function isSmallFinish(
+  project: Pick<Project, 'metadata' | 'status' | 'state' | 'is_priority'>, now = new Date(),
+): boolean {
+  if (project.status === 'completed' || project.status === 'graveyard' || project.state === 'live' || project.is_priority) return false
+  const tag = readSeasonTag(project.metadata)
+  if (!tag || tag.role !== 'also') return false
+  if (!tag.until) return true
+  const end = Date.UTC(+tag.until.slice(0, 4), +tag.until.slice(5, 7) - 1, +tag.until.slice(8, 10))
+  return end >= Date.UTC(now.getFullYear(), now.getMonth(), now.getDate())
+}
+
 /** "10 weeks to Christmas", "5 days to Christmas", "Christmas is today", or
  *  without a name "10 weeks left" / "Last day"; or null: no season, no date,
  *  it's over, or this isn't the live project (a stale tag on a project that
