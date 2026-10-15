@@ -27,6 +27,7 @@ import { AnimatePresence } from 'framer-motion'
 import { useSessionStore, type CloseResult } from '../../stores/useSessionStore'
 import { useVoicePreference } from '../../stores/useVoicePreference'
 import { useProjectStore } from '../../stores/useProjectStore'
+import { isActivelyWorked, readThemes } from '../../lib/projectThemes'
 import { useOnlineStatus } from '../../hooks/useOnlineStatus'
 import { useSessionNotification, SESSION_ACTION_EVENT, type SessionAction } from '../../hooks/useSessionNotification'
 import { haptic } from '../../utils/haptics'
@@ -108,15 +109,24 @@ export function SessionContract({
 
   // ── The move: stored, so this is usually instant ──────────────────
   useEffect(() => {
-    if (!resuming) void loadMove(project.id)
+    if (!resuming && !themeLed) void loadMove(project.id)
     // Once per project; a resumed session already has its move.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [project.id])
   const moveHere = moveFor === project.id ? move : null
 
+  // A project you're in the middle of and have written "Keep in mind" lines
+  // for: Go just starts, with those lines on screen. The stored move is
+  // never the task here -- it's only rewritten at an in-app close-out, so
+  // for the book it was a step from weeks ago.
+  const themeLines = readThemes(project.metadata).map(t => t.text)
+  const themeLed = themeLines.length > 0 && isActivelyWorked(project)
+
   const go = useCallback(async () => {
     haptic.medium()
-    const items = moveHere?.kind === 'move' ? [{ text: moveHere.text, source: null, taskId: null }] : undefined
+    const items = themeLed
+      ? [{ text: `Keep going on ${project.title}`, source: null, taskId: null }]
+      : moveHere?.kind === 'move' ? [{ text: moveHere.text, source: null, taskId: null }] : undefined
     await startSession(project.id, null, source, items)
     if (useSessionStore.getState().active) {
       setNowMs(Date.now())
@@ -124,16 +134,16 @@ export function SessionContract({
       setFocusOpen(true)
       setPhase('running')
     }
-  }, [moveHere, project.id, source, startSession])
+  }, [moveHere, themeLed, project.id, project.title, source, startSession])
 
   // The card's Go button already was the decision: don't ask it twice.
   const autoStarted = useRef(false)
   useEffect(() => {
     if (!autoStart || autoStarted.current || resuming || phase !== 'move') return
-    if (moveHere?.kind !== 'move') return
+    if (!themeLed && moveHere?.kind !== 'move') return
     autoStarted.current = true
     void go()
-  }, [autoStart, resuming, phase, moveHere, go])
+  }, [autoStart, resuming, phase, moveHere, themeLed, go])
 
   // ── The clock: wall time, never an accumulator ────────────────────
   // A locked phone suspends timers; (now - started_at) never lies.
@@ -275,6 +285,8 @@ export function SessionContract({
                   timeUp={timeUp}
                   online={online}
                   stuckSignal={stuckSignal}
+                  themes={themeLed ? themeLines : undefined}
+                  lastNote={themeLed ? project.last_closeout_text?.trim().slice(0, 240) || null : null}
                   onToggle={toggle}
                   onStop={stop}
                   onMinimise={() => setFocusOpen(false)}
@@ -300,7 +312,9 @@ export function SessionContract({
               ) : closeResult ? (
                 <Handoff
                   result={closeResult}
-                  nextMove={moveHere ?? closeResult.nextMove}
+                  // With Keep in mind lines, next time opens on those lines and your
+                  // note, not on a move -- so don't promise one.
+                  nextMove={themeLed ? null : moveHere ?? closeResult.nextMove}
                   onSetMove={(text: string) => { void reworkMove(project.id, { action: 'set', text }) }}
                   note={savedNote}
                   minutes={closeResult.duration_minutes}

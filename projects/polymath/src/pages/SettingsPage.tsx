@@ -377,6 +377,126 @@ export function SettingsPage() {
           </header>
         </div>
 
+        {/* The season: what matters for a stretch of time. */}
+        <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mb-10">
+          <div>
+            <h2 className="section-heading">what <span className="accent">matters now</span></h2>
+            <SeasonRow />
+          </div>
+        </section>
+
+        {/* Notifications Section */}
+        <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mb-10">
+          <div>
+            <h2 className="section-heading">when it <span className="accent">nudges you</span></h2>
+
+            <div className="space-y-3">
+
+              {/* Bedtime reflection */}
+              <div className="glass-card-subtle">
+                <div className="flex items-center justify-between px-4 py-3.5">
+                  <div>
+                    <p className="text-[15px]" style={{ color: "var(--brand-text-secondary)" }}>Bedtime reflection</p>
+                    <p className="text-[12px]" style={{ color: "var(--brand-text-muted)" }}>Daily reminder to capture the day</p>
+                  </div>
+                  <button
+                    onClick={() => toggleBedtime(!bedtimeEnabled)}
+                    className="relative h-7 w-12 rounded-full transition-all flex-shrink-0"
+                    style={{ background: bedtimeEnabled ? 'rgba(var(--brand-primary-rgb), 0.65)' : 'var(--glass-surface-hover)' }}
+                  >
+                    <div className="absolute top-1 h-5 w-5 rounded-full bg-white transition-all" style={{ left: bedtimeEnabled ? '26px' : '4px' }} />
+                  </button>
+                </div>
+                {bedtimeEnabled && (
+                  <div className="px-4 pb-3.5 flex items-center gap-3 border-t border-[var(--glass-surface)] pt-3">
+                    <span className="text-[12px]" style={{ color: "var(--brand-text-muted)" }}>Time</span>
+                    <select
+                      value={bedtimeHour}
+                      onChange={e => updateBedtime(Number(e.target.value), bedtimeMinute)}
+                      className="rounded-lg px-2 py-1 text-[13px] outline-none"
+                      style={{ background: 'var(--glass-surface)', color: "var(--brand-text-secondary)" }}
+                    >
+                      {Array.from({ length: 24 }, (_, i) => (
+                        <option key={i} value={i} style={{ background: 'var(--brand-bg)' }}>
+                          {String(i).padStart(2, '0')}
+                        </option>
+                      ))}
+                    </select>
+                    <span style={{ color: "var(--brand-text-muted)" }}>:</span>
+                    <select
+                      value={bedtimeMinute}
+                      onChange={e => updateBedtime(bedtimeHour, Number(e.target.value))}
+                      className="rounded-lg px-2 py-1 text-[13px] outline-none"
+                      style={{ background: 'var(--glass-surface)', color: "var(--brand-text-secondary)" }}
+                    >
+                      {[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55].map(m => (
+                        <option key={m} value={m} style={{ background: 'var(--brand-bg)' }}>
+                          {String(m).padStart(2, '0')}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
+
+              {/* Daily voice note */}
+              <div className="glass-card-subtle">
+                <div className="flex items-center justify-between px-4 py-3.5">
+                  <div>
+                    <p className="text-[15px]" style={{ color: "var(--brand-text-secondary)" }}>Daily voice note</p>
+                    <p className="text-[12px]" style={{ color: "var(--brand-text-muted)" }}>A push reminder to record a thought — skipped once you've captured one that day</p>
+                  </div>
+                  <button
+                    onClick={() => toggleVoiceNote(!voiceNoteEnabled)}
+                    className="relative h-7 w-12 rounded-full transition-all flex-shrink-0"
+                    style={{ background: voiceNoteEnabled ? 'rgba(var(--brand-primary-rgb), 0.65)' : 'var(--glass-surface-hover)' }}
+                  >
+                    <div className="absolute top-1 h-5 w-5 rounded-full bg-white transition-all" style={{ left: voiceNoteEnabled ? '26px' : '4px' }} />
+                  </button>
+                </div>
+                {voiceNoteEnabled && (
+                  <div className="px-4 pb-3.5 flex items-center gap-3 border-t border-[var(--glass-surface)] pt-3">
+                    <span className="text-[12px]" style={{ color: "var(--brand-text-muted)" }}>Time</span>
+                    <select
+                      value={voiceNoteHour}
+                      onChange={e => updateVoiceNoteTime(Number(e.target.value), voiceNoteMinute)}
+                      className="rounded-lg px-2 py-1 text-[13px] outline-none"
+                      style={{ background: 'var(--glass-surface)', color: "var(--brand-text-secondary)" }}
+                    >
+                      {Array.from({ length: 24 }, (_, i) => (
+                        <option key={i} value={i} style={{ background: 'var(--brand-bg)' }}>
+                          {String(i).padStart(2, '0')}
+                        </option>
+                      ))}
+                    </select>
+                    <span style={{ color: "var(--brand-text-muted)" }}>:</span>
+                    <select
+                      value={voiceNoteMinute}
+                      onChange={e => updateVoiceNoteTime(voiceNoteHour, Number(e.target.value))}
+                      className="rounded-lg px-2 py-1 text-[13px] outline-none"
+                      style={{ background: 'var(--glass-surface)', color: "var(--brand-text-secondary)" }}
+                    >
+                      {[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55].map(m => (
+                        <option key={m} value={m} style={{ background: 'var(--brand-bg)' }}>
+                          {String(m).padStart(2, '0')}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+                {voiceNoteError && (
+                  <div className="px-4 pb-3.5">
+                    <p className="text-[12px]" style={{ color: "rgba(var(--color-error-rgb), 1)" }}>{voiceNoteError}</p>
+                  </div>
+                )}
+              </div>
+
+              <WeekendNudgeRow />
+
+            </div>
+          </div>
+        </section>
+
         {/* Appearance Section */}
         <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mb-10">
           <div>
@@ -546,126 +666,6 @@ export function SettingsPage() {
                   {briefSaving ? 'Saving…' : 'Save'}
                 </button>
               </div>
-            </div>
-          </div>
-        </section>
-
-        {/* The season: what matters for a stretch of time. */}
-        <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mb-10">
-          <div>
-            <h2 className="section-heading">what <span className="accent">matters now</span></h2>
-            <SeasonRow />
-          </div>
-        </section>
-
-        {/* Notifications Section */}
-        <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mb-10">
-          <div>
-            <h2 className="section-heading">when it <span className="accent">nudges you</span></h2>
-
-            <div className="space-y-3">
-
-              {/* Bedtime reflection */}
-              <div className="glass-card-subtle">
-                <div className="flex items-center justify-between px-4 py-3.5">
-                  <div>
-                    <p className="text-[15px]" style={{ color: "var(--brand-text-secondary)" }}>Bedtime reflection</p>
-                    <p className="text-[12px]" style={{ color: "var(--brand-text-muted)" }}>Daily reminder to capture the day</p>
-                  </div>
-                  <button
-                    onClick={() => toggleBedtime(!bedtimeEnabled)}
-                    className="relative h-7 w-12 rounded-full transition-all flex-shrink-0"
-                    style={{ background: bedtimeEnabled ? 'rgba(var(--brand-primary-rgb), 0.65)' : 'var(--glass-surface-hover)' }}
-                  >
-                    <div className="absolute top-1 h-5 w-5 rounded-full bg-white transition-all" style={{ left: bedtimeEnabled ? '26px' : '4px' }} />
-                  </button>
-                </div>
-                {bedtimeEnabled && (
-                  <div className="px-4 pb-3.5 flex items-center gap-3 border-t border-[var(--glass-surface)] pt-3">
-                    <span className="text-[12px]" style={{ color: "var(--brand-text-muted)" }}>Time</span>
-                    <select
-                      value={bedtimeHour}
-                      onChange={e => updateBedtime(Number(e.target.value), bedtimeMinute)}
-                      className="rounded-lg px-2 py-1 text-[13px] outline-none"
-                      style={{ background: 'var(--glass-surface)', color: "var(--brand-text-secondary)" }}
-                    >
-                      {Array.from({ length: 24 }, (_, i) => (
-                        <option key={i} value={i} style={{ background: 'var(--brand-bg)' }}>
-                          {String(i).padStart(2, '0')}
-                        </option>
-                      ))}
-                    </select>
-                    <span style={{ color: "var(--brand-text-muted)" }}>:</span>
-                    <select
-                      value={bedtimeMinute}
-                      onChange={e => updateBedtime(bedtimeHour, Number(e.target.value))}
-                      className="rounded-lg px-2 py-1 text-[13px] outline-none"
-                      style={{ background: 'var(--glass-surface)', color: "var(--brand-text-secondary)" }}
-                    >
-                      {[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55].map(m => (
-                        <option key={m} value={m} style={{ background: 'var(--brand-bg)' }}>
-                          {String(m).padStart(2, '0')}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-              </div>
-
-              {/* Daily voice note */}
-              <div className="glass-card-subtle">
-                <div className="flex items-center justify-between px-4 py-3.5">
-                  <div>
-                    <p className="text-[15px]" style={{ color: "var(--brand-text-secondary)" }}>Daily voice note</p>
-                    <p className="text-[12px]" style={{ color: "var(--brand-text-muted)" }}>A push reminder to record a thought — skipped once you've captured one that day</p>
-                  </div>
-                  <button
-                    onClick={() => toggleVoiceNote(!voiceNoteEnabled)}
-                    className="relative h-7 w-12 rounded-full transition-all flex-shrink-0"
-                    style={{ background: voiceNoteEnabled ? 'rgba(var(--brand-primary-rgb), 0.65)' : 'var(--glass-surface-hover)' }}
-                  >
-                    <div className="absolute top-1 h-5 w-5 rounded-full bg-white transition-all" style={{ left: voiceNoteEnabled ? '26px' : '4px' }} />
-                  </button>
-                </div>
-                {voiceNoteEnabled && (
-                  <div className="px-4 pb-3.5 flex items-center gap-3 border-t border-[var(--glass-surface)] pt-3">
-                    <span className="text-[12px]" style={{ color: "var(--brand-text-muted)" }}>Time</span>
-                    <select
-                      value={voiceNoteHour}
-                      onChange={e => updateVoiceNoteTime(Number(e.target.value), voiceNoteMinute)}
-                      className="rounded-lg px-2 py-1 text-[13px] outline-none"
-                      style={{ background: 'var(--glass-surface)', color: "var(--brand-text-secondary)" }}
-                    >
-                      {Array.from({ length: 24 }, (_, i) => (
-                        <option key={i} value={i} style={{ background: 'var(--brand-bg)' }}>
-                          {String(i).padStart(2, '0')}
-                        </option>
-                      ))}
-                    </select>
-                    <span style={{ color: "var(--brand-text-muted)" }}>:</span>
-                    <select
-                      value={voiceNoteMinute}
-                      onChange={e => updateVoiceNoteTime(voiceNoteHour, Number(e.target.value))}
-                      className="rounded-lg px-2 py-1 text-[13px] outline-none"
-                      style={{ background: 'var(--glass-surface)', color: "var(--brand-text-secondary)" }}
-                    >
-                      {[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55].map(m => (
-                        <option key={m} value={m} style={{ background: 'var(--brand-bg)' }}>
-                          {String(m).padStart(2, '0')}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-                {voiceNoteError && (
-                  <div className="px-4 pb-3.5">
-                    <p className="text-[12px]" style={{ color: "rgba(var(--color-error-rgb), 1)" }}>{voiceNoteError}</p>
-                  </div>
-                )}
-              </div>
-
-              <WeekendNudgeRow />
-
             </div>
           </div>
         </section>

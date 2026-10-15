@@ -147,6 +147,24 @@ const noEcho = { recentTexts: [], resonance: '', corrections: '' }
 describe('the mull channel, end to end', () => {
   beforeEach(() => { generateText.mockReset() })
 
+  it('asks the draft for four candidates, season or not', async () => {
+    respond({ draft: [ONE_TAKE], judge: [ship(1)] })
+    await bakeMull(fakeSupabase(corpus()).client, 'u1', noEcho)
+    expect(draftPromptSent()).toMatch(/Up to 4 candidates/)
+  })
+
+  it('gives the draft a longer budget when nobody is waiting on it', async () => {
+    const timeouts: number[] = []
+    generateText.mockImplementation(async (prompt: string, opts: { timeoutMs?: number }) => {
+      if (!prompt.includes('You are the last check')) timeouts.push(opts.timeoutMs ?? 0)
+      return JSON.stringify(prompt.includes('You are the last check') ? { scores: [ship(1)] } : { candidates: [ONE_TAKE] })
+    })
+    await bakeMull(fakeSupabase(corpus()).client, 'u1', noEcho)
+    await bakeMull(fakeSupabase(corpus()).client, 'u1', noEcho, [], false, 30_000)
+    expect(timeouts[0]).toBeLessThan(10_000)
+    expect(timeouts[1]).toBeGreaterThan(20_000)
+  })
+
   it('ships a question built on two real rows once the judge says so', async () => {
     respond({ draft: [ONE_TAKE], judge: [ship(1)] })
     const trace: string[] = []

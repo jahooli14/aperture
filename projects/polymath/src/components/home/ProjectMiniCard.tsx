@@ -15,6 +15,7 @@
 import { useNavigate } from 'react-router-dom'
 import { Play } from 'lucide-react'
 import { getTheme } from '../../lib/projectTheme'
+import { blockedReason } from '../../lib/season'
 import { haptic } from '../../utils/haptics'
 import { useHomeAnswerStore } from '../../stores/useHomeAnswerStore'
 import type { Project } from '../../types'
@@ -40,6 +41,13 @@ export function ProjectMiniCard({
   const primaryLabel = project.metadata?.tags?.[0]
 
   const isGhost = variant === 'ghost'
+
+  // A small thing that can't be started yet says so, and has no play button:
+  // starting it would only lead to a session with nothing to do.
+  const blocked = blockedReason(project)
+  const shownMeta = blocked
+    ? (blocked.waiting ? `waiting for ${blocked.waiting}` : 'not yet')
+    : meta
 
   // Project identity comes through as color in the card's own light — the
   // border, the glow, the top hairline — not a glyph. Each project type
@@ -111,12 +119,12 @@ export function ProjectMiniCard({
         </h4>
 
         {/* Mode framing sub-line — uppercase tracked caps, single tone. */}
-        {meta && (
+        {shownMeta && (
           <span
             className="text-[11px] uppercase tracking-[0.14em] font-semibold mt-1"
             style={{ color: 'rgba(var(--brand-primary-rgb), 0.85)' }}
           >
-            {meta}
+            {shownMeta}
           </span>
         )}
 
@@ -137,7 +145,7 @@ export function ProjectMiniCard({
           ) : (
             <span aria-hidden />
           )}
-          <button
+          {!blocked && <button
             type="button"
             // ▶ doesn't run its own session flow any more -- it points the
             // answer box at this project and opens the one contract there.
@@ -153,7 +161,7 @@ export function ProjectMiniCard({
             }}
           >
             <Play className="h-3 w-3 fill-current" style={{ marginLeft: '1px' }} />
-          </button>
+          </button>}
         </div>
       </div>
     </div>

@@ -60,7 +60,7 @@ import { normalizeTaskOrder } from './_lib/task-order.js'
 import { reconcileCloseout, parseTicked } from './_lib/session-closeout.js'
 import { readCycleState, cycleLabel, rollToNextCycle, lastCycleSteps } from './_lib/project-cycles.js'
 import { appendMilestone, readMilestones } from './_lib/project-milestones.js'
-import { bakeMull, SHELF_LIFE_HOURS } from './_lib/mull-generator.js'
+import { bakeMull, SHELF_LIFE_HOURS, NIGHTLY_BUDGET_MS } from './_lib/mull-generator.js'
 import { runDriftDecay } from './_lib/drift-runner.js'
 import { SPARK_RESPONSE_TAG, SPARK_CORRECTION_TAG } from './_lib/corpus-provenance.js'
 import { handleProjectOutputs } from './_lib/project-outputs.js'
@@ -2413,7 +2413,8 @@ async function retireAndRebake(
   creative = false,
 ): Promise<
   | { rerolled: true; spark: unknown }
-  | { rerolled: false; reason: string }
+  /** `slow`: it ran out of time, which says nothing about the notes. */
+  | { rerolled: false; reason: string; slow?: boolean }
 > {
   const nowIso = new Date().toISOString()
 
@@ -2462,7 +2463,10 @@ async function retireAndRebake(
     if (served) return { rerolled: true, spark: served }
   }
 
-  let baked = await bakeMull(supabase, userId, undefined, [], creative)
+  // Cron has nobody waiting, so it gets the long budget; the button keeps ten seconds.
+  const trace: string[] = []
+  const budget = force ? NIGHTLY_BUDGET_MS : undefined
+  let baked = await bakeMull(supabase, userId, undefined, trace, creative, budget)
 
   // Silence often isn't a thin corpus — it's an empty fragments table.
   // A project's captures are most of what a blind spot is found in, so
@@ -2477,7 +2481,7 @@ async function retireAndRebake(
   if (baked.length === 0 && force) {
     const { backfillFragments } = await import('./_lib/fragments.js')
     const attached = await backfillFragments(supabase, userId, 8)
-    if (attached > 0) baked = await bakeMull(supabase, userId, undefined, [], creative)
+    if (attached > 0) baked = await bakeMull(supabase, userId, undefined, trace, creative, budget)
   }
 
   if (baked.length === 0) {
@@ -2494,7 +2498,10 @@ async function retireAndRebake(
         .eq('id', retiring.id)
         .eq('user_id', userId)
     }
-    return { rerolled: false, reason: 'nothing else to ask' }
+    // "!!" lines are the run failing (a timeout, a rejected call), not the
+    // notes having nothing in them. The app says which.
+    const slow = trace.some(l => l.startsWith('!!'))
+    return slow ? { rerolled: false, reason: 'took too long', slow: true } : { rerolled: false, reason: 'nothing else to ask' }
   }
 
   // Same as the bake: anything past the first is banked behind it, with
@@ -2582,7 +2589,7 @@ async function handleExecutionSparks(req: VercelRequest, res: VercelResponse) {
         'a real bake would stop here and write nothing; this run continues so you can see why',
       )
     }
-    const baked = await bakeMull(supabase, userId, undefined, trace)
+    const baked = await bakeMull(supabase, userId, undefined, trace, false, NIGHTLY_BUDGET_MS)
 
     if (explain) {
       return res.status(200).json({

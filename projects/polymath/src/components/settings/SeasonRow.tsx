@@ -156,9 +156,9 @@ export function SeasonRow() {
                 : 'Say what matters for a stretch of time, and the takes will aim at it. The rest stays for fun.'}
             </p>
             {season.active !== false && waitingOn.map(a => (
-              <p key={a.id} className="text-[13px] mt-1 leading-snug flex items-center gap-2" style={{ color: 'var(--brand-text-muted)' }}>
+              <p key={a.id} className="text-[13px] mt-1 leading-snug flex items-center justify-between gap-2" style={{ color: 'var(--brand-text-muted)' }}>
                 <span>{a.title} is waiting for {a.waiting}.</span>
-                <button onClick={() => { void gotIt(a.id) }} disabled={saving} className="py-1 disabled:opacity-40" style={{ color: 'rgb(var(--brand-primary-rgb))' }}>
+                <button onClick={() => { void gotIt(a.id) }} disabled={saving} className="py-1 px-2 -mr-2 whitespace-nowrap flex-shrink-0 disabled:opacity-40" style={{ color: 'rgb(var(--brand-primary-rgb))' }}>
                   Got it
                 </button>
               </p>
