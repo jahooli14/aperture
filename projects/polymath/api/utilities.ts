@@ -60,7 +60,7 @@ import { normalizeTaskOrder } from './_lib/task-order.js'
 import { reconcileCloseout, parseTicked } from './_lib/session-closeout.js'
 import { readCycleState, cycleLabel, rollToNextCycle, lastCycleSteps } from './_lib/project-cycles.js'
 import { appendMilestone, readMilestones } from './_lib/project-milestones.js'
-import { bakeMull, SHELF_LIFE_HOURS, NIGHTLY_BUDGET_MS } from './_lib/mull-generator.js'
+import { bakeMull, probeLatency, SHELF_LIFE_HOURS, NIGHTLY_BUDGET_MS } from './_lib/mull-generator.js'
 import { runDriftDecay } from './_lib/drift-runner.js'
 import { SPARK_RESPONSE_TAG, SPARK_CORRECTION_TAG } from './_lib/corpus-provenance.js'
 import { handleProjectOutputs } from './_lib/project-outputs.js'
@@ -2592,6 +2592,7 @@ async function handleExecutionSparks(req: VercelRequest, res: VercelResponse) {
     const baked = await bakeMull(supabase, userId, undefined, trace, false, NIGHTLY_BUDGET_MS)
 
     if (explain) {
+      await probeLatency(supabase, userId, trace)
       return res.status(200).json({
         explain: true,
         wouldBake: baked.length,
