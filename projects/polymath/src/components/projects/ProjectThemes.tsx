@@ -166,11 +166,21 @@ export function ProjectThemes({ project, onGo }: { project: Project; onGo?: () =
 }
 
 /** The lead style, no decoration: the lines are the content. */
-export function ThemeList({ themes }: { themes: ProjectTheme[] }) {
+export function ThemeList({ themes, rgb }: { themes: ProjectTheme[]; rgb?: string }) {
+  // Each line carries its own stripe, so they read as three themes, not a
+  // paragraph: a bright edge and a wash that fades out to the right.
+  const c = rgb ?? 'var(--brand-primary-rgb)'
   return (
-    <ul className="space-y-2">
+    <ul className="space-y-1.5">
       {themes.map(t => (
-        <li key={t.text} className="type-lead">
+        <li
+          key={t.text}
+          className="type-lead pl-3 pr-2 py-1.5 rounded-r-lg"
+          style={{
+            boxShadow: `inset 2px 0 0 rgba(${c},0.85)`,
+            background: `linear-gradient(90deg, rgba(${c},0.16), rgba(${c},0) 75%)`,
+          }}
+        >
           {t.text}
         </li>
       ))}

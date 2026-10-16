@@ -64,7 +64,7 @@ export function UpToSpeed({ project }: { project: Project }) {
       {data && (
         <>
           {data.what && (
-            <p className="text-[15px] leading-relaxed font-serif" style={{ color: 'var(--brand-text-secondary)' }}>
+            <p className="text-[15px] leading-relaxed" style={{ color: 'var(--brand-text-secondary)' }}>
               {data.what}
             </p>
           )}
@@ -82,7 +82,7 @@ export function UpToSpeed({ project }: { project: Project }) {
               <p className="eyebrow">Still up in the air</p>
               {data.open.map(o => (
                 <div key={o.text}>
-                  <p className="text-[15px] leading-[1.45] font-serif" style={{ color: 'var(--brand-text-primary)' }}>
+                  <p className="text-[15px] leading-[1.45]" style={{ color: 'var(--brand-text-primary)' }}>
                     {o.text}
                   </p>
                   <p className="text-[11px]" style={{ color: 'var(--brand-text-muted)' }}>from your {o.from}</p>
