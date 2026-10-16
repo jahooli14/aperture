@@ -356,7 +356,7 @@ export function StandingQuestion() {
   const hasSources = (spark.sources?.length ?? 0) >= 2
 
   return reveal(
-    <div className="pb-2 mb-2.5">
+    <div>
       <p
         className="text-[11px] font-medium uppercase tracking-[0.14em] mb-1 truncate"
         style={{ color: 'var(--brand-text-muted)' }}

@@ -287,139 +287,106 @@ export function TodaysAnswerCard() {
 
   const theme = getTheme(focusProject.type || 'other', focusProject.title, focusProject.metadata?.tags)
 
+  // What the project half says under its title: your Keep in mind lines
+  // while you're on it, else the move, a fork, or where you left off. All
+  // plain text on the card itself -- no panel inside a panel.
+  const label = 'text-[11px] font-medium uppercase tracking-[0.14em] mb-1.5'
+  const muted = { color: 'var(--brand-text-muted)' }
+  const readout = steering ? (
+    <>
+      <p className={label} style={muted}>keep in mind</p>
+      <ThemeList themes={themes} />
+      {reEntry && <p className="text-[13px] mt-2 line-clamp-2" style={muted}>You stopped with “{reEntry}”</p>}
+    </>
+  ) : nextMove ? (
+    <>
+      <p className={label} style={muted}>next move</p>
+      <p className="type-lead">{nextMove.move}</p>
+      {nextMove.doneWhen && <p className="text-[13px] mt-1" style={muted}>{nextMove.doneWhen}</p>}
+      {reEntry && <p className="text-[13px] mt-2 line-clamp-1" style={muted}>You stopped with “{reEntry}”</p>}
+    </>
+  ) : fork ? (
+    <>
+      <p className={label} style={muted}>first, decide</p>
+      <p className="type-lead">{fork}</p>
+    </>
+  ) : reEntry ? (
+    <>
+      <p className={label} style={muted}>where you left off</p>
+      <p className="type-lead line-clamp-3">“{reEntry}”</p>
+    </>
+  ) : null
+
   return (
-    <div className="space-y-3">
-      {/* The thing to think about while you're NOT working. Its own card,
-          so the project below can be a card like every other project. */}
+    // One card, two halves. The thought on top, the work below, joined by a
+    // thread down the left edge that runs from the thought's colour into
+    // the project's. The wrapper carries the breathing glow because the
+    // card clips its overflow.
+    <div className="relative isolate rounded-2xl neon-breathe" style={{ ['--neon-rgb' as string]: theme.rgb }}>
       <div
-        className="rounded-2xl p-4 overflow-hidden relative neon-edge"
+        className="rounded-2xl overflow-hidden relative neon-edge"
         style={{
-          background: 'linear-gradient(155deg, rgba(var(--brand-primary-rgb),0.10) 0%, rgba(13,20,34,0.86) 55%)',
+          background: `linear-gradient(155deg, rgba(${theme.rgb},0.10) 0%, rgba(13,20,34,0.88) 60%)`,
           backdropFilter: 'blur(32px) saturate(190%)',
           WebkitBackdropFilter: 'blur(32px) saturate(190%)',
-          border: '1px solid rgba(var(--brand-primary-rgb),0.10)',
-          boxShadow: '0 0 32px rgba(var(--brand-primary-rgb),0.16), 0 12px 36px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.06)',
+          border: `1px solid rgba(${theme.rgb},0.14)`,
+          boxShadow: `0 0 36px rgba(${theme.rgb},0.20), 0 12px 36px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.06)`,
         }}
       >
-        <StandingQuestion />
-      </div>
+        <span
+          aria-hidden
+          className="absolute left-0 top-0 bottom-0 w-[3px]"
+          style={{ background: `linear-gradient(180deg, rgb(var(--brand-primary-rgb)), rgb(${theme.rgb}))`, opacity: 0.9 }}
+        />
 
-      {/* The project you're on: same card as the ones under "everything
-          else" (title inside, in the project's own colour), just bigger,
-          and the one place with a Go. The wrapper carries the breathing
-          glow because the card clips its overflow. */}
-      <div className="relative isolate rounded-2xl neon-breathe" style={{ ['--neon-rgb' as string]: theme.rgb }}>
+        <div className="pl-5 pr-4 pt-4 pb-3" style={{ background: 'rgba(var(--brand-primary-rgb),0.06)' }}>
+          <StandingQuestion />
+        </div>
+
         <div
-          className="rounded-2xl p-4 flex flex-col overflow-hidden relative neon-edge cursor-pointer"
-          onClick={() => navigate(`/projects/${focusProject!.id}`)}
-          style={{
-            background: `linear-gradient(155deg, rgba(${theme.rgb},0.12) 0%, rgba(13,20,34,0.86) 60%)`,
-            backdropFilter: 'blur(32px) saturate(190%)',
-            WebkitBackdropFilter: 'blur(32px) saturate(190%)',
-            border: `1px solid rgba(${theme.rgb},0.14)`,
-            boxShadow: `0 0 32px rgba(${theme.rgb},0.20), 0 12px 36px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.06)`,
-          }}
-        >
-          <div className="flex items-start justify-between gap-2 mb-0.5">
+          aria-hidden
+          className="h-px"
+          style={{ background: `linear-gradient(90deg, rgb(var(--brand-primary-rgb)), rgb(${theme.rgb}) 55%, transparent)`, opacity: 0.55 }}
+        />
+
+        <div className="pl-5 pr-4 pt-3.5 pb-4 cursor-pointer" onClick={() => navigate(`/projects/${focusProject!.id}`)}>
+          <div className="flex items-start justify-between gap-2">
             <h3 className="card-title-lg line-clamp-2 flex-1">{focusProject.title}</h3>
             {dormancyLabel && (
-              <span
-                className="text-[11px] font-medium uppercase tracking-[0.14em] px-2 py-0.5 rounded-full flex-shrink-0 mt-0.5"
-                style={{ color: 'var(--brand-text-muted)', border: '1px solid rgba(255,255,255,0.18)', background: 'rgba(0,0,0,0.3)' }}
-              >
-                {dormancyLabel}
-              </span>
+              <span className="text-[13px] flex-shrink-0 mt-0.5" style={muted}>{dormancyLabel}</span>
             )}
           </div>
-          <span
-            className="text-[11px] uppercase tracking-[0.14em] font-semibold mb-3 inline-block"
-            style={{ color: `rgba(${theme.rgb},0.9)` }}
-          >
+          <p className="text-[13px] mt-0.5 mb-3" style={muted}>
             {formatRelativeTime(focusProject.last_active || focusProject.updated_at)}
             {seasonLine(focusProject) ? ` · ${seasonLine(focusProject)}` : ''}
-          </span>
+          </p>
 
-        {/* The readout below carries no border — it's a passive surface,
-            not something you can act on. Every 1px rectangle at the same
-            weight is what made the page read as a stack of outlined
-            boxes; fill alone separates it from the card behind it. */}
-        {steering ? (
-          <div className="p-3 rounded-xl mb-2.5" style={{ background: 'rgba(255,255,255,0.055)' }}>
-            <p className="text-[11px] font-medium uppercase tracking-[0.14em] mb-1.5" style={{ color: 'var(--brand-text-muted)' }}>
-              keep in mind
-            </p>
-            <ThemeList themes={themes} />
-            {reEntry && (
-              <p className="text-[13px] mt-2 line-clamp-2" style={{ color: 'var(--brand-text-secondary)' }}>
-                You stopped with “{reEntry}”
-              </p>
-            )}
-          </div>
-        ) : nextMove ? (
-          <div className="p-3 rounded-xl mb-2.5" style={{ background: 'rgba(255,255,255,0.055)' }}>
-            <p className="text-[11px] font-medium uppercase tracking-[0.14em] mb-1" style={{ color: 'var(--brand-text-muted)' }}>
-              next move
-            </p>
-            <p
-              className="text-[15px] leading-[1.35] font-medium"
-              style={{ color: 'var(--brand-text-primary)', fontFamily: 'var(--brand-font-body)' }}
-            >
-              {nextMove.move}
-            </p>
-            {nextMove.doneWhen && (
-              <p className="text-[13px] mt-1" style={{ color: 'var(--brand-text-secondary)' }}>{nextMove.doneWhen}</p>
-            )}
-            {reEntry && (
-              <p className="text-[13px] mt-1.5 line-clamp-1" style={{ color: 'var(--brand-text-secondary)' }}>
-                You stopped with “{reEntry}”
-              </p>
-            )}
-          </div>
-        ) : fork ? (
-          <div className="p-3 rounded-xl mb-2.5" style={{ background: 'rgba(255,255,255,0.055)' }}>
-            <p className="text-[11px] font-medium uppercase tracking-[0.14em] mb-1" style={{ color: 'var(--brand-text-muted)' }}>
-              first, decide
-            </p>
-            <p className="text-[16px] leading-[1.4] font-medium" style={{ fontFamily: 'var(--brand-font-body)' }}>{fork}</p>
-          </div>
-        ) : reEntry ? (
-          <div className="p-3 rounded-xl mb-2.5" style={{ background: 'rgba(255,255,255,0.055)' }}>
-            <p className="text-[11px] font-medium uppercase tracking-[0.14em] mb-1" style={{ color: 'var(--brand-text-muted)' }}>
-              where you left off
-            </p>
-            <p
-              className="text-[15px] leading-[1.4] line-clamp-3"
-              style={{ color: 'var(--brand-text-primary)', fontFamily: 'var(--brand-font-body)' }}
-            >
-              “{reEntry}”
-            </p>
-          </div>
-        ) : null}
+          {readout && <div className="mb-3.5">{readout}</div>}
 
-        {/* One button. The move is already written, so Go starts the
-            session straight away; "change it" opens "too big" / "wrong
-            thing" inline under it (MoveTweak). */}
-        <div className="space-y-1" onClick={e => e.stopPropagation()}>
-          <button
-            onClick={() => handleStartSession(!!nextMove || steering)}
-            className="neon-button w-full py-3 rounded-xl font-semibold text-[15px] flex items-center justify-center gap-2"
-          >
-            <Play className="h-3.5 w-3.5 fill-current" />
-            {nextMove || steering ? 'Go' : fork ? 'Answer it' : 'Find the first move'}
-          </button>
-          {nextMove && !steering && (
+          {/* One button. The move is already written, so Go starts the
+              session straight away; "change it" opens "too big" / "wrong
+              thing" inline under it (MoveTweak). */}
+          <div className="space-y-1" onClick={e => e.stopPropagation()}>
             <button
-              onClick={() => setTweaking(t => !t)}
-              className="w-full text-[13px] py-0.5"
-              style={{ color: 'rgb(var(--brand-primary-rgb))' }}
+              onClick={() => handleStartSession(!!nextMove || steering)}
+              className="neon-button w-full py-3 rounded-xl font-semibold text-[15px] flex items-center justify-center gap-2"
             >
-              {tweaking ? 'Keep this one' : 'Not this — change it'}
+              <Play className="h-3.5 w-3.5 fill-current" />
+              {nextMove || steering ? 'Go' : fork ? 'Answer it' : 'Find the first move'}
             </button>
-          )}
-          {nextMove && !steering && tweaking && (
-            <MoveTweak projectId={focusProject.id} onClose={() => setTweaking(false)} />
-          )}
-        </div>
+            {nextMove && !steering && (
+              <button
+                onClick={() => setTweaking(t => !t)}
+                className="w-full text-[13px] py-1"
+                style={{ color: 'var(--brand-text-muted)' }}
+              >
+                {tweaking ? 'Keep this one' : 'Not this — change it'}
+              </button>
+            )}
+            {nextMove && !steering && tweaking && (
+              <MoveTweak projectId={focusProject.id} onClose={() => setTweaking(false)} />
+            )}
+          </div>
         </div>
       </div>
     </div>
