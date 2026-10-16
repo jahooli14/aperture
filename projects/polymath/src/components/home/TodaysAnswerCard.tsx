@@ -39,6 +39,8 @@ import { seasonLine } from '../../lib/season'
 import { ThemeList } from '../projects/ProjectThemes'
 import { getTheme } from '../../lib/projectTheme'
 
+const GRAIN = `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .55 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>")`
+
 export function TodaysAnswerCard() {
   const navigate = useNavigate()
   const allProjects = useProjectStore(s => s.allProjects)
@@ -318,38 +320,46 @@ export function TodaysAnswerCard() {
   ) : null
 
   return (
-    // One card, two halves. The thought on top, the work below, joined by a
-    // thread down the left edge that runs from the thought's colour into
-    // the project's. The wrapper carries the breathing glow because the
-    // card clips its overflow.
-    <div className="relative isolate rounded-2xl neon-breathe" style={{ ['--neon-rgb' as string]: theme.rgb }}>
+    // One card, two halves: the thought lit from above, the work lit from
+    // below, with a single bead of light on the seam where one becomes the
+    // other. The wrapper carries the breathing glow because the card clips
+    // its overflow.
+    <div className="relative isolate rounded-[22px] neon-breathe" style={{ ['--neon-rgb' as string]: theme.rgb }}>
       <div
-        className="rounded-2xl overflow-hidden relative neon-edge"
+        className="rounded-[22px] overflow-hidden relative neon-edge"
         style={{
-          background: `linear-gradient(155deg, rgba(${theme.rgb},0.10) 0%, rgba(13,20,34,0.88) 60%)`,
+          background: `radial-gradient(130% 55% at 8% 0%, rgba(var(--brand-primary-rgb),0.30) 0%, transparent 70%), radial-gradient(120% 55% at 100% 100%, rgba(${theme.rgb},0.30) 0%, transparent 70%), rgba(12,19,34,0.86)`,
           backdropFilter: 'blur(32px) saturate(190%)',
           WebkitBackdropFilter: 'blur(32px) saturate(190%)',
           border: `1px solid rgba(${theme.rgb},0.14)`,
-          boxShadow: `0 0 36px rgba(${theme.rgb},0.20), 0 12px 36px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.06)`,
+          boxShadow: `0 0 40px rgba(${theme.rgb},0.18), 0 16px 44px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.07)`,
         }}
       >
+        {/* A little grain so the glass feels like a surface, not a gradient. */}
         <span
           aria-hidden
-          className="absolute left-0 top-0 bottom-0 w-[3px]"
-          style={{ background: `linear-gradient(180deg, rgb(var(--brand-primary-rgb)), rgb(${theme.rgb}))`, opacity: 0.9 }}
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            opacity: 0.07,
+            mixBlendMode: 'overlay',
+            backgroundImage: GRAIN,
+          }}
         />
 
-        <div className="pl-5 pr-4 pt-4 pb-3" style={{ background: 'rgba(var(--brand-primary-rgb),0.06)' }}>
+        <div className="relative px-5 pt-5 pb-4">
           <StandingQuestion />
         </div>
 
-        <div
-          aria-hidden
-          className="h-px"
-          style={{ background: `linear-gradient(90deg, rgb(var(--brand-primary-rgb)), rgb(${theme.rgb}) 55%, transparent)`, opacity: 0.55 }}
-        />
+        {/* The seam: a hairline that starts at the text edge with a bead of
+            light and fades out toward the far side. */}
+        <div aria-hidden className="relative h-px mx-5" style={{ background: `linear-gradient(90deg, rgba(var(--brand-primary-rgb),0.7), rgba(${theme.rgb},0.45) 45%, transparent)` }}>
+          <span
+            className="absolute -left-[2px] -top-[2px] w-[5px] h-[5px] rounded-full"
+            style={{ background: '#fff', boxShadow: `0 0 10px 2px rgba(${theme.rgb},0.9), 0 0 3px 1px rgba(255,255,255,0.8)` }}
+          />
+        </div>
 
-        <div className="pl-5 pr-4 pt-3.5 pb-4 cursor-pointer" onClick={() => navigate(`/projects/${focusProject!.id}`)}>
+        <div className="relative px-5 pt-4 pb-5 cursor-pointer" onClick={() => navigate(`/projects/${focusProject!.id}`)}>
           <div className="flex items-start justify-between gap-2">
             <h3 className="card-title-lg line-clamp-2 flex-1">{focusProject.title}</h3>
             {dormancyLabel && (
