@@ -28,11 +28,6 @@ const MIN_ARTICLE_CHARS = 120
 /** How much of an article the prompt sees. The row keeps the same cut, so a
  *  quote can only ever be checked against text the model was shown. */
 const ARTICLE_CHARS = 1500
-/** The most the notes may add to the prompt. The draft has ten seconds, the
- *  prompt was 84k characters, and it timed out. Notes are newest first, so
- *  the oldest are the ones left out; projects, list items and fragments are
- *  small and stay. A row left out is also out of `rows`, so it can't be cited. */
-export const MAX_NOTE_CHARS = 30_000
 
 export type CorpusRowKind = 'project' | 'memory' | 'fragment' | 'list_item' | 'article'
 
@@ -159,25 +154,13 @@ export async function loadCorpus(
     // collapses every span a question might state.
     readableDate((row.memory_id && memoryDateById.get(row.memory_id)) || row.created_at || '')
 
-  // Newest notes first (the query order); keep them until the budget is spent.
-  let noteBudget = MAX_NOTE_CHARS
-  const keptMemories = (memories as any[]).filter(m => {
-    const cost = String(m.title ?? '').length + String(m.body ?? '').length + 80
-    if (noteBudget < cost) return false
-    noteBudget -= cost
-    return true
-  })
-  if (keptMemories.length < memories.length) {
-    trace.push(`corpus: ${memories.length - keptMemories.length} oldest notes left out to fit the draft's time (${memories.length} -> ${keptMemories.length})`)
-  }
-
   const rows: CorpusRow[] = [
     ...projects.map((p: any, i: number): CorpusRow => ({
       kind: 'project', id: p.id, captureId: p.id, ref: `P${i + 1}`, projectId: p.id,
       title: p.title ?? '', text: p.description ?? '',
       meta: `${p.status ?? ''}, started ${readableDate(p.created_at)}, last touched ${readableDate(p.last_active) || 'never'}`,
     })),
-    ...keptMemories.map((m: any, i: number): CorpusRow => ({
+    ...memories.map((m: any, i: number): CorpusRow => ({
       kind: 'memory', id: m.id, captureId: m.id, ref: `N${i + 1}`, projectId: null,
       title: m.title ?? '', text: m.body ?? '', meta: dateOf(m),
     })),

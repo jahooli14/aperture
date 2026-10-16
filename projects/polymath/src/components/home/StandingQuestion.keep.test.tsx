@@ -76,15 +76,24 @@ describe('keeping a yes', () => {
   })
 })
 
-describe('when the reroll runs out of time', () => {
-  it('says it took too long, not that there is nothing to work with', async () => {
+describe('when the reroll comes back empty', () => {
+  it('asks to try again and never says the notes are empty', async () => {
     get.mockResolvedValue({ spark: null })
     post.mockResolvedValue({ rerolled: false, reason: 'took too long', slow: true })
     render(<StandingQuestion />)
     fireEvent.click(await screen.findByText('give me something to think about'))
-    expect(await screen.findByText('That took too long. Try again.')).toBeTruthy()
+    expect(await screen.findByText(/Try again\./)).toBeTruthy()
+    expect(screen.queryByText(/Nothing else worth asking/)).toBeNull()
     expect(screen.queryByText(/Really nothing to work with/)).toBeNull()
     expect(screen.queryByText('get more creative')).toBeNull()
+  })
+})
+
+describe('the score', () => {
+  it('shows quietly beside the label when there is one', async () => {
+    get.mockResolvedValue({ spark: { id: 's3', type: 'mull', text: TAKE, project_id: 'p1', projects: { title: 'The book' }, score: 82 } })
+    render(<StandingQuestion />)
+    expect(await screen.findByText('82%')).toBeTruthy()
   })
 })
 

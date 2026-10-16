@@ -45,6 +45,9 @@ export interface DraftContext {
   /** A season has been set (season.ts). Without one, no season-shaped
    *  instructions (the others, the wild one) are sent at all. */
   seasonActive?: boolean
+  /** The nightly bake writes two drafts at once, each with its own lens, so
+   *  the two don't write the same takes. */
+  lens?: 'live' | 'elsewhere'
 }
 
 export function draftPrompt(ctx: DraftContext): string {
@@ -153,17 +156,17 @@ ${PLAIN_ENGLISH_RULES}
 then one committed claim, no question mark.)
 
 WHAT TO RETURN
-Up to ${ctx.howMany} candidates, best first, each built on different rows. For each:
-- "noticing": the pattern, in one plain sentence. Private -- they never see it.
-- "doubt": the strongest reason this is a coincidence of wording, not something
-  real, or that they would just say "no, that's not it". If the doubt wins,
-  leave the candidate out.
+${ctx.lens === 'live' ? 'THIS ROUND: lean on the project they are deep in and the ones that matter this season.\n' : ctx.lens === 'elsewhere' ? 'THIS ROUND: stay away from the project they are deep in and the ones that matter this season. Find what runs across everything else: other projects, notes, list items. Prefer the two captures that look least alike on the surface.\n' : ''}Up to ${ctx.howMany} candidates, best first, each built on different rows. For each:
+- "noticing": the pattern, under 12 words. Private -- they never see it.
+- "doubt": under 10 words: the strongest reason this is a coincidence of
+  wording, not something real, or that they would just say "no, that's not it".
+  If the doubt wins, leave the candidate out.
 - "evidence": every row the take leans on -- at least two different
   captures (a fragment and the note it was cut from count as one) --
-  as { "ref": "N12", "quote": "4 to 15 words copied exactly from that row" }.
+  as { "ref": "N12", "quote": "4 to 10 words copied exactly from that row" }.
   Quotes are checked character for character. A wrong one kills the candidate.
 - "take": what they see.
-- "stake": what they would do differently if it's right. A real action.
+- "stake": under 12 words: what they would do differently if it's right. A real action.
 - "project": the exact title of the project it's most about, or null.
 
 If nothing in here holds a real one, return an empty list. An honest nothing is
@@ -254,7 +257,7 @@ ${liveTitle ? `- "crosses": true only if the take puts "${liveTitle}" next to a 
   of theirs about something ELSE, with neither mentioning the other. A take built
   from things all about "${liveTitle}", or all about one other thing, is false.
   This only decides the order; it never makes a take ship.
-` : ''}Then "verdict": "ship" or "kill", and "reason": one plain sentence.
+` : ''}Then "verdict": "ship" or "kill", and "reason": under 8 words.
 
 ${loose
     ? 'This is a second pass after nothing better was found, so ship anything true and reactable -- but never anything false.'

@@ -50,6 +50,11 @@ export const SHELF_LIFE_HOURS = 96
 
 /** One to show, two banked behind it. */
 const QUESTIONS_PER_RUN = 3
+/** With this much time left and nobody waiting, write two drafts at once, a
+ *  different lens each. The model writes about 80 tokens a second, so one
+ *  draft of six takes would take longer than the whole budget; two drafts of
+ *  three take as long as one. */
+const PARALLEL_DRAFT_MIN_MS = 18_000
 
 /** Candidates per draft call; the judge sees all that pass the gates. */
 const CANDIDATES_PER_RUN = 4
@@ -73,6 +78,10 @@ const MODEL = 'gemini-flash-latest'
  * first honest candidate ships alone.
  */
 export const TOTAL_BUDGET_MS = 10_000
+/** "Ask me something else" with an empty bank. Pressing it has to produce
+ *  something, so it gets room to: the model measured at 12-13s end to end,
+ *  and the button shows "thinking…" while it works. */
+export const LIVE_BUDGET_MS = 25_000
 /** The nightly bake and the cron retire-and-rebake have nobody waiting on
  *  them, so they get room to finish: the draft is the slow part and a bigger
  *  corpus plus a season made it miss ten seconds. The reroll button keeps
@@ -105,6 +114,8 @@ export interface BakedSpark {
   /** Every row the question was built on, by plain title -- what was put
    *  next to what. Shown under the question. */
   sources?: { kind: string; title: string }[]
+  /** The judge's backing, 0-100 (mean of its four scores). Absent when unjudged. */
+  score?: number
   /** Written now, shown later. */
   banked?: boolean
 }
@@ -459,6 +470,10 @@ export async function generateMull(
   creative = false,
   /** When the whole run must be finished by. */
   deadline = Date.now() + TOTAL_BUDGET_MS,
+  /** The last pass of a press that found nothing: one draft that stays away
+   *  from the live project and goes for the furthest-apart pair it can find.
+   *  Honesty gates unchanged. */
+  reach = false,
 ): Promise<BakedSpark[]> {
   const corpusStart = Date.now()
   const [corpus, echo] = await Promise.all([loadCorpus(supabase, userId, trace), echoIn])
@@ -474,12 +489,14 @@ export async function generateMull(
   ])
   const recentTexts = creative ? [] : echo.recentTexts
 
-  const prompt = draftPrompt({
+  const parallel = !reach && deadline - Date.now() >= PARALLEL_DRAFT_MIN_MS
+  const promptFor = (lens?: 'live' | 'elsewhere') => draftPrompt({
     corpusText: corpus.text,
     // Never more, season or not: every extra candidate is output the model
     // has to write inside the ten-second ceiling. Six of them timed the
     // draft out live (6.8s allowed, aborted) and nothing shipped at all.
-    howMany: CANDIDATES_PER_RUN,
+    howMany: parallel ? 3 : CANDIDATES_PER_RUN,
+    lens,
     recentQuestions: recentTexts,
     recentRefs: corpus.rows.filter(r => recentIds.has(r.id)).map(r => r.ref),
     resonance: echo.resonance,
@@ -490,6 +507,7 @@ export async function generateMull(
     waitingTitles: echo.season?.active ? echo.season.also.filter(p => p.blocked).map(p => p.title) : [],
     seasonActive: !!echo.season?.active,
   })
+  const prompt = promptFor(reach ? 'elsewhere' : parallel && echo.live ? 'live' : undefined)
   trace.push(`draft prompt: ${prompt.length} chars`)
 
   const draftBudget = deadline - Date.now() - MIN_JUDGE_MS - TAIL_MS
@@ -497,7 +515,13 @@ export async function generateMull(
     trace.push(`!! out of time before the draft (${deadline - Date.now()}ms left)`)
     return []
   }
-  const drafted = await draft(prompt, draftBudget, trace)
+  const drafted = parallel
+    ? (await Promise.all([
+        draft(prompt, draftBudget, trace),
+        draft(promptFor('elsewhere'), draftBudget, trace),
+      ])).flat()
+    : await draft(prompt, draftBudget, trace)
+  if (parallel) trace.push(`two drafts in parallel: ${drafted.length} candidates between them`)
 
   // Drop a question written twice in one response.
   const seenQuestions = new Set<string>()
@@ -549,6 +573,7 @@ export async function generateMull(
   )
   const depths = new Map<Grounded, 0 | 1 | 2>()
   const ranks = new Map<Grounded, number>()
+  const percents = new Map<Grounded, number>()
   // The judge's own read ("crosses") can lift a 0 to a 1 -- and only for a
   // take about the main project, never past it. Only the cited rows can
   // prove the trifecta.
@@ -574,6 +599,7 @@ export async function generateMull(
         depths.set(x.g, d)
         const rank = judgeRank(x.s) + bonus(d)
         ranks.set(x.g, rank)
+        percents.set(x.g, Math.round(((x.s.revelation + x.s.truth + x.s.specific + x.s.answerable) / 4) * 10))
         return { ...x, rank }
       })
       .sort((a, b) => b.rank - a.rank)
@@ -626,7 +652,7 @@ export async function generateMull(
   }
 
   // Four slots (main, two others, wild) need four takes; otherwise three.
-  const perRun = seasonOn && alsoIds.length > 1 ? QUESTIONS_PER_RUN + 1 : QUESTIONS_PER_RUN
+  const perRun = parallel || (seasonOn && alsoIds.length > 1) ? QUESTIONS_PER_RUN + 1 : QUESTIONS_PER_RUN
   const baked: BakedSpark[] = []
   for (const g of ranked) {
     if (baked.length >= perRun) break
@@ -645,6 +671,7 @@ export async function generateMull(
       subject_id: g.rows[0].id,
       subject_kind: g.rows[0].kind,
       sources: sourcesOf(g.rows),
+      score: percents.get(g),
       banked: baked.length > 0,
     })
   }
@@ -676,6 +703,34 @@ export async function probeLatency(supabase: SupabaseClient, userId: string, tra
   await run(`your notes (${corpus.text.length} chars) in, one word out`, `${corpus.text}\n\nReply with the single word OK.`, 8)
   await run('tiny prompt, ~600 tokens out', 'Write about 450 words on why a small wooden toy takes longer to finish than it looks. Plain prose.', 2048)
   await run('your notes in, one word out (again)', `${corpus.text}\n\nReply with the single word OK.`, 8)
+
+  // Is the ~1.5s floor the model, the SDK, or the network? Same tiny prompt
+  // three more ways: straight over HTTP, the Lite model, and streamed.
+  const key = process.env.GEMINI_API_KEY
+  trace.push(`probe region: ${process.env.VERCEL_REGION ?? 'unknown'}`)
+  const raw = async (label: string, model: string, stream: boolean) => {
+    const start = Date.now()
+    try {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:${stream ? 'streamGenerateContent?alt=sse&' : 'generateContent?'}key=${key}`
+      const r = await fetch(url, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ contents: [{ parts: [{ text: 'Reply with the single word OK.' }] }], generationConfig: { maxOutputTokens: 8 } }),
+        signal: AbortSignal.timeout(30_000),
+      })
+      const headersMs = Date.now() - start
+      await r.text()
+      trace.push(`probe ${label}: ${Date.now() - start}ms (status ${r.status}, headers after ${headersMs}ms)`)
+    } catch (e) {
+      trace.push(`probe ${label} FAILED after ${Date.now() - start}ms: ${e instanceof Error ? e.message : String(e)}`)
+    }
+  }
+  if (key) {
+    await raw('raw HTTP, flash, tiny', MODEL, false)
+    await raw('raw HTTP, flash, tiny (again)', MODEL, false)
+    await raw('raw HTTP, flash-lite, tiny', 'gemini-flash-lite-latest', false)
+    await raw('raw HTTP, flash, streamed', MODEL, true)
+  }
 }
 
 export async function bakeMull(
@@ -686,9 +741,10 @@ export async function bakeMull(
   creative = false,
   /** Whole-run budget. Defaults to the reroll's ten seconds. */
   budgetMs = TOTAL_BUDGET_MS,
+  reach = false,
 ): Promise<BakedSpark[]> {
   const mulls = await generateMull(
-    supabase, userId, echo ?? loadEchoContext(supabase, userId), trace, creative, Date.now() + budgetMs,
+    supabase, userId, echo ?? loadEchoContext(supabase, userId), trace, creative, Date.now() + budgetMs, reach,
   )
   if (mulls.length === 0) trace.push('nothing worth asking -- empty slot')
   return mulls

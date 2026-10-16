@@ -60,7 +60,7 @@ import { normalizeTaskOrder } from './_lib/task-order.js'
 import { reconcileCloseout, parseTicked } from './_lib/session-closeout.js'
 import { readCycleState, cycleLabel, rollToNextCycle, lastCycleSteps } from './_lib/project-cycles.js'
 import { appendMilestone, readMilestones } from './_lib/project-milestones.js'
-import { bakeMull, probeLatency, SHELF_LIFE_HOURS, NIGHTLY_BUDGET_MS } from './_lib/mull-generator.js'
+import { bakeMull, probeLatency, SHELF_LIFE_HOURS, NIGHTLY_BUDGET_MS, LIVE_BUDGET_MS } from './_lib/mull-generator.js'
 import { runDriftDecay } from './_lib/drift-runner.js'
 import { SPARK_RESPONSE_TAG, SPARK_CORRECTION_TAG } from './_lib/corpus-provenance.js'
 import { handleProjectOutputs } from './_lib/project-outputs.js'
@@ -84,7 +84,7 @@ const EXECUTION_SESSIONS_RESOURCES = new Set([
   'harvest', 'mirror', 'book',
   'next-cycle', 'stuck', 'move',
 ])
-const EXECUTION_SPARKS_RESOURCES = new Set(['bake', 'today', 'respond', 'spark-followup', 'dismiss-spark', 'reroll-spark', 'retire-and-rebake', 'catch-up'])
+const EXECUTION_SPARKS_RESOURCES = new Set(['bake', 'today', 'respond', 'spark-followup', 'dismiss-spark', 'reroll-spark', 'retire-and-rebake', 'topup-bank', 'catch-up'])
 const EXECUTION_PROPOSALS_RESOURCES = new Set([
   'drift-decay', 'reembed-articles', 'backfill-embeddings', 'reprocess-backlog',
 ])
@@ -1602,6 +1602,13 @@ async function insertSparks(
   if (!missing(first.error)) return first as any
   const withSelect = (payload: Record<string, unknown>[], sel: string | undefined) =>
     supabase.from('sparks').insert(payload).select(sel || 'id')
+  // Stage 0: only `score` (20261016) is likely missing.
+  const noScore = rows.map(({ score: _score, ...rest }) => rest)
+  const scoreless = (select ?? '').replace(/,\s*score\b/, '')
+  const zero = await withSelect(noScore, scoreless)
+  if (!missing(zero.error)) return zero as any
+  rows = noScore
+  select = scoreless
   // Stage 1: only `sources` (20261003) is likely missing -- keep the rest, so
   // the "next run avoids these rows" guard keeps working.
   const noSources = rows.map(({ sources: _src, ...rest }) => rest)
@@ -2463,10 +2470,26 @@ async function retireAndRebake(
     if (served) return { rerolled: true, spark: served }
   }
 
-  // Cron has nobody waiting, so it gets the long budget; the button keeps ten seconds.
+  // Cron has nobody waiting, so it gets the long budget. The button gets
+  // enough to finish a live draft: pressing it must produce something.
   const trace: string[] = []
-  const budget = force ? NIGHTLY_BUDGET_MS : undefined
+  const budget = force ? NIGHTLY_BUDGET_MS : LIVE_BUDGET_MS
   let baked = await bakeMull(supabase, userId, undefined, trace, creative, budget)
+
+  // A strict pass that came back empty (not slow, just nothing passed the
+  // shape gates) goes straight to the looser pass instead of making them tap
+  // "get more creative". Honesty gates still apply to both.
+  if (baked.length === 0 && !creative && !force && !trace.some(l => l.startsWith('!!'))) {
+    trace.push('strict pass found nothing -- trying the looser pass')
+    baked = await bakeMull(supabase, userId, undefined, trace, true, budget)
+  }
+  // Still nothing and not for want of time: one last draft aimed away from
+  // the live project, at the furthest-apart pair. A press never ends on "the
+  // notes are empty".
+  if (baked.length === 0 && !force && !trace.some(l => l.startsWith('!!'))) {
+    trace.push('looser pass found nothing -- reaching for the furthest-apart pair')
+    baked = await bakeMull(supabase, userId, undefined, trace, true, 20_000, true)
+  }
 
   // Silence often isn't a thin corpus — it's an empty fragments table.
   // A project's captures are most of what a blind spot is found in, so
@@ -2501,7 +2524,8 @@ async function retireAndRebake(
     // "!!" lines are the run failing (a timeout, a rejected call), not the
     // notes having nothing in them. The app says which.
     const slow = trace.some(l => l.startsWith('!!'))
-    return slow ? { rerolled: false, reason: 'took too long', slow: true } : { rerolled: false, reason: 'nothing else to ask' }
+    // Either way it's a try-again, never a verdict on the notes.
+    return { rerolled: false, reason: slow ? 'took too long' : 'did not land', slow: true }
   }
 
   // Same as the bake: anything past the first is banked behind it, with
@@ -2518,9 +2542,10 @@ async function retireAndRebake(
       subject_id: spark.subject_id ?? null,
       subject_kind: spark.subject_kind ?? null,
       sources: spark.sources ?? null,
+      score: spark.score ?? null,
       shown_at: i === 0 ? nowIso : null,
     })),
-    'id, type, text, project_id, shown_at, sources, projects(title)',
+    'id, type, text, project_id, shown_at, sources, score, projects(title)',
   )
 
   if (insertErr) {
@@ -2531,6 +2556,57 @@ async function retireAndRebake(
   const inserted = (insertedRows ?? []).find((r: any) => r.shown_at) ?? insertedRows?.[0] ?? null
 
   return { rerolled: true, spark: inserted }
+}
+
+/**
+ * Restock the bank. "Ask me something else" serves a banked take first, so
+ * every tap spends one; this runs behind it with nobody waiting and the long
+ * budget, so the next tap is free too. Does nothing while two or more unseen
+ * takes are waiting.
+ */
+const BANK_TARGET = 2
+async function topUpBank(
+  supabase: ReturnType<typeof getSupabaseClient>, userId: string,
+): Promise<{ added: number; waiting: number; reason?: string }> {
+  const nowIso = new Date().toISOString()
+  const { data: waitingRows } = await supabase
+    .from('sparks')
+    .select('id, expires_at')
+    .eq('user_id', userId)
+    .is('answered_at', null)
+    .is('shown_at', null)
+    .gt('expires_at', nowIso)
+  const waiting = waitingRows?.length ?? 0
+  if (waiting >= BANK_TARGET) return { added: 0, waiting }
+
+  const trace: string[] = []
+  const baked = await bakeMull(supabase, userId, undefined, trace, false, NIGHTLY_BUDGET_MS)
+  if (baked.length === 0) return { added: 0, waiting, reason: 'nothing else to ask' }
+
+  // Behind whatever is already banked, so they come out in the order made.
+  const latest = Math.max(Date.now(), ...(waitingRows ?? []).map((r: any) => new Date(r.expires_at).getTime()))
+  const { error } = await insertSparks(
+    supabase,
+    baked.map((spark, i) => ({
+      user_id: userId,
+      type: spark.type,
+      project_id: spark.project_id,
+      text: spark.text,
+      expires_at: new Date(latest + (i + 1) * 60_000).toISOString(),
+      stake: spark.stake ?? null,
+      subject_id: spark.subject_id ?? null,
+      subject_kind: spark.subject_kind ?? null,
+      sources: spark.sources ?? null,
+      score: spark.score ?? null,
+      shown_at: null,
+    })),
+    'id',
+  )
+  if (error) {
+    console.error('[utilities/sparks] top-up insert failed:', error)
+    return { added: 0, waiting, reason: error.message }
+  }
+  return { added: baked.length, waiting }
 }
 
 async function handleExecutionSparks(req: VercelRequest, res: VercelResponse) {
@@ -2627,6 +2703,7 @@ async function handleExecutionSparks(req: VercelRequest, res: VercelResponse) {
       subject_id: spark.subject_id ?? null,
       subject_kind: spark.subject_kind ?? null,
       sources: spark.sources ?? null,
+      score: spark.score ?? null,
     }))
 
     const { error: insertErr } = await insertSparks(supabase, rows)
@@ -2668,7 +2745,7 @@ async function handleExecutionSparks(req: VercelRequest, res: VercelResponse) {
     // isn't there yet.
     let data: any[] | null = null
     let error: { code?: string; message: string } | null = null
-    for (const cols of [`${BASE_COLS}, sources, stake`, `${BASE_COLS}, sources`, BASE_COLS]) {
+    for (const cols of [`${BASE_COLS}, sources, stake, score`, `${BASE_COLS}, sources, stake`, `${BASE_COLS}, sources`, BASE_COLS]) {
       ;({ data, error } = (await standing(cols)) as { data: any[] | null; error: { code?: string; message: string } | null })
       if (error?.code !== '42703') break
     }
@@ -2776,6 +2853,14 @@ async function handleExecutionSparks(req: VercelRequest, res: VercelResponse) {
     // strict reroll already came back with nothing. See retireAndRebake.
     const creative = req.body?.creative === true
     return res.status(200).json(await retireAndRebake(supabase, userId, false, creative))
+  }
+
+  // ─── TOP-UP-BANK (the app, in the background) ───────────────────────
+  if (resource === 'topup-bank') {
+    if (req.method !== 'POST') return res.status(405).json({ error: 'POST required' })
+    const userId = await getUserId(req)
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' })
+    return res.status(200).json(await topUpBank(supabase, userId))
   }
 
   // ─── RETIRE-AND-REBAKE (cron) ───────────────────────────────────────
