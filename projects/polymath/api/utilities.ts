@@ -2476,19 +2476,24 @@ async function retireAndRebake(
   const budget = force ? NIGHTLY_BUDGET_MS : LIVE_BUDGET_MS
   let baked = await bakeMull(supabase, userId, undefined, trace, creative, budget)
 
-  // A strict pass that came back empty (not slow, just nothing passed the
-  // shape gates) goes straight to the looser pass instead of making them tap
-  // "get more creative". Honesty gates still apply to both.
-  if (baked.length === 0 && !creative && !force && !trace.some(l => l.startsWith('!!'))) {
-    trace.push('strict pass found nothing -- trying the looser pass')
-    baked = await bakeMull(supabase, userId, undefined, trace, true, budget)
-  }
-  // Still nothing and not for want of time: one last draft aimed away from
-  // the live project, at the furthest-apart pair. A press never ends on "the
-  // notes are empty".
-  if (baked.length === 0 && !force && !trace.some(l => l.startsWith('!!'))) {
-    trace.push('looser pass found nothing -- reaching for the furthest-apart pair')
-    baked = await bakeMull(supabase, userId, undefined, trace, true, 20_000, true)
+  // Nothing shipped, so try again with looser ground until something does:
+  // the strict pass, the looser one, a last draft aimed away from the live
+  // project at the furthest-apart pair, then looser again (a draft is a roll
+  // of the dice). There is always a set of takes to mull; the judge only
+  // sets the percentage. Stops at ~55s so the function (90s) never dies
+  // mid-write.
+  const startedAt = Date.now()
+  const passes: { creative: boolean; reach: boolean; ms: number }[] = [
+    { creative: true, reach: false, ms: budget },
+    { creative: true, reach: true, ms: 20_000 },
+    { creative: true, reach: false, ms: 20_000 },
+  ]
+  for (const pass of passes) {
+    if (baked.length > 0 || force) break
+    if (creative && !pass.reach && pass === passes[0]) continue
+    if (Date.now() - startedAt > 55_000 - pass.ms) break
+    trace.push(`nothing shipped -- trying again${pass.reach ? ', reaching for the furthest-apart pair' : ', looser'}`)
+    baked = await bakeMull(supabase, userId, undefined, trace, pass.creative, pass.ms, pass.reach)
   }
 
   // Silence often isn't a thin corpus — it's an empty fragments table.
@@ -2524,7 +2529,7 @@ async function retireAndRebake(
     // "!!" lines are the run failing (a timeout, a rejected call), not the
     // notes having nothing in them. The app says which.
     const slow = trace.some(l => l.startsWith('!!'))
-    // Either way it's a try-again, never a verdict on the notes.
+    // Never a verdict on the notes; the app just asks again quietly.
     return { rerolled: false, reason: slow ? 'took too long' : 'did not land', slow: true }
   }
 

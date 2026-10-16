@@ -244,16 +244,19 @@ describe('the mull channel, end to end', () => {
     expect(await bakeMull(fakeSupabase(corpus()).client, 'u1')).toEqual([])
   })
 
-  it('ships nothing the judge kills, however honest', async () => {
-    respond({ draft: [ONE_TAKE], judge: [ship(1, { verdict: 'kill', reason: 'they already know this' })] })
+  it('ships what the judge kills too, with a low percentage', async () => {
+    respond({ draft: [ONE_TAKE], judge: [ship(1, { verdict: 'kill', revelation: 2, truth: 2, specific: 2, answerable: 2, reason: 'they already know this' })] })
     const trace: string[] = []
-    expect(await bakeMull(fakeSupabase(corpus()).client, 'u1', undefined, trace)).toEqual([])
+    const baked = await bakeMull(fakeSupabase(corpus()).client, 'u1', undefined, trace)
+    expect(baked).toHaveLength(1)
+    expect(baked[0].score).toBe(20)
     expect(trace.join('\n')).toMatch(/judge KILL .*they already know this/)
   })
 
-  it('ships nothing the judge calls untrue, even with a ship verdict', async () => {
-    respond({ draft: [ONE_TAKE], judge: [ship(1, { truth: 4 })] })
-    expect(await bakeMull(fakeSupabase(corpus()).client, 'u1')).toEqual([])
+  it('puts an overreaching take behind an honest one', async () => {
+    respond({ draft: [GREENHOUSE, ONE_TAKE], judge: [ship(1, { overreach: true, revelation: 10 }), ship(2, { revelation: 6 })] })
+    const baked = await bakeMull(fakeSupabase(corpus()).client, 'u1')
+    expect(baked.map(b => b.text)).toEqual([ONE_TAKE.question, GREENHOUSE.question])
   })
 
   it('orders by the judge, not by the drafter', async () => {
@@ -692,8 +695,10 @@ describe('creative mode ("get more creative")', () => {
     expect(await generateMull(fakeSupabase(corpus()).client, 'u1', noEcho, [], true)).toEqual([])
   })
 
-  it('still refuses what the judge calls untrue', async () => {
+  it('still ships it, marked low, when the judge calls it untrue', async () => {
     respond({ draft: [ONE_TAKE], judge: [ship(1, { truth: 3 })] })
-    expect(await generateMull(fakeSupabase(corpus()).client, 'u1', noEcho, [], true)).toEqual([])
+    const out = await generateMull(fakeSupabase(corpus()).client, 'u1', noEcho, [], true)
+    expect(out).toHaveLength(1)
+    expect(out[0].score).toBeLessThan(80)
   })
 })

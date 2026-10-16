@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   quoteIsReal, resolveEvidence, specifics, unsupportedSpecifics, ordinalSupported,
-  offersAChoice, isClosed, checkCandidate, crossesLiveProject, crossingDepth, judgeShips, judgeRank, parseJudgeScores, readsAnInnerState,
+  offersAChoice, isClosed, checkCandidate, crossesLiveProject, crossingDepth, judgePercent, judgeRank, parseJudgeScores, readsAnInnerState,
   type Candidate, type JudgeScore,
 } from './mull.js'
 import type { Corpus, CorpusRow } from './mull-corpus.js'
@@ -145,19 +145,14 @@ describe('the judge', () => {
   const s = (o: Partial<JudgeScore>): JudgeScore =>
     ({ n: 1, revelation: 8, truth: 8, specific: 8, answerable: 8, verdict: 'ship', reason: '', ...o })
 
-  it('ships only on its own verdict, a true pattern and a real revelation', () => {
-    expect(judgeShips(s({}))).toBe(true)
-    expect(judgeShips(s({ verdict: 'kill' }))).toBe(false)
-    expect(judgeShips(s({ truth: 6 }))).toBe(false)
-    expect(judgeShips(s({ revelation: 6 }))).toBe(false)
+  it('turns the four scores into a percentage', () => {
+    expect(judgePercent(s({}))).toBe(80)
+    expect(judgePercent(s({ revelation: 10, truth: 10, specific: 10, answerable: 10 }))).toBe(100)
+    expect(judgePercent(s({ revelation: 2, truth: 4, specific: 2, answerable: 4 }))).toBe(30)
   })
-  it('the loose bar drops taste, never truth', () => {
-    expect(judgeShips(s({ verdict: 'kill', revelation: 3 }), true)).toBe(true)
-    expect(judgeShips(s({ truth: 5 }), true)).toBe(false)
-  })
-  it('never ships an overreaching take, however sharp', () => {
-    expect(judgeShips(s({ overreach: true }))).toBe(false)
-    expect(judgeShips(s({ overreach: true }), true)).toBe(false)
+  it('marks an overreaching take down hard and ranks it last, but never removes it', () => {
+    expect(judgePercent(s({ overreach: true }))).toBe(40)
+    expect(judgeRank(s({ overreach: true }))).toBeLessThan(judgeRank(s({ revelation: 3, truth: 3, specific: 3, answerable: 3 })))
     expect(parseJudgeScores({ scores: [{ n: 1, revelation: 8, truth: 8, specific: 8, answerable: 8, overreach: true, verdict: 'ship' }] }, 1).get(1)?.overreach).toBe(true)
   })
   it('revelation outweighs everything else', () => {

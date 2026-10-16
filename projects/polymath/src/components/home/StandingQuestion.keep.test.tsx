@@ -77,15 +77,15 @@ describe('keeping a yes', () => {
 })
 
 describe('when the reroll comes back empty', () => {
-  it('asks to try again and never says the notes are empty', async () => {
+  it('quietly asks once more and never says the notes are empty or that it failed', async () => {
     get.mockResolvedValue({ spark: null })
-    post.mockResolvedValue({ rerolled: false, reason: 'took too long', slow: true })
+    post.mockResolvedValue({ rerolled: false, reason: 'did not land', slow: true })
     render(<StandingQuestion />)
     fireEvent.click(await screen.findByText('give me something to think about'))
-    expect(await screen.findByText(/Try again\./)).toBeTruthy()
+    await waitFor(() => expect(post.mock.calls.filter(c => String(c[0]).includes('reroll-spark'))).toHaveLength(2))
     expect(screen.queryByText(/Nothing else worth asking/)).toBeNull()
+    expect(screen.queryByText(/Couldn't land one/)).toBeNull()
     expect(screen.queryByText(/Really nothing to work with/)).toBeNull()
-    expect(screen.queryByText('get more creative')).toBeNull()
   })
 })
 
