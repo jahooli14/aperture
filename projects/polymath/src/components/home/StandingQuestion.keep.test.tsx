@@ -87,3 +87,16 @@ describe('when the reroll runs out of time', () => {
     expect(screen.queryByText('get more creative')).toBeNull()
   })
 })
+
+describe('where a take came from', () => {
+  it('stays hidden until you tap the take', async () => {
+    get.mockResolvedValue({ spark: { id: 's2', type: 'mull', text: TAKE, project_id: 'p1', projects: { title: 'The book' }, sources: [{ title: 'Greenhouse note' }, { title: 'The book' }], stake: 'x' } })
+    render(<StandingQuestion />)
+    const take = await screen.findByText(/one slow sitting/)
+    expect(screen.queryByText(/Greenhouse note/)).toBeNull()
+    fireEvent.click(take)
+    expect(await screen.findByText(/Greenhouse note \+ The book/)).toBeTruthy()
+    fireEvent.click(take)
+    await waitFor(() => expect(screen.queryByText(/Greenhouse note/)).toBeNull())
+  })
+})

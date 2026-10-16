@@ -58,6 +58,8 @@ const quietActionStyle = { color: 'rgb(var(--brand-primary-rgb))' }
 export function StandingQuestion() {
   const [spark, setSpark] = useState<StandingQuestionSpark | null>(null)
   const [answering, setAnswering] = useState(false)
+  // Where the take came from stays out of sight until you tap the take.
+  const [showSources, setShowSources] = useState(false)
   const [text, setText] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [rerolling, setRerolling] = useState(false)
@@ -218,6 +220,7 @@ export function StandingQuestion() {
       if (data.rerolled && data.spark) {
         haptic.light()
         setSpark(data.spark)
+        setShowSources(false)
         setAnswering(false)
         setText('')
         setStance(null)
@@ -350,6 +353,7 @@ export function StandingQuestion() {
   }
 
   const projectTitle = spark.projects?.title ?? null
+  const hasSources = (spark.sources?.length ?? 0) >= 2
 
   return reveal(
     <div className="pb-2 mb-2.5">
@@ -365,7 +369,15 @@ export function StandingQuestion() {
           .mull-line in theme.css). It settles sharp and still, so it's
           dreamy on arrival and readable at rest. Keyed on the spark so a
           new question arrives the same way. */}
-      <p key={spark.id} className="mull-text text-[16px] leading-[1.45] mt-0.5">
+      <p
+        key={spark.id}
+        className={`mull-text text-[16px] leading-[1.45] mt-0.5 ${hasSources ? 'cursor-pointer' : ''}`}
+        {...(hasSources ? {
+          role: 'button', tabIndex: 0, 'aria-expanded': showSources,
+          onClick: () => setShowSources(v => !v),
+          onKeyDown: (e: React.KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setShowSources(v => !v) } },
+        } : {})}
+      >
         {splitSentences(spark.text).map((line, i) => (
           <span key={i} className="mull-line" style={{ animationDelay: `${0.2 + i * 0.9}s` }}>
             {line}{' '}
@@ -373,7 +385,7 @@ export function StandingQuestion() {
         ))}
       </p>
 
-      {(spark.sources?.length ?? 0) >= 2 && (
+      {hasSources && showSources && (
         <p className="text-[13px] mt-1 leading-snug line-clamp-1" style={{ color: 'var(--brand-text-secondary)' }}>
           <span className="text-[11px] uppercase tracking-[0.14em] font-medium mr-1.5" style={{ color: 'var(--brand-text-muted)' }}>
             from
