@@ -37,7 +37,7 @@ import { parseModelJson } from './schemas.js'
 import { echoesRecent, fetchRecentSparkTexts, fetchRecentSparkProjectIds, fetchRecentSparkSubjectIds } from './spark-echo.js'
 import { SPARK_CORRECTION_TAG, isAppAuthored } from './corpus-provenance.js'
 import { loadCorpus, normaliseTitle, type Corpus, type CorpusRow } from './mull-corpus.js'
-import { checkCandidate, crossingDepth, CROSSING_BONUS, TRIFECTA_BONUS, slotOf, orderBySlots, type Slot, judgeShips, judgeRank, parseJudgeScores, type Candidate, type Grounded, type JudgeScore } from './mull.js'
+import { checkCandidate, crossingDepth, CROSSING_BONUS, TRIFECTA_BONUS, slotOf, orderBySlots, type Slot, judgePercent, judgeRank, parseJudgeScores, type Candidate, type Grounded, type JudgeScore } from './mull.js'
 import { draftPrompt, judgePrompt } from './mull-prompts.js'
 
 /**
@@ -412,11 +412,11 @@ async function draft(prompt: string, timeoutMs: number, trace: MullTrace): Promi
   }
 }
 
-async function judge(grounded: Grounded[], loose: boolean, timeoutMs: number, trace: MullTrace, liveTitle?: string | null): Promise<Map<number, JudgeScore> | null> {
+async function judge(grounded: Grounded[], timeoutMs: number, trace: MullTrace, liveTitle?: string | null): Promise<Map<number, JudgeScore> | null> {
   const start = Date.now()
   let usage: Usage = null
   try {
-    const raw = await generateText(judgePrompt(grounded, loose, liveTitle), {
+    const raw = await generateText(judgePrompt(grounded, liveTitle), {
       responseFormat: 'json', model: MODEL, maxTokens: 8192,
       thinkingLevel: 'low', timeoutMs, onUsage: u => { usage = u },
     })
@@ -557,7 +557,7 @@ export async function generateMull(
 
   const judgeBudget = deadline - Date.now() - TAIL_MS
   const scores = judgeBudget >= MIN_JUDGE_MS
-    ? await judge(grounded, creative, judgeBudget, trace, echo.live?.title ?? null)
+    ? await judge(grounded, judgeBudget, trace, echo.live?.title ?? null)
     : (trace.push(`judge skipped: ${judgeBudget}ms left`), null)
   // The Venn: a take that crosses the live project outranks one that stays
   // inside it (mull.ts, CROSSING_BONUS). Judged by the rows it cites, and
@@ -593,13 +593,13 @@ export async function generateMull(
     })
     ranked = grounded
       .map((g, i) => ({ g, s: scores.get(i + 1) }))
-      .filter((x): x is { g: Grounded; s: JudgeScore } => !!x.s && judgeShips(x.s, creative))
+      .filter((x): x is { g: Grounded; s: JudgeScore } => !!x.s)
       .map(x => {
         const d = depthOf(x.g, x.s)
         depths.set(x.g, d)
         const rank = judgeRank(x.s) + bonus(d)
         ranks.set(x.g, rank)
-        percents.set(x.g, Math.round(((x.s.revelation + x.s.truth + x.s.specific + x.s.answerable) / 4) * 10))
+        percents.set(x.g, judgePercent(x.s))
         return { ...x, rank }
       })
       .sort((a, b) => b.rank - a.rank)

@@ -322,21 +322,19 @@ export interface JudgeScore {
 }
 
 /**
- * Whether a judged candidate ships. Truth is a floor in every tier -- a
- * looser bar changes how good a question has to be, never whether it may
- * be false. The strict bar needs the judge's own "ship" as well as the
- * numbers, because the reason it gives for a kill is usually right even
- * when its scores are generous.
+ * The judge scores; it never blocks. There is always a set of takes to mull,
+ * and they get lower in percentage as you go through them, so the app shows
+ * the best one left. An overreaching take (a feeling or motive put on them)
+ * is marked down hard, not removed.
  */
-export function judgeShips(s: JudgeScore, loose = false): boolean {
-  if (s.overreach) return false
-  if (loose) return s.truth >= 6 && s.answerable >= 5
-  return s.verdict === 'ship' && s.truth >= 7 && s.revelation >= 7 && s.answerable >= 6
+export function judgePercent(s: JudgeScore): number {
+  const mean = (s.revelation + s.truth + s.specific + s.answerable) / 4
+  return Math.max(0, Math.min(100, Math.round(mean * 10 * (s.overreach ? 0.5 : 1))))
 }
 
 /** Revelation counts double: it is the only thing this channel is for. */
 export function judgeRank(s: JudgeScore): number {
-  return 2 * s.revelation + s.truth + s.specific + s.answerable
+  return 2 * s.revelation + s.truth + s.specific + s.answerable - (s.overreach ? 40 : 0)
 }
 
 /**

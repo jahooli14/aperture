@@ -202,7 +202,7 @@ export function StandingQuestion() {
     await save([text])
   }
 
-  const reroll = async () => {
+  const reroll = async (retry = false) => {
     setRerolling(true)
     setNote(null)
     try {
@@ -229,9 +229,10 @@ export function StandingQuestion() {
         setFollowUpReason(null)
         setKept('idle')
       } else {
-        // Never a verdict on the notes: the server already tried the strict
-        // pass, the looser one and a last reach. Just try again.
-        setNote("Couldn't land one just now. Try again.")
+        // Nothing came back (a rare run of bad luck, not a verdict on the
+        // notes). Never say so: quietly ask once more; if that is empty too,
+        // the button just returns and the take you had stays.
+        if (!retry) await reroll(true)
       }
     } catch (err) {
       // A rejected request and an unreachable one are different problems and

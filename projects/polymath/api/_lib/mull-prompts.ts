@@ -169,8 +169,8 @@ ${ctx.lens === 'live' ? 'THIS ROUND: lean on the project they are deep in and th
 - "stake": under 12 words: what they would do differently if it's right. A real action.
 - "project": the exact title of the project it's most about, or null.
 
-If nothing in here holds a real one, return an empty list. An honest nothing is
-better than a forced take.
+Always return at least one candidate. If nothing here is strong, return the best
+of what there is and let your doubt say so. Every quote must still be real.
 
 JSON only:
 { "candidates": [ { "noticing": "", "doubt": "", "evidence": [ { "ref": "", "quote": "" } ], "take": "", "stake": "", "project": null } ] }`
@@ -221,7 +221,7 @@ function rowForJudge(r: CorpusRow): string {
   return `    [${r.ref}] ${r.title ? `"${r.title}" ` : ''}(${r.meta}): ${text}`
 }
 
-export function judgePrompt(candidates: Grounded[], loose: boolean, liveTitle?: string | null): string {
+export function judgePrompt(candidates: Grounded[], liveTitle?: string | null): string {
   const list = candidates.map((c, i) =>
     `#${i + 1}\n  SHOWN TO THEM: "${c.question}"\n  CLAIMED PATTERN: ${c.noticing || '(none given)'}\n` +
     `  THE WRITER'S OWN DOUBT: ${c.doubt || '(none given)'}\n  BUILT ON:\n${c.rows.map(rowForJudge).join('\n')}`,
@@ -259,9 +259,9 @@ ${liveTitle ? `- "crosses": true only if the take puts "${liveTitle}" next to a 
   This only decides the order; it never makes a take ship.
 ` : ''}Then "verdict": "ship" or "kill", and "reason": under 8 words.
 
-${loose
-    ? 'This is a second pass after nothing better was found, so ship anything true and reactable -- but never anything false.'
-    : 'Be harsh: they would rather see nothing than a clever-sounding claim that doesn\'t land. But judge each on its own. A take that is true, specific and sharp ships, even if it is the only one here.'}
+Every take is shown in order of score, best first, so score honestly: a weak
+one gets a low number, not a kind one. Never inflate. "verdict" is your gut
+call only; it doesn't remove anything.
 
 JSON only:
 { "scores": [ { "n": 1, "revelation": 0, "truth": 0, "specific": 0, "answerable": 0, "overreach": false, "crosses": false, "verdict": "kill", "reason": "" } ] }`
