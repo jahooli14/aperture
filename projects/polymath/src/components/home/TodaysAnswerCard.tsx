@@ -37,6 +37,7 @@ import { haptic } from '../../utils/haptics'
 import { isActivelyWorked, readThemes } from '../../lib/projectThemes'
 import { seasonLine } from '../../lib/season'
 import { ThemeList } from '../projects/ProjectThemes'
+import { getTheme } from '../../lib/projectTheme'
 
 export function TodaysAnswerCard() {
   const navigate = useNavigate()
@@ -225,10 +226,8 @@ export function TodaysAnswerCard() {
   // everywhere else in the app, so outlining the hero in it made the one
   // thing you're meant to act on read as something that had gone wrong.
   // The badge carries how long it's been; the card just warms slightly.
-  const dormancyColor: string | null = null
   // The badge is the signal, so it stays legible; the card's border is
   // only atmosphere and sits far softer.
-  const dormancyBadgeColor: string | null = null
   const dormancyLabel = dormancyDays >= 28
     ? 'long quiet'
     : dormancyDays >= 7
@@ -286,77 +285,59 @@ export function TodaysAnswerCard() {
     )
   }
 
-  return (
-    <>
-    {/* Wrapper carries the breathing glow: the card itself clips its
-        overflow, which would cut an outer glow off at the edge. */}
-    <div className="relative isolate rounded-2xl neon-breathe">
-    <div
-      className="rounded-2xl p-4 flex flex-col overflow-hidden relative transition-colors duration-700 neon-edge"
-      style={{
-        background: 'linear-gradient(155deg, rgba(var(--brand-primary-rgb),0.10) 0%, rgba(13,20,34,0.86) 55%)',
-        backdropFilter: 'blur(32px) saturate(190%)',
-        WebkitBackdropFilter: 'blur(32px) saturate(190%)',
-        border: `1px solid ${dormancyColor ?? 'rgba(var(--brand-primary-rgb),0.10)'}`,
-        boxShadow: '0 0 42px rgba(var(--brand-primary-rgb),0.22), 0 12px 36px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.06)',
-      }}
-    >
-      {/* Top hairline glow — same brand-primary cue used on ThoughtOfTheDay. */}
-      <div
-        className="absolute top-0 left-0 right-0 h-px"
-        style={{ background: 'linear-gradient(90deg, transparent, rgba(var(--brand-primary-rgb),0.45), transparent)' }}
-      />
+  const theme = getTheme(focusProject.type || 'other', focusProject.title, focusProject.metadata?.tags)
 
-      {/* Two halves of one card, always in this order. The top quarter is
-          the thing to think about while you're NOT working; everything
-          below the rule is the session. The order doesn't shuffle by time
-          of day — a card that rearranges itself on a clock can't be learned,
-          and the session is what you came to press either way, so it keeps
-          the weight and the space. Resting state only: during a session
-          there's one thing on screen and it isn't a question about another
-          project. */}
-      <div onClick={(e) => e.stopPropagation()}>
+  return (
+    <div className="space-y-3">
+      {/* The thing to think about while you're NOT working. Its own card,
+          so the project below can be a card like every other project. */}
+      <div
+        className="rounded-2xl p-4 overflow-hidden relative neon-edge"
+        style={{
+          background: 'linear-gradient(155deg, rgba(var(--brand-primary-rgb),0.10) 0%, rgba(13,20,34,0.86) 55%)',
+          backdropFilter: 'blur(32px) saturate(190%)',
+          WebkitBackdropFilter: 'blur(32px) saturate(190%)',
+          border: '1px solid rgba(var(--brand-primary-rgb),0.10)',
+          boxShadow: '0 0 32px rgba(var(--brand-primary-rgb),0.16), 0 12px 36px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.06)',
+        }}
+      >
         <StandingQuestion />
       </div>
 
-      <div className="cursor-pointer" onClick={() => navigate(`/projects/${focusProject!.id}`)}>
-        {/* The line the mull question sits above is its own, deliberately
-            faint — this is the one that marks the handoff into the
-            project, so it carries more contrast and a touch of the brand
-            glow rather than reading as one more hairline. */}
+      {/* The project you're on: same card as the ones under "everything
+          else" (title inside, in the project's own colour), just bigger,
+          and the one place with a Go. The wrapper carries the breathing
+          glow because the card clips its overflow. */}
+      <div className="relative isolate rounded-2xl neon-breathe" style={{ ['--neon-rgb' as string]: theme.rgb }}>
         <div
-          className="h-px mb-2.5 -mt-0.5"
-          style={{ background: 'linear-gradient(90deg, rgba(var(--brand-primary-rgb),0.35), rgba(255,255,255,0.16) 40%, transparent)' }}
-        />
-        <div className="flex items-start justify-between gap-2 mb-0.5">
-          <h3
-            className="card-title-lg line-clamp-1 flex-1"
-            style={{ fontWeight: 600, fontSize: '1.0625rem', fontFamily: 'var(--brand-font-body)' }}
-          >
-            {focusProject.title}
-          </h3>
-          {dormancyLabel && (
-            <span
-              className="text-[11px] font-medium uppercase tracking-[0.14em] px-2 py-0.5 rounded-full flex-shrink-0 mt-0.5"
-              style={{
-                color: 'var(--brand-text-muted)',
-                border: '1px solid rgba(255,255,255,0.18)',
-                background: 'rgba(0,0,0,0.3)',
-              }}
-            >
-              {dormancyLabel}
-            </span>
-          )}
-        </div>
-        <span
-          className="text-[11px] uppercase tracking-[0.14em] font-medium mb-2 inline-block"
+          className="rounded-2xl p-4 flex flex-col overflow-hidden relative neon-edge cursor-pointer"
+          onClick={() => navigate(`/projects/${focusProject!.id}`)}
           style={{
-            color: dormancyBadgeColor ?? 'var(--brand-text-muted)',
+            background: `linear-gradient(155deg, rgba(${theme.rgb},0.12) 0%, rgba(13,20,34,0.86) 60%)`,
+            backdropFilter: 'blur(32px) saturate(190%)',
+            WebkitBackdropFilter: 'blur(32px) saturate(190%)',
+            border: `1px solid rgba(${theme.rgb},0.14)`,
+            boxShadow: `0 0 32px rgba(${theme.rgb},0.20), 0 12px 36px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.06)`,
           }}
         >
-          {formatRelativeTime(focusProject.last_active || focusProject.updated_at)}
-          {seasonLine(focusProject) ? ` · ${seasonLine(focusProject)}` : ''}
-        </span>
+          <div className="flex items-start justify-between gap-2 mb-0.5">
+            <h3 className="card-title-lg line-clamp-2 flex-1">{focusProject.title}</h3>
+            {dormancyLabel && (
+              <span
+                className="text-[11px] font-medium uppercase tracking-[0.14em] px-2 py-0.5 rounded-full flex-shrink-0 mt-0.5"
+                style={{ color: 'var(--brand-text-muted)', border: '1px solid rgba(255,255,255,0.18)', background: 'rgba(0,0,0,0.3)' }}
+              >
+                {dormancyLabel}
+              </span>
+            )}
+          </div>
+          <span
+            className="text-[11px] uppercase tracking-[0.14em] font-semibold mb-3 inline-block"
+            style={{ color: `rgba(${theme.rgb},0.9)` }}
+          >
+            {formatRelativeTime(focusProject.last_active || focusProject.updated_at)}
+            {seasonLine(focusProject) ? ` · ${seasonLine(focusProject)}` : ''}
+          </span>
 
         {/* The readout below carries no border — it's a passive surface,
             not something you can act on. Every 1px rectangle at the same
@@ -439,10 +420,8 @@ export function TodaysAnswerCard() {
             <MoveTweak projectId={focusProject.id} onClose={() => setTweaking(false)} />
           )}
         </div>
+        </div>
       </div>
-
     </div>
-    </div>
-    </>
   )
 }

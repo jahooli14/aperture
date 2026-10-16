@@ -270,7 +270,7 @@ export function StandingQuestion() {
   if (!spark) {
     if (!loaded) return reveal(null)
     return reveal(
-      <div className="pb-3.5 mb-4">
+      <div>
         <p
           className="text-[11px] font-medium uppercase tracking-[0.14em] mb-1.5"
           style={{ color: 'var(--brand-text-muted)' }}
@@ -278,15 +278,15 @@ export function StandingQuestion() {
           to mull
         </p>
         <button
-          className="text-[13px] italic transition-opacity hover:opacity-80 disabled:opacity-35"
-          style={{ color: 'var(--brand-text-muted)', fontFamily: 'var(--brand-font-serif)' }}
+          className="text-[15px] font-medium py-1 transition-opacity hover:opacity-80 disabled:opacity-50"
+          style={{ color: 'rgb(var(--brand-primary-rgb))' }}
           disabled={rerolling}
           onClick={() => reroll()}
         >
           {rerolling && rerollKind === 'plain' ? 'thinking…' : 'give me something to think about'}
         </button>
         {note && (
-          <p className="text-[11px] mt-1.5" style={{ color: 'var(--brand-text-muted)' }}>
+          <p className="text-[13px] mt-1.5" style={{ color: 'var(--brand-text-secondary)' }}>
             {note}
           </p>
         )}
@@ -328,7 +328,7 @@ export function StandingQuestion() {
 
   if (receipt) {
     return reveal(
-      <div className="pb-3 mb-4">
+      <div>
         <p className="text-[13px]" style={{ color: 'var(--brand-text-muted)' }}>{receipt}</p>
         {kept === 'kept' ? (
           <p className="text-[13px] mt-1.5" style={{ color: 'var(--brand-text-secondary)' }}>
