@@ -60,7 +60,7 @@ import { normalizeTaskOrder } from './_lib/task-order.js'
 import { reconcileCloseout, parseTicked } from './_lib/session-closeout.js'
 import { readCycleState, cycleLabel, rollToNextCycle, lastCycleSteps } from './_lib/project-cycles.js'
 import { appendMilestone, readMilestones } from './_lib/project-milestones.js'
-import { bakeMull, probeLatency, SHELF_LIFE_HOURS, NIGHTLY_BUDGET_MS } from './_lib/mull-generator.js'
+import { bakeMull, probeLatency, SHELF_LIFE_HOURS, NIGHTLY_BUDGET_MS, LIVE_BUDGET_MS } from './_lib/mull-generator.js'
 import { runDriftDecay } from './_lib/drift-runner.js'
 import { SPARK_RESPONSE_TAG, SPARK_CORRECTION_TAG } from './_lib/corpus-provenance.js'
 import { handleProjectOutputs } from './_lib/project-outputs.js'
@@ -2463,10 +2463,19 @@ async function retireAndRebake(
     if (served) return { rerolled: true, spark: served }
   }
 
-  // Cron has nobody waiting, so it gets the long budget; the button keeps ten seconds.
+  // Cron has nobody waiting, so it gets the long budget. The button gets
+  // enough to finish a live draft: pressing it must produce something.
   const trace: string[] = []
-  const budget = force ? NIGHTLY_BUDGET_MS : undefined
+  const budget = force ? NIGHTLY_BUDGET_MS : LIVE_BUDGET_MS
   let baked = await bakeMull(supabase, userId, undefined, trace, creative, budget)
+
+  // A strict pass that came back empty (not slow, just nothing passed the
+  // shape gates) goes straight to the looser pass instead of making them tap
+  // "get more creative". Honesty gates still apply to both.
+  if (baked.length === 0 && !creative && !force && !trace.some(l => l.startsWith('!!'))) {
+    trace.push('strict pass found nothing -- trying the looser pass')
+    baked = await bakeMull(supabase, userId, undefined, trace, true, budget)
+  }
 
   // Silence often isn't a thin corpus — it's an empty fragments table.
   // A project's captures are most of what a blind spot is found in, so

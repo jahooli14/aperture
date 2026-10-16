@@ -78,6 +78,10 @@ const MODEL = 'gemini-flash-latest'
  * first honest candidate ships alone.
  */
 export const TOTAL_BUDGET_MS = 10_000
+/** "Ask me something else" with an empty bank. Pressing it has to produce
+ *  something, so it gets room to: the model measured at 12-13s end to end,
+ *  and the button shows "thinking…" while it works. */
+export const LIVE_BUDGET_MS = 25_000
 /** The nightly bake and the cron retire-and-rebake have nobody waiting on
  *  them, so they get room to finish: the draft is the slow part and a bigger
  *  corpus plus a season made it miss ten seconds. The reroll button keeps
