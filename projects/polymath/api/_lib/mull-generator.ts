@@ -377,10 +377,10 @@ export function readCandidates(raw: unknown): Candidate[] {
   })).filter(c => c.question)
 }
 
-type Usage = { input: number; output: number; thinking: number } | null
+type Usage = { input: number; output: number; thinking: number; model?: string; total?: number } | null
 
 const tokens = (u: Usage) =>
-  u ? ` (tokens: ${u.input} in, ${u.thinking} thinking, ${u.output} out)` : ''
+  u ? ` (tokens: ${u.input} in, ${u.thinking} thinking, ${u.output} out${u.model ? `, model ${u.model}` : ''}${u.total != null ? `, API total ${u.total}, unaccounted ${u.total - u.input - u.output - u.thinking}` : ''})` : ''
 
 async function draft(prompt: string, timeoutMs: number, trace: MullTrace): Promise<Candidate[]> {
   const start = Date.now()
@@ -650,6 +650,32 @@ export async function generateMull(
   }
   if (baked.length === 0) trace.push('the judge shipped nothing')
   return baked
+}
+
+/**
+ * Where the time goes, measured on its own (bake-explain only): a one-word
+ * answer to a tiny prompt (the fixed cost of a call), a one-word answer to
+ * your real notes (reading them), and a long answer to a tiny prompt (how
+ * fast it writes). The draft is some mix of the three.
+ */
+export async function probeLatency(supabase: SupabaseClient, userId: string, trace: MullTrace): Promise<void> {
+  const run = async (label: string, prompt: string, maxTokens: number) => {
+    const start = Date.now()
+    let usage: Usage = null
+    try {
+      await generateText(prompt, { model: MODEL, maxTokens, thinkingLevel: 'low', timeoutMs: 30_000, onUsage: u => { usage = u } })
+      const ms = Date.now() - start
+      const rate = usage && (usage as NonNullable<Usage>).output > 50 ? `, ${Math.round((usage as NonNullable<Usage>).output / (ms / 1000))} tokens/s overall` : ''
+      trace.push(`probe ${label}: ${ms}ms${tokens(usage)}${rate}`)
+    } catch (e) {
+      trace.push(`probe ${label} FAILED after ${Date.now() - start}ms: ${e instanceof Error ? e.message : String(e)}`)
+    }
+  }
+  await run('tiny prompt, one word out', 'Reply with the single word OK.', 8)
+  const corpus = await loadCorpus(supabase, userId, [])
+  await run(`your notes (${corpus.text.length} chars) in, one word out`, `${corpus.text}\n\nReply with the single word OK.`, 8)
+  await run('tiny prompt, ~600 tokens out', 'Write about 450 words on why a small wooden toy takes longer to finish than it looks. Plain prose.', 2048)
+  await run('your notes in, one word out (again)', `${corpus.text}\n\nReply with the single word OK.`, 8)
 }
 
 export async function bakeMull(

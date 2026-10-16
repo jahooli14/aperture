@@ -86,7 +86,7 @@ export async function generateText(
     /** Abort the request after this long. Unset waits as long as the SDK does. */
     timeoutMs?: number
     /** Token counts for this call, so a slow one can say where the time went. */
-    onUsage?: (usage: { input: number; output: number; thinking: number }) => void
+    onUsage?: (usage: { input: number; output: number; thinking: number; model?: string; total?: number }) => void
   } = {}
 ): Promise<string> {
   if (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY === 'dummy-key-for-initialization') {
@@ -133,6 +133,12 @@ export async function generateText(
           input: usage.promptTokenCount || 0,
           output: usage.candidatesTokenCount || 0,
           thinking: (usage as { thoughtsTokenCount?: number }).thoughtsTokenCount ?? 0,
+          // Which model actually answered: "-latest" is an alias, and what it
+          // points at can change under us.
+          model: (result.response as { modelVersion?: string }).modelVersion,
+          // The API's own total, so any tokens it spent that the other counts
+          // leave out (hidden thinking) show up as total - in - out.
+          total: usage.totalTokenCount,
         })
         trackTokenUsage('generateText', usage.promptTokenCount || 0, usage.candidatesTokenCount || 0)
         console.log(`[Token Stats] Input: ${usage.promptTokenCount}, Output: ${usage.candidatesTokenCount}, Thinking: ${(usage as { thoughtsTokenCount?: number }).thoughtsTokenCount ?? 0}, Total cost: $${tokenStats.estimated_cost_usd.toFixed(4)}`)
