@@ -297,8 +297,7 @@ export function TodaysAnswerCard() {
   const readout = steering ? (
     <>
       <p className={label} style={muted}>keep in mind</p>
-      <ThemeList themes={themes} />
-      {reEntry && <p className="text-[13px] mt-2 line-clamp-2" style={muted}>You stopped with “{reEntry}”</p>}
+      <ThemeList themes={themes} rgb={theme.rgb} />
     </>
   ) : nextMove ? (
     <>
@@ -319,47 +318,67 @@ export function TodaysAnswerCard() {
     </>
   ) : null
 
+  const BASE = '#0c1322'
+  // "Where you left off" sits beside Go when the lines lead; in the move and
+  // fork layouts it is already part of the readout.
+  const stopped = steering ? reEntry : null
+
   return (
-    // One card, two halves: the thought lit from above, the work lit from
-    // below, with a single bead of light on the seam where one becomes the
-    // other. The wrapper carries the breathing glow because the card clips
-    // its overflow.
+    // One card, two halves: the thought above, the work below, and a slow
+    // swell between them where a bead of light rides the curve. The wrapper
+    // carries the breathing glow because the card clips its overflow.
     <div className="relative isolate rounded-[22px] neon-breathe" style={{ ['--neon-rgb' as string]: theme.rgb }}>
       <div
         className="rounded-[22px] overflow-hidden relative neon-edge"
         style={{
-          background: `radial-gradient(130% 55% at 8% 0%, rgba(var(--brand-primary-rgb),0.30) 0%, transparent 70%), radial-gradient(120% 55% at 100% 100%, rgba(${theme.rgb},0.30) 0%, transparent 70%), rgba(12,19,34,0.86)`,
-          backdropFilter: 'blur(32px) saturate(190%)',
-          WebkitBackdropFilter: 'blur(32px) saturate(190%)',
-          border: `1px solid rgba(${theme.rgb},0.14)`,
+          background: BASE,
+          border: `1px solid rgba(${theme.rgb},0.16)`,
           boxShadow: `0 0 40px rgba(${theme.rgb},0.18), 0 16px 44px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.07)`,
         }}
       >
+        {/* The work's own light, from the bottom corner. */}
+        <span
+          aria-hidden
+          className="absolute inset-0 pointer-events-none"
+          style={{ background: `radial-gradient(120% 55% at 100% 100%, rgba(${theme.rgb},0.28) 0%, transparent 70%)` }}
+        />
         {/* A little grain so the glass feels like a surface, not a gradient. */}
         <span
           aria-hidden
           className="absolute inset-0 pointer-events-none"
-          style={{
-            opacity: 0.07,
-            mixBlendMode: 'overlay',
-            backgroundImage: GRAIN,
-          }}
+          style={{ opacity: 0.07, mixBlendMode: 'overlay', backgroundImage: GRAIN }}
         />
 
-        <div className="relative px-5 pt-5 pb-4">
-          <StandingQuestion />
-        </div>
-
-        {/* The seam: a hairline that starts at the text edge with a bead of
-            light and fades out toward the far side. */}
-        <div aria-hidden className="relative h-px mx-5" style={{ background: `linear-gradient(90deg, rgba(var(--brand-primary-rgb),0.7), rgba(${theme.rgb},0.45) 45%, transparent)` }}>
+        {/* The thought: lit cyan from above, and its lower edge is the swell. */}
+        <div className="relative" style={{ background: 'linear-gradient(180deg, rgba(var(--brand-primary-rgb),0.26) 0%, rgba(var(--brand-primary-rgb),0.10) 100%)' }}>
+          <div className="px-5 pt-5 pb-9">
+            <StandingQuestion />
+          </div>
+          <svg
+            aria-hidden
+            className="absolute bottom-0 left-0 w-full block"
+            style={{ height: 30 }}
+            viewBox="0 0 400 30"
+            preserveAspectRatio="none"
+          >
+            <defs>
+              <linearGradient id="seamline" x1="0" x2="1" y1="0" y2="0">
+                <stop offset="0" stopColor="rgb(var(--brand-primary-rgb))" />
+                <stop offset="0.6" stopColor={`rgb(${theme.rgb})`} stopOpacity="0.6" />
+                <stop offset="1" stopColor={`rgb(${theme.rgb})`} stopOpacity="0" />
+              </linearGradient>
+            </defs>
+            <path d="M0 30 L0 12 C 90 30 230 30 400 5 L400 30 Z" fill={BASE} />
+            <path d="M0 12 C 90 30 230 30 400 5" fill="none" stroke="url(#seamline)" strokeWidth="1.4" vectorEffect="non-scaling-stroke" />
+          </svg>
           <span
-            className="absolute -left-[2px] -top-[2px] w-[5px] h-[5px] rounded-full"
-            style={{ background: '#fff', boxShadow: `0 0 10px 2px rgba(${theme.rgb},0.9), 0 0 3px 1px rgba(255,255,255,0.8)` }}
+            aria-hidden
+            className="absolute w-[6px] h-[6px] rounded-full"
+            style={{ left: 17, bottom: 17, background: '#fff', boxShadow: `0 0 12px 3px rgba(${theme.rgb},0.9), 0 0 3px 1px rgba(255,255,255,0.85)` }}
           />
         </div>
 
-        <div className="relative px-5 pt-4 pb-5 cursor-pointer" onClick={() => navigate(`/projects/${focusProject!.id}`)}>
+        <div className="relative px-5 pt-1 pb-5 cursor-pointer" onClick={() => navigate(`/projects/${focusProject!.id}`)}>
           <div className="flex items-start justify-between gap-2">
             <h3 className="card-title-lg line-clamp-2 flex-1">{focusProject.title}</h3>
             {dormancyLabel && (
@@ -373,30 +392,33 @@ export function TodaysAnswerCard() {
 
           {readout && <div className="mb-3.5">{readout}</div>}
 
-          {/* One button. The move is already written, so Go starts the
-              session straight away; "change it" opens "too big" / "wrong
-              thing" inline under it (MoveTweak). */}
-          <div className="space-y-1" onClick={e => e.stopPropagation()}>
+          {/* Go is a small button, not a bar. Where you stopped sits beside
+              it; "change it" opens "too big" / "wrong thing" under it. */}
+          <div className="flex items-end justify-between gap-4" onClick={e => e.stopPropagation()}>
+            {stopped ? (
+              <p className="text-[13px] line-clamp-2 flex-1 min-w-0" style={muted}>You stopped with “{stopped}”</p>
+            ) : nextMove && !steering ? (
+              <button
+                onClick={() => setTweaking(t => !t)}
+                className="text-[13px] py-1.5 text-left"
+                style={muted}
+              >
+                {tweaking ? 'Keep this one' : 'Not this — change it'}
+              </button>
+            ) : <span />}
             <button
               onClick={() => handleStartSession(!!nextMove || steering)}
-              className="neon-button w-full py-3 rounded-xl font-semibold text-[15px] flex items-center justify-center gap-2"
+              className="neon-button flex-shrink-0 px-6 py-2.5 rounded-full font-semibold text-[15px] flex items-center gap-2"
             >
               <Play className="h-3.5 w-3.5 fill-current" />
               {nextMove || steering ? 'Go' : fork ? 'Answer it' : 'Find the first move'}
             </button>
-            {nextMove && !steering && (
-              <button
-                onClick={() => setTweaking(t => !t)}
-                className="w-full text-[13px] py-1"
-                style={{ color: 'var(--brand-text-muted)' }}
-              >
-                {tweaking ? 'Keep this one' : 'Not this — change it'}
-              </button>
-            )}
-            {nextMove && !steering && tweaking && (
-              <MoveTweak projectId={focusProject.id} onClose={() => setTweaking(false)} />
-            )}
           </div>
+          {nextMove && !steering && tweaking && (
+            <div className="mt-2" onClick={e => e.stopPropagation()}>
+              <MoveTweak projectId={focusProject.id} onClose={() => setTweaking(false)} />
+            </div>
+          )}
         </div>
       </div>
     </div>

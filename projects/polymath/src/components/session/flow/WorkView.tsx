@@ -90,7 +90,15 @@ export function WorkView({
           <div className="space-y-4">
             <p className="eyebrow">Keep in mind</p>
             <ul className="space-y-3">
-              {themes!.map(t => <li key={t} className="type-lead">{t}</li>)}
+              {themes!.map(t => (
+                <li
+                  key={t}
+                  className="type-lead pl-3 py-1.5 rounded-r-lg"
+                  style={{ boxShadow: 'inset 2px 0 0 rgba(var(--brand-primary-rgb),0.85)', background: 'linear-gradient(90deg, rgba(var(--brand-primary-rgb),0.16), transparent 75%)' }}
+                >
+                  {t}
+                </li>
+              ))}
             </ul>
             {lastNote && (
               <p className="text-[15px] italic leading-snug pt-2 line-clamp-4" style={faint(0.7)}>
