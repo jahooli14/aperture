@@ -147,22 +147,21 @@ const noEcho = { recentTexts: [], resonance: '', corrections: '' }
 describe('the mull channel, end to end', () => {
   beforeEach(() => { generateText.mockReset() })
 
-  it('leaves the oldest notes out once the notes would make the prompt too long', async () => {
-    const data = corpus() as any
-    // 60 recent notes of ~1k characters each, newest first, then the originals.
-    const many = Array.from({ length: 60 }, (_, i) => ({
-      user_id: 'u1', id: `big${i}`, title: `Note ${i}`, body: `Note number ${i}. ${'filler words '.repeat(80)}`,
-      created_at: ago(i + 1), tags: [], source_reference: null,
-    }))
-    data.memories = [...many, ...data.memories]
+  it('writes two drafts at once when nobody is waiting, one lens each', async () => {
     respond({ draft: [ONE_TAKE], judge: [ship(1)] })
-    const trace: string[] = []
-    await bakeMull(fakeSupabase(data).client, 'u1', noEcho, trace)
-    expect(trace.join('\n')).toMatch(/oldest notes left out/)
-    const prompt = draftPromptSent()
-    expect(prompt).toContain('Note number 0.')
-    expect(prompt).not.toContain('Note number 59.')
-    expect(prompt.length).toBeLessThan(70_000)
+    await bakeMull(fakeSupabase(corpus()).client, 'u1', noEcho, undefined, false, 30_000)
+    const drafts = generateText.mock.calls.map(c => c[0] as string).filter(p => !p.includes('You are the last check'))
+    expect(drafts).toHaveLength(2)
+    expect(drafts.some(p => p.includes('stay away from the project they are deep in'))).toBe(true)
+    expect(drafts.every(p => /Up to 3 candidates/.test(p))).toBe(true)
+  })
+
+  it('writes one draft of four when someone is waiting', async () => {
+    respond({ draft: [ONE_TAKE], judge: [ship(1)] })
+    await bakeMull(fakeSupabase(corpus()).client, 'u1', noEcho)
+    const drafts = generateText.mock.calls.map(c => c[0] as string).filter(p => !p.includes('You are the last check'))
+    expect(drafts).toHaveLength(1)
+    expect(drafts[0]).toMatch(/Up to 4 candidates/)
   })
 
   it('asks the draft for four candidates, season or not', async () => {

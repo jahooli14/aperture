@@ -45,6 +45,9 @@ export interface DraftContext {
   /** A season has been set (season.ts). Without one, no season-shaped
    *  instructions (the others, the wild one) are sent at all. */
   seasonActive?: boolean
+  /** The nightly bake writes two drafts at once, each with its own lens, so
+   *  the two don't write the same takes. */
+  lens?: 'live' | 'elsewhere'
 }
 
 export function draftPrompt(ctx: DraftContext): string {
@@ -153,7 +156,7 @@ ${PLAIN_ENGLISH_RULES}
 then one committed claim, no question mark.)
 
 WHAT TO RETURN
-Up to ${ctx.howMany} candidates, best first, each built on different rows. For each:
+${ctx.lens === 'live' ? 'THIS ROUND: lean on the project they are deep in and the ones that matter this season.\n' : ctx.lens === 'elsewhere' ? 'THIS ROUND: stay away from the project they are deep in and the ones that matter this season. Find what runs across everything else: other projects, notes, list items.\n' : ''}Up to ${ctx.howMany} candidates, best first, each built on different rows. For each:
 - "noticing": the pattern, in one plain sentence. Private -- they never see it.
 - "doubt": the strongest reason this is a coincidence of wording, not something
   real, or that they would just say "no, that's not it". If the doubt wins,

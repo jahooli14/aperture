@@ -84,7 +84,7 @@ const EXECUTION_SESSIONS_RESOURCES = new Set([
   'harvest', 'mirror', 'book',
   'next-cycle', 'stuck', 'move',
 ])
-const EXECUTION_SPARKS_RESOURCES = new Set(['bake', 'today', 'respond', 'spark-followup', 'dismiss-spark', 'reroll-spark', 'retire-and-rebake', 'catch-up'])
+const EXECUTION_SPARKS_RESOURCES = new Set(['bake', 'today', 'respond', 'spark-followup', 'dismiss-spark', 'reroll-spark', 'retire-and-rebake', 'topup-bank', 'catch-up'])
 const EXECUTION_PROPOSALS_RESOURCES = new Set([
   'drift-decay', 'reembed-articles', 'backfill-embeddings', 'reprocess-backlog',
 ])
@@ -2533,6 +2533,56 @@ async function retireAndRebake(
   return { rerolled: true, spark: inserted }
 }
 
+/**
+ * Restock the bank. "Ask me something else" serves a banked take first, so
+ * every tap spends one; this runs behind it with nobody waiting and the long
+ * budget, so the next tap is free too. Does nothing while two or more unseen
+ * takes are waiting.
+ */
+const BANK_TARGET = 2
+async function topUpBank(
+  supabase: ReturnType<typeof getSupabaseClient>, userId: string,
+): Promise<{ added: number; waiting: number; reason?: string }> {
+  const nowIso = new Date().toISOString()
+  const { data: waitingRows } = await supabase
+    .from('sparks')
+    .select('id, expires_at')
+    .eq('user_id', userId)
+    .is('answered_at', null)
+    .is('shown_at', null)
+    .gt('expires_at', nowIso)
+  const waiting = waitingRows?.length ?? 0
+  if (waiting >= BANK_TARGET) return { added: 0, waiting }
+
+  const trace: string[] = []
+  const baked = await bakeMull(supabase, userId, undefined, trace, false, NIGHTLY_BUDGET_MS)
+  if (baked.length === 0) return { added: 0, waiting, reason: 'nothing else to ask' }
+
+  // Behind whatever is already banked, so they come out in the order made.
+  const latest = Math.max(Date.now(), ...(waitingRows ?? []).map((r: any) => new Date(r.expires_at).getTime()))
+  const { error } = await insertSparks(
+    supabase,
+    baked.map((spark, i) => ({
+      user_id: userId,
+      type: spark.type,
+      project_id: spark.project_id,
+      text: spark.text,
+      expires_at: new Date(latest + (i + 1) * 60_000).toISOString(),
+      stake: spark.stake ?? null,
+      subject_id: spark.subject_id ?? null,
+      subject_kind: spark.subject_kind ?? null,
+      sources: spark.sources ?? null,
+      shown_at: null,
+    })),
+    'id',
+  )
+  if (error) {
+    console.error('[utilities/sparks] top-up insert failed:', error)
+    return { added: 0, waiting, reason: error.message }
+  }
+  return { added: baked.length, waiting }
+}
+
 async function handleExecutionSparks(req: VercelRequest, res: VercelResponse) {
   const resource = req.query.resource as string
   const supabase = getSupabaseClient()
@@ -2776,6 +2826,14 @@ async function handleExecutionSparks(req: VercelRequest, res: VercelResponse) {
     // strict reroll already came back with nothing. See retireAndRebake.
     const creative = req.body?.creative === true
     return res.status(200).json(await retireAndRebake(supabase, userId, false, creative))
+  }
+
+  // ─── TOP-UP-BANK (the app, in the background) ───────────────────────
+  if (resource === 'topup-bank') {
+    if (req.method !== 'POST') return res.status(405).json({ error: 'POST required' })
+    const userId = await getUserId(req)
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' })
+    return res.status(200).json(await topUpBank(supabase, userId))
   }
 
   // ─── RETIRE-AND-REBAKE (cron) ───────────────────────────────────────

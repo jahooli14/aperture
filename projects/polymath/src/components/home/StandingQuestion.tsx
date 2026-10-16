@@ -219,6 +219,9 @@ export function StandingQuestion() {
       }
       if (data.rerolled && data.spark) {
         haptic.light()
+        // Restock behind it. Nobody waits on this, and it fails quietly: the
+        // next tap just generates live instead.
+        void api.post('utilities?resource=topup-bank', {}, { timeout: 120_000 }).catch(() => undefined)
         setSpark(data.spark)
         setShowSources(false)
         setAnswering(false)
