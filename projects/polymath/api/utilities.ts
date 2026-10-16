@@ -1602,6 +1602,13 @@ async function insertSparks(
   if (!missing(first.error)) return first as any
   const withSelect = (payload: Record<string, unknown>[], sel: string | undefined) =>
     supabase.from('sparks').insert(payload).select(sel || 'id')
+  // Stage 0: only `score` (20261016) is likely missing.
+  const noScore = rows.map(({ score: _score, ...rest }) => rest)
+  const scoreless = (select ?? '').replace(/,\s*score\b/, '')
+  const zero = await withSelect(noScore, scoreless)
+  if (!missing(zero.error)) return zero as any
+  rows = noScore
+  select = scoreless
   // Stage 1: only `sources` (20261003) is likely missing -- keep the rest, so
   // the "next run avoids these rows" guard keeps working.
   const noSources = rows.map(({ sources: _src, ...rest }) => rest)
@@ -2476,6 +2483,13 @@ async function retireAndRebake(
     trace.push('strict pass found nothing -- trying the looser pass')
     baked = await bakeMull(supabase, userId, undefined, trace, true, budget)
   }
+  // Still nothing and not for want of time: one last draft aimed away from
+  // the live project, at the furthest-apart pair. A press never ends on "the
+  // notes are empty".
+  if (baked.length === 0 && !force && !trace.some(l => l.startsWith('!!'))) {
+    trace.push('looser pass found nothing -- reaching for the furthest-apart pair')
+    baked = await bakeMull(supabase, userId, undefined, trace, true, 20_000, true)
+  }
 
   // Silence often isn't a thin corpus — it's an empty fragments table.
   // A project's captures are most of what a blind spot is found in, so
@@ -2510,7 +2524,8 @@ async function retireAndRebake(
     // "!!" lines are the run failing (a timeout, a rejected call), not the
     // notes having nothing in them. The app says which.
     const slow = trace.some(l => l.startsWith('!!'))
-    return slow ? { rerolled: false, reason: 'took too long', slow: true } : { rerolled: false, reason: 'nothing else to ask' }
+    // Either way it's a try-again, never a verdict on the notes.
+    return { rerolled: false, reason: slow ? 'took too long' : 'did not land', slow: true }
   }
 
   // Same as the bake: anything past the first is banked behind it, with
@@ -2527,9 +2542,10 @@ async function retireAndRebake(
       subject_id: spark.subject_id ?? null,
       subject_kind: spark.subject_kind ?? null,
       sources: spark.sources ?? null,
+      score: spark.score ?? null,
       shown_at: i === 0 ? nowIso : null,
     })),
-    'id, type, text, project_id, shown_at, sources, projects(title)',
+    'id, type, text, project_id, shown_at, sources, score, projects(title)',
   )
 
   if (insertErr) {
@@ -2581,6 +2597,7 @@ async function topUpBank(
       subject_id: spark.subject_id ?? null,
       subject_kind: spark.subject_kind ?? null,
       sources: spark.sources ?? null,
+      score: spark.score ?? null,
       shown_at: null,
     })),
     'id',
@@ -2686,6 +2703,7 @@ async function handleExecutionSparks(req: VercelRequest, res: VercelResponse) {
       subject_id: spark.subject_id ?? null,
       subject_kind: spark.subject_kind ?? null,
       sources: spark.sources ?? null,
+      score: spark.score ?? null,
     }))
 
     const { error: insertErr } = await insertSparks(supabase, rows)
@@ -2727,7 +2745,7 @@ async function handleExecutionSparks(req: VercelRequest, res: VercelResponse) {
     // isn't there yet.
     let data: any[] | null = null
     let error: { code?: string; message: string } | null = null
-    for (const cols of [`${BASE_COLS}, sources, stake`, `${BASE_COLS}, sources`, BASE_COLS]) {
+    for (const cols of [`${BASE_COLS}, sources, stake, score`, `${BASE_COLS}, sources, stake`, `${BASE_COLS}, sources`, BASE_COLS]) {
       ;({ data, error } = (await standing(cols)) as { data: any[] | null; error: { code?: string; message: string } | null })
       if (error?.code !== '42703') break
     }

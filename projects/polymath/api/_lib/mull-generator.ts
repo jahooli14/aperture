@@ -114,6 +114,8 @@ export interface BakedSpark {
   /** Every row the question was built on, by plain title -- what was put
    *  next to what. Shown under the question. */
   sources?: { kind: string; title: string }[]
+  /** The judge's backing, 0-100 (mean of its four scores). Absent when unjudged. */
+  score?: number
   /** Written now, shown later. */
   banked?: boolean
 }
@@ -468,6 +470,10 @@ export async function generateMull(
   creative = false,
   /** When the whole run must be finished by. */
   deadline = Date.now() + TOTAL_BUDGET_MS,
+  /** The last pass of a press that found nothing: one draft that stays away
+   *  from the live project and goes for the furthest-apart pair it can find.
+   *  Honesty gates unchanged. */
+  reach = false,
 ): Promise<BakedSpark[]> {
   const corpusStart = Date.now()
   const [corpus, echo] = await Promise.all([loadCorpus(supabase, userId, trace), echoIn])
@@ -483,7 +489,7 @@ export async function generateMull(
   ])
   const recentTexts = creative ? [] : echo.recentTexts
 
-  const parallel = deadline - Date.now() >= PARALLEL_DRAFT_MIN_MS
+  const parallel = !reach && deadline - Date.now() >= PARALLEL_DRAFT_MIN_MS
   const promptFor = (lens?: 'live' | 'elsewhere') => draftPrompt({
     corpusText: corpus.text,
     // Never more, season or not: every extra candidate is output the model
@@ -501,7 +507,7 @@ export async function generateMull(
     waitingTitles: echo.season?.active ? echo.season.also.filter(p => p.blocked).map(p => p.title) : [],
     seasonActive: !!echo.season?.active,
   })
-  const prompt = promptFor(parallel && echo.live ? 'live' : undefined)
+  const prompt = promptFor(reach ? 'elsewhere' : parallel && echo.live ? 'live' : undefined)
   trace.push(`draft prompt: ${prompt.length} chars`)
 
   const draftBudget = deadline - Date.now() - MIN_JUDGE_MS - TAIL_MS
@@ -567,6 +573,7 @@ export async function generateMull(
   )
   const depths = new Map<Grounded, 0 | 1 | 2>()
   const ranks = new Map<Grounded, number>()
+  const percents = new Map<Grounded, number>()
   // The judge's own read ("crosses") can lift a 0 to a 1 -- and only for a
   // take about the main project, never past it. Only the cited rows can
   // prove the trifecta.
@@ -592,6 +599,7 @@ export async function generateMull(
         depths.set(x.g, d)
         const rank = judgeRank(x.s) + bonus(d)
         ranks.set(x.g, rank)
+        percents.set(x.g, Math.round(((x.s.revelation + x.s.truth + x.s.specific + x.s.answerable) / 4) * 10))
         return { ...x, rank }
       })
       .sort((a, b) => b.rank - a.rank)
@@ -663,6 +671,7 @@ export async function generateMull(
       subject_id: g.rows[0].id,
       subject_kind: g.rows[0].kind,
       sources: sourcesOf(g.rows),
+      score: percents.get(g),
       banked: baked.length > 0,
     })
   }
@@ -732,9 +741,10 @@ export async function bakeMull(
   creative = false,
   /** Whole-run budget. Defaults to the reroll's ten seconds. */
   budgetMs = TOTAL_BUDGET_MS,
+  reach = false,
 ): Promise<BakedSpark[]> {
   const mulls = await generateMull(
-    supabase, userId, echo ?? loadEchoContext(supabase, userId), trace, creative, Date.now() + budgetMs,
+    supabase, userId, echo ?? loadEchoContext(supabase, userId), trace, creative, Date.now() + budgetMs, reach,
   )
   if (mulls.length === 0) trace.push('nothing worth asking -- empty slot')
   return mulls

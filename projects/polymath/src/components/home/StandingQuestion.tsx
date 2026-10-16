@@ -32,6 +32,8 @@ export interface StandingQuestionSpark {
   sources?: { kind: string; title: string }[] | null
   /** What they'd do differently if it's right (sparks.stake). */
   stake?: string | null
+  /** How strongly the judge backed it, 0-100. Shown quietly. */
+  score?: number | null
 }
 
 /** Every spark is a question now. The one kind that wasn't -- the
@@ -63,9 +65,6 @@ export function StandingQuestion() {
   const [text, setText] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [rerolling, setRerolling] = useState(false)
-  // Which button started the wait. Both used to read `rerolling`, so tapping
-  // "get more creative" put "thinking…" on it AND on "ask me something else".
-  const [rerollKind, setRerollKind] = useState<'plain' | 'creative'>('plain')
   // A take is a claim, so the first reaction is a stance, tapped. Saying why
   // is optional and comes second.
   const [stance, setStance] = useState<Stance | null>(null)
@@ -77,7 +76,6 @@ export function StandingQuestion() {
   // asking yet" as the end of the road. A second, explicit tap, so the
   // corpus never runs out of *something* to ask even when it's run out of
   // the good stuff — handy for a demo, or just a slow week.
-  const [offerCreative, setOfferCreative] = useState(false)
   // The one question back. A computed fact can be true and still be out of
   // date — "you gave up on it in January" is arithmetic, whether that is
   // still how they think about it is only knowable from them. Two turns,
@@ -204,15 +202,14 @@ export function StandingQuestion() {
     await save([text])
   }
 
-  const reroll = async (creative = false) => {
+  const reroll = async () => {
     setRerolling(true)
-    setRerollKind(creative ? 'creative' : 'plain')
     setNote(null)
     try {
       // A reroll is one model call over the whole corpus, which can run well
       // past the client's default 30s. The server allows 300s; stopping at 30
       // abandoned bakes that were still working and called it "unreachable".
-      const data = await api.post('utilities?resource=reroll-spark', { creative }, { timeout: 120_000 }) as {
+      const data = await api.post('utilities?resource=reroll-spark', {}, { timeout: 120_000 }) as {
         rerolled?: boolean
         slow?: boolean
         spark?: StandingQuestionSpark
@@ -227,27 +224,14 @@ export function StandingQuestion() {
         setAnswering(false)
         setText('')
         setStance(null)
-        setOfferCreative(false)
         setFollowUp(null)
         setFollowUpText('')
         setFollowUpReason(null)
         setKept('idle')
-      } else if (data.slow) {
-        // It ran out of time. That says nothing about the notes, so don't
-        // claim they're empty or offer the looser pass.
-        setNote('That took too long. Try again.')
-        setOfferCreative(false)
-      } else if (!creative) {
-        // Honest about silence rather than pretending to think — and the
-        // question you had is still there. Offer the looser pass instead
-        // of just repeating "nothing else" forever.
-        setNote('Nothing else worth asking yet.')
-        setOfferCreative(true)
       } else {
-        // Even the looser pass found nothing grounded in anything real —
-        // that's a genuinely empty corpus, not a high bar.
-        setNote('Really nothing to work with right now.')
-        setOfferCreative(false)
+        // Never a verdict on the notes: the server already tried the strict
+        // pass, the looser one and a last reach. Just try again.
+        setNote("Couldn't land one just now. Try again.")
       }
     } catch (err) {
       // A rejected request and an unreachable one are different problems and
@@ -289,22 +273,12 @@ export function StandingQuestion() {
           disabled={rerolling}
           onClick={() => reroll()}
         >
-          {rerolling && rerollKind === 'plain' ? 'thinking…' : 'give me something to think about'}
+          {rerolling ? 'thinking…' : 'give me something to think about'}
         </button>
         {note && (
           <p className="text-[13px] mt-1.5" style={{ color: 'var(--brand-text-secondary)' }}>
             {note}
           </p>
-        )}
-        {offerCreative && (
-          <button
-            className="text-[13px] mt-1.5 transition-opacity hover:opacity-90 disabled:opacity-40"
-            style={{ color: 'var(--brand-text-muted)', textDecoration: 'underline' }}
-            disabled={rerolling}
-            onClick={() => reroll(true)}
-          >
-            {rerolling && rerollKind === 'creative' ? 'thinking…' : 'get more creative'}
-          </button>
         )}
       </div>
     )
@@ -365,6 +339,9 @@ export function StandingQuestion() {
         style={{ color: 'var(--brand-text-muted)' }}
       >
         {projectTitle ? `to mull · ${projectTitle}` : 'to mull'}
+        {typeof spark.score === 'number' && (
+          <span className="ml-2 normal-case tracking-normal" title="How strongly the check backed this one">{spark.score}%</span>
+        )}
       </p>
 
       {/* The one ethereal thing on the page: italic, pale, a faint halo,
@@ -449,21 +426,8 @@ export function StandingQuestion() {
             disabled={rerolling}
             onClick={() => reroll()}
           >
-            {rerolling && rerollKind === 'plain' ? 'thinking…' : 'ask me something else'}
+            {rerolling ? 'thinking…' : 'ask me something else'}
           </button>
-          {offerCreative && (
-            <>
-              <span style={{ color: 'var(--brand-text-muted)' }}>·</span>
-              <button
-                className="text-[13px] transition-opacity hover:opacity-90 disabled:opacity-30"
-                style={quietActionStyle}
-                disabled={rerolling}
-                onClick={() => reroll(true)}
-              >
-                {rerolling && rerollKind === 'creative' ? 'thinking…' : 'get more creative'}
-              </button>
-            </>
-          )}
         </div>
         </div>
       )}
