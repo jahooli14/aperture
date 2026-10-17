@@ -51,6 +51,8 @@ export interface DraftContext {
   /** One row this draft must start from, picked in code so each parallel
    *  draft covers different ground. */
   seedRef?: string
+  /** The person's own words about what they want from takes (Settings). */
+  brief?: string
 }
 
 export function draftPrompt(ctx: DraftContext): string {
@@ -160,7 +162,7 @@ ${goodExamplesBlock()}
 
 BAD -- shapes that have shipped before and failed:
 ${badExamplesBlock()}
-${ctx.resonance}${ctx.corrections}${ctx.focus ?? ''}${avoid}${avoidRefs}
+${ctx.brief ? `WHAT THEY SAID THEY WANT FROM TAKES (their own words; it steers what you look for, and every rule above still holds):\n${ctx.brief}\n\n` : ''}${ctx.resonance}${ctx.corrections}${ctx.focus ?? ''}${avoid}${avoidRefs}
 ${PLAIN_ENGLISH_RULES}
 (Those examples are about voice. The shape still follows HOW TO WRITE IT: facts,
 then one committed claim, no question mark.)

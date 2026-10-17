@@ -11,6 +11,7 @@ import { useNotificationSettings } from '../stores/useNotificationSettings'
 import { useJourneyStore } from '../stores/useJourneyStore'
 import { WeekendNudgeRow } from '../components/settings/WeekendNudgeRow'
 import { SeasonRow } from '../components/settings/SeasonRow'
+import { TakeBriefRow } from '../components/settings/TakeBriefRow'
 
 const intensityOptions = [
   { value: 'subtle' as const, label: 'Subtle', description: 'Quiet — less glow, less motion' },
@@ -382,6 +383,14 @@ export function SettingsPage() {
           <div>
             <h2 className="section-heading">what <span className="accent">matters now</span></h2>
             <SeasonRow />
+          </div>
+        </section>
+
+        {/* What you want from the to-mull takes, in your own words. */}
+        <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mb-10">
+          <div>
+            <h2 className="section-heading">what you want from <span className="accent">takes</span></h2>
+            <TakeBriefRow />
           </div>
         </section>
 

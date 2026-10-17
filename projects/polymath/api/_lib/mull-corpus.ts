@@ -196,7 +196,7 @@ export async function loadCorpus(
   return { rows, byRef: new Map(rows.map(r => [r.ref, r])), projectIdByTitle, text }
 }
 
-function formatRow(r: CorpusRow): string {
+export function formatRow(r: CorpusRow): string {
   const title = r.title && r.kind !== 'fragment' && r.kind !== 'list_item' ? ` "${r.title}"` : ''
   return `[${r.ref}]${title} (${r.meta}): ${r.text}`
 }

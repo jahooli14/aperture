@@ -139,6 +139,8 @@ export interface EchoContext {
   corrections: string
   /** Where they are now; see loadFocus. */
   focus?: string
+  /** Their own words about what they want from takes (Settings). */
+  brief?: string
   /** The project they're working on, for the crossing (mull.ts). */
   live?: { id: string; title: string } | null
   /** What matters this stretch (season.ts): the main project, the others, the date. */
@@ -353,10 +355,43 @@ export async function loadSeason(supabase: SupabaseClient, userId: string): Prom
   }
 }
 
+/** `user_settings.take_brief` (20261017). Absent column, no row or empty all read as none. */
+export async function loadTakeBrief(supabase: SupabaseClient, userId: string): Promise<string> {
+  const { data, error } = await supabase.from('user_settings').select('take_brief').eq('user_id', userId).limit(1)
+  if (error) return ''
+  const raw = (data as { take_brief?: unknown }[] | null)?.[0]?.take_brief
+  return typeof raw === 'string' ? raw.trim().slice(0, 1200) : ''
+}
+
+/** The draft prompt for one call. Shared by the real run and the A/B test
+ *  (mull-experiment.ts) so both ask exactly the same thing. `corpusText`
+ *  overrides the corpus for a small slice. */
+export function buildDraftPrompt(
+  corpus: Corpus, echo: EchoContext, recentIds: Set<string>, recentTexts: string[],
+  o: { howMany: number; lens?: 'live' | 'elsewhere'; seedRef?: string; corpusText?: string; liveTitle?: string | null; recentRefs?: string[] },
+): string {
+  return draftPrompt({
+    corpusText: o.corpusText ?? corpus.text,
+    howMany: o.howMany,
+    lens: o.lens,
+    seedRef: o.seedRef,
+    recentQuestions: recentTexts,
+    recentRefs: o.recentRefs ?? corpus.rows.filter(r => recentIds.has(r.id)).map(r => r.ref),
+    resonance: echo.resonance,
+    corrections: echo.corrections,
+    focus: echo.focus ?? '',
+    brief: echo.brief,
+    liveTitle: o.liveTitle !== undefined ? o.liveTitle : echo.season?.main?.title ?? echo.live?.title ?? null,
+    alsoTitles: echo.season?.active ? echo.season.also.map(p => p.title) : [],
+    waitingTitles: echo.season?.active ? echo.season.also.filter(p => p.blocked).map(p => p.title) : [],
+    seasonActive: !!echo.season?.active,
+  })
+}
+
 export async function loadEchoContext(
   supabase: SupabaseClient, userId: string,
 ): Promise<EchoContext> {
-  const [recentTexts, recentProjectIds, recentSubjectIds, resonance, corrections, focus, season] = await Promise.all([
+  const [recentTexts, recentProjectIds, recentSubjectIds, resonance, corrections, focus, season, brief] = await Promise.all([
     fetchRecentSparkTexts(supabase, userId),
     fetchRecentSparkProjectIds(supabase, userId),
     fetchRecentSparkSubjectIds(supabase, userId),
@@ -364,8 +399,9 @@ export async function loadEchoContext(
     loadCorrections(supabase, userId),
     loadFocus(supabase, userId),
     loadSeason(supabase, userId),
+    loadTakeBrief(supabase, userId),
   ])
-  return { recentTexts, recentProjectIds, recentSubjectIds, resonance, corrections, focus, live: season?.main ?? null, season }
+  return { recentTexts, recentProjectIds, recentSubjectIds, resonance, corrections, focus, brief, live: season?.main ?? null, season }
 }
 
 function expiresAt(hours: number): string {
@@ -494,23 +530,12 @@ export async function generateMull(
   const recentTexts = creative ? [] : echo.recentTexts
 
   const parallel = !reach && deadline - Date.now() >= PARALLEL_DRAFT_MIN_MS
-  const promptFor = (lens?: 'live' | 'elsewhere', seedRef?: string) => draftPrompt({
-    corpusText: corpus.text,
+  const promptFor = (lens?: 'live' | 'elsewhere', seedRef?: string) => buildDraftPrompt(corpus, echo, recentIds, recentTexts, {
     // Never more, season or not: every extra candidate is output the model
-    // has to write inside the ten-second ceiling. Six of them timed the
-    // draft out live (6.8s allowed, aborted) and nothing shipped at all.
+    // has to write inside the ceiling.
     howMany: parallel ? CANDIDATES_PER_CALL : CANDIDATES_PER_RUN,
     lens,
     seedRef,
-    recentQuestions: recentTexts,
-    recentRefs: corpus.rows.filter(r => recentIds.has(r.id)).map(r => r.ref),
-    resonance: echo.resonance,
-    corrections: echo.corrections,
-    focus: echo.focus ?? '',
-    liveTitle: echo.season?.main?.title ?? echo.live?.title ?? null,
-    alsoTitles: echo.season?.active ? echo.season.also.map(p => p.title) : [],
-    waitingTitles: echo.season?.active ? echo.season.also.filter(p => p.blocked).map(p => p.title) : [],
-    seasonActive: !!echo.season?.active,
   })
   const prompt = promptFor(reach ? 'elsewhere' : parallel && echo.live ? 'live' : undefined)
   trace.push(`draft prompt: ${prompt.length} chars`)

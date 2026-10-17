@@ -60,7 +60,7 @@ import { normalizeTaskOrder } from './_lib/task-order.js'
 import { reconcileCloseout, parseTicked } from './_lib/session-closeout.js'
 import { readCycleState, cycleLabel, rollToNextCycle, lastCycleSteps } from './_lib/project-cycles.js'
 import { appendMilestone, readMilestones } from './_lib/project-milestones.js'
-import { bakeMull, probeLatency, SHELF_LIFE_HOURS, NIGHTLY_BUDGET_MS, LIVE_BUDGET_MS } from './_lib/mull-generator.js'
+import { bakeMull, loadTakeBrief, probeLatency, SHELF_LIFE_HOURS, NIGHTLY_BUDGET_MS, LIVE_BUDGET_MS } from './_lib/mull-generator.js'
 import { runDriftDecay } from './_lib/drift-runner.js'
 import { SPARK_RESPONSE_TAG, SPARK_CORRECTION_TAG } from './_lib/corpus-provenance.js'
 import { handleProjectOutputs } from './_lib/project-outputs.js'
@@ -84,7 +84,7 @@ const EXECUTION_SESSIONS_RESOURCES = new Set([
   'harvest', 'mirror', 'book',
   'next-cycle', 'stuck', 'move',
 ])
-const EXECUTION_SPARKS_RESOURCES = new Set(['bake', 'today', 'respond', 'spark-followup', 'dismiss-spark', 'reroll-spark', 'retire-and-rebake', 'topup-bank', 'catch-up'])
+const EXECUTION_SPARKS_RESOURCES = new Set(['bake', 'today', 'respond', 'spark-followup', 'dismiss-spark', 'reroll-spark', 'retire-and-rebake', 'topup-bank', 'take-brief', 'catch-up'])
 const EXECUTION_PROPOSALS_RESOURCES = new Set([
   'drift-decay', 'reembed-articles', 'backfill-embeddings', 'reprocess-backlog',
 ])
@@ -2649,6 +2649,15 @@ async function handleExecutionSparks(req: VercelRequest, res: VercelResponse) {
     // it. Explain writes nothing, so there is no reason for it to defer.
     const explain = req.query.explain === '1' || req.query.explain === 'true'
 
+    // ?experiment=1: A/B of one Flash call against a swarm of Flash-Lite
+    // calls, same spend and time, scored blind. Writes nothing.
+    if (req.query.experiment === '1') {
+      const { runExperiment } = await import('./_lib/mull-experiment.js')
+      const lines: string[] = []
+      await runExperiment(supabase, userId, lines)
+      return res.status(200).json({ experiment: true, trace: lines })
+    }
+
     // A question that's still standing is not replaced by a fresh one. It
     // now lives for days precisely so it can sit unanswered, and baking over
     // it every morning would take it away on exactly the day the answer was
@@ -2871,6 +2880,21 @@ async function handleExecutionSparks(req: VercelRequest, res: VercelResponse) {
     // strict reroll already came back with nothing. See retireAndRebake.
     const creative = req.body?.creative === true
     return res.status(200).json(await retireAndRebake(supabase, userId, false, creative))
+  }
+
+  // ─── TAKE-BRIEF (Settings: what they want from takes) ───────────────
+  if (resource === 'take-brief') {
+    const userId = await getUserId(req)
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' })
+    if (req.method === 'GET') return res.status(200).json({ brief: await loadTakeBrief(supabase, userId) })
+    if (req.method !== 'POST') return res.status(405).json({ error: 'GET or POST required' })
+    const incoming = req.body?.brief
+    if (incoming !== null && incoming !== undefined && typeof incoming !== 'string') return res.status(400).json({ error: 'brief must be text' })
+    const next = typeof incoming === 'string' && incoming.trim() ? incoming.trim() : null
+    if (next && next.length > 1200) return res.status(400).json({ error: 'brief must be 1200 characters or fewer' })
+    const { error } = await supabase.from('user_settings').upsert({ user_id: userId, take_brief: next }, { onConflict: 'user_id' })
+    if (error) return res.status(500).json({ error: error.code === '42703' ? 'Run the take_brief migration first.' : error.message })
+    return res.status(200).json({ brief: next ?? '' })
   }
 
   // ─── TOP-UP-BANK (the app, in the background) ───────────────────────
