@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   quoteIsReal, resolveEvidence, specifics, unsupportedSpecifics, ordinalSupported,
   offersAChoice, isClosed, checkCandidate, crossesLiveProject, crossingDepth, judgePercent, judgeRank, parseJudgeScores, readsAnInnerState,
-  type Candidate, type JudgeScore,
+  rowNaming, type Candidate, type JudgeScore,
 } from './mull.js'
 import type { Corpus, CorpusRow } from './mull-corpus.js'
 
@@ -60,6 +60,27 @@ describe('specifics', () => {
   })
   it('flags what no evidence row contains', () => {
     expect(unsupportedSpecifics('In March you said one take. What would Abbey Road say?', ['14 March 2025 one take'])).toEqual(['abbey', 'road'])
+  })
+})
+
+describe('a real name the draft forgot to cite', () => {
+  const FRIEND = row('N9', 'Mocked Alex Foley for wearing all black again, then felt bad.', { meta: '3 May 2025' })
+  const rows = [...ROWS, FRIEND]
+  const corpus: Corpus = { rows, byRef: new Map(rows.map(r => [r.ref, r])), projectIdByTitle: new Map(), text: '' }
+  const take = 'You said one take, and the book swaps characters out. You mocked Alex Foley for all black.'
+
+  it('adds the one row that holds the name, so the judge can read it', () => {
+    const r = checkCandidate(candidate(take), corpus)
+    expect(r.ok).toBe(true)
+    if (r.ok) expect(r.grounded.rows.map(x => x.ref)).toContain('N9')
+  })
+  it('still rejects a name that is in no note', () => {
+    const r = checkCandidate(candidate(take.replace('Alex Foley', 'Gordon Ramsay')), corpus)
+    expect(r.ok).toBe(false)
+  })
+  it('never guesses a source for a number or a date', () => {
+    expect(rowNaming(['2025'], ROWS.slice(0, 2), corpus)).toBeNull()
+    expect(rowNaming(['alex', 'foley'], ROWS, corpus)?.ref).toBe('N9')
   })
 })
 
