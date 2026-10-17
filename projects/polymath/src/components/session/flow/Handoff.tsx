@@ -19,14 +19,13 @@ interface Props {
   onSetMove: (text: string) => void
   /** The note they just left, if any. */
   note: string
-  minutes: number
   busy: boolean
   onClose: () => void
   onFinish: () => void
   onNextCycle: () => void
 }
 
-export function Handoff({ result, nextMove, onSetMove, note, minutes, busy, onClose, onFinish, onNextCycle }: Props) {
+export function Handoff({ result, nextMove, onSetMove, note, busy, onClose, onFinish, onNextCycle }: Props) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState('')
   const startsWith = nextMove?.kind === 'move' ? splitDoneWhen(nextMove.text) : null
@@ -43,7 +42,7 @@ export function Handoff({ result, nextMove, onSetMove, note, minutes, busy, onCl
     <div className="flex-1 flex flex-col py-6 space-y-7">
       <div className="space-y-1">
         <p className={label} style={{ color: accent, opacity: 0.85 }}>
-          {minutes > 0 ? `${minutes} minute${minutes === 1 ? '' : 's'} logged` : 'Logged'}
+          Saved
         </p>
         {result.pendingSync && (
           <p className="text-[12.5px]" style={faint(0.55)}>Saved on this phone. It’ll sync when you’re back online.</p>

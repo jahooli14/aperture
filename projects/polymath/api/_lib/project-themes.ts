@@ -8,10 +8,12 @@
  * it ("every chapter in the new voice", "the ending doesn't land yet"), so
  * they stay true across many sessions and nothing has to keep them current.
  *
- * Deliberately NOT kept in sync automatically. The owner doesn't report in
- * after a session, so anything that relies on that goes stale the same way
- * the move did. They're set by the user (or drafted from their notes, then
- * kept or edited by them) and change only when the user changes them.
+ * Kept in step with the notes (Oct 2026, the owner's call): lines that never
+ * changed made the whole card look dead, "which defeats the whole point".
+ * When new notes land under a project, the lines are re-read against them:
+ * kept if the notes still back them, reworded or swapped if the notes say it
+ * has moved on. The old lines are kept for an Undo. Never from nothing: a
+ * project with no lines is not given any behind the owner's back.
  *
  * Pure except nothing — the route does the reads and writes.
  */
@@ -131,6 +133,90 @@ export function parseThemeDraft(raw: string, evidence: Evidence[], title: string
     if (!hasOnlyKnownSpecifics(text, haystack)) continue
     if (findVoiceViolations(text).length > 0) continue
     if (out.some(t => t.toLowerCase() === text.toLowerCase())) continue
+    out.push(text)
+    if (out.length >= MAX_THEMES) break
+  }
+  return out
+}
+
+
+/** A fingerprint of the notes the lines were last read against. Not "the
+ *  newest date": a note said on the page is linked a moment after it is
+ *  saved, so a date check can miss it for good. */
+export function materialSignature(rows: Array<{ text: string; at: string }>): string {
+  const basis = rows.slice(0, 12).map(r => `${r.at.slice(0, 10)}|${r.text.slice(0, 60)}`).join('\n')
+  let h = 5381
+  for (let i = 0; i < basis.length; i++) h = ((h * 33) ^ basis.charCodeAt(i)) >>> 0
+  return `${rows.length}:${h.toString(36)}`
+}
+
+/** What the notes were last read against, and the lines that were replaced. */
+export interface ThemesUpdate { at: string; previous: string[] }
+
+export function readThemesUpdate(metadata: unknown): ThemesUpdate | null {
+  const raw = (metadata as { themes_update?: unknown } | null)?.themes_update as Partial<ThemesUpdate> | undefined
+  if (!raw || typeof raw.at !== 'string' || !Array.isArray(raw.previous)) return null
+  return { at: raw.at, previous: raw.previous.filter((t): t is string => typeof t === 'string').slice(0, MAX_THEMES) }
+}
+
+export function buildThemesRefreshPrompt(input: {
+  title: string
+  description: string | null
+  current: string[]
+  evidence: Evidence[]
+}): string {
+  const rows = input.evidence.map(e => `[${e.id}] (${e.label}) ${e.text}`).join('\n')
+  return `Someone is working on a creative project. These are the big things they were
+steering by:
+
+${input.current.map(t => `- ${t}`).join('\n')}
+
+Below is what they have said about it, newest first. Say what they are steering by NOW.
+
+Project: "${input.title}"
+${input.description ? `What it is: ${input.description}\n` : ''}
+What they've said about it:
+${rows}
+
+Rules:
+- Keep a line exactly as written when the notes still back it. Most of the time most lines stay.
+- Reword or replace a line only when a newer note shows it has been done, dropped or has changed. Add one only when a newer note shows a new big thing.
+- Things that stay true for weeks, not today's step. Under 10 words, in their words.
+- Each new or reworded line cites the row it came from by id. A kept line needs no row.
+- Name nothing (people, places, tools, numbers) that the rows don't name.
+- 2 or 3 lines. If nothing has changed, return the same lines.
+
+${PLAIN_ENGLISH_RULES}
+
+Return JSON only:
+{ "themes": [ { "text": "...", "from": "ROW_ID or KEPT" } ] }`
+}
+
+/**
+ * The lines after a re-read. A line identical to a current one is kept
+ * without a citation (it passed the gates when it was written); anything new
+ * must cite a real row, share its wording, name nothing the notes don't, and
+ * pass the voice check, same as a first draft.
+ */
+export function parseThemeRefresh(raw: string, evidence: Evidence[], title: string, current: string[]): string[] {
+  let parsed: unknown
+  try { parsed = JSON.parse(raw) } catch { return [] }
+  const list = (parsed as { themes?: unknown })?.themes
+  if (!Array.isArray(list)) return []
+  const known = new Set(current.map(t => t.trim().toLowerCase()))
+  const haystack = evidenceHaystack(evidence, title)
+  const out: string[] = []
+  for (const item of list) {
+    const text = typeof item?.text === 'string' ? item.text.replace(/\s+/g, ' ').trim().replace(/^["“]|["”]$/g, '') : ''
+    if (!text || text.length > MAX_THEME_CHARS) continue
+    if (out.some(t => t.toLowerCase() === text.toLowerCase())) continue
+    if (!known.has(text.toLowerCase())) {
+      if (text.split(/\s+/).length > 14) continue
+      const row = evidence.find(e => e.id === item?.from)
+      if (!row || !citationSupports(text, row.text)) continue
+      if (!hasOnlyKnownSpecifics(text, haystack)) continue
+      if (findVoiceViolations(text).length > 0) continue
+    }
     out.push(text)
     if (out.length >= MAX_THEMES) break
   }

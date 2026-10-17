@@ -59,3 +59,54 @@ describe('isActivelyWorked', () => {
     expect(isActivelyWorked([null, undefined], now)).toBe(false)
   })
 })
+
+
+import { materialSignature, parseThemeRefresh, buildThemesRefreshPrompt, readThemesUpdate } from './project-themes.js'
+
+describe('keeping the lines in step with the notes', () => {
+  const ev = [
+    { id: 'N1', label: 'note, 17 Oct', text: 'Pasted the rewrite comments into Claude and the voice is much closer now' },
+    { id: 'N2', label: 'note, 2 Oct', text: 'Do the full trim before anything else' },
+  ]
+  const current = ['Do the full trim', 'Check length and structure']
+
+  it('keeps a current line without a citation and takes a new one that cites a real row', () => {
+    const raw = JSON.stringify({ themes: [
+      { text: 'Do the full trim', from: 'KEPT' },
+      { text: 'The voice is much closer now', from: 'N1' },
+    ] })
+    expect(parseThemeRefresh(raw, ev, 'Going Analogue', current)).toEqual(['Do the full trim', 'The voice is much closer now'])
+  })
+
+  it('drops a new line that cites nothing, a row that does not say it, or names something new', () => {
+    const raw = JSON.stringify({ themes: [
+      { text: 'Get an agent by March', from: 'KEPT' },
+      { text: 'Sell the film rights', from: 'N1' },
+      { text: 'Send it to Harper Collins', from: 'N1' },
+    ] })
+    expect(parseThemeRefresh(raw, ev, 'Going Analogue', current)).toEqual([])
+  })
+
+  it('reads nothing from a broken reply', () => {
+    expect(parseThemeRefresh('not json', ev, 't', current)).toEqual([])
+  })
+
+  it('the fingerprint changes when a note lands, and not otherwise', () => {
+    const a = [{ text: 'one', at: '2026-10-01T00:00:00Z' }]
+    const b = [{ text: 'two', at: '2026-10-17T00:00:00Z' }, ...a]
+    expect(materialSignature(a)).toBe(materialSignature([...a]))
+    expect(materialSignature(b)).not.toBe(materialSignature(a))
+  })
+
+  it('shows the lines it was given and asks for the same lines when nothing changed', () => {
+    const p = buildThemesRefreshPrompt({ title: 'Going Analogue', description: null, current, evidence: ev })
+    expect(p).toContain('- Do the full trim')
+    expect(p).toContain('return the same lines')
+  })
+
+  it('reads the update marker, and only a well-formed one', () => {
+    expect(readThemesUpdate({ themes_update: { at: '2026-10-17T10:00:00Z', previous: ['a', 'b'] } })).toEqual({ at: '2026-10-17T10:00:00Z', previous: ['a', 'b'] })
+    expect(readThemesUpdate({ themes_update: { at: 5 } })).toBeNull()
+    expect(readThemesUpdate({})).toBeNull()
+  })
+})

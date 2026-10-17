@@ -19,7 +19,7 @@
  */
 
 import { useEffect, useRef, useState } from 'react'
-import { Play } from 'lucide-react'
+import { Mic, Play } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import {
   useProjectStore,
@@ -37,6 +37,8 @@ import { haptic } from '../../utils/haptics'
 import { isActivelyWorked, readThemes } from '../../lib/projectThemes'
 import { seasonLine } from '../../lib/season'
 import { ThemeList } from '../projects/ProjectThemes'
+import { ThemesUpdatedNote, useRefreshThemes } from '../projects/ThemesFollowNotes'
+import { UpdateSheet } from '../projects/UpdateSheet'
 import { getTheme } from '../../lib/projectTheme'
 
 const GRAIN = `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .55 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>")`
@@ -66,6 +68,7 @@ export function TodaysAnswerCard() {
   // which sets an override rather than re-starring — the same project
   // appeared in both places.
   const focusProject = useFocusProject()
+  useRefreshThemes(focusProject)
 
   // Drop the override the moment the REAL priority changes to something
   // else — without this, a chip pick from earlier in the session would
@@ -84,6 +87,7 @@ export function TodaysAnswerCard() {
   // started, so the whole flow (window → shapes → timer → close-out)
   // happens in the one box rather than on a second screen.
   const [contractOpen, setContractOpen] = useState(false)
+  const [updateOpen, setUpdateOpen] = useState(false)
   // Go on the card IS the decision, so the session starts straight away.
   // "Change it" opens the same box without starting.
   const [autoStart, setAutoStart] = useState(false)
@@ -298,6 +302,7 @@ export function TodaysAnswerCard() {
     <>
       <p className={label} style={muted}>keep in mind</p>
       <ThemeList themes={themes} rgb={theme.rgb} />
+      <ThemesUpdatedNote project={focusProject} />
     </>
   ) : nextMove ? (
     <>
@@ -407,11 +412,11 @@ export function TodaysAnswerCard() {
               </button>
             ) : <span />}
             <button
-              onClick={() => handleStartSession(!!nextMove || steering)}
+              onClick={() => (nextMove || steering ? (haptic.medium(), setUpdateOpen(true)) : handleStartSession(false))}
               className="neon-button flex-shrink-0 px-6 py-2.5 rounded-full font-semibold text-[15px] flex items-center gap-2"
             >
-              <Play className="h-3.5 w-3.5 fill-current" />
-              {nextMove || steering ? 'Go' : fork ? 'Answer it' : 'Find the first move'}
+              {nextMove || steering ? <Mic className="h-4 w-4" /> : <Play className="h-3.5 w-3.5 fill-current" />}
+              {nextMove || steering ? 'Update' : fork ? 'Answer it' : 'Find the first move'}
             </button>
           </div>
           {nextMove && !steering && tweaking && (
@@ -421,6 +426,7 @@ export function TodaysAnswerCard() {
           )}
         </div>
       </div>
+      {updateOpen && <UpdateSheet project={focusProject} onClose={() => setUpdateOpen(false)} />}
     </div>
   )
 }

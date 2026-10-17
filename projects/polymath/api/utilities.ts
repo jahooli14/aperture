@@ -84,7 +84,7 @@ const EXECUTION_SESSIONS_RESOURCES = new Set([
   'harvest', 'mirror', 'book',
   'next-cycle', 'stuck', 'move',
 ])
-const EXECUTION_SPARKS_RESOURCES = new Set(['bake', 'today', 'respond', 'spark-followup', 'dismiss-spark', 'reroll-spark', 'retire-and-rebake', 'topup-bank', 'take-brief', 'prompt-preview', 'catch-up'])
+const EXECUTION_SPARKS_RESOURCES = new Set(['bake', 'today', 'respond', 'spark-followup', 'dismiss-spark', 'reroll-spark', 'retire-and-rebake', 'topup-bank', 'take-brief', 'prompt-preview', 'project-update', 'catch-up'])
 const EXECUTION_PROPOSALS_RESOURCES = new Set([
   'drift-decay', 'reembed-articles', 'backfill-embeddings', 'reprocess-backlog',
 ])
@@ -2348,19 +2348,53 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
     if (req.method !== 'GET') return res.status(405).json({ error: 'GET required' })
 
     const { aggregateMonthlyMirror, monthStart } = await import('./_lib/mirror.js')
+    const { isAppAuthored } = await import('./_lib/corpus-provenance.js')
     const start = monthStart(new Date())
+    // Days, not minutes: nobody remembers to press start and stop. A day
+    // counts when something you did leaves a trace on the project: a session
+    // or close-out, or a note filed under it (not one the app prompted).
+    const tz = Number(req.query.tz)
+    const tzOffsetMin = Number.isFinite(tz) ? tz : 0
 
-    const [{ data: sessionsData }, { data: projectsData }] = await Promise.all([
+    const [{ data: sessionsData }, { data: notesData }, { data: projectsData }, { data: linkData }, { data: sayData }] = await Promise.all([
       supabase
         .from('sessions')
-        .select('project_id, duration_minutes')
+        .select('project_id, started_at')
         .eq('user_id', userId)
         .gte('started_at', start.toISOString())
         .not('project_id', 'is', null),
+      supabase
+        .from('memories')
+        .select('created_at, tags, triage')
+        .eq('user_id', userId)
+        .gte('created_at', start.toISOString()),
       supabase.from('projects').select('id, title, state').eq('user_id', userId).neq('state', 'harvested'),
+      // Said on the project's own page: linked by a connection.
+      supabase
+        .from('connections')
+        .select('source_id, created_at')
+        .eq('source_type', 'project')
+        .eq('connection_type', 'project_voice_note')
+        .gte('created_at', start.toISOString()),
+      // A line typed into the box on its page (not a fragment cut from a note).
+      supabase
+        .from('fragments')
+        .select('project_id, created_at')
+        .eq('user_id', userId)
+        .is('memory_id', null)
+        .not('project_id', 'is', null)
+        .gte('created_at', start.toISOString()),
     ])
 
-    const rows = aggregateMonthlyMirror(sessionsData ?? [], (projectsData ?? []) as any)
+    const traces = [
+      ...((linkData ?? []) as { source_id: string; created_at: string }[]).map(c => ({ project_id: c.source_id, at: c.created_at })),
+      ...((sayData ?? []) as { project_id: string; created_at: string }[]).map(f => ({ project_id: f.project_id, at: f.created_at })),
+      ...((sessionsData ?? []) as { project_id: string; started_at: string }[]).map(s => ({ project_id: s.project_id, at: s.started_at })),
+      ...((notesData ?? []) as { created_at: string; tags: string[] | null; triage: { project_id?: string | null } | null }[])
+        .filter(m => m.triage?.project_id && !isAppAuthored(m))
+        .map(m => ({ project_id: m.triage!.project_id as string, at: m.created_at })),
+    ]
+    const rows = aggregateMonthlyMirror(traces, (projectsData ?? []) as any, tzOffsetMin)
     return res.status(200).json({ month: start.toISOString().slice(0, 7), rows })
   }
 
@@ -2880,6 +2914,18 @@ async function handleExecutionSparks(req: VercelRequest, res: VercelResponse) {
     // strict reroll already came back with nothing. See retireAndRebake.
     const creative = req.body?.creative === true
     return res.status(200).json(await retireAndRebake(supabase, userId, false, creative))
+  }
+
+  // ─── PROJECT-UPDATE (the main button: say where you got to) ─────────
+  if (resource === 'project-update') {
+    if (req.method !== 'POST') return res.status(405).json({ error: 'POST required' })
+    const userId = await getUserId(req)
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' })
+    const { project_id, text } = req.body || {}
+    if (typeof project_id !== 'string' || !project_id || typeof text !== 'string') return res.status(400).json({ error: 'project_id and text required' })
+    const { saveProjectUpdate } = await import('./_lib/project-update.js')
+    const out = await saveProjectUpdate(supabase, userId, project_id, text)
+    return out.ok ? res.status(200).json(out) : res.status(out.status).json({ error: out.error })
   }
 
   // ─── PROMPT-PREVIEW (Settings: read the real prompts) ───────────────

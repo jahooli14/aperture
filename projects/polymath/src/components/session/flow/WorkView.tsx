@@ -59,17 +59,21 @@ export function WorkView({
           <ChevronDown size={20} />
         </button>
         <p className="text-[12px] truncate flex-1 text-center" style={faint(0.55)}>{title}</p>
-        <div className="text-right">
-          <p
-            className="text-[17px] tabular-nums font-medium leading-none"
-            style={{ color: timeUp ? 'rgba(245,158,11,0.95)' : 'var(--brand-text-primary)' }}
-          >
-            {formatClock(clockSeconds)}
-          </p>
-          <p className="text-[11px] uppercase tracking-[0.14em] mt-1" style={faint(0.4)}>
-            {timeUp ? 'over' : hasWindow ? 'left' : 'so far'}
-          </p>
-        </div>
+        {/* A count-up clock was the whole point of Go once; nobody presses
+            start and stop, so only a window set before moves existed shows one. */}
+        {hasWindow ? (
+          <div className="text-right">
+            <p
+              className="text-[17px] tabular-nums font-medium leading-none"
+              style={{ color: timeUp ? 'rgba(245,158,11,0.95)' : 'var(--brand-text-primary)' }}
+            >
+              {formatClock(clockSeconds)}
+            </p>
+            <p className="text-[11px] uppercase tracking-[0.14em] mt-1" style={faint(0.4)}>
+              {timeUp ? 'over' : 'left'}
+            </p>
+          </div>
+        ) : <div className="w-9" aria-hidden />}
       </div>
 
       {/* Progress as dots. Tap one to un-tick it if you jumped the gun. */}

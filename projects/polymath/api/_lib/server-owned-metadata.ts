@@ -10,7 +10,7 @@
  * database already holds for them and ignores what the client sent.
  */
 
-export const SERVER_OWNED_KEYS = ['season', 'themes', 'up_to_speed'] as const
+export const SERVER_OWNED_KEYS = ['season', 'themes', 'themes_signature', 'themes_update', 'up_to_speed'] as const
 
 export function preserveServerOwned(
   incoming: Record<string, unknown>,

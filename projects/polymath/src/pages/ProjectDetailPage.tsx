@@ -23,6 +23,7 @@ import { SessionContract } from '../components/session/SessionContract'
 import { ProjectNotes } from '../components/projects/ProjectNotes'
 import { NextMovePanel } from '../components/projects/NextMovePanel'
 import { ProjectThemes } from '../components/projects/ProjectThemes'
+import { UpdateSheet } from '../components/projects/UpdateSheet'
 import { UpToSpeed } from '../components/projects/UpToSpeed'
 import { isActivelyWorked, readThemes } from '../lib/projectThemes'
 import { Button } from '../components/ui/button'
@@ -57,6 +58,7 @@ export function ProjectDetailPage() {
   const { fetchProjects, deleteProject, updateProject, syncProject, setPriority } = useProjectStore()
   const activeSessionProjectId = useSessionStore(s => s.active?.project_id ?? null)
   const [sessionOpen, setSessionOpen] = useState(false)
+  const [updateOpen, setUpdateOpen] = useState(false)
   // Go on the move IS the decision; "change it" opens without starting.
   const [sessionAutoStart, setSessionAutoStart] = useState(false)
 
@@ -379,6 +381,7 @@ export function ProjectDetailPage() {
         {/* The one session engine, run in place: the same contract the home
             runs, opened here so you can look around first and then start
             without leaving. */}
+        {updateOpen && project && <UpdateSheet project={project} onClose={() => setUpdateOpen(false)} />}
         {sessionOpen && (
           <SessionContract
             project={project}
@@ -402,10 +405,7 @@ export function ProjectDetailPage() {
                 back in is the move below. */}
             {project.status !== 'completed' && project.status !== 'graveyard'
               && (readThemes(project.metadata).length > 0 || project.is_priority || isActivelyWorked(project)) && (
-              <ProjectThemes
-                project={project}
-                onGo={() => { setSessionAutoStart(true); setSessionOpen(true) }}
-              />
+              <ProjectThemes project={project} onGo={() => setUpdateOpen(true)} />
             )}
 
             {/* The way back in: the move, unless themes are leading, or it

@@ -50,7 +50,17 @@ export async function loadProjectMaterial(
   userId: string,
   projectId: string,
 ): Promise<ProjectMaterial | null> {
-  const [projectRes, fragRes, memRes, sessRes] = await Promise.all([
+  // Notes said on the project's own page are linked by a connection (made
+  // after the fact by the client), and older ones carry no triage at all.
+  const { data: linkRows } = await supabase
+    .from('connections')
+    .select('target_id')
+    .eq('source_type', 'project').eq('source_id', projectId)
+    .eq('connection_type', 'project_voice_note')
+    .order('created_at', { ascending: false }).limit(PER_SOURCE)
+  const linkedIds = (linkRows ?? []).map((r: { target_id: string }) => r.target_id).filter(Boolean)
+
+  const [projectRes, fragRes, memRes, sessRes, linkedRes] = await Promise.all([
     supabase.from('projects')
       .select('title, description, status, metadata, notes_doc, last_active, last_session_ended_at')
       .eq('id', projectId).eq('user_id', userId).single(),
@@ -68,6 +78,9 @@ export async function loadProjectMaterial(
       .eq('project_id', projectId).eq('user_id', userId)
       .not('ended_at', 'is', null)
       .order('ended_at', { ascending: false }).limit(PER_SOURCE),
+    linkedIds.length
+      ? supabase.from('memories').select('title, body, tags, created_at').eq('user_id', userId).in('id', linkedIds)
+      : Promise.resolve({ data: [] as { title: string; body: string; tags: string[] | null; created_at: string }[], error: null }),
   ])
   if (projectRes.error || !projectRes.data) {
     console.error('[project-material] project load failed:', projectRes.error?.message)
@@ -84,7 +97,7 @@ export async function loadProjectMaterial(
   for (const f of fragRes.data ?? []) {
     if (typeof f.text === 'string' && f.text.trim()) rows.push({ kind: 'note', text: f.text.trim(), at: f.created_at })
   }
-  for (const m of (memRes.data ?? []).filter(m => !isAppAuthored(m))) {
+  for (const m of [...(memRes.data ?? []), ...(linkedRes.data ?? [])].filter(m => !isAppAuthored(m))) {
     const text = [m.title, m.body].filter((t: unknown) => typeof t === 'string' && t.trim()).join(' — ')
     if (text) rows.push({ kind: 'note', text, at: m.created_at })
   }

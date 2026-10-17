@@ -1,3 +1,4 @@
+import { explicitProjectId, pinnedTriage } from './explicit-project.js'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { APP_AUTHORED_TAGS } from './corpus-provenance.js'
 import { getSupabaseClient } from './supabase.js'
@@ -141,6 +142,11 @@ export async function processMemory(memoryId: string, opts: ProcessOptions = {})
     const tagVocabulary = await fetchTagVocabulary(memory.user_id || 'f2404e61-2010-46c8-8edd-b8a3e702f0fb')
     logger.info({ memory_id: memoryId, vocab_size: tagVocabulary.length }, '🔄 Extracting metadata...')
     const metadata = await extractMetadata(memory.title, memory.orig_transcript || memory.body, projects || [], bodyFormat, tagVocabulary)
+
+    // Said on a project's own page: it is about that project, whatever the
+    // model guessed (explicit-project.ts).
+    const pinnedTo = explicitProjectId(memory.source_reference)
+    if (pinnedTo) metadata.triage = pinnedTriage(metadata.triage, pinnedTo) as unknown as typeof metadata.triage
     logger.info({ memory_id: memoryId, summary_title: metadata.summary_title, triage: metadata.triage?.category }, '✅ Metadata extracted')
 
     // 3. Generate embedding for the processed memory content

@@ -5,7 +5,6 @@ import {
   saveTicks,
   elapsedSeconds,
   partitionRunningShapes,
-  closeoutDraft,
   splitDoneWhen,
   closeoutPrompt,
   SHORT_SESSION_SECONDS,
@@ -83,31 +82,6 @@ describe('the spark stays a punt once the session starts', () => {
   })
 })
 
-describe('the close-out draft is what you did', () => {
-  const shapes = [
-    shape('Get the paints out.', 'friction'),
-    shape('Block in the sky.'),
-    shape('Wash the brushes.', 'friction'),
-  ]
-
-  it('leaves setup and pack-down out of it', () => {
-    expect(closeoutDraft(shapes, new Set([0, 1, 2]))).toBe('Did: Block in the sky.')
-  })
-
-  it('is empty when only the bookends were ticked', () => {
-    expect(closeoutDraft(shapes, new Set([0, 2]))).toBe('')
-  })
-
-  it('joins several without doubling up full stops', () => {
-    const two = [shape('Bounce the vocal.'), shape('Re-do the transition.')]
-    expect(closeoutDraft(two, new Set([0, 1]))).toBe('Did: Bounce the vocal. Re-do the transition.')
-  })
-
-  it('is empty when nothing was ticked', () => {
-    expect(closeoutDraft(shapes, new Set())).toBe('')
-  })
-})
-
 describe('splitDoneWhen', () => {
   it('pulls the stopping point out from under the move', () => {
     expect(splitDoneWhen('Loop bars 9-12 and program a kick. Done when it loops without wincing.'))
@@ -137,12 +111,4 @@ describe('closeoutPrompt', () => {
     expect(closeoutPrompt(5 * 60, 1).question).not.toBe('What got in the way?')
   })
 })
-
-describe('closeoutDraft drops the stopping point', () => {
-  it('says what you did, not when it counted as done', () => {
-    const shapes = [shape('Sketch the pole three times. Done when three sketches exist.')]
-    expect(closeoutDraft(shapes, new Set([0]))).toBe('Did: Sketch the pole three times.')
-  })
-})
-
 

@@ -4,19 +4,21 @@
  * (api/_lib/project-themes.ts).
  *
  * Set by the user, or drafted from their notes and then kept or edited.
- * Nothing updates them behind their back and nothing asks if they're still
- * right — they change when the user changes them.
+ * They follow the notes: new notes re-read them (ThemesFollowNotes), with a
+ * line saying so and an Undo. The main button is Update, not Go.
  */
 
 import { useState } from 'react'
-import { Loader2, Play, Sparkles } from 'lucide-react'
+import { Loader2, Mic, Sparkles } from 'lucide-react'
 import { api } from '../../lib/apiClient'
 import { useProjectStore } from '../../stores/useProjectStore'
-import { MAX_THEMES, isActivelyWorked, readThemes, type ProjectTheme } from '../../lib/projectThemes'
+import { MAX_THEMES, readThemes, type ProjectTheme } from '../../lib/projectThemes'
+import { ThemesUpdatedNote, useRefreshThemes } from './ThemesFollowNotes'
 import type { Project } from '../../types'
 
 export function ProjectThemes({ project, onGo }: { project: Project; onGo?: () => void }) {
   const themes = readThemes(project.metadata)
+  useRefreshThemes(project)
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState<string[]>([])
   const [drafting, setDrafting] = useState(false)
@@ -73,7 +75,7 @@ export function ProjectThemes({ project, onGo }: { project: Project; onGo?: () =
       <div className="glass-card p-5 space-y-3">
         <p className="eyebrow">Keep in mind</p>
         <p className="text-[13px] leading-snug" style={{ color: 'var(--brand-text-secondary)' }}>
-          Two or three things to hold onto while you work on this. They stay until you change them.
+          Two or three things to hold onto while you work on this. They follow your notes, and you can change them any time.
         </p>
         {draft.map((value, i) => (
           <input
@@ -152,13 +154,14 @@ export function ProjectThemes({ project, onGo }: { project: Project; onGo?: () =
         </button>
       </div>
       <ThemeList themes={themes} />
-      {onGo && isActivelyWorked(project) && (
+      <ThemesUpdatedNote project={project} />
+      {onGo && (
         <button
           onClick={onGo}
           className="neon-button w-full py-3 rounded-xl font-semibold text-[15px] flex items-center justify-center gap-2"
         >
-          <Play className="h-3.5 w-3.5 fill-current" />
-          Go
+          <Mic className="h-4 w-4" />
+          Update
         </button>
       )}
     </div>

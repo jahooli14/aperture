@@ -66,20 +66,6 @@ export function partitionRunningShapes(shapes: SessionShape[]): {
 }
 
 /**
- * The honest first draft of a close-out, so the box is never empty at the
- * moment attention is lowest. Setup and pack-down are ticked like anything
- * else but they are not what you did — "Did: Got the paints out. Cleaned
- * the brushes." is a worse answer than saying nothing.
- */
-export function closeoutDraft(shapes: SessionShape[], ticked: Set<number>): string {
-  const done = shapes
-    .filter((sh, i) => ticked.has(i) && sh.source !== 'friction')
-    .map(sh => splitDoneWhen(sh.text).move.trim().replace(/[.!?]+$/, ''))
-    .filter(Boolean)
-  return done.length > 0 ? `Did: ${done.join('. ')}.` : ''
-}
-
-/**
  * A first move ends "Done when …" (plain-english.ts, FIRST_MOVE_RULES).
  * On screen that's two things: the move, which is what you do, and the
  * stopping point, which is quieter and sits under it. Text without one

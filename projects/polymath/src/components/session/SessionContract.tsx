@@ -33,7 +33,7 @@ import { useSessionNotification, SESSION_ACTION_EVENT, type SessionAction } from
 import { haptic } from '../../utils/haptics'
 import {
   loadTicks, saveTicks, elapsedSeconds, partitionRunningShapes,
-  closeoutDraft, closeoutPrompt, splitDoneWhen,
+  closeoutPrompt, splitDoneWhen,
   loadMinimised, saveMinimised,
 } from './sessionRunOps'
 import { MoveCard } from './flow/MoveCard'
@@ -220,9 +220,10 @@ export function SessionContract({
     const doneItems = shapes
       .filter((_, i) => ticked.has(i))
       .map(sh => ({ text: splitDoneWhen(sh.text).move, taskId: sh.taskId ?? null, partial: sh.partial }))
-    // No note is fine -- what you ticked still stands as the record, so the
-    // next session never opens on nothing.
-    const text = note.trim() || closeoutDraft(shapes, ticked)
+    // No note is fine -- what you ticked still stands as the record. An app-
+    // written "Did: <the move>" used to be saved here when the box was empty,
+    // and then showed on the card as "You stopped with" words nobody said.
+    const text = note.trim()
     const result = await closeSession(text, mvsSeed ?? undefined, doneItems)
     if (!result) return
     // No new move came back but the old one was just done: without this
@@ -317,7 +318,6 @@ export function SessionContract({
                   nextMove={themeLed ? null : moveHere ?? closeResult.nextMove}
                   onSetMove={(text: string) => { void reworkMove(project.id, { action: 'set', text }) }}
                   note={savedNote}
-                  minutes={closeResult.duration_minutes}
                   busy={busy}
                   onClose={finishUp}
                   onFinish={() => { void markFinished() }}

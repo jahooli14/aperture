@@ -50,7 +50,7 @@ type SlotKind = 'closeout' | 'mirror' | null
 interface MirrorRow {
   project_id: string
   title: string
-  minutes: number
+  days: number
   is_live: boolean
 }
 
@@ -92,7 +92,7 @@ async function getJson<T>(url: string): Promise<T | null> {
 function MirrorSlot({ rows, onDismiss }: { rows: MirrorRow[]; onDismiss: () => void }) {
   const [missingText, setMissingText] = useState('')
   const [submitting, setSubmitting] = useState(false)
-  const maxMinutes = Math.max(1, ...rows.map(r => r.minutes))
+  const maxDays = Math.max(1, ...rows.map(r => r.days))
 
   const [failed, setFailed] = useState(false)
   const submitMissing = async () => {
@@ -121,12 +121,12 @@ function MirrorSlot({ rows, onDismiss }: { rows: MirrorRow[]; onDismiss: () => v
           <div key={r.project_id} className="space-y-1">
             <div className="flex justify-between text-sm">
               <span>{r.title}{r.is_live && <span style={accentTextStyle}> · live</span>}</span>
-              <span className="tabular-nums">{Math.round(r.minutes / 60 * 10) / 10}h</span>
+              <span className="tabular-nums">{r.days} {r.days === 1 ? 'day' : 'days'}</span>
             </div>
             <div className="h-1.5 rounded-full bg-white/10 overflow-hidden">
               <div
                 className="h-full rounded-full"
-                style={{ width: `${(r.minutes / maxMinutes) * 100}%`, background: 'rgb(var(--brand-primary-rgb))' }}
+                style={{ width: `${(r.days / maxDays) * 100}%`, background: 'rgb(var(--brand-primary-rgb))' }}
               />
             </div>
           </div>
@@ -186,7 +186,7 @@ export function AttentionSlot() {
       }
 
       if (!mirrorSeenThisMonth()) {
-        const mirror = await getJson<{ rows: MirrorRow[] }>('/api/utilities?resource=mirror')
+        const mirror = await getJson<{ rows: MirrorRow[] }>(`/api/utilities?resource=mirror&tz=${new Date().getTimezoneOffset()}`)
         if (cancelled) return
         if (mirror && mirror.rows.length > 0) {
           setMirrorRows(mirror.rows)
