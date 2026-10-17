@@ -25,6 +25,8 @@ import { AddItemToListDialog } from './lists/AddItemToListDialog'
 import { SaveArticleDialog } from './reading/SaveArticleDialog'
 import { CreateMenuModal } from './CreateMenuModal'
 import { AnimatePresence, motion } from 'framer-motion'
+import { useLocation } from 'react-router-dom'
+import { useProjectStore } from '../stores/useProjectStore'
 
 interface VoiceFABProps {
   onTranscript: (text: string) => void
@@ -109,6 +111,11 @@ export function VoiceFAB({
   hidden = false,
   onTap,
 }: VoiceFABProps) {
+  // On a project's page, Say it and Write it are about THAT project: they are
+  // filed under it, not guessed at.
+  const location = useLocation()
+  const pageProjectId = location.pathname.match(/^\/projects\/([^/]+)$/)?.[1] ?? null
+  const pageProjectTitle = useProjectStore(s => (pageProjectId ? s.allProjects.find(p => p.id === pageProjectId)?.title ?? null : null))
   const [isVoiceOpen, setIsVoiceOpen] = useState(false)
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [showProjectDialog, setShowProjectDialog] = useState(false)
@@ -420,6 +427,7 @@ export function VoiceFAB({
       <CreateMenuModal
         isOpen={isMenuOpen}
         onClose={() => setIsMenuOpen(false)}
+        projectTitle={pageProjectTitle}
         onAction={(action) => {
           if (action === 'voice') setIsVoiceOpen(true)
           if (action === 'thought') setShowThoughtDialog(true)
@@ -493,6 +501,7 @@ export function VoiceFAB({
         isOpen={showThoughtDialog}
         onOpenChange={setShowThoughtDialog}
         hideTrigger
+        projectId={pageProjectId ?? undefined}
         onSwitchType={() => {
           // Let the user jump from thought sheet into the full-type menu
           // without losing what they typed (draft is auto-persisted).

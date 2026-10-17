@@ -283,6 +283,8 @@ export interface CreateMemoryDialogProps {
   trigger?: React.ReactNode
   initialMode?: 'text' | 'checklist'
   onSwitchType?: () => void
+  /** Said on a project's page: the note is filed under that project. */
+  projectId?: string
 }
 
 export function CreateMemoryDialog({
@@ -292,6 +294,7 @@ export function CreateMemoryDialog({
   trigger,
   initialMode = 'text',
   onSwitchType,
+  projectId,
 }: CreateMemoryDialogProps = {}) {
   const [internalOpen, setInternalOpen] = useState(false)
   const [selectedFiles, setSelectedFiles] = useState<File[]>([])
@@ -436,6 +439,7 @@ export function CreateMemoryDialog({
         tags: tags.length > 0 ? tags : undefined,
         memory_type: formData.memory_type || undefined,
         image_files: imageFiles,
+        ...(projectId && { source_reference: { type: 'project' as const, id: projectId } }),
       }
     }
 

@@ -5,6 +5,8 @@ interface CreateMenuModalProps {
     isOpen: boolean
     onClose: () => void
     onAction: (action: 'voice' | 'thought' | 'project' | 'article' | 'list') => void
+    /** On a project's page: what Say it and Write it will be kept on. */
+    projectTitle?: string | null
 }
 
 // All actions share the brand cyan accent — icon + label do the work of
@@ -21,7 +23,7 @@ const creationActions = [
     { id: 'article', label: 'Article',   description: 'A link to read later', icon: Link },
 ] as const
 
-export function CreateMenuModal({ isOpen, onClose, onAction }: CreateMenuModalProps) {
+export function CreateMenuModal({ isOpen, onClose, onAction, projectTitle }: CreateMenuModalProps) {
     return (
         <AnimatePresence>
             {isOpen && (
@@ -67,7 +69,7 @@ export function CreateMenuModal({ isOpen, onClose, onAction }: CreateMenuModalPr
                                     className="text-[11px] uppercase tracking-[0.14em] font-semibold mt-1.5 inline-block"
                                     style={{ color: 'rgba(var(--brand-primary-rgb),0.7)' }}
                                 >
-                                    pick one
+                                    {projectTitle ? `Say it and write it are kept on ${projectTitle}` : 'pick one'}
                                 </span>
                             </div>
                             <button
@@ -133,7 +135,7 @@ export function CreateMenuModal({ isOpen, onClose, onAction }: CreateMenuModalPr
                                                 {action.label}
                                             </p>
                                             <p className="text-[11.5px] text-white/55 mt-0.5 leading-snug">
-                                                {action.description}
+                                                {projectTitle && (action.id === 'voice' || action.id === 'thought') ? `Kept on ${projectTitle}` : action.description}
                                             </p>
                                         </div>
                                     </motion.button>

@@ -4,6 +4,7 @@
  *
  *   POST ?resource=themes       { project_id, action: 'draft' }           -> { themes: string[] }   (not saved)
  *   POST ?resource=themes       { project_id, action: 'set', themes }     -> { themes: ProjectTheme[] }
+ *   POST ?resource=themes       { project_id, action: 'refresh' }         -> { themes, changed, previous? }   (re-read against new notes)
  *   POST ?resource=up-to-speed  { project_id, refresh? }                  -> { up_to_speed: UpToSpeed | null }
  */
 
@@ -12,7 +13,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { generateText } from './gemini-chat.js'
 import { MODELS } from './models.js'
 import { loadProjectMaterial, materialEvidence } from './project-material.js'
-import { buildThemesPrompt, normalizeThemes, parseThemeDraft, readThemes } from './project-themes.js'
+import { buildThemesPrompt, buildThemesRefreshPrompt, materialSignature, normalizeThemes, parseThemeDraft, parseThemeRefresh, readThemes } from './project-themes.js'
 import { buildUpToSpeedPrompt, isFresh, parseUpToSpeed, readUpToSpeed } from './up-to-speed.js'
 
 const MODEL_TIMEOUT_MS = 20_000
@@ -39,6 +40,53 @@ async function mergeMetadata(
   return true
 }
 
+/** Re-reads a project's lines against its notes. Null when the project isn't
+ *  the person's. Never throws: a failed model call leaves the lines alone. */
+export async function refreshThemes(
+  supabase: SupabaseClient, userId: string, project_id: string, force = false,
+): Promise<{ themes: ReturnType<typeof readThemes>; changed: boolean; previous?: string[] } | null> {
+  const current = await supabase
+    .from('projects').select('metadata').eq('id', project_id).eq('user_id', userId).single()
+  if (current.error || !current.data) return null
+  const before = readThemes(current.data.metadata)
+  // Never author lines from nothing behind someone's back.
+  if (before.length === 0) return { themes: before, changed: false }
+  const material = await loadProjectMaterial(supabase, userId, project_id)
+  if (!material || material.rows.length === 0) return { themes: before, changed: false }
+
+  const signature = materialSignature(material.rows)
+  const meta = (current.data.metadata ?? {}) as Record<string, unknown>
+  if (!force && meta.themes_signature === signature) return { themes: before, changed: false }
+
+  const evidence = materialEvidence(material)
+  const currentTexts = before.map(t => t.text)
+  try {
+    const raw = await generateText(
+      buildThemesRefreshPrompt({ title: material.title, description: material.description, current: currentTexts, evidence }),
+      { model: MODELS.SESSION_SHAPE_CHAT, responseFormat: 'json', temperature: 0.2, maxTokens: 400, thinkingLevel: 'low', timeoutMs: MODEL_TIMEOUT_MS },
+    )
+    const refreshed = parseThemeRefresh(raw, evidence, material.title, currentTexts)
+    const same = refreshed.length === 0
+      || (refreshed.length === currentTexts.length && refreshed.every((t, i) => t.toLowerCase() === currentTexts[i].toLowerCase()))
+    if (same) {
+      await mergeMetadata(supabase, userId, project_id, { themes_signature: signature })
+      return { themes: before, changed: false }
+    }
+    const next = normalizeThemes(refreshed, before)
+    const ok = await mergeMetadata(supabase, userId, project_id, {
+      themes: next,
+      themes_signature: signature,
+      themes_update: { at: new Date().toISOString(), previous: currentTexts },
+    })
+    if (!ok) return { themes: before, changed: false }
+    return { themes: next, changed: true, previous: currentTexts }
+  } catch (e) {
+    // The signature is left alone so the next look tries again.
+    console.error('[themes] refresh failed:', e instanceof Error ? e.message : String(e))
+    return { themes: before, changed: false }
+  }
+}
+
 export async function handleThemes(
   req: VercelRequest, res: VercelResponse, supabase: SupabaseClient, userId: string,
 ) {
@@ -51,9 +99,22 @@ export async function handleThemes(
       .from('projects').select('metadata').eq('id', project_id).eq('user_id', userId).single()
     if (error || !data) return res.status(404).json({ error: 'project not found' })
     const next = normalizeThemes(themes, readThemes(data.metadata))
-    const ok = await mergeMetadata(supabase, userId, project_id, { themes: next })
+    // A hand edit (or an Undo) settles it: the lines are what the owner wants
+    // now, so the "updated from your notes" marker goes.
+    // And they were written against the notes as they stand, so the next look
+    // doesn't re-read them against the same notes and undo the edit.
+    const material = await loadProjectMaterial(supabase, userId, project_id)
+    const ok = await mergeMetadata(supabase, userId, project_id, {
+      themes: next, themes_update: null,
+      ...(material && material.rows.length ? { themes_signature: materialSignature(material.rows) } : {}),
+    })
     if (!ok) return res.status(500).json({ error: "Couldn't save those" })
     return res.status(200).json({ themes: next })
+  }
+
+  if (action === 'refresh') {
+    const out = await refreshThemes(supabase, userId, project_id, !!req.body?.force)
+    return out ? res.status(200).json(out) : res.status(404).json({ error: 'project not found' })
   }
 
   if (action === 'draft') {
@@ -73,7 +134,7 @@ export async function handleThemes(
     }
   }
 
-  return res.status(400).json({ error: "action must be 'draft' or 'set'" })
+  return res.status(400).json({ error: "action must be 'draft', 'set' or 'refresh'" })
 }
 
 export async function handleUpToSpeed(

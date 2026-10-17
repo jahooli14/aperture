@@ -18,11 +18,11 @@ import { useEffect, useState, useRef, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Loader2, MoreVertical, Star, Sprout, ArrowLeft } from 'lucide-react'
 import { useProjectStore } from '../stores/useProjectStore'
-import { useSessionStore } from '../stores/useSessionStore'
-import { SessionContract } from '../components/session/SessionContract'
 import { ProjectNotes } from '../components/projects/ProjectNotes'
 import { NextMovePanel } from '../components/projects/NextMovePanel'
 import { ProjectThemes } from '../components/projects/ProjectThemes'
+import { UpdateSheet } from '../components/projects/UpdateSheet'
+import { ProjectUpdates } from '../components/projects/ProjectUpdates'
 import { UpToSpeed } from '../components/projects/UpToSpeed'
 import { isActivelyWorked, readThemes } from '../lib/projectThemes'
 import { Button } from '../components/ui/button'
@@ -55,10 +55,7 @@ export function ProjectDetailPage() {
   const navigate = useNavigate()
 
   const { fetchProjects, deleteProject, updateProject, syncProject, setPriority } = useProjectStore()
-  const activeSessionProjectId = useSessionStore(s => s.active?.project_id ?? null)
-  const [sessionOpen, setSessionOpen] = useState(false)
-  // Go on the move IS the decision; "change it" opens without starting.
-  const [sessionAutoStart, setSessionAutoStart] = useState(false)
+  const [updateOpen, setUpdateOpen] = useState(false)
 
   const project = useProjectStore(state => state.allProjects.find(p => p.id === id))
 
@@ -108,16 +105,8 @@ export function ProjectDetailPage() {
     // The same page instance serves every project: nothing from the last one
     // may carry over.
     setSparkedByMemories([])
-    setSessionOpen(false)
-    setSessionAutoStart(false)
     void loadProjectDetails()
   }, [id, loadProjectDetails])
-
-  // A session running on this project when the page mounts is one to rejoin,
-  // not to start again.
-  useEffect(() => {
-    if (activeSessionProjectId && activeSessionProjectId === id) setSessionOpen(true)
-  }, [activeSessionProjectId, id])
 
   // The thought(s) this project grew from.
   useEffect(() => {
@@ -376,22 +365,8 @@ export function ProjectDetailPage() {
       </div>
 
       <div className="max-w-2xl mx-auto px-5 sm:px-6 space-y-8">
-        {/* The one session engine, run in place: the same contract the home
-            runs, opened here so you can look around first and then start
-            without leaving. */}
-        {sessionOpen && (
-          <SessionContract
-            project={project}
-            autoStart={sessionAutoStart}
-            onDone={() => { setSessionOpen(false); setSessionAutoStart(false); void fetchProjects() }}
-            onFinish={() => handleStatusChange('completed')}
-          />
-        )}
+        {updateOpen && project && <UpdateSheet project={project} onClose={() => setUpdateOpen(false)} />}
 
-        {/* Everything below goes while the contract is open: one thing on
-            screen, exactly as the home clears around a session. */}
-        {!sessionOpen && (
-          <>
             {/* Back after a while: where things stand, from your own notes.
                 The move panel under it is the way back in. */}
             <UpToSpeed project={project} />
@@ -402,21 +377,15 @@ export function ProjectDetailPage() {
                 back in is the move below. */}
             {project.status !== 'completed' && project.status !== 'graveyard'
               && (readThemes(project.metadata).length > 0 || project.is_priority || isActivelyWorked(project)) && (
-              <ProjectThemes
-                project={project}
-                onGo={() => { setSessionAutoStart(true); setSessionOpen(true) }}
-              />
+              <ProjectThemes project={project} onGo={() => setUpdateOpen(true)} />
             )}
+
+            <ProjectUpdates project={project} />
 
             {/* The way back in: the move, unless themes are leading, or it
                 can't be started yet (nothing to write a move for). */}
             {!steering && !blockedReason(project) && (
-              <NextMovePanel
-                project={project}
-                onGo={() => { setSessionAutoStart(true); setSessionOpen(true) }}
-                onChange={() => { setSessionAutoStart(false); setSessionOpen(true) }}
-                onFinish={() => handleStatusChange('completed')}
-              />
+              <NextMovePanel project={project} onUpdate={() => setUpdateOpen(true)} />
             )}
 
             <FinishedItButton project={project} />
@@ -424,8 +393,6 @@ export function ProjectDetailPage() {
             <div data-notes-section className="pb-32 pt-2">
               <ProjectNotes projectId={project.id} notesDoc={project.notes_doc} />
             </div>
-          </>
-        )}
       </div>
 
       {confirmDialog}

@@ -4,12 +4,12 @@
  * It used to open the session box, which showed the same project, last
  * note, move and Go a second time just to reach two buttons. Now the two
  * buttons (and "say what's off") open right under the move they change.
- * Same route as the session box: useSessionStore.reworkMove.
+ * Same route as the session box: useMoveStore.reworkMove.
  */
 
 import { useState } from 'react'
 import { ArrowUp, Loader2, Minimize2, Shuffle } from 'lucide-react'
-import { useSessionStore, type MoveChange } from '../../stores/useSessionStore'
+import { useMoveStore, type MoveChange } from '../../stores/useMoveStore'
 
 const quiet = {
   background: 'rgba(255,255,255,0.05)',
@@ -18,16 +18,16 @@ const quiet = {
 }
 
 export function MoveTweak({ projectId, onClose }: { projectId: string; onClose: () => void }) {
-  const reworkMove = useSessionStore(s => s.reworkMove)
-  const busy = useSessionStore(s => s.moveBusy)
-  const error = useSessionStore(s => s.error)
+  const reworkMove = useMoveStore(s => s.reworkMove)
+  const busy = useMoveStore(s => s.moveBusy)
+  const error = useMoveStore(s => s.error)
   const [say, setSay] = useState('')
   const online = typeof navigator === 'undefined' || navigator.onLine
 
   const change = async (c: MoveChange) => {
     if (busy) return
     await reworkMove(projectId, c)
-    if (!useSessionStore.getState().error) {
+    if (!useMoveStore.getState().error) {
       setSay('')
       onClose()
     }

@@ -53,3 +53,17 @@ export function themeDate(iso: string): string {
   if (Number.isNaN(d.getTime())) return ''
   return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
 }
+
+
+/** When the lines were last re-read against new notes, and what they said
+ *  before (api/_lib/project-themes.ts). Shown for a few days with an Undo. */
+export const THEMES_UPDATE_SHOWN_DAYS = 3
+
+export function readThemesUpdate(metadata: Project['metadata'], now = Date.now()): { at: string; previous: string[] } | null {
+  const raw = (metadata as { themes_update?: { at?: unknown; previous?: unknown } } | undefined)?.themes_update
+  if (!raw || typeof raw.at !== 'string' || !Array.isArray(raw.previous)) return null
+  const age = now - new Date(raw.at).getTime()
+  if (!Number.isFinite(age) || age > THEMES_UPDATE_SHOWN_DAYS * 86_400_000) return null
+  const previous = raw.previous.filter((t): t is string => typeof t === 'string' && !!t.trim())
+  return previous.length ? { at: raw.at, previous } : null
+}

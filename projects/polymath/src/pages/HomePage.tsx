@@ -4,16 +4,15 @@
  * One page that drives you, top to bottom:
  *   1. The two-sided card (TodaysAnswerCard). Top: a question to think about
  *      while you're not working. Bottom: the project to pick up right now,
- *      its one next move, and Go. During a session this card is the session.
- *   2. The attention slot (AttentionSlot): at most ONE thing the app has to
- *      say — a close-out you owe it, or the monthly mirror. Silent otherwise.
+ *      its lines or its one next move, and Update.
+ *   2. The attention slot (AttentionSlot): the monthly mirror, once a month.
+ *      Silent otherwise.
  *   3. Everything else (EverythingElseMini): one swipeable row of the other
- *      projects you're keeping warm, ▶ to start one now, ending in
+ *      projects you're keeping warm, an arrow to put one on the card, ending in
  *      "Suggest a project".
  *   4. Now consuming (ConsumingWidget): what you're reading, watching, playing.
  *   5. Thought of the day (ThoughtOfTheDay): something you said, back to you.
  *
- * Everything below the card hides while a session runs.
  */
 
 import { useEffect, useState } from 'react'
@@ -22,7 +21,6 @@ import { motion } from 'framer-motion'
 import { useProjectStore } from '../stores/useProjectStore'
 import { useMemoryStore } from '../stores/useMemoryStore'
 import { useJourneyStore } from '../stores/useJourneyStore'
-import { useSessionStore } from '../stores/useSessionStore'
 import { useAuthContext } from '../contexts/AuthContext'
 import { SubtleBackground } from '../components/SubtleBackground'
 import { TodaysAnswerCard } from '../components/home/TodaysAnswerCard'
@@ -48,11 +46,6 @@ export function HomePage() {
   // with the "suggest a project" card now, so it is never empty — and a
   // shelf with nothing warm on it is exactly when that card earns its
   // place most.
-  // A session running anywhere in the app (the standalone /session route
-  // included) clears the page too, so coming back to home mid-hour never
-  // lands on a wall of other projects.
-  const sessionRunning = useSessionStore(s => s.active != null)
-  const clearPage = sessionRunning
   // The suggestions deck opens under the "everything else" row and is a
   // full surface of its own, so what sits BELOW it goes — the row itself
   // stays, because the deck is anchored to it.
@@ -215,18 +208,7 @@ export function HomePage() {
             <TodaysAnswerCard />
           </motion.div>
 
-          {/* Everything below is other projects and other things to look at
-              — exactly what a running session is meant to hold your
-              attention against, so all of it hides until the session ends.
-              Same reasoning as the answer card itself going OLED-black for
-              the running phase, just at the page level.
-
-              It hides for an expanded answer card too: opening the chips,
-              the focus thread or the deck means you're looking at that,
-              and leaving three more sections under it is the menu the
-              whole stack exists to avoid. */}
-          {!clearPage && (
-            <>
+          {/* Everything below is other projects and other things to look at. */}
               {/* The attention budget (SPEC.md) — at most ONE of: a deferred
                   close-out, the monthly mirror, the live-project re-ask, a
                   composite/morph proposal, today's spark, or the different-thing
@@ -303,17 +285,11 @@ export function HomePage() {
                   <ThoughtOfTheDay />
                 </DeferMount>
               </motion.div>
-                </>
-              )}
             </>
           )}
 
           {/* Quiet exit to Settings — small, centred, low-contrast. Lives
-              at the very bottom so it never competes with content, and
-              goes with everything else when the card takes the screen: a
-              lone Settings link under a running session is the whole
-              "one thing on screen" rule undone by its own footer. */}
-          {!clearPage && (
+              at the very bottom so it never competes with content. */}
           <motion.div {...stackTransition(6)}>
             <div className="pt-10 pb-2 flex justify-center">
               <button
@@ -326,7 +302,6 @@ export function HomePage() {
               </button>
             </div>
           </motion.div>
-          )}
 
         </div>
 

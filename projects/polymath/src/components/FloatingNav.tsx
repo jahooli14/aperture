@@ -229,7 +229,7 @@ export function FloatingNav() {
         })
       } else {
         // Offline: queue for later but keep optimistic memory
-        await addOfflineCapture(text)
+        await addOfflineCapture(text, projectId ? `project:${projectId}` : null)
         addToast({
           title: 'Queued for sync',
           description: 'Will process when back online.',
@@ -249,7 +249,7 @@ export function FloatingNav() {
       if (isNetworkError) {
         // True network error - queue for offline sync
         try {
-          await addOfflineCapture(text)
+          await addOfflineCapture(text, projectId ? `project:${projectId}` : null)
           addToast({
             title: 'Queued for sync',
             description: 'Will process when back online.',
