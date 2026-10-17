@@ -2444,15 +2444,28 @@ async function retireAndRebake(
   // costs nothing at all — no model call, and it comes back instantly
   // instead of after ten seconds of thinking. Its shelf life is stamped
   // from now, since until this moment it had never been seen.
-  const { data: bankedRows } = await supabase
+  // Best first: the bank is filled across several runs, so the highest
+  // backed take left goes next, not the oldest. (`score` arrives with
+  // 20261016_spark_score.sql; without it, soonest-to-expire.)
+  const bankQuery = (cols: string) => supabase
     .from('sparks')
-    .select('id')
+    .select(cols)
     .eq('user_id', userId)
     .is('answered_at', null)
     .is('shown_at', null)
     .gt('expires_at', nowIso)
-    .order('expires_at', { ascending: true })
-    .limit(1)
+  let bankedRows: any[] | null = null
+  {
+    const withScore = await bankQuery('id, score, expires_at')
+    if (!withScore.error) {
+      bankedRows = ((withScore.data ?? []) as any[]).sort((a, b) =>
+        (b.score ?? -1) - (a.score ?? -1) || new Date(a.expires_at).getTime() - new Date(b.expires_at).getTime())
+    } else {
+      const plain = await bankQuery('id, expires_at')
+      bankedRows = ((plain.data ?? []) as any[]).sort((a, b) =>
+        new Date(a.expires_at).getTime() - new Date(b.expires_at).getTime())
+    }
+  }
 
   const fromBank = bankedRows?.[0] ?? null
   if (fromBank) {

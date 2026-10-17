@@ -139,6 +139,13 @@ HOW TO WRITE IT
   seems like". Name the pattern, don't theorise about it.
 - Claim only what the rows support. If they could answer "that's not what I
   said", rewrite it.
+- A title is not a note. A film, book, album or project title says nothing about
+  its plot or what it contains; never claim what it holds, or what choosing it
+  means about them. Use it only as "you rated X", "you added X".
+- An order of dates is not a story. Don't say one note "came before" another, or
+  what changed between them, unless the notes themselves say so.
+- No diagnosing: nothing medical, emotional or about their relationships, even
+  lightly. If it needs a theory about why, it isn't a take.
 - Don't open with "For <project>, you planned..." or "You said you would...".
   Open with something that happened, or a line they said.
 - They will hear it as speech. Short sentences, words they would use, no jargon of
@@ -159,7 +166,7 @@ ${PLAIN_ENGLISH_RULES}
 then one committed claim, no question mark.)
 
 WHAT TO RETURN
-${ctx.seedRef ? `START FROM [${ctx.seedRef}]. Every candidate leans on that row plus at least one other row that looks nothing like it on the surface.\n` : ''}${ctx.lens === 'live' ? 'THIS ROUND: lean on the project they are deep in and the ones that matter this season.\n' : ctx.lens === 'elsewhere' ? 'THIS ROUND: stay away from the project they are deep in and the ones that matter this season. Find what runs across everything else: other projects, notes, list items. Prefer the two captures that look least alike on the surface.\n' : ''}Up to ${ctx.howMany} candidates, best first, each built on different rows. For each:
+${ctx.seedRef ? `START FROM [${ctx.seedRef}]. Every candidate leans on that row plus at least one other row that looks nothing like it on the surface. If [${ctx.seedRef}] has no honest partner, start from the nearest row that does; a forced link is worse than a different start.\n` : ''}${ctx.lens === 'live' ? 'THIS ROUND: lean on the project they are deep in and the ones that matter this season.\n' : ctx.lens === 'elsewhere' ? 'THIS ROUND: stay away from the project they are deep in and the ones that matter this season. Find what runs across everything else: other projects, notes, list items. Prefer the two captures that look least alike on the surface.\n' : ''}Up to ${ctx.howMany} candidates, best first, each built on different rows. For each:
 - "noticing": the pattern, under 12 words. Private -- they never see it.
 - "doubt": under 10 words: the strongest reason this is a coincidence of
   wording, not something real, or that they would just say "no, that's not it".
