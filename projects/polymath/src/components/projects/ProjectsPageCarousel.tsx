@@ -309,7 +309,7 @@ function ProjectCard({ project, prominent = false }: { project: Project, promine
           {/* The chevron circle that used to sit here is gone. The whole
               card is already the link, so it wasn't an action — it was a
               second circular button of exactly the same size sitting next to
-              the one real action (start a session), and the drawer grid is
+              the one real action (open the project), and the drawer grid is
               twenty cards deep. Two identical-looking buttons per card, one
               of which does nothing you can't do by tapping the card, is most
               of why this page reads as busy. */}

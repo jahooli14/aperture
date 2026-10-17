@@ -24,7 +24,8 @@ import { ProjectThemes } from '../components/projects/ProjectThemes'
 import { UpdateSheet } from '../components/projects/UpdateSheet'
 import { ProjectUpdates } from '../components/projects/ProjectUpdates'
 import { UpToSpeed } from '../components/projects/UpToSpeed'
-import { isActivelyWorked, readThemes } from '../lib/projectThemes'
+import { isActivelyWorked, projectKind, readThemes } from '../lib/projectThemes'
+import { readStoredMove } from '../stores/useMoveStore'
 import { Button } from '../components/ui/button'
 import { useToast } from '../components/ui/toast'
 import { useConfirmDialog } from '../components/ui/confirm-dialog'
@@ -311,6 +312,16 @@ export function ProjectDetailPage() {
               <Star className={`h-3 w-3 ${project.is_priority ? 'fill-current' : ''}`} />
               {project.is_priority ? 'Live' : 'Make it live'}
             </button>
+          )}
+          {!isRetired(project.status) && project.status !== 'completed' && (
+            <span
+              className="quiet-pill"
+              title={projectKind(project, !!readStoredMove(project.metadata)) === 'ongoing'
+                ? 'Worked on over weeks. Read off the lines you keep in mind.'
+                : 'One job. Read off its next move.'}
+            >
+              {projectKind(project, !!readStoredMove(project.metadata)) === 'ongoing' ? 'Ongoing' : 'One job'}
+            </span>
           )}
           {(parked || project.status === 'completed') && (
             <span className="quiet-pill">
