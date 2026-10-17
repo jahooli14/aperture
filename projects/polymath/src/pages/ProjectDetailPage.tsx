@@ -387,7 +387,7 @@ export function ProjectDetailPage() {
                 never wrote lines for doesn't get an empty prompt: its way
                 back in is the move below. */}
             {project.status !== 'completed' && project.status !== 'graveyard'
-              && (readThemes(project.metadata).length > 0 || project.is_priority || isActivelyWorked(project)) && (
+              && (readThemes(project.metadata).length > 0 || projectKind(project, !!readStoredMove(project.metadata)) === 'ongoing' || isActivelyWorked(project)) && (
               <ProjectThemes project={project} onGo={() => setUpdateOpen(true)} />
             )}
 

@@ -125,6 +125,9 @@ export function CreateProjectDialog({
   // The plan opens on its first step only. A whole list shown up front reads
   // as the work, and takes over from the idea; the rest is a tap away.
   const [showAll, setShowAll] = useState(false)
+  // Asked once, here, so it is never guessed later: one thing to finish,
+  // or something to keep working at (read off "Keep in mind" lines).
+  const [kind, setKind] = useState<'one-off' | 'ongoing'>('one-off')
 
   // Everything the user has said, which is the project brief.
   const saidByUser = () => history.filter(m => m.role === 'user').map(m => m.content.trim()).filter(Boolean)
@@ -189,6 +192,7 @@ export function CreateProjectDialog({
     setTitle('')
     setDraftTasks([])
     setShowAll(false)
+    setKind('one-off')
     setSaving(false)
     shapedPrefillRef.current = false
   }
@@ -290,6 +294,7 @@ export function CreateProjectDialog({
           tasks,
           progress: 0,
           is_shaped: true,
+          kind,
           // Kept only when the user actually said what done looks like.
           // Never asked for: an ongoing craft has no finish line, and
           // forcing one means rewriting it forever.
@@ -697,6 +702,28 @@ export function CreateProjectDialog({
                         )}
                       </div>
                     )}
+                  </div>
+                </div>
+
+                <div className="flex-shrink-0">
+                  <p className="eyebrow mb-2">Is this…</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {([
+                      ['one-off', 'One thing', 'You finish it and it is done'],
+                      ['ongoing', 'Something to keep at', 'You come back to it for weeks'],
+                    ] as const).map(([value, label, hint]) => (
+                      <button
+                        key={value}
+                        type="button"
+                        onClick={() => setKind(value)}
+                        aria-pressed={kind === value}
+                        className="quiet-pill !h-auto !flex-col !items-start !py-2 !px-3 text-left"
+                        data-on={kind === value ? 'true' : 'false'}
+                      >
+                        <span className="text-[13px] font-medium">{label}</span>
+                        <span className="text-[11px]" style={{ color: 'var(--brand-text-muted)' }}>{hint}</span>
+                      </button>
+                    ))}
                   </div>
                 </div>
 

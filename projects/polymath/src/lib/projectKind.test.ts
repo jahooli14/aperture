@@ -14,4 +14,8 @@ describe('projectKind', () => {
     expect(projectKind({ metadata: {}, is_priority: true } as never, true)).toBe('one-off')
     expect(projectKind({ metadata: {}, is_priority: false } as never, false)).toBe('one-off')
   })
+  it('what you chose at the start wins', () => {
+    expect(projectKind({ metadata: { kind: 'ongoing' }, is_priority: false } as never, true)).toBe('ongoing')
+    expect(projectKind({ metadata: { ...lines, kind: 'one-off' }, is_priority: true } as never, false)).toBe('one-off')
+  })
 })
