@@ -221,10 +221,11 @@ export function ProjectDetailPage() {
   const parked = project.status === 'dormant'
   const lastTouched = project.last_active || project.updated_at || null
   const description = project.description?.trim() || ''
-  // Being worked on and has themes: they lead (with Go) and the move steps
-  // aside. Otherwise the move is the way back in. Either way: notes below.
+  // An ongoing project being worked on, with threads: they lead and the move
+  // steps aside. A one-off keeps its move even if it has threads. Otherwise the move is the way back in. Either way: notes below.
   const steering = project.status !== 'completed' && project.status !== 'graveyard'
     && readThemes(project.metadata).length > 0 && isActivelyWorked(project)
+    && projectKind(project, !!readStoredMove(project.metadata)) === 'ongoing'
 
   return (
     <div className="min-h-screen page-bottom relative" style={{ backgroundColor: 'var(--brand-bg)' }}>
@@ -386,8 +387,7 @@ export function ProjectDetailPage() {
                 while you're working on it. A project you haven't touched and
                 never wrote lines for doesn't get an empty prompt: its way
                 back in is the move below. */}
-            {project.status !== 'completed' && project.status !== 'graveyard'
-              && (readThemes(project.metadata).length > 0 || projectKind(project, !!readStoredMove(project.metadata)) === 'ongoing' || isActivelyWorked(project)) && (
+            {project.status !== 'completed' && project.status !== 'graveyard' && (
               <ProjectThemes project={project} onGo={() => setUpdateOpen(true)} />
             )}
 

@@ -141,6 +141,7 @@ Skipped entirely for a repeating project (`metadata.cycle` above) — it already
 - **Say something about it**: on its page, the + (or double-tap / hold for voice) files the note under it ("Kept on {title}" in the menu; `source_reference` `project:<id>` or `{type:'project', id}`, also offline). Anywhere else the note is free-floating and the app guesses.
 - **Where you got to, or an idea for it**: **Update** (home card or project page, same sheet). Long-running → the "Keep in mind" lines re-read off the notes; one-off → the next move is rewritten. No Go screen, no timer.
 - **Ongoing vs one job**: asked once when a project is made ("One thing" / "Something to keep at", stored as `metadata.kind`) and shown as a pill on the page. Ongoing is read off its "Keep in mind" lines (the page offers to draft them from notes); one job off its next move. Older projects with no choice fall back to: has lines → ongoing (`projectKind`, `projectThemes.ts`).
+- **Threads** (was "Keep in mind"): every project page shows a Threads card, empty or not — say them (mic), type them, or draft from notes. Only an *ongoing* project leads with them on the home card and page; a one-off keeps its next move on top and the threads sit alongside.
 - **A new project idea**: "Suggest a project" (end of the everything-else row), or + → Project to type one in.
 - **A question to mull**: the nightly take on the home card; "ask me something else" serves the next-best banked one. There is no per-project "ask me about this" route on purpose — the take already leans on the live project.
 
