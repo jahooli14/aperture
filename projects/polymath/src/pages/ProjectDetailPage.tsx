@@ -24,7 +24,8 @@ import { ProjectThemes } from '../components/projects/ProjectThemes'
 import { UpdateSheet } from '../components/projects/UpdateSheet'
 import { ProjectUpdates } from '../components/projects/ProjectUpdates'
 import { UpToSpeed } from '../components/projects/UpToSpeed'
-import { isActivelyWorked, readThemes } from '../lib/projectThemes'
+import { isActivelyWorked, projectKind, readThemes } from '../lib/projectThemes'
+import { readStoredMove } from '../stores/useMoveStore'
 import { Button } from '../components/ui/button'
 import { useToast } from '../components/ui/toast'
 import { useConfirmDialog } from '../components/ui/confirm-dialog'
@@ -312,6 +313,16 @@ export function ProjectDetailPage() {
               {project.is_priority ? 'Live' : 'Make it live'}
             </button>
           )}
+          {!isRetired(project.status) && project.status !== 'completed' && (
+            <span
+              className="quiet-pill"
+              title={projectKind(project, !!readStoredMove(project.metadata)) === 'ongoing'
+                ? 'Worked on over weeks. Read off the lines you keep in mind.'
+                : 'One job. Read off its next move.'}
+            >
+              {projectKind(project, !!readStoredMove(project.metadata)) === 'ongoing' ? 'Ongoing' : 'One job'}
+            </span>
+          )}
           {(parked || project.status === 'completed') && (
             <span className="quiet-pill">
               {parked ? 'Parked' : 'Finished'}
@@ -376,7 +387,7 @@ export function ProjectDetailPage() {
                 never wrote lines for doesn't get an empty prompt: its way
                 back in is the move below. */}
             {project.status !== 'completed' && project.status !== 'graveyard'
-              && (readThemes(project.metadata).length > 0 || project.is_priority || isActivelyWorked(project)) && (
+              && (readThemes(project.metadata).length > 0 || projectKind(project, !!readStoredMove(project.metadata)) === 'ongoing' || isActivelyWorked(project)) && (
               <ProjectThemes project={project} onGo={() => setUpdateOpen(true)} />
             )}
 

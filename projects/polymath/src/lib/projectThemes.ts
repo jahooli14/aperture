@@ -67,3 +67,21 @@ export function readThemesUpdate(metadata: Project['metadata'], now = Date.now()
   const previous = raw.previous.filter((t): t is string => typeof t === 'string' && !!t.trim())
   return previous.length ? { at: raw.at, previous } : null
 }
+
+export type ProjectKind = 'ongoing' | 'one-off'
+
+/** One word for how a project is worked, shown on its page. Ongoing
+ *  (the book) is read off its "Keep in mind" lines; a one-off (a coaster)
+ *  off its next move. Chosen when the project is made (metadata.kind). For
+ *  older projects with no choice: having lines makes it ongoing. A live project
+ *  with no move yet is offered lines, so it reads as ongoing too. */
+export function projectKind(
+  project: Pick<Project, 'metadata' | 'is_priority'>,
+  hasMove: boolean,
+): ProjectKind {
+  const chosen = (project.metadata as { kind?: unknown } | undefined)?.kind
+  if (chosen === 'ongoing' || chosen === 'one-off') return chosen
+  if (readThemes(project.metadata).length > 0) return 'ongoing'
+  if (project.is_priority && !hasMove) return 'ongoing'
+  return 'one-off'
+}
