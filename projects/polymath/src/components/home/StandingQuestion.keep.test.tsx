@@ -36,7 +36,7 @@ async function answer(stance: string) {
 describe('keeping a yes', () => {
   it('offers the stake after a yes and keeps it as a theme in one tap', async () => {
     await answer('yes')
-    const keep = await screen.findByText(/Keep in mind:/)
+    const keep = await screen.findByText(/Add as a thread:/)
     fireEvent.click(keep)
     await waitFor(() => expect(post).toHaveBeenCalledWith('utilities?resource=themes', {
       project_id: 'p1', action: 'set', themes: ['Chapter nine gets one slow sitting'],
@@ -48,7 +48,7 @@ describe('keeping a yes', () => {
   it('adds to the themes already there', async () => {
     themes = [{ text: 'Every chapter in the new voice', at: '2026-10-01T00:00:00Z' }]
     await answer('yes')
-    fireEvent.click(await screen.findByText(/Keep in mind:/))
+    fireEvent.click(await screen.findByText(/Add as a thread:/))
     await waitFor(() => expect(post).toHaveBeenCalledWith('utilities?resource=themes', {
       project_id: 'p1', action: 'set', themes: ['Every chapter in the new voice', 'Chapter nine gets one slow sitting'],
     }))
@@ -57,20 +57,20 @@ describe('keeping a yes', () => {
   it('offers nothing after a no', async () => {
     await answer('no')
     await screen.findByText(/Wrong is useful too/)
-    expect(screen.queryByText(/Keep in mind:/)).toBeNull()
+    expect(screen.queryByText(/Add as a thread:/)).toBeNull()
   })
 
   it('offers nothing when the project already has three', async () => {
     themes = ['a', 'b', 'c'].map(t => ({ text: t, at: '2026-10-01T00:00:00Z' }))
     await answer('yes')
     await screen.findByText(/Noted/)
-    expect(screen.queryByText(/Keep in mind:/)).toBeNull()
+    expect(screen.queryByText(/Add as a thread:/)).toBeNull()
   })
 
   it('says so when keeping fails, and the line stays', async () => {
     await answer('yes')
     post.mockRejectedValueOnce(new Error('nope'))
-    fireEvent.click(await screen.findByText(/Keep in mind:/))
+    fireEvent.click(await screen.findByText(/Add as a thread:/))
     expect(await screen.findByText(/Couldn't keep that/)).toBeTruthy()
     expect(screen.getByText('Chapter nine gets one slow sitting')).toBeTruthy()
   })

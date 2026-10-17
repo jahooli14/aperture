@@ -1,5 +1,5 @@
 /**
- * Themes on the project page, shown to the user as "Keep in mind": the 2-3
+ * Themes on the project page, shown to the user as "Threads": the 2-3
  * big things about this project that stay true for weeks
  * (api/_lib/project-themes.ts).
  *
@@ -10,6 +10,7 @@
 
 import { useState } from 'react'
 import { Loader2, Mic, Sparkles } from 'lucide-react'
+import { VoiceInput } from '../VoiceInput'
 import { api } from '../../lib/apiClient'
 import { useProjectStore } from '../../stores/useProjectStore'
 import { MAX_THEMES, readThemes, type ProjectTheme } from '../../lib/projectThemes'
@@ -30,6 +31,20 @@ export function ProjectThemes({ project, onGo }: { project: Project; onGo?: () =
     while (filled.length < MAX_THEMES) filled.push('')
     setDraft(filled.slice(0, MAX_THEMES))
     setNote(null)
+    setEditing(true)
+  }
+
+  // Said out loud: each sentence becomes a line, filling the empty ones.
+  const fromSpeech = (text: string) => {
+    const lines = text.split(/[.!?\n]+/).map(l => l.trim()).filter(Boolean)
+    if (lines.length === 0) return
+    setDraft(prev => {
+      const base = editing ? prev.filter(v => v.trim()) : []
+      const next = [...base, ...lines].slice(0, MAX_THEMES)
+      while (next.length < MAX_THEMES) next.push('')
+      return next
+    })
+    setNote('Check these, change any, then Save.')
     setEditing(true)
   }
 
@@ -73,9 +88,9 @@ export function ProjectThemes({ project, onGo }: { project: Project; onGo?: () =
   if (editing) {
     return (
       <div className="glass-card p-5 space-y-3">
-        <p className="eyebrow">Keep in mind</p>
+        <p className="eyebrow">Threads</p>
         <p className="text-[13px] leading-snug" style={{ color: 'var(--brand-text-secondary)' }}>
-          Two or three things to hold onto while you work on this. They follow your notes, and you can change them any time.
+          Two or three things to hold onto while you work on this. Say them or type them. They follow your notes, and you can change them any time.
         </p>
         {draft.map((value, i) => (
           <input
@@ -99,6 +114,7 @@ export function ProjectThemes({ project, onGo }: { project: Project; onGo?: () =
             {drafting ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
             {drafting ? 'Reading your notes…' : 'Draft from my notes'}
           </button>
+          <VoiceInput variant="icon" onTranscript={fromSpeech} maxDuration={60} />
           <div className="flex gap-2">
             <button onClick={() => { setEditing(false); setNote(null) }} className="px-3 py-2 text-[13px] rounded-lg" style={{ color: 'var(--brand-text-secondary)' }}>Cancel</button>
             <button
@@ -118,9 +134,9 @@ export function ProjectThemes({ project, onGo }: { project: Project; onGo?: () =
   if (themes.length === 0) {
     return (
       <div className="glass-card-subtle p-5 space-y-2">
-        <p className="eyebrow">Keep in mind</p>
+        <p className="eyebrow">Threads</p>
         <p className="text-[15px] leading-snug" style={{ color: 'var(--brand-text-secondary)' }}>
-          Two or three things to hold onto while you work on this.
+          Two or three things to hold onto while you work on this. A few words each: "every chapter in the new voice".
         </p>
         {note && <p className="text-[13px]" style={{ color: 'var(--brand-text-secondary)' }}>{note}</p>}
         <div className="flex gap-4 pt-1">
@@ -136,6 +152,10 @@ export function ProjectThemes({ project, onGo }: { project: Project; onGo?: () =
           <button onClick={() => open([])} className="text-[13px] py-2" style={{ color: 'var(--brand-text-secondary)' }}>
             Write them
           </button>
+          <span className="flex items-center gap-1.5 text-[13px]" style={{ color: 'var(--brand-text-secondary)' }}>
+            <VoiceInput variant="icon" onTranscript={fromSpeech} maxDuration={60} />
+            Say them
+          </span>
         </div>
       </div>
     )
@@ -144,7 +164,7 @@ export function ProjectThemes({ project, onGo }: { project: Project; onGo?: () =
   return (
     <div className="glass-card p-5 space-y-4">
       <div className="flex items-center justify-between">
-        <p className="eyebrow">Keep in mind</p>
+        <p className="eyebrow">Threads</p>
         <button
           onClick={() => open(themes.map(t => t.text))}
           className="text-[13px] py-1 px-2 -mr-2"

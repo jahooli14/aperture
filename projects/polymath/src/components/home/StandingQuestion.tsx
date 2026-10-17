@@ -322,7 +322,7 @@ export function StandingQuestion() {
             disabled={kept === 'saving'}
             onClick={() => { void keepIt() }}
           >
-            {kept === 'saving' ? 'Keeping…' : kept === 'failed' ? "Couldn't keep that. Try again: " : 'Keep in mind: '}
+            {kept === 'saving' ? 'Keeping…' : kept === 'failed' ? "Couldn't keep that. Try again: " : 'Add as a thread: '}
             <span className="font-medium">{keepLine}</span>
           </button>
         ) : null}

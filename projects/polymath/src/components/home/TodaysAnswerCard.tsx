@@ -29,7 +29,7 @@ import { MoveTweak } from './MoveTweak'
 import { useMoveStore, readStoredMove } from '../../stores/useMoveStore'
 import { splitDoneWhen } from '../../lib/moveText'
 import { haptic } from '../../utils/haptics'
-import { isActivelyWorked, readThemes } from '../../lib/projectThemes'
+import { isActivelyWorked, projectKind, readThemes } from '../../lib/projectThemes'
 import { seasonLine } from '../../lib/season'
 import { ThemeList } from '../projects/ProjectThemes'
 import { ThemesUpdatedNote, useRefreshThemes } from '../projects/ThemesFollowNotes'
@@ -159,6 +159,7 @@ export function TodaysAnswerCard() {
   // a way back in is what a cold project needs.
   const themes = readThemes(focusProject.metadata)
   const steering = themes.length > 0 && isActivelyWorked(focusProject)
+    && projectKind(focusProject, !!nextMove) === 'ongoing'
 
   // No timestamp at all means never touched, not touched in 1970 — the
   // `|| 0` fallback here dated the project to the epoch and stamped a
