@@ -12,6 +12,7 @@ import { useJourneyStore } from '../stores/useJourneyStore'
 import { WeekendNudgeRow } from '../components/settings/WeekendNudgeRow'
 import { SeasonRow } from '../components/settings/SeasonRow'
 import { TakeBriefRow } from '../components/settings/TakeBriefRow'
+import { FullPrompt } from '../components/settings/FullPrompt'
 
 const intensityOptions = [
   { value: 'subtle' as const, label: 'Subtle', description: 'Quiet — less glow, less motion' },
@@ -391,6 +392,8 @@ export function SettingsPage() {
           <div>
             <h2 className="section-heading">what you want from <span className="accent">takes</span></h2>
             <TakeBriefRow />
+            <FullPrompt which="take_draft" label="the whole prompt that writes a take" />
+            <FullPrompt which="take_judge" label="the whole prompt that scores a take" />
           </div>
         </section>
 
@@ -676,6 +679,7 @@ export function SettingsPage() {
                 </button>
               </div>
             </div>
+            <FullPrompt which="ideas" label="the whole prompt, with your brief in it" />
           </div>
         </section>
 

@@ -534,6 +534,26 @@ ${ideaBrief}
 revive = restart a dormant project (optionally reshaped for who they are NOW — see THE ARC). extend = a specific NEW direction/output for a dormant OR active project. name = a brand-new project the captures point at (centre_id null). Use ALL of it — every project (dormant and active), every voice note, every list item, reading and highlights — not just one section. Decide the move from where the strongest real energy is, not from a fixed preference order. If the brief and the data don't line up cleanly, follow the brief.`
 }
 
+/** The whole "Suggest a project" prompt as the model gets it, with one
+ *  bracketed line standing in for each block of your real data. Shown
+ *  read-only in Settings so the brief you edit can be read in context. */
+export function previewFastIdeaPrompt(brief: string | null): string {
+  const at = '2026-01-01T00:00:00Z'
+  const stub: GatherResult = {
+    memories: [{ id: '[id]', title: null, body: '[your voice notes appear here, newest first, up to 350, each with its date]', themes: [], memory_type: null, created_at: at }],
+    list_items: [{ id: '[id]', content: '[your list items appear here, grouped by list]', list_type: 'lists', list_title: null, status: 'active', created_at: at, reaction: null, user_rating: null }],
+    active_projects: [{ id: '[id]', title: '[your active projects appear here]', description: null, status: 'active', tags: [], updated_at: at }],
+    dormant_projects: [{ id: '[id]', title: '[your dormant projects appear here, with where they stalled]', description: null, status: 'dormant', updated_at: at }],
+    reading: [{ id: '[id]', title: '[articles you saved appear here]', excerpt: null, source: null, created_at: at }],
+    highlights: [{ id: '[id]', quote: '[sentences you highlighted appear here]', article_title: null, created_at: at }],
+    prior_suggestions: [], ie_ideas: [],
+    prior_ideas: { saved: [{ title: '[ideas you saved]', feedback: null }], rejected: [{ title: '[ideas you said "not for me" to, with your reasons]', feedback: null }], built: [] },
+    recent_seed_pairs: [], recent_titles: [{ title: '[ideas just shown to you]', used_at: at }], recent_centre_ids: [], blocked_project_ids: [],
+    recently_mined: [], total_signal_count: 0,
+  }
+  return buildFastSinglePrompt(stub, stub.dormant_projects, false, null, brief)
+}
+
 /** The one-hour, start-to-finish prompt. Same JSON contract as the project
  *  prompt (so parseFastIdea handles both), but the frame is inverted: no
  *  reviving dormant projects, no commitment past tonight — just ONE small

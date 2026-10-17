@@ -280,3 +280,24 @@ call only; it doesn't remove anything.
 JSON only:
 { "scores": [ { "n": 1, "revelation": 0, "truth": 0, "specific": 0, "answerable": 0, "overreach": false, "crosses": false, "verdict": "kill", "reason": "" } ] }`
 }
+
+/** Both take prompts as the model gets them, with a bracketed line where
+ *  your real notes and recent takes go. Read-only, shown in Settings. */
+export function previewTakePrompts(brief: string): { draft: string; judge: string } {
+  const draft = draftPrompt({
+    corpusText: '[YOUR CORPUS GOES HERE: every project, note, fragment, list item and good article, one row each, with a ref like [N12] and a date]',
+    howMany: 2,
+    recentQuestions: ['[your recent takes are listed here so it does not repeat them]'],
+    recentRefs: [],
+    resonance: '',
+    corrections: '',
+    brief: brief || undefined,
+    liveTitle: '[your live project]',
+    alsoTitles: [],
+    seasonActive: false,
+  })
+  const sample = {
+    question: '[a take the draft wrote]', noticing: '[what it noticed]', doubt: '[its own doubt]', evidence: [], stake: '', project: null, rows: [],
+  } as unknown as Grounded
+  return { draft, judge: judgePrompt([sample], '[your live project]') }
+}
