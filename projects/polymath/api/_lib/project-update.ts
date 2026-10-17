@@ -12,13 +12,23 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { processMemory } from './process-memory.js'
 import { refreshThemes } from './project-catchup-routes.js'
+import { moveFromUpdate } from './move-say.js'
 
 export const MAX_UPDATE_CHARS = 2000
 
 export async function saveProjectUpdate(
   supabase: SupabaseClient, userId: string, projectId: string, text: string,
 ): Promise<
-  | { ok: true; themes: { text: string; at: string }[]; changed: boolean; previous?: string[] }
+  | {
+      ok: true
+      themes: { text: string; at: string }[]
+      changed: boolean
+      previous?: string[]
+      /** A project with a stored move: the next one, and what it logged as done. */
+      move?: { text: string; kind: 'move' | 'fork' }
+      logged?: string
+      project_done?: boolean
+    }
   | { ok: false; status: number; error: string }
 > {
   const clean = text.replace(/\s+/g, ' ').trim().slice(0, MAX_UPDATE_CHARS)
@@ -63,6 +73,15 @@ export async function saveProjectUpdate(
     .update({ last_active: now, last_closeout_text: clean.slice(0, 1000) })
     .eq('id', projectId).eq('user_id', userId)
 
+  // One after the other: both read-then-write the project's metadata, and
+  // run together the second write would wipe the first.
   const refreshed = await refreshThemes(supabase, userId, projectId, true)
-  return { ok: true, themes: refreshed?.themes ?? [], changed: !!refreshed?.changed, previous: refreshed?.previous }
+  const moved = await moveFromUpdate(supabase, userId, projectId, clean)
+  return {
+    ok: true,
+    themes: refreshed?.themes ?? [],
+    changed: !!refreshed?.changed,
+    previous: refreshed?.previous,
+    ...(moved ? { move: { text: moved.move.text, kind: moved.move.kind }, ...(moved.logged ? { logged: moved.logged } : {}), ...(moved.projectDone ? { project_done: true } : {}) } : {}),
+  }
 }

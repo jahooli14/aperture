@@ -13,7 +13,7 @@
  */
 
 import { useNavigate } from 'react-router-dom'
-import { Play } from 'lucide-react'
+import { ArrowUp } from 'lucide-react'
 import { getTheme } from '../../lib/projectTheme'
 import { blockedReason } from '../../lib/season'
 import { haptic } from '../../utils/haptics'
@@ -36,7 +36,7 @@ export function ProjectMiniCard({
   variant = 'glass',
 }: ProjectMiniCardProps) {
   const navigate = useNavigate()
-  const requestStart = useHomeAnswerStore(s => s.requestStart)
+  const showOnHome = useHomeAnswerStore(s => s.showOnHome)
   const theme = getTheme(project.type || 'other', project.title, project.metadata?.tags)
   const primaryLabel = project.metadata?.tags?.[0]
 
@@ -147,12 +147,9 @@ export function ProjectMiniCard({
           )}
           {!blocked && <button
             type="button"
-            // ▶ doesn't run its own session flow any more -- it points the
-            // answer box at this project and opens the one contract there.
-            // Same engine as the star and the chat, so a session looks the
-            // same however you got to it.
-            onClick={(e) => { e.stopPropagation(); haptic.medium(); requestStart(project.id) }}
-            aria-label={`Start session for ${project.title}`}
+            // Puts this project on the home card, where Update lives.
+            onClick={(e) => { e.stopPropagation(); haptic.medium(); showOnHome(project.id); window.scrollTo({ top: 0, behavior: 'smooth' }) }}
+            aria-label={`Put ${project.title} on the home card`}
             className="h-7 w-7 rounded-full flex items-center justify-center transition-transform hover:scale-110 active:scale-95 disabled:opacity-60"
             style={{
               background: 'rgba(var(--brand-primary-rgb), 0.10)',
@@ -160,7 +157,7 @@ export function ProjectMiniCard({
               color: 'rgb(var(--brand-primary-rgb))',
             }}
           >
-            <Play className="h-3 w-3 fill-current" style={{ marginLeft: '1px' }} />
+            <ArrowUp className="h-3.5 w-3.5" />
           </button>}
         </div>
       </div>

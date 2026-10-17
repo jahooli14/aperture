@@ -1,7 +1,7 @@
 /**
  * One project walked through the move loop, the way a person uses it:
- * a question first, the answer writes the first move, a session does it,
- * the note at the end writes the next one. The model is replaced by what
+ * a question first, the answer writes the first move, you say you did it,
+ * what you said writes the next one. The model is replaced by what
  * it would plausibly say; everything between is production code.
  *
  * The gaps worth catching live between steps, not inside them: a move
@@ -14,7 +14,7 @@ import {
   buildEvidence, buildMovePrompt, parseMove, fallbackMove, addFeedback,
   stageFor, type MoveInput,
 } from './next-move.js'
-import { reconcileCloseout } from './session-closeout.js'
+import { stripDoneWhen } from './session-items.js'
 
 const fresh: MoveInput = {
   title: 'Telegraph pole',
@@ -53,17 +53,9 @@ describe('the move loop', () => {
 
   it('logs the done move without its stopping rule, and writes the next one from the note', () => {
     const move = 'Sketch the wires sagging between two poles, three times. Done when three sketches exist.'
-    const closed = reconcileCloseout({
-      tasks: [],
-      sessionItems: [{ text: move, taskId: 'pending-1', partial: false }],
-      ticked: [{ text: move, taskId: 'pending-1', partial: false }],
-      endedAt: new Date('2026-09-24T20:00:00Z'),
-      windowMinutes: null,
-      durationMinutes: 40,
-      debrief: null,
-    })
-    const logged = closed.tasks.find(t => t.done)
-    expect(logged?.text).toBe('Sketch the wires sagging between two poles, three times.')
+    // What Update logs when you say you did it: the move, without its stopping rule.
+    const loggedText = stripDoneWhen(move)
+    expect(loggedText).toBe('Sketch the wires sagging between two poles, three times.')
 
     const next: MoveInput = {
       ...fresh,
@@ -71,14 +63,14 @@ describe('the move loop', () => {
       note: 'Third sketch works. Next: try it in wire, not pencil. The sag keeps looking too neat.',
       did: [move],
       lastMove: move,
-      log: [logged!.text],
+      log: [loggedText],
     }
     const nev = buildEvidence(next)
     expect(nev[0].label).toBe('the note they left when they stopped')
     expect(buildMovePrompt(next, nev)).not.toContain('IF NOTHING IS DECIDED YET')
     // Work has started: a fork is refused even if the model tries one.
-    expect(parseMove({ kind: 'fork', question: 'Pole or wires?' }, next, nev, 'closeout').move).toBeNull()
-    const written = parseMove({ move: 'Bend one length of wire into the third sketch’s sag', done_when: 'it hangs by itself' }, next, nev, 'closeout').move
+    expect(parseMove({ kind: 'fork', question: 'Pole or wires?' }, next, nev, 'reshape').move).toBeNull()
+    const written = parseMove({ move: 'Bend one length of wire into the third sketch’s sag', done_when: 'it hangs by itself' }, next, nev, 'reshape').move
     expect(written?.text).toContain('Done when it hangs by itself.')
   })
 

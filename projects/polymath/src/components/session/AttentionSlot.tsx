@@ -1,12 +1,10 @@
 /**
  * AttentionSlot — the attention budget (SPEC.md).
  *
- * The two things the app may put in front of you on open, in this order:
- *   1. a close-out you owe it (you worked, then closed the app without
- *      saying where you got to — worth more than anything the app can say);
- *   2. the monthly mirror, once, on the first open of the month.
- * It renders AT MOST ONE, and nothing at all while a session is running.
- * Whatever loses is not queued behind the winner.
+ * The one thing the app may put in front of you on open: the monthly
+ * mirror, once, on the first open of the month (the days you touched each
+ * project). There used to be a second, a close-out you owed after a timed
+ * session; there are no sessions any more, so nothing is ever owed.
  *
  * It used to hold four more: "make X your live project?", a project reshape,
  * a two-project mash-up and the weekly find from outside. The first was the
@@ -21,7 +19,6 @@
  */
 
 import { useEffect, useState } from 'react'
-import { useSessionStore } from '../../stores/useSessionStore'
 import { VoiceInput } from '../VoiceInput'
 import { api } from '../../lib/apiClient'
 
@@ -44,8 +41,6 @@ const primaryButtonStyle = {
   color: 'rgb(var(--brand-primary-rgb))',
 }
 const accentTextStyle = { color: 'rgb(var(--brand-primary-rgb))' }
-
-type SlotKind = 'closeout' | 'mirror' | null
 
 interface MirrorRow {
   project_id: string
@@ -160,112 +155,33 @@ function MirrorSlot({ rows, onDismiss }: { rows: MirrorRow[]; onDismiss: () => v
 }
 
 export function AttentionSlot() {
-  const { pendingCloseout, checkPendingCloseout, closeoutForPending } = useSessionStore()
-  const closing = useSessionStore(s => s.closing)
-  // During a session there is exactly one thing on screen. The budget is
-  // for what the app says on OPEN — interrupting the hour it just helped
-  // you start is the worst possible moment for any of it.
-  const sessionRunning = useSessionStore(s => s.active != null)
-  const [kind, setKind] = useState<SlotKind>(null)
   const [mirrorRows, setMirrorRows] = useState<MirrorRow[]>([])
-  const [closeoutText, setCloseoutText] = useState('')
   const [resolved, setResolved] = useState(false)
 
   useEffect(() => {
     let cancelled = false
 
     async function resolve() {
-      // The slot renders null during a session anyway -- no reason to spend
-      // calls competing with the hour it would interrupt.
-      if (sessionRunning) return
-      await checkPendingCloseout()
+      if (mirrorSeenThisMonth()) return
+      const mirror = await getJson<{ rows: MirrorRow[] }>(`/api/utilities?resource=mirror&tz=${new Date().getTimezoneOffset()}`)
       if (cancelled) return
-      if (useSessionStore.getState().pendingCloseout) {
-        setKind('closeout')
-        return
+      if (mirror && mirror.rows.length > 0) {
+        setMirrorRows(mirror.rows)
+        markMirrorSeen()
       }
-
-      if (!mirrorSeenThisMonth()) {
-        const mirror = await getJson<{ rows: MirrorRow[] }>(`/api/utilities?resource=mirror&tz=${new Date().getTimezoneOffset()}`)
-        if (cancelled) return
-        if (mirror && mirror.rows.length > 0) {
-          setMirrorRows(mirror.rows)
-          setKind('mirror')
-          markMirrorSeen()
-          return
-        }
-      }
-
     }
 
     resolve()
     return () => {
       cancelled = true
     }
-  }, [sessionRunning])
+  }, [])
 
-  if (sessionRunning || resolved || !kind) return null
+  if (resolved || mirrorRows.length === 0) return null
 
-  if (kind === 'closeout' && pendingCloseout) {
-    return (
-      <div className="glass-card p-6 space-y-3 mt-5 mb-4">
-        <p className="text-base">
-          You did some time on {pendingCloseout.projects?.title ?? 'a project'} — where'd you get to?
-        </p>
-        <VoiceInput onTranscript={t => setCloseoutText(c => (c ? `${c} ${t}` : t))} maxDuration={30} />
-        {/* Voice was the only way to answer this. A mic that won't start,
-            a room you can't talk in, or just preferring to type left the
-            question unanswerable — and every other close-out in the app
-            offers the keyboard. */}
-        <textarea
-          value={closeoutText}
-          onChange={e => setCloseoutText(e.target.value)}
-          placeholder="Did: ... Next: ..."
-          rows={2}
-          className="field w-full px-3 py-2 text-sm resize-none"
-        />
-        <div className="space-y-1">
-          <button
-            className="w-full py-2 rounded-lg text-sm font-medium disabled:opacity-50"
-            style={primaryButtonStyle}
-            disabled={!closeoutText.trim() || closing}
-            onClick={async () => {
-              await closeoutForPending(closeoutText.trim())
-              setResolved(true)
-            }}
-          >
-            {closing ? 'Saving…' : 'Save'}
-          </button>
-          {/* Skip used to hide this card and nothing else, so the session
-              stayed open on the server and the question came back on the
-              very next home open, and the one after that, until it aged
-              out. Nothing to report IS an answer: it closes the session
-              with an empty close-out, exactly as the contract's own
-              "Skip — nothing to report" does. Styled as the quiet way out
-              rather than a bordered button of equal weight to Save. */}
-          <button
-            className={quietOutClass}
-            style={quietOutStyle}
-            disabled={closing}
-            onClick={async () => {
-              await closeoutForPending('')
-              setResolved(true)
-            }}
-          >
-            or skip it
-          </button>
-        </div>
-      </div>
-    )
-  }
-
-  if (kind === 'mirror') {
-    return (
-      <div className="mt-5 mb-4">
-        <MirrorSlot rows={mirrorRows} onDismiss={() => setResolved(true)} />
-      </div>
-    )
-  }
-
-  return null
+  return (
+    <div className="mt-5 mb-4">
+      <MirrorSlot rows={mirrorRows} onDismiss={() => setResolved(true)} />
+    </div>
+  )
 }

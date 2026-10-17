@@ -1,7 +1,7 @@
 import React, { useMemo, useRef, useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Star, CheckCircle2, Clock, Snowflake, Archive, Sprout, Loader2, ListOrdered, Play } from 'lucide-react'
+import { Star, CheckCircle2, Clock, Snowflake, Archive, Sprout, Loader2, ListOrdered, ArrowUp } from 'lucide-react'
 import type { Project } from '../../types'
 import { useProjectStore } from '../../stores/useProjectStore'
 import { useHomeAnswerStore } from '../../stores/useHomeAnswerStore'
@@ -34,17 +34,16 @@ function ProjectCard({ project, prominent = false }: { project: Project, promine
   const { setPriority, setUpNext, replaceUpNext } = useProjectStore()
   const { addToast } = useToast()
   const navigate = useNavigate()
-  const requestStart = useHomeAnswerStore(s => s.requestStart)
+  const showOnHome = useHomeAnswerStore(s => s.showOnHome)
 
   // Browsing the full list is exactly the "oh actually I want to have a go
-  // at this one" moment -- starting a session shouldn't require detouring
-  // through the project page first. Same engine as the mini-card's play
-  // button: point home at this project, then go there.
-  const handleStartSession = (e: React.MouseEvent) => {
+  // at this one" moment -- putting it on the home card (where Update lives)
+  // shouldn't require detouring through the project page first.
+  const handlePutOnHome = (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
     haptic.medium()
-    requestStart(project.id)
+    showOnHome(project.id)
     navigate('/')
   }
   const tasks = (project.metadata?.tasks || []) as Task[]
@@ -296,8 +295,8 @@ function ProjectCard({ project, prominent = false }: { project: Project, promine
           )}
           <button
             type="button"
-            onClick={handleStartSession}
-            aria-label={`Start session for ${project.title}`}
+            onClick={handlePutOnHome}
+            aria-label={`Put ${project.title} on the home card`}
             className="h-7 w-7 rounded-full flex items-center justify-center transition-transform hover:scale-110 active:scale-95"
             style={{
               background: `rgba(${theme.rgb}, 0.14)`,
@@ -305,7 +304,7 @@ function ProjectCard({ project, prominent = false }: { project: Project, promine
               color: theme.textColor,
             }}
           >
-            <Play className="h-3 w-3 fill-current" style={{ marginLeft: '1px' }} />
+            <ArrowUp className="h-3.5 w-3.5" />
           </button>
           {/* The chevron circle that used to sit here is gone. The whole
               card is already the link, so it wasn't an action — it was a

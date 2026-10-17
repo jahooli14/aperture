@@ -29,15 +29,19 @@ describe('FinishedItButton', () => {
     await waitFor(() => expect(updateProject).toHaveBeenCalledWith('st', { status: 'completed' }))
     expect(addToast).toHaveBeenCalledWith(expect.objectContaining({ title: 'Done.' }))
   })
-  it('is not there for the main project, a finished one, or a project outside the season', () => {
+  it('is not there for the main project, a finished one, or one read off long-running lines', () => {
     const { container, rerender } = render(<FinishedItButton project={small({ state: 'live' })} />)
     expect(container.textContent).toBe('')
     rerender(<FinishedItButton project={small({ status: 'completed' })} />)
     expect(container.textContent).toBe('')
-    rerender(<FinishedItButton project={small({ metadata: {} })} />)
+    rerender(<FinishedItButton project={small({ metadata: { themes: [{ text: 'Every chapter in the new voice', at: '2026-10-01T00:00:00Z' }] } })} />)
     expect(container.textContent).toBe('')
+  })
+  it('is there for any one-off, in or out of a season', () => {
+    const { rerender } = render(<FinishedItButton project={small({ metadata: {} })} />)
+    expect(screen.getByText('Finished it')).toBeTruthy()
     rerender(<FinishedItButton project={small({ metadata: { season: { role: 'also', until: '2020-01-01', label: null } } })} />)
-    expect(container.textContent).toBe('')
+    expect(screen.getByText('Finished it')).toBeTruthy()
   })
   it('says so when it could not save', async () => {
     updateProject.mockRejectedValue(new Error('x'))

@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { buildSpinePrompt } from './task-spine.js'
 import { buildMovePrompt, buildEvidence, type MoveInput } from './next-move.js'
-import { buildStuckPrompt } from './session-moves.js'
 import { CLEAR_STEP_RULES, CREATIVE_MOVE_RULES } from './plain-english.js'
 
 describe('CLEAR_STEP_RULES', () => {
@@ -20,9 +19,8 @@ describe('CLEAR_STEP_RULES', () => {
       heading: [], captures: [], feedback: [], said: null, answering: null,
     }
     const move = buildMovePrompt(input, buildEvidence(input))
-    const stuck = buildStuckPrompt({ title: 'The shelf', step: 'Cut the back panel', progressNote: null, said: null, evidence: ev })
 
-    for (const p of [spine, move, stuck]) {
+    for (const p of [spine, move]) {
       expect(p).toContain('without decoding it')
       expect(p).toContain(CREATIVE_MOVE_RULES.slice(0, 40))
     }
