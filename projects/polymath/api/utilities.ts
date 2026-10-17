@@ -84,7 +84,7 @@ const EXECUTION_SESSIONS_RESOURCES = new Set([
   'harvest', 'mirror', 'book',
   'next-cycle', 'stuck', 'move',
 ])
-const EXECUTION_SPARKS_RESOURCES = new Set(['bake', 'today', 'respond', 'spark-followup', 'dismiss-spark', 'reroll-spark', 'retire-and-rebake', 'topup-bank', 'take-brief', 'catch-up'])
+const EXECUTION_SPARKS_RESOURCES = new Set(['bake', 'today', 'respond', 'spark-followup', 'dismiss-spark', 'reroll-spark', 'retire-and-rebake', 'topup-bank', 'take-brief', 'prompt-preview', 'catch-up'])
 const EXECUTION_PROPOSALS_RESOURCES = new Set([
   'drift-decay', 'reembed-articles', 'backfill-embeddings', 'reprocess-backlog',
 ])
@@ -2880,6 +2880,23 @@ async function handleExecutionSparks(req: VercelRequest, res: VercelResponse) {
     // strict reroll already came back with nothing. See retireAndRebake.
     const creative = req.body?.creative === true
     return res.status(200).json(await retireAndRebake(supabase, userId, false, creative))
+  }
+
+  // ─── PROMPT-PREVIEW (Settings: read the real prompts) ───────────────
+  if (resource === 'prompt-preview') {
+    if (req.method !== 'GET') return res.status(405).json({ error: 'GET required' })
+    const userId = await getUserId(req)
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' })
+    const { previewFastIdeaPrompt } = await import('./_lib/project-ideas/generator.js')
+    const { previewTakePrompts } = await import('./_lib/mull-prompts.js')
+    const { data: prefs } = await supabase.from('user_settings').select('idea_prompt').eq('user_id', userId).limit(1)
+    const ideaBrief = (prefs as { idea_prompt?: unknown }[] | null)?.[0]?.idea_prompt
+    const takes = previewTakePrompts(await loadTakeBrief(supabase, userId))
+    return res.status(200).json({
+      ideas: previewFastIdeaPrompt(typeof ideaBrief === 'string' && ideaBrief.trim() ? ideaBrief : null),
+      take_draft: takes.draft,
+      take_judge: takes.judge,
+    })
   }
 
   // ─── TAKE-BRIEF (Settings: what they want from takes) ───────────────

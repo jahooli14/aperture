@@ -710,3 +710,19 @@ describe('creative mode ("get more creative")', () => {
     expect(out[0].score).toBeLessThan(80)
   })
 })
+
+describe('the prompts Settings shows', () => {
+  it('the take prompts carry the person\'s brief and the rules, with a stand-in for the corpus', async () => {
+    const { previewTakePrompts } = await import('./mull-prompts.js')
+    const p = previewTakePrompts('Leave my dad out of it.')
+    expect(p.draft).toContain('Leave my dad out of it.')
+    expect(p.draft).toContain('YOUR CORPUS GOES HERE')
+    expect(p.draft).toContain('WHAT COUNTS AS EVIDENCE')
+    expect(p.judge).toContain('revelation')
+  })
+  it('the idea prompt carries the brief in its slot', async () => {
+    const { previewFastIdeaPrompt } = await import('./project-ideas/generator.js')
+    expect(previewFastIdeaPrompt('Only woodwork.')).toContain('Only woodwork.')
+    expect(previewFastIdeaPrompt(null)).toContain('THE REJECTED LIST IS YOUR MAP')
+  })
+})
