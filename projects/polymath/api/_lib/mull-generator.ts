@@ -368,13 +368,14 @@ export async function loadTakeBrief(supabase: SupabaseClient, userId: string): P
  *  overrides the corpus for a small slice. */
 export function buildDraftPrompt(
   corpus: Corpus, echo: EchoContext, recentIds: Set<string>, recentTexts: string[],
-  o: { howMany: number; lens?: 'live' | 'elsewhere'; seedRef?: string; corpusText?: string; liveTitle?: string | null; recentRefs?: string[] },
+  o: { howMany: number; lens?: 'live' | 'elsewhere'; seedRef?: string; corpusText?: string; liveTitle?: string | null; recentRefs?: string[]; lean?: boolean },
 ): string {
   return draftPrompt({
     corpusText: o.corpusText ?? corpus.text,
     howMany: o.howMany,
     lens: o.lens,
     seedRef: o.seedRef,
+    lean: o.lean,
     recentQuestions: recentTexts,
     recentRefs: o.recentRefs ?? corpus.rows.filter(r => recentIds.has(r.id)).map(r => r.ref),
     resonance: echo.resonance,

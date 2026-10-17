@@ -53,6 +53,8 @@ export interface DraftContext {
   seedRef?: string
   /** The person's own words about what they want from takes (Settings). */
   brief?: string
+  /** Leave out the worked examples: ~half the prompt, for the many small calls of the A/B swarm. */
+  lean?: boolean
 }
 
 export function draftPrompt(ctx: DraftContext): string {
@@ -157,12 +159,12 @@ HOW TO WRITE IT
 - Lists and articles are taste, not their words. Name the film or the article;
   don't quote it as something they said.
 
-GOOD -- the evidence, then the take. Copy the move, never the wording:
+${ctx.lean ? '' : `GOOD -- the evidence, then the take. Copy the move, never the wording:
 ${goodExamplesBlock()}
 
 BAD -- shapes that have shipped before and failed:
 ${badExamplesBlock()}
-${ctx.brief ? `WHAT THEY SAID THEY WANT FROM TAKES (their own words; it steers what you look for, and every rule above still holds):\n${ctx.brief}\n\n` : ''}${ctx.resonance}${ctx.corrections}${ctx.focus ?? ''}${avoid}${avoidRefs}
+`}${ctx.brief ? `WHAT THEY SAID THEY WANT FROM TAKES (their own words; it steers what you look for, and every rule above still holds):\n${ctx.brief}\n\n` : ''}${ctx.resonance}${ctx.corrections}${ctx.focus ?? ''}${avoid}${avoidRefs}
 ${PLAIN_ENGLISH_RULES}
 (Those examples are about voice. The shape still follows HOW TO WRITE IT: facts,
 then one committed claim, no question mark.)
