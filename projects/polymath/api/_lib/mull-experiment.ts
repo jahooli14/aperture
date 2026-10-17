@@ -119,7 +119,7 @@ function sliceFor(corpus: Corpus, seed: CorpusRow, liveRow: CorpusRow | null, re
 
 async function swarmArm(
   name: string, corpus: Corpus, echo: Awaited<ReturnType<typeof loadEchoContext>>, recentIds: Set<string>, recentTexts: string[],
-  caps: { usd: number; ms: number; maxCalls: number }, rand: () => number,
+  caps: { usd: number; ms: number; maxCalls: number }, rand: () => number, lean: boolean,
 ): Promise<ArmResult> {
   const start = Date.now()
   const spend = newSpend()
@@ -133,16 +133,25 @@ async function swarmArm(
   let next = 0
   // Judging gets a slice of the budget too; the drafts may use ~80% of it.
   const draftUsd = caps.usd * 0.8
+  // A call's cost is reserved when it is launched, not when it returns, so a
+  // wave of parallel calls can't overshoot the cap. ~3.7 chars a token in,
+  // ~250 tokens out (measured on production runs).
+  let reserved = 0
   const worker = async () => {
-    while (next < caps.maxCalls && next < seeds.length && Date.now() < deadline - 1_000 && spend.usd < draftUsd) {
-      const i = next++
+    while (next < caps.maxCalls && next < seeds.length && Date.now() < deadline - 1_000) {
+      const i = next
       const withLive = liveRow && i % 2 === 0
       const rows = sliceFor(corpus, seeds[i], withLive ? liveRow : null, recentIds, rand)
       const prompt = buildDraftPrompt(corpus, echo, recentIds, recentTexts, {
         howMany: 1, seedRef: seeds[i].ref, corpusText: rows.map(formatRow).join('\n'),
-        liveTitle: withLive ? liveTitle : null, recentRefs: [],
+        liveTitle: withLive ? liveTitle : null, recentRefs: [], lean,
       })
+      const est = (prompt.length / 3.7 * PRICE.lite.in + 250 * PRICE.lite.out) / 1_000_000
+      if (spend.usd + reserved + est > draftUsd) return
+      next++
+      reserved += est
       const raw = await ask(LITE, 'lite', prompt, 2048, Math.max(4_000, deadline - Date.now() - 2_000), spend)
+      reserved -= est
       if (raw) drafted.push(...readCandidates(raw))
     }
   }
@@ -174,14 +183,17 @@ export async function runExperiment(supabase: SupabaseClient, userId: string, tr
   const A: ArmResult = { name: 'A  one Flash call', drafted: aDrafted.length, passed: aPassed.length, drops: aDrops, picks: aRanked.slice(0, 3), spend: aSpend, ms: Date.now() - aStart }
 
   // ── B: swarm of Lite, capped at A's spend and A's time ────────────────
-  const B = await swarmArm('B  Lite swarm, same spend + time', corpus, echo, recentIds, recentTexts,
-    { usd: A.spend.usd, ms: A.ms, maxCalls: 400 }, rand)
-  // ── C: the same swarm with room to spare ──────────────────────────────
-  const C = await swarmArm('C  Lite swarm, ~5x spend + 2x time', corpus, echo, recentIds, recentTexts,
-    { usd: A.spend.usd * 5, ms: Math.max(A.ms * 2, 20_000), maxCalls: 400 }, rand)
+  const B = await swarmArm('B  Lite swarm, full prompt, same spend + time', corpus, echo, recentIds, recentTexts,
+    { usd: A.spend.usd, ms: A.ms, maxCalls: 400 }, rand, false)
+  // ── L: the swarm with the examples left out (about half the cost per call)
+  const L = await swarmArm('L  Lite swarm, lean prompt, same spend + time', corpus, echo, recentIds, recentTexts,
+    { usd: A.spend.usd, ms: A.ms, maxCalls: 400 }, rand, true)
+  // ── C: the lean swarm with room to spare ──────────────────────────────
+  const C = await swarmArm('C  Lite swarm, lean prompt, ~5x spend + 2x time', corpus, echo, recentIds, recentTexts,
+    { usd: A.spend.usd * 5, ms: Math.max(A.ms * 2, 14_000), maxCalls: 400 }, rand, true)
 
   // ── Blind pooled judge: every arm's picks, shuffled, scored together ───
-  const arms = [A, B, C]
+  const arms = [A, B, L, C]
   const pool = shuffle(arms.flatMap((arm, ai) => arm.picks.map(g => ({ g, ai }))), rand)
   const blindSpend = newSpend()
   const blindRaw = pool.length
@@ -199,8 +211,9 @@ export async function runExperiment(supabase: SupabaseClient, userId: string, tr
     trace.push(`calls ${arm.spend.calls} (${arm.spend.failed} failed${arm.spend.firstError ? `: ${arm.spend.firstError}` : ''}), ${arm.spend.inTok} in / ${arm.spend.outTok} out tokens, ${usd(arm.spend.usd)}, ${(arm.ms / 1000).toFixed(1)}s`)
     trace.push(`drafted ${arm.drafted}, passed gates ${arm.passed}; dropped: ${dropText}`)
     trace.push(`blind score of its top ${pcts.length}: ${pcts.join('%, ') || 'none'}${pcts.length ? '%' : ''}  (best ${pcts.length ? Math.max(...pcts) : 0}%, mean ${pcts.length ? Math.round(pcts.reduce((a, b) => a + b, 0) / pcts.length) : 0}%)`)
-    const best = mine.sort((a, b) => judgePercent(b.s!) - judgePercent(a.s!))[0]
-    if (best) trace.push(`its best: ${judgePercent(best.s!)}% -- ${best.x.g.question}`)
+    for (const m of mine.sort((a, b) => judgePercent(b.s!) - judgePercent(a.s!))) {
+      trace.push(`  ${judgePercent(m.s!)}% -- ${m.x.g.question}`)
+    }
   }
   trace.push(`blind judge cost ${usd(blindSpend.usd)}`)
 }
