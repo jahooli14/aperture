@@ -147,13 +147,14 @@ const noEcho = { recentTexts: [], resonance: '', corrections: '' }
 describe('the mull channel, end to end', () => {
   beforeEach(() => { generateText.mockReset() })
 
-  it('writes two drafts at once when nobody is waiting, one lens each', async () => {
+  it('writes several short drafts at once when nobody is waiting, each from a different row', async () => {
     respond({ draft: [ONE_TAKE], judge: [ship(1)] })
     await bakeMull(fakeSupabase(corpus()).client, 'u1', noEcho, undefined, false, 30_000)
     const drafts = generateText.mock.calls.map(c => c[0] as string).filter(p => !p.includes('You are the last check'))
-    expect(drafts).toHaveLength(2)
-    expect(drafts.some(p => p.includes('stay away from the project they are deep in'))).toBe(true)
-    expect(drafts.every(p => /Up to 3 candidates/.test(p))).toBe(true)
+    expect(drafts.length).toBeGreaterThan(1)
+    const starts = drafts.map(p => /START FROM \[(\w+)\]/.exec(p)?.[1]).filter(Boolean)
+    expect(new Set(starts).size).toBe(starts.length)
+    expect(drafts.every(p => /Up to 2 candidates/.test(p))).toBe(true)
   })
 
   it('writes one draft of four when someone is waiting', async () => {

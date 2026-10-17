@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   quoteIsReal, resolveEvidence, specifics, unsupportedSpecifics, ordinalSupported,
   offersAChoice, isClosed, checkCandidate, crossesLiveProject, crossingDepth, judgePercent, judgeRank, parseJudgeScores, readsAnInnerState,
-  rowNaming, type Candidate, type JudgeScore,
+  rowNaming, pickSeeds, type Candidate, type JudgeScore,
 } from './mull.js'
 import type { Corpus, CorpusRow } from './mull-corpus.js'
 
@@ -81,6 +81,29 @@ describe('a real name the draft forgot to cite', () => {
   it('never guesses a source for a number or a date', () => {
     expect(rowNaming(['2025'], ROWS.slice(0, 2), corpus)).toBeNull()
     expect(rowNaming(['alex', 'foley'], ROWS, corpus)?.ref).toBe('N9')
+  })
+})
+
+describe('pickSeeds', () => {
+  const mk = (n: number, kind: CorpusRow['kind']) => Array.from({ length: n }, (_, i) => row(`${kind[0].toUpperCase()}${i}`, `row ${kind} ${i}`, { kind, id: `${kind}${i}`, captureId: `${kind}${i}` }))
+  const rows = [...mk(40, 'memory'), ...mk(3, 'list_item')]
+  const corpus: Corpus = { rows, byRef: new Map(rows.map(r => [r.ref, r])), projectIdByTitle: new Map(), text: '' }
+  let k = 0
+  const rand = () => ((k = (k * 7 + 3) % 11) / 11)
+
+  it('spreads over recent notes, list items and older notes, all different', () => {
+    const seeds = pickSeeds(corpus, new Set(), 4, rand)
+    expect(seeds).toHaveLength(4)
+    expect(new Set(seeds.map(s => s.id)).size).toBe(4)
+    expect(seeds.some(s => s.kind === 'list_item')).toBe(true)
+  })
+  it('never starts from a row a recent take used', () => {
+    const avoid = new Set(rows.filter(r => r.kind === 'list_item').map(r => r.id))
+    expect(pickSeeds(corpus, avoid, 6, rand).every(s => s.kind === 'memory')).toBe(true)
+  })
+  it('returns fewer when the corpus is small', () => {
+    const tiny: Corpus = { ...corpus, rows: rows.slice(0, 2) }
+    expect(pickSeeds(tiny, new Set(), 4, rand).length).toBeLessThanOrEqual(2)
   })
 })
 
