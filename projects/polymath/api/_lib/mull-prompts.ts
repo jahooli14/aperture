@@ -48,6 +48,9 @@ export interface DraftContext {
   /** The nightly bake writes two drafts at once, each with its own lens, so
    *  the two don't write the same takes. */
   lens?: 'live' | 'elsewhere'
+  /** One row this draft must start from, picked in code so each parallel
+   *  draft covers different ground. */
+  seedRef?: string
 }
 
 export function draftPrompt(ctx: DraftContext): string {
@@ -156,7 +159,7 @@ ${PLAIN_ENGLISH_RULES}
 then one committed claim, no question mark.)
 
 WHAT TO RETURN
-${ctx.lens === 'live' ? 'THIS ROUND: lean on the project they are deep in and the ones that matter this season.\n' : ctx.lens === 'elsewhere' ? 'THIS ROUND: stay away from the project they are deep in and the ones that matter this season. Find what runs across everything else: other projects, notes, list items. Prefer the two captures that look least alike on the surface.\n' : ''}Up to ${ctx.howMany} candidates, best first, each built on different rows. For each:
+${ctx.seedRef ? `START FROM [${ctx.seedRef}]. Every candidate leans on that row plus at least one other row that looks nothing like it on the surface.\n` : ''}${ctx.lens === 'live' ? 'THIS ROUND: lean on the project they are deep in and the ones that matter this season.\n' : ctx.lens === 'elsewhere' ? 'THIS ROUND: stay away from the project they are deep in and the ones that matter this season. Find what runs across everything else: other projects, notes, list items. Prefer the two captures that look least alike on the surface.\n' : ''}Up to ${ctx.howMany} candidates, best first, each built on different rows. For each:
 - "noticing": the pattern, under 12 words. Private -- they never see it.
 - "doubt": under 10 words: the strongest reason this is a coincidence of
   wording, not something real, or that they would just say "no, that's not it".

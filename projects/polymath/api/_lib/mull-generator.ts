@@ -37,7 +37,7 @@ import { parseModelJson } from './schemas.js'
 import { echoesRecent, fetchRecentSparkTexts, fetchRecentSparkProjectIds, fetchRecentSparkSubjectIds } from './spark-echo.js'
 import { SPARK_CORRECTION_TAG, isAppAuthored } from './corpus-provenance.js'
 import { loadCorpus, normaliseTitle, type Corpus, type CorpusRow } from './mull-corpus.js'
-import { checkCandidate, crossingDepth, CROSSING_BONUS, TRIFECTA_BONUS, slotOf, orderBySlots, type Slot, judgePercent, judgeRank, parseJudgeScores, type Candidate, type Grounded, type JudgeScore } from './mull.js'
+import { checkCandidate, crossingDepth, CROSSING_BONUS, TRIFECTA_BONUS, slotOf, orderBySlots, type Slot, judgePercent, judgeRank, pickSeeds, parseJudgeScores, type Candidate, type Grounded, type JudgeScore } from './mull.js'
 import { draftPrompt, judgePrompt } from './mull-prompts.js'
 
 /**
@@ -55,6 +55,10 @@ const QUESTIONS_PER_RUN = 3
  *  draft of six takes would take longer than the whole budget; two drafts of
  *  three take as long as one. */
 const PARALLEL_DRAFT_MIN_MS = 18_000
+/** Parallel drafts, and how many candidates each writes. Short outputs in
+ *  parallel take as long as the longest one. */
+const PARALLEL_CALLS = 4
+const CANDIDATES_PER_CALL = 2
 
 /** Candidates per draft call; the judge sees all that pass the gates. */
 const CANDIDATES_PER_RUN = 4
@@ -490,13 +494,14 @@ export async function generateMull(
   const recentTexts = creative ? [] : echo.recentTexts
 
   const parallel = !reach && deadline - Date.now() >= PARALLEL_DRAFT_MIN_MS
-  const promptFor = (lens?: 'live' | 'elsewhere') => draftPrompt({
+  const promptFor = (lens?: 'live' | 'elsewhere', seedRef?: string) => draftPrompt({
     corpusText: corpus.text,
     // Never more, season or not: every extra candidate is output the model
     // has to write inside the ten-second ceiling. Six of them timed the
     // draft out live (6.8s allowed, aborted) and nothing shipped at all.
-    howMany: parallel ? 3 : CANDIDATES_PER_RUN,
+    howMany: parallel ? CANDIDATES_PER_CALL : CANDIDATES_PER_RUN,
     lens,
+    seedRef,
     recentQuestions: recentTexts,
     recentRefs: corpus.rows.filter(r => recentIds.has(r.id)).map(r => r.ref),
     resonance: echo.resonance,
@@ -515,13 +520,17 @@ export async function generateMull(
     trace.push(`!! out of time before the draft (${deadline - Date.now()}ms left)`)
     return []
   }
+  // Parallel path: one draft on the live project (when there is one) and
+  // the rest each starting from a different row picked in code.
+  const callsWanted = PARALLEL_CALLS
+  const seeds = parallel ? pickSeeds(corpus, recentIds, callsWanted - (echo.live ? 1 : 0)) : []
   const drafted = parallel
     ? (await Promise.all([
-        draft(prompt, draftBudget, trace),
-        draft(promptFor('elsewhere'), draftBudget, trace),
+        ...(echo.live ? [draft(prompt, draftBudget, trace)] : []),
+        ...seeds.map(r => draft(promptFor('elsewhere', r.ref), draftBudget, trace)),
       ])).flat()
     : await draft(prompt, draftBudget, trace)
-  if (parallel) trace.push(`two drafts in parallel: ${drafted.length} candidates between them`)
+  if (parallel) trace.push(`${seeds.length + (echo.live ? 1 : 0)} drafts in parallel (seeds ${seeds.map(r => r.ref).join(', ') || 'none'}): ${drafted.length} candidates between them`)
 
   // Drop a question written twice in one response.
   const seenQuestions = new Set<string>()

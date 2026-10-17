@@ -249,6 +249,28 @@ export function claimSentence(text: string): string {
   return parts[parts.length - 1] ?? text.trim()
 }
 
+/**
+ * Where each parallel draft starts. Left to itself the model finds the same
+ * two or three strong patterns every time, and each run's candidates echo
+ * the last run's. So code picks different starting rows, spread over recent
+ * notes, list items and older notes, none used by a recent take, and each
+ * draft is told to build from its own. Pure; `rand` is injected for tests.
+ */
+export function pickSeeds(corpus: Corpus, avoid: Set<string>, n: number, rand: () => number = Math.random): CorpusRow[] {
+  const free = (r: CorpusRow) => !avoid.has(r.id) && !avoid.has(r.captureId)
+  const notes = corpus.rows.filter(r => r.kind === 'memory' && free(r))
+  const recent = notes.slice(0, 30)
+  const older = notes.slice(30)
+  const items = corpus.rows.filter(r => r.kind === 'list_item' && free(r))
+  const out: CorpusRow[] = []
+  for (const pool of [recent, items, older, recent, older, items]) {
+    if (out.length >= n) break
+    if (pool.length === 0) continue
+    out.push(pool.splice(Math.floor(rand() * pool.length), 1)[0])
+  }
+  return out
+}
+
 const MONTHS_AND_DAYS = /^(jan(uary)?|feb(ruary)?|mar(ch)?|apr(il)?|may|june?|july?|aug(ust)?|sep(t(ember)?)?|oct(ober)?|nov(ember)?|dec(ember)?|mon(day)?|tue(s(day)?)?|wed(nesday)?|thu(r(s(day)?)?)?|fri(day)?|sat(urday)?|sun(day)?)$/
 
 /**
