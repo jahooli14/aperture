@@ -157,6 +157,13 @@ describe('the mull channel, end to end', () => {
     expect(drafts.every(p => /Up to 2 candidates/.test(p))).toBe(true)
   })
 
+  it('hands the draft their own words about what they want from takes', async () => {
+    respond({ draft: [ONE_TAKE], judge: [ship(1)] })
+    await bakeMull(fakeSupabase(corpus()).client, 'u1', { ...noEcho, brief: 'Leave my dad out of it.' })
+    expect(draftPromptSent()).toContain('Leave my dad out of it.')
+    expect(draftPromptSent()).toMatch(/every rule above still holds/)
+  })
+
   it('writes one draft of four when someone is waiting', async () => {
     respond({ draft: [ONE_TAKE], judge: [ship(1)] })
     await bakeMull(fakeSupabase(corpus()).client, 'u1', noEcho)

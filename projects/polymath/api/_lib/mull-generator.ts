@@ -139,6 +139,8 @@ export interface EchoContext {
   corrections: string
   /** Where they are now; see loadFocus. */
   focus?: string
+  /** Their own words about what they want from takes (Settings). */
+  brief?: string
   /** The project they're working on, for the crossing (mull.ts). */
   live?: { id: string; title: string } | null
   /** What matters this stretch (season.ts): the main project, the others, the date. */
@@ -353,10 +355,18 @@ export async function loadSeason(supabase: SupabaseClient, userId: string): Prom
   }
 }
 
+/** `user_settings.take_brief` (20261017). Absent column, no row or empty all read as none. */
+export async function loadTakeBrief(supabase: SupabaseClient, userId: string): Promise<string> {
+  const { data, error } = await supabase.from('user_settings').select('take_brief').eq('user_id', userId).limit(1)
+  if (error) return ''
+  const raw = (data as { take_brief?: unknown }[] | null)?.[0]?.take_brief
+  return typeof raw === 'string' ? raw.trim().slice(0, 1200) : ''
+}
+
 export async function loadEchoContext(
   supabase: SupabaseClient, userId: string,
 ): Promise<EchoContext> {
-  const [recentTexts, recentProjectIds, recentSubjectIds, resonance, corrections, focus, season] = await Promise.all([
+  const [recentTexts, recentProjectIds, recentSubjectIds, resonance, corrections, focus, season, brief] = await Promise.all([
     fetchRecentSparkTexts(supabase, userId),
     fetchRecentSparkProjectIds(supabase, userId),
     fetchRecentSparkSubjectIds(supabase, userId),
@@ -364,8 +374,9 @@ export async function loadEchoContext(
     loadCorrections(supabase, userId),
     loadFocus(supabase, userId),
     loadSeason(supabase, userId),
+    loadTakeBrief(supabase, userId),
   ])
-  return { recentTexts, recentProjectIds, recentSubjectIds, resonance, corrections, focus, live: season?.main ?? null, season }
+  return { recentTexts, recentProjectIds, recentSubjectIds, resonance, corrections, focus, brief, live: season?.main ?? null, season }
 }
 
 function expiresAt(hours: number): string {
@@ -507,6 +518,7 @@ export async function generateMull(
     resonance: echo.resonance,
     corrections: echo.corrections,
     focus: echo.focus ?? '',
+    brief: echo.brief,
     liveTitle: echo.season?.main?.title ?? echo.live?.title ?? null,
     alsoTitles: echo.season?.active ? echo.season.also.map(p => p.title) : [],
     waitingTitles: echo.season?.active ? echo.season.also.filter(p => p.blocked).map(p => p.title) : [],
