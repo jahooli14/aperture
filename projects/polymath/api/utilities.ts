@@ -48,7 +48,7 @@ import { MODELS } from './_lib/models.js'
 import { PLAIN_ENGLISH_RULES } from './_lib/plain-english.js'
 import { DEFAULT_IDEA_BRIEF } from './_lib/project-ideas/default-prompt.js'
 import type { CoverageGrid } from '../src/types'
-import { deriveSessionShapes, needsMvsSeed, measuredMvs, type SlotInput, type SessionShape } from './_lib/session-shapes.js'
+import { deriveSessionShapes, type SlotInput, type SessionShape } from './_lib/session-shapes.js'
 import { shapeProjectFromDump } from './_lib/project-shaping.js'
 import { generateTaskSpine, toStoredTasks, buildEvidenceFromSaid } from './_lib/task-spine.js'
 import { stuckMove } from './_lib/session-moves.js'
@@ -84,7 +84,7 @@ const EXECUTION_SESSIONS_RESOURCES = new Set([
   'harvest', 'mirror', 'book',
   'next-cycle', 'stuck', 'move',
 ])
-const EXECUTION_SPARKS_RESOURCES = new Set(['bake', 'today', 'respond', 'spark-followup', 'dismiss-spark', 'reroll-spark', 'retire-and-rebake', 'topup-bank', 'take-brief', 'prompt-preview', 'project-update', 'catch-up'])
+const EXECUTION_SPARKS_RESOURCES = new Set(['bake', 'today', 'respond', 'spark-followup', 'dismiss-spark', 'reroll-spark', 'retire-and-rebake', 'topup-bank', 'take-brief', 'prompt-preview', 'project-update', 'project-updates', 'catch-up'])
 const EXECUTION_PROPOSALS_RESOURCES = new Set([
   'drift-decay', 'reembed-articles', 'backfill-embeddings', 'reprocess-backlog',
 ])
@@ -1793,7 +1793,9 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
       : deriveSessionShapes({
           lastClosingText: project.last_closeout_text ?? null,
           slots,
-          mvsMinutes: project.mvs_minutes ?? null,
+          // Session length is no longer learned (nobody presses stop); steps
+          // are never sized from it.
+          mvsMinutes: null,
           windowMinutes: typeof window_minutes === 'number' ? window_minutes : null,
         })
 
@@ -1828,7 +1830,7 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
     return res.status(200).json({
       session,
       shapes,
-      ask_mvs_seed: needsMvsSeed(project.mvs_minutes ?? null, priorSessionCount ?? 0),
+      ask_mvs_seed: false,
     })
   }
 
@@ -1975,21 +1977,10 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
     }
     if (text) projectUpdate.last_closeout_text = text
 
-    if (typeof mvs_seed_minutes === 'number' && mvs_seed_minutes > 0) {
-      // One-time seed from the user's own estimate, asked only on session one.
-      projectUpdate.mvs_minutes = Math.round(mvs_seed_minutes)
-    } else {
-      const { data: movedSessions } = await supabase
-        .from('sessions')
-        .select('duration_minutes')
-        .eq('project_id', session.project_id)
-        .eq('user_id', userId)
-        .eq('moved', true)
-        .not('duration_minutes', 'is', null)
-
-      const measured = measuredMvs((movedSessions ?? []).map(s => s.duration_minutes as number))
-      if (measured != null) projectUpdate.mvs_minutes = measured
-    }
+    // No "minimum viable session" is learned from how long sessions ran any
+    // more. A session's length is whenever someone remembered to press stop
+    // (1 minute, 22 hours), and treating it as real skewed what the app
+    // believed about the work.
 
     const { error: projErr } = await supabase
       .from('projects')
@@ -2349,6 +2340,7 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
 
     const { aggregateMonthlyMirror, monthStart } = await import('./_lib/mirror.js')
     const { isAppAuthored } = await import('./_lib/corpus-provenance.js')
+    const { explicitProjectId } = await import('./_lib/explicit-project.js')
     const start = monthStart(new Date())
     // Days, not minutes: nobody remembers to press start and stop. A day
     // counts when something you did leaves a trace on the project: a session
@@ -2365,17 +2357,12 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
         .not('project_id', 'is', null),
       supabase
         .from('memories')
-        .select('created_at, tags, triage')
+        .select('created_at, tags, triage, source_reference')
         .eq('user_id', userId)
         .gte('created_at', start.toISOString()),
       supabase.from('projects').select('id, title, state').eq('user_id', userId).neq('state', 'harvested'),
-      // Said on the project's own page: linked by a connection.
-      supabase
-        .from('connections')
-        .select('source_id, created_at')
-        .eq('source_type', 'project')
-        .eq('connection_type', 'project_voice_note')
-        .gte('created_at', start.toISOString()),
+      // (a note said on a project's page is read off its own tag, below)
+      Promise.resolve({ data: [] as { source_id: string; created_at: string }[] }),
       // A line typed into the box on its page (not a fragment cut from a note).
       supabase
         .from('fragments')
@@ -2390,9 +2377,10 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
       ...((linkData ?? []) as { source_id: string; created_at: string }[]).map(c => ({ project_id: c.source_id, at: c.created_at })),
       ...((sayData ?? []) as { project_id: string; created_at: string }[]).map(f => ({ project_id: f.project_id, at: f.created_at })),
       ...((sessionsData ?? []) as { project_id: string; started_at: string }[]).map(s => ({ project_id: s.project_id, at: s.started_at })),
-      ...((notesData ?? []) as { created_at: string; tags: string[] | null; triage: { project_id?: string | null } | null }[])
-        .filter(m => m.triage?.project_id && !isAppAuthored(m))
-        .map(m => ({ project_id: m.triage!.project_id as string, at: m.created_at })),
+      ...((notesData ?? []) as { created_at: string; tags: string[] | null; triage: { project_id?: string | null } | null; source_reference: unknown }[])
+        .filter(m => !isAppAuthored(m))
+        .map(m => ({ project_id: explicitProjectId(m.source_reference) ?? m.triage?.project_id ?? '', at: m.created_at }))
+        .filter(t => t.project_id),
     ]
     const rows = aggregateMonthlyMirror(traces, (projectsData ?? []) as any, tzOffsetMin)
     return res.status(200).json({ month: start.toISOString().slice(0, 7), rows })
@@ -2914,6 +2902,21 @@ async function handleExecutionSparks(req: VercelRequest, res: VercelResponse) {
     // strict reroll already came back with nothing. See retireAndRebake.
     const creative = req.body?.creative === true
     return res.status(200).json(await retireAndRebake(supabase, userId, false, creative))
+  }
+
+  // ─── PROJECT-UPDATES (what's been said about it, newest first) ───────
+  if (resource === 'project-updates') {
+    if (req.method !== 'GET') return res.status(405).json({ error: 'GET required' })
+    const userId = await getUserId(req)
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' })
+    const projectId = req.query.project_id
+    if (typeof projectId !== 'string' || !projectId) return res.status(400).json({ error: 'project_id required' })
+    const { loadProjectMaterial } = await import('./_lib/project-material.js')
+    const material = await loadProjectMaterial(supabase, userId, projectId)
+    if (!material) return res.status(404).json({ error: 'project not found' })
+    return res.status(200).json({
+      updates: material.rows.filter(r => r.kind !== 'done').slice(0, 8).map(r => ({ kind: r.kind, text: r.text, at: r.at })),
+    })
   }
 
   // ─── PROJECT-UPDATE (the main button: say where you got to) ─────────

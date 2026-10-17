@@ -77,28 +77,12 @@ export function splitDoneWhen(text: string): { move: string; doneWhen: string | 
   return { move: m[1].trim(), doneWhen: m[2].trim().replace(/^done when/i, 'Done when') }
 }
 
-/** Under this, with nothing ticked, the session didn't really get going. */
-export const SHORT_SESSION_SECONDS = 10 * 60
-
-
-
 /**
- * SPEC.md, closing: normally "where'd you get to?", but after a short or
- * abandoned session, "what got in the way?" -- a bad session is data about
- * conditions, and the wrong question there gets no answer. Either way the
- * breadcrumb asks for where you stopped and what's next, because that is
- * the next session's opening move.
+ * The close-out question. Always the same: how long you were in the screen
+ * says nothing about the work (nobody presses start and stop), so a short
+ * session no longer gets a different, gloomier question.
  */
-export function closeoutPrompt(elapsedSec: number, tickedCount: number): {
-  question: string
-  placeholder: string
-} {
-  if (elapsedSec < SHORT_SESSION_SECONDS && tickedCount === 0) {
-    return {
-      question: 'What got in the way?',
-      placeholder: 'Got interrupted… couldn’t find the file… wasn’t feeling it…',
-    }
-  }
+export function closeoutPrompt(): { question: string; placeholder: string } {
   return {
     question: 'Where did you stop, and what’s next?',
     placeholder: 'Stopped at … Next … What’s bugging me …',

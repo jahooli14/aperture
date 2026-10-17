@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { deriveSessionShapes, needsMvsSeed, measuredMvs } from './session-shapes.js'
+import { deriveSessionShapes } from './session-shapes.js'
 
 describe('deriveSessionShapes', () => {
   it('gives a brand-new project a single start shape', () => {
@@ -114,34 +114,5 @@ describe('deriveSessionShapes', () => {
     })
     expect(shapes[0].source).toBe('ignition')
     expect(shapes[1].source).toBe('slot')
-  })
-})
-
-describe('needsMvsSeed', () => {
-  it('asks once, on the first session, when unseeded', () => {
-    expect(needsMvsSeed(null, 0)).toBe(true)
-  })
-
-  it('never asks again once any session has happened', () => {
-    expect(needsMvsSeed(null, 1)).toBe(false)
-  })
-
-  it('never asks once a value exists', () => {
-    expect(needsMvsSeed(45, 0)).toBe(false)
-  })
-})
-
-describe('measuredMvs', () => {
-  it('returns null with fewer than 3 moved sessions', () => {
-    expect(measuredMvs([])).toBeNull()
-    expect(measuredMvs([30, 45])).toBeNull()
-  })
-
-  it('returns the 25th percentile duration once there are 3+', () => {
-    expect(measuredMvs([20, 40, 60, 80])).toBe(40)
-  })
-
-  it('is not thrown off by input order', () => {
-    expect(measuredMvs([80, 20, 60, 40])).toBe(40)
   })
 })

@@ -128,25 +128,3 @@ export function deriveSessionShapes(input: ShapeInput): SessionShape[] {
   // chore sheet -- three items including the warm-up.
   return [ignitionShape(input.windowMinutes), ...shapes].slice(0, MAX_ITEMS)
 }
-
-/**
- * MVS is unseeded (null) until either the user answers the one-line seeding
- * question or three "moved" sessions exist to measure from. Call sites use
- * this to decide whether to ask the seeding question this session.
- */
-export function needsMvsSeed(mvsMinutes: number | null, priorSessionCount: number): boolean {
-  return mvsMinutes == null && priorSessionCount === 0
-}
-
-/**
- * The 25th-percentile duration of sessions that moved, per SPEC.md. Takes
- * only durations that already passed the `moved` filter -- callers query
- * for that, this just does the percentile so the math is unit-testable
- * without a database.
- */
-export function measuredMvs(movedDurationsMinutes: number[]): number | null {
-  if (movedDurationsMinutes.length < 3) return null
-  const sorted = [...movedDurationsMinutes].sort((a, b) => a - b)
-  const idx = Math.floor(sorted.length * 0.25)
-  return sorted[Math.min(idx, sorted.length - 1)]
-}

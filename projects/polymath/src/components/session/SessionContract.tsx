@@ -208,7 +208,7 @@ export function SessionContract({
     return () => window.removeEventListener(SESSION_ACTION_EVENT, onAction)
   }, [isRunning, currentIndex])
 
-  const ask = closeoutPrompt(elapsedSec, ticked.size)
+  const ask = closeoutPrompt()
   const did = shapes.filter((sh, i) => ticked.has(i) && sh.source !== 'friction').map(sh => sh.text)
 
   const stop = () => {

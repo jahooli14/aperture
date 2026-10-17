@@ -24,6 +24,7 @@ import { ProjectNotes } from '../components/projects/ProjectNotes'
 import { NextMovePanel } from '../components/projects/NextMovePanel'
 import { ProjectThemes } from '../components/projects/ProjectThemes'
 import { UpdateSheet } from '../components/projects/UpdateSheet'
+import { ProjectUpdates } from '../components/projects/ProjectUpdates'
 import { UpToSpeed } from '../components/projects/UpToSpeed'
 import { isActivelyWorked, readThemes } from '../lib/projectThemes'
 import { Button } from '../components/ui/button'
@@ -407,6 +408,8 @@ export function ProjectDetailPage() {
               && (readThemes(project.metadata).length > 0 || project.is_priority || isActivelyWorked(project)) && (
               <ProjectThemes project={project} onGo={() => setUpdateOpen(true)} />
             )}
+
+            <ProjectUpdates project={project} />
 
             {/* The way back in: the move, unless themes are leading, or it
                 can't be started yet (nothing to write a move for). */}

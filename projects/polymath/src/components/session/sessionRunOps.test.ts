@@ -7,7 +7,6 @@ import {
   partitionRunningShapes,
   splitDoneWhen,
   closeoutPrompt,
-  SHORT_SESSION_SECONDS,
 } from './sessionRunOps'
 import type { SessionShape } from '../../stores/useSessionStore'
 
@@ -99,16 +98,8 @@ describe('splitDoneWhen', () => {
 })
 
 describe('closeoutPrompt', () => {
-  it('asks where you stopped and what is next after a real session', () => {
-    expect(closeoutPrompt(40 * 60, 1).question).toContain('what’s next')
-  })
-
-  it('asks what got in the way after a short session with nothing done', () => {
-    expect(closeoutPrompt(SHORT_SESSION_SECONDS - 1, 0).question).toBe('What got in the way?')
-  })
-
-  it('a short session that got something done is still a real one', () => {
-    expect(closeoutPrompt(5 * 60, 1).question).not.toBe('What got in the way?')
+  it('asks where you stopped and what is next, however long you were in the screen', () => {
+    expect(closeoutPrompt().question).toContain('what’s next')
   })
 })
 

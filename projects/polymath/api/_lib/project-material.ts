@@ -20,6 +20,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { isAppAuthored } from './corpus-provenance.js'
+import { pinnedTriage } from './explicit-project.js'
 import type { Evidence } from './session-grounding.js'
 
 export interface MaterialRow {
@@ -50,16 +51,6 @@ export async function loadProjectMaterial(
   userId: string,
   projectId: string,
 ): Promise<ProjectMaterial | null> {
-  // Notes said on the project's own page are linked by a connection (made
-  // after the fact by the client), and older ones carry no triage at all.
-  const { data: linkRows } = await supabase
-    .from('connections')
-    .select('target_id')
-    .eq('source_type', 'project').eq('source_id', projectId)
-    .eq('connection_type', 'project_voice_note')
-    .order('created_at', { ascending: false }).limit(PER_SOURCE)
-  const linkedIds = (linkRows ?? []).map((r: { target_id: string }) => r.target_id).filter(Boolean)
-
   const [projectRes, fragRes, memRes, sessRes, linkedRes] = await Promise.all([
     supabase.from('projects')
       .select('title, description, status, metadata, notes_doc, last_active, last_session_ended_at')
@@ -78,9 +69,13 @@ export async function loadProjectMaterial(
       .eq('project_id', projectId).eq('user_id', userId)
       .not('ended_at', 'is', null)
       .order('ended_at', { ascending: false }).limit(PER_SOURCE),
-    linkedIds.length
-      ? supabase.from('memories').select('title, body, tags, created_at').eq('user_id', userId).in('id', linkedIds)
-      : Promise.resolve({ data: [] as { title: string; body: string; tags: string[] | null; created_at: string }[], error: null }),
+    // Said on the project's own page: the client tags the note
+    // `project:<id>` (explicit-project.ts). Older ones were never pinned.
+    supabase.from('memories')
+      .select('id, title, body, tags, created_at, triage')
+      .eq('user_id', userId)
+      .filter('source_reference', 'eq', JSON.stringify(`project:${projectId}`))
+      .order('created_at', { ascending: false }).limit(PER_SOURCE),
   ])
   if (projectRes.error || !projectRes.data) {
     console.error('[project-material] project load failed:', projectRes.error?.message)
@@ -89,6 +84,19 @@ export async function loadProjectMaterial(
   if (fragRes.error) console.warn('[project-material] fragments failed:', fragRes.error.message)
   if (memRes.error) console.warn('[project-material] memories failed:', memRes.error.message)
   if (sessRes.error) console.warn('[project-material] sessions failed:', sessRes.error.message)
+
+  // Self-heal: a note tagged to this project that the model filed as
+  // something else is pinned now, so everything else that reads a project's
+  // notes (the days you touched it, the catch-up) sees it too.
+  for (const m of linkedRes.data ?? []) {
+    const filed = (m as { triage?: { project_id?: string | null } | null }).triage?.project_id
+    if (filed !== projectId) {
+      const { error: pinErr } = await supabase.from('memories')
+        .update({ triage: pinnedTriage((m as { triage?: unknown }).triage, projectId) })
+        .eq('id', (m as { id: string }).id)
+      if (pinErr) console.warn('[project-material] could not pin a tagged note:', pinErr.message)
+    }
+  }
 
   const p = projectRes.data
   const metadata = (p.metadata as Record<string, unknown>) ?? {}
