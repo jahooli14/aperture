@@ -2649,6 +2649,15 @@ async function handleExecutionSparks(req: VercelRequest, res: VercelResponse) {
     // it. Explain writes nothing, so there is no reason for it to defer.
     const explain = req.query.explain === '1' || req.query.explain === 'true'
 
+    // ?experiment=1: A/B of one Flash call against a swarm of Flash-Lite
+    // calls, same spend and time, scored blind. Writes nothing.
+    if (req.query.experiment === '1') {
+      const { runExperiment } = await import('./_lib/mull-experiment.js')
+      const lines: string[] = []
+      await runExperiment(supabase, userId, lines)
+      return res.status(200).json({ experiment: true, trace: lines })
+    }
+
     // A question that's still standing is not replaced by a fresh one. It
     // now lives for days precisely so it can sit unanswered, and baking over
     // it every morning would take it away on exactly the day the answer was

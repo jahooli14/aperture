@@ -41,6 +41,7 @@ on:
         options:
           - ''
           - bake-explain
+          - bake-experiment
           - bake
           - retire-and-rebake
           - reembed-articles
@@ -110,6 +111,8 @@ jobs:
               # Writes nothing. Prints which of the mull channel's four
               # steps declined, and the numbers it decided on.
               bake-explain)   hit "/api/utilities?resource=bake&explain=1" ;;
+              # A/B: one Flash call vs a swarm of Flash-Lite, same spend and time.
+              bake-experiment) hit "/api/utilities?resource=bake&experiment=1" ;;
               bake)           hit "/api/utilities?resource=bake" ;;
               # Retires whatever spark is currently standing (however long
               # it has left) and bakes a fresh one. The only way to clear a
