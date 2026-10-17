@@ -166,7 +166,7 @@ export function UpdateSheet({ project, onClose }: { project: Project; onClose: (
                 onChange={e => setText(e.target.value)}
                 disabled={busy}
                 rows={5}
-                placeholder={fork ? 'Your answer' : 'Trimmed chapter two. Next is the voice pass.'}
+                placeholder={fork ? 'Your answer' : 'Trimmed chapter two. Next is the voice pass. Or an idea for it.'}
                 className="field w-full px-3 py-2.5 pr-12 text-[15px]"
               />
               <div className="absolute right-2 bottom-2">

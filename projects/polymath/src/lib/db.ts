@@ -43,6 +43,8 @@ export interface PendingCapture {
   transcript?: string
   audio_blob?: Blob
   mime_type?: string
+  /** `project:<id>` when it was said on a project's page. */
+  source_reference?: string | null
   timestamp: number
   synced: boolean
   retries?: number
@@ -325,9 +327,10 @@ export class RosetteDatabase extends Dexie {
 
   // --- Pending Capture Methods ---
 
-  async addPendingCapture(input: { transcript?: string, blob?: Blob, mimeType?: string }): Promise<number> {
+  async addPendingCapture(input: { transcript?: string, blob?: Blob, mimeType?: string, sourceReference?: string | null }): Promise<number> {
     return await this.pendingCaptures.add({
       transcript: input.transcript,
+      source_reference: input.sourceReference ?? null,
       audio_blob: input.blob,
       mime_type: input.mimeType,
       timestamp: Date.now(),

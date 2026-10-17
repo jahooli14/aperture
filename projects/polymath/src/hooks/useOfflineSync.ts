@@ -61,7 +61,8 @@ export function useOfflineSync() {
               'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-              transcript: capture.transcript
+              transcript: capture.transcript,
+              source_reference: capture.source_reference ?? null,
             })
           })
 
@@ -117,9 +118,9 @@ export function useOfflineSync() {
     }
   }
 
-  async function addOfflineCapture(transcript: string) {
+  async function addOfflineCapture(transcript: string, sourceReference?: string | null) {
     try {
-      await db.addPendingCapture({ transcript })
+      await db.addPendingCapture({ transcript, sourceReference })
       await updatePendingCount()
       console.log(' Capture queued for offline sync')
 

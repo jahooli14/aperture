@@ -135,6 +135,14 @@ The app asks the right question at the right moment: the move-writer, when a fin
 
 Skipped entirely for a repeating project (`metadata.cycle` above) — it already gets the same idea via `cycle.history`, and recording both would double up the same checkpoint. `target_date` is the other half: an optional, ISO date, **never asked for** — same rule as `end_goal` itself — offered in the edit sheet only once a finish line exists (a deadline with nothing it's a deadline *for* is just a nag). Shown as plain day-count arithmetic ("14 days until the target date" / "3 days past it"), never a projected pace — there's rarely enough data for a real rate, and a confident-sounding wrong one is worse than none.
 
+### The routes (Oct 2026 — one way to do each thing)
+
+- **Open a project**: tap its card anywhere (home card, mini cards, Projects tab, search, a note's project line) → its page. The arrow on a mini card puts it on the home card instead.
+- **Say something about it**: on its page, the + (or double-tap / hold for voice) files the note under it ("Kept on {title}" in the menu; `source_reference` `project:<id>` or `{type:'project', id}`, also offline). Anywhere else the note is free-floating and the app guesses.
+- **Where you got to, or an idea for it**: **Update** (home card or project page, same sheet). Long-running → the "Keep in mind" lines re-read off the notes; one-off → the next move is rewritten. No Go screen, no timer.
+- **A new project idea**: "Suggest a project" (end of the everything-else row), or + → Project to type one in.
+- **A question to mull**: the nightly take on the home card; "ask me something else" serves the next-best banked one. There is no per-project "ask me about this" route on purpose — the take already leans on the live project.
+
 ### Themes, the catch-up, and the Saturday nudge (Oct 2026)
 
 Why: the owner rarely opened the app during a creative session. On the live project (the book) they already know what to do, and the move is only rewritten at an in-app close-out they don't do — so it was stale after one session. The app's job splits by moment: **capture** any time; **weekday, live project** → glance, close, go work; **free time** → pick something back up; **want something new** → "Suggest a project". Success is hours on the mirror, not time in the app.
