@@ -249,6 +249,20 @@ export function claimSentence(text: string): string {
   return parts[parts.length - 1] ?? text.trim()
 }
 
+const MONTHS_AND_DAYS = /^(jan(uary)?|feb(ruary)?|mar(ch)?|apr(il)?|may|june?|july?|aug(ust)?|sep(t(ember)?)?|oct(ober)?|nov(ember)?|dec(ember)?|mon(day)?|tue(s(day)?)?|wed(nesday)?|thu(r(s(day)?)?)?|fri(day)?|sat(urday)?|sun(day)?)$/
+
+/**
+ * The one row, not already cited, that contains every name the take used
+ * without evidence. Names only: a number or a date appears in too many rows
+ * to say which one it came from.
+ */
+export function rowNaming(missing: string[], cited: CorpusRow[], corpus: Corpus): CorpusRow | null {
+  if (missing.length === 0 || missing.some(w => /\d/.test(w) || MONTHS_AND_DAYS.test(w))) return null
+  return corpus.rows.find(r =>
+    !cited.includes(r) && missing.every(w => evidenceText(r).toLowerCase().includes(w)),
+  ) ?? null
+}
+
 /**
  * Every reason a candidate is thrown away before the judge sees it, or
  * null with the rows its evidence resolved to. Logged by name, so a
@@ -276,7 +290,19 @@ export function checkCandidate(
   // Checked against the full rows the quotes resolved to, never the quotes
   // alone: a real quote with an invented detail dressed around it passes a
   // quote-only check and fails this one.
-  const invented = unsupportedSpecifics(text, rows.map(evidenceText))
+  let invented = unsupportedSpecifics(text, rows.map(evidenceText))
+  if (invented.length > 0) {
+    // A real person the draft named without citing the note they're in.
+    // If exactly the names it used sit together in one row of the corpus,
+    // that row becomes part of the evidence, so the judge reads it in full
+    // and scores whether the claim is true of it. A name found nowhere is
+    // still a hard reject, and so is any number or date.
+    const source = rowNaming(invented, rows, corpus)
+    if (source) {
+      rows.push(source)
+      invented = unsupportedSpecifics(text, rows.map(evidenceText))
+    }
+  }
   if (invented.length > 0) {
     return { ok: false, reason: `names something its evidence doesn't: ${invented.join(', ')}` }
   }
