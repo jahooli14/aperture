@@ -132,7 +132,7 @@ export function UpdateSheet({ project, onClose }: { project: Project; onClose: (
             )}
             {showLines && (
               <div className="space-y-2">
-                <p className="text-[13px]" style={{ color: 'var(--brand-text-secondary)' }}>Your lines now read:</p>
+                <p className="text-[13px]" style={{ color: 'var(--brand-text-secondary)' }}>Your threads now read:</p>
                 <ThemeList themes={result.themes} />
                 <button onClick={() => { void undo() }} disabled={busy} className="text-[13px] underline disabled:opacity-40" style={{ color: 'var(--brand-text-secondary)' }}>
                   {busy ? 'Undoing…' : 'Undo that'}
@@ -141,7 +141,7 @@ export function UpdateSheet({ project, onClose }: { project: Project; onClose: (
             )}
             {!nextMove && !showLines && !result.logged && (
               <p className="text-[15px]" style={{ color: 'var(--brand-text-secondary)' }}>
-                {undone ? 'Put your old lines back.' : readThemes(project.metadata).length > 0 ? 'Your lines still hold.' : 'Kept on the project.'}
+                {undone ? 'Put your old threads back.' : readThemes(project.metadata).length > 0 ? 'Your threads still hold.' : 'Kept on the project.'}
               </p>
             )}
             {result.projectDone && (
@@ -166,7 +166,7 @@ export function UpdateSheet({ project, onClose }: { project: Project; onClose: (
                 onChange={e => setText(e.target.value)}
                 disabled={busy}
                 rows={5}
-                placeholder={fork ? 'Your answer' : 'Trimmed chapter two. Next is the voice pass. Or an idea for it.'}
+                placeholder={fork ? 'Your answer' : 'Trimmed chapter two. Or an idea: open on the pay phone.'}
                 className="field w-full px-3 py-2.5 pr-12 text-[15px]"
               />
               <div className="absolute right-2 bottom-2">

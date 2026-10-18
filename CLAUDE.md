@@ -145,6 +145,34 @@ Skipped entirely for a repeating project (`metadata.cycle` above) — it already
 - **A new project idea**: "Suggest a project" (end of the everything-else row), or + → Project to type one in.
 - **A question to mull**: the nightly take on the home card; "ask me something else" serves the next-best banked one. There is no per-project "ask me about this" route on purpose — the take already leans on the live project.
 
+### The journey (what a person does, in order)
+
+**Day one**
+1. Sign in (six-digit emailed code or Google).
+2. Onboarding (`/onboarding`): one non-work project, a few lists. `startThingsMoving` makes the project live, writes its first move, bakes the first take.
+3. Land on home: the take on top, the live project under it, Update.
+4. Add another project: + → Project → say or type it → plan → pick *One thing* or *Something to keep at* → Start.
+5. Open the project page: next move (one-off) or Threads (ongoing).
+6. Set threads: *Say them*, *Write them*, or *Draft from my notes* (a new project has no notes yet, so the first two are the real route).
+7. Capture: + → Say it / Write it. On a project page it's kept on that project.
+8. Add a list item, an article or a feed when it comes up. Reading counts only once voted good.
+
+**Every day**
+1. Open home. Read the take; tap yes / no / sort of, optionally say why; "Add as a thread" if it's worth keeping.
+2. Glance at the live project: threads (ongoing) or next move (one-off).
+3. Work off-app.
+4. Update: say or type where you got to, or an idea for it. Threads re-read with Undo; a one-off's move is rewritten.
+5. Capture anything else with + (or hold + to record at once).
+6. When a project is done: *Finished it* (one-offs). When you want something new: Suggest a project.
+
+**Now and then**
+- "Ask me something else" for another take.
+- Edit threads by hand; flip a project between Ongoing and One job with the pill.
+- Settings: season ("what matters now"), what you want from takes, the Saturday pick-up.
+- Monthly: the mirror (days touched).
+
+**Known soft spots**: nothing prompts a new ongoing project to set threads once it exists (the empty card is the only nudge); a new project has no notes, so "Draft from my notes" does nothing until it does.
+
 ### Themes, the catch-up, and the Saturday nudge (Oct 2026)
 
 Why: the owner rarely opened the app during a creative session. On the live project (the book) they already know what to do, and the move is only rewritten at an in-app close-out they don't do — so it was stale after one session. The app's job splits by moment: **capture** any time; **weekday, live project** → glance, close, go work; **free time** → pick something back up; **want something new** → "Suggest a project". Success is hours on the mirror, not time in the app.

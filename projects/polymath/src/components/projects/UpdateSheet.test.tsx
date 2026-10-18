@@ -25,7 +25,7 @@ describe('UpdateSheet', () => {
     await waitFor(() => expect(post).toHaveBeenCalledWith(
       'utilities?resource=project-update', { project_id: 'p1', text: 'Pasted the comments into Claude' }, expect.anything(),
     ))
-    expect(await screen.findByText('Your lines still hold.')).toBeTruthy()
+    expect(await screen.findByText('Your threads still hold.')).toBeTruthy()
   })
 
   it('shows the new lines when they changed, and Undo puts the old ones back', async () => {
@@ -37,7 +37,7 @@ describe('UpdateSheet', () => {
     expect(await screen.findByText('The voice is close now')).toBeTruthy()
     fireEvent.click(screen.getByText('Undo that'))
     await waitFor(() => expect(post).toHaveBeenLastCalledWith('utilities?resource=themes', { project_id: 'p1', action: 'set', themes: ['Do the full trim'] }))
-    expect(await screen.findByText('Put your old lines back.')).toBeTruthy()
+    expect(await screen.findByText('Put your old threads back.')).toBeTruthy()
   })
 
   it('keeps what you wrote when saving fails', async () => {
