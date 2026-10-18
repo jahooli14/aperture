@@ -136,26 +136,26 @@ export function ProjectThemes({ project, onGo }: { project: Project; onGo?: () =
       <div className="glass-card-subtle p-5 space-y-2">
         <p className="eyebrow">Threads</p>
         <p className="text-[15px] leading-snug" style={{ color: 'var(--brand-text-secondary)' }}>
-          Two or three things to hold onto while you work on this. A few words each: "every chapter in the new voice".
+          Two or three things to hold onto while you work on this. A few words each, like "keep it simple".
         </p>
         {note && <p className="text-[13px]" style={{ color: 'var(--brand-text-secondary)' }}>{note}</p>}
-        <div className="flex gap-4 pt-1">
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-1 pt-1">
+          <span className="flex items-center gap-1.5 text-[13px] whitespace-nowrap" style={{ color: 'rgb(var(--brand-primary-rgb))' }}>
+            <VoiceInput variant="icon" onTranscript={fromSpeech} maxDuration={60} />
+            Say them
+          </span>
+          <button onClick={() => open([])} className="text-[13px] py-2 whitespace-nowrap" style={{ color: 'var(--brand-text-secondary)' }}>
+            Write them
+          </button>
           <button
             onClick={() => { void fromNotes() }}
             disabled={drafting}
-            className="flex items-center gap-1.5 text-[13px] py-2"
-            style={{ color: 'rgb(var(--brand-primary-rgb))' }}
+            className="flex items-center gap-1.5 text-[13px] py-2 whitespace-nowrap"
+            style={{ color: 'var(--brand-text-secondary)' }}
           >
             {drafting ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
             {drafting ? 'Reading your notes…' : 'Draft from my notes'}
           </button>
-          <button onClick={() => open([])} className="text-[13px] py-2" style={{ color: 'var(--brand-text-secondary)' }}>
-            Write them
-          </button>
-          <span className="flex items-center gap-1.5 text-[13px]" style={{ color: 'var(--brand-text-secondary)' }}>
-            <VoiceInput variant="icon" onTranscript={fromSpeech} maxDuration={60} />
-            Say them
-          </span>
         </div>
       </div>
     )

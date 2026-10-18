@@ -227,6 +227,13 @@ export function ProjectDetailPage() {
     && readThemes(project.metadata).length > 0 && isActivelyWorked(project)
     && projectKind(project, !!readStoredMove(project.metadata)) === 'ongoing'
 
+  // A one-off leads with its next move, threads under it; an ongoing one
+  // leads with its threads and keeps the move as the way back in.
+  const oneOff = projectKind(project, !!readStoredMove(project.metadata)) === 'one-off'
+  const movePanel = !steering && !blockedReason(project)
+    ? <NextMovePanel project={project} onUpdate={() => setUpdateOpen(true)} />
+    : null
+
   return (
     <div className="min-h-screen page-bottom relative" style={{ backgroundColor: 'var(--brand-bg)' }}>
       <SubtleBackground />
@@ -314,16 +321,20 @@ export function ProjectDetailPage() {
               {project.is_priority ? 'Live' : 'Make it live'}
             </button>
           )}
-          {!isRetired(project.status) && project.status !== 'completed' && (
-            <span
-              className="quiet-pill"
-              title={projectKind(project, !!readStoredMove(project.metadata)) === 'ongoing'
-                ? 'Worked on over weeks. Read off the lines you keep in mind.'
-                : 'One job. Read off its next move.'}
-            >
-              {projectKind(project, !!readStoredMove(project.metadata)) === 'ongoing' ? 'Ongoing' : 'One job'}
-            </span>
-          )}
+          {!isRetired(project.status) && project.status !== 'completed' && (() => {
+            const kind = projectKind(project, !!readStoredMove(project.metadata))
+            const next = kind === 'ongoing' ? 'one-off' : 'ongoing'
+            return (
+              <button
+                type="button"
+                className="quiet-pill transition-colors"
+                title={`Tap to make it ${next === 'ongoing' ? 'ongoing' : 'one job'}`}
+                onClick={() => { void useProjectStore.getState().updateProject(project.id, { metadata: { ...(project.metadata ?? {}), kind: next } }) }}
+              >
+                {kind === 'ongoing' ? 'Ongoing' : 'One job'}
+              </button>
+            )
+          })()}
           {(parked || project.status === 'completed') && (
             <span className="quiet-pill">
               {parked ? 'Parked' : 'Finished'}
@@ -383,21 +394,19 @@ export function ProjectDetailPage() {
                 The move panel under it is the way back in. */}
             <UpToSpeed project={project} />
 
-            {/* Keep in mind — weeks, not one session. Shown on the home card
-                while you're working on it. A project you haven't touched and
-                never wrote lines for doesn't get an empty prompt: its way
-                back in is the move below. */}
+            {oneOff && movePanel}
+
+            {/* Threads — a few things to hold onto, true for weeks. Always
+                here, so there is somewhere to add them. */}
             {project.status !== 'completed' && project.status !== 'graveyard' && (
               <ProjectThemes project={project} onGo={() => setUpdateOpen(true)} />
             )}
 
             <ProjectUpdates project={project} />
 
-            {/* The way back in: the move, unless themes are leading, or it
-                can't be started yet (nothing to write a move for). */}
-            {!steering && !blockedReason(project) && (
-              <NextMovePanel project={project} onUpdate={() => setUpdateOpen(true)} />
-            )}
+            {/* The way back in, for an ongoing project: the move, unless
+                threads are leading or it can't be started yet. */}
+            {!oneOff && movePanel}
 
             <FinishedItButton project={project} />
 

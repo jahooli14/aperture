@@ -189,7 +189,7 @@ export function TodaysAnswerCard() {
   const muted = { color: 'var(--brand-text-muted)' }
   const readout = steering ? (
     <>
-      <p className={label} style={muted}>keep in mind</p>
+      <p className={label} style={muted}>threads</p>
       <ThemeList themes={themes} rgb={theme.rgb} />
       <ThemesUpdatedNote project={focusProject} />
     </>

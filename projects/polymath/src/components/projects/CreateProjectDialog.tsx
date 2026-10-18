@@ -232,7 +232,10 @@ export function CreateProjectDialog({
       // ever means "yes".
       if (data.readyToExtract) {
         setHistory([...newHistory, { role: 'model', content: data.reply }])
-        await shapeIt()
+        // `history` here is from before this turn, so the message just sent
+        // is passed in: on the first turn the brief would otherwise be empty
+        // and nothing would happen.
+        await shapeIt([message])
         return
       }
       setHistory([...newHistory, { role: 'model', content: data.reply, offers: data.offers || [] }])
@@ -705,7 +708,7 @@ export function CreateProjectDialog({
                   </div>
                 </div>
 
-                <div className="flex-shrink-0">
+                <div className="flex-shrink-0 mb-3 mt-1">
                   <p className="eyebrow mb-2">Is this…</p>
                   <div className="grid grid-cols-2 gap-2">
                     {([
