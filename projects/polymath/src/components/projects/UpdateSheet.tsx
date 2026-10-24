@@ -15,6 +15,7 @@
 
 import { useState } from 'react'
 import { createPortal } from 'react-dom'
+import { motion } from 'framer-motion'
 import { Check, Loader2, X } from 'lucide-react'
 import { api } from '../../lib/apiClient'
 import { useProjectStore } from '../../stores/useProjectStore'
@@ -102,8 +103,17 @@ export function UpdateSheet({ project, onClose }: { project: Project; onClose: (
   // anything fixed inside it, so the sheet has to live on the body.
   return createPortal(
     <div className="fixed inset-0 z-[60] flex items-end justify-center" role="dialog" aria-modal="true" aria-label="Update">
-      <div className="absolute inset-0 bg-black/60" onClick={busy ? undefined : onClose} />
-      <div
+      <motion.div
+        className="absolute inset-0 bg-black/70"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.15 }}
+        onClick={busy ? undefined : onClose}
+      />
+      <motion.div
+        initial={{ y: '100%' }}
+        animate={{ y: 0 }}
+        transition={{ type: 'spring', damping: 38, stiffness: 560, mass: 0.4 }}
         className="relative w-full max-w-lg neon-edge rounded-t-[24px] rounded-b-none p-5 space-y-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] max-h-[88vh] overflow-y-auto"
         style={{ background: '#0c1322' }}
       >
@@ -183,7 +193,7 @@ export function UpdateSheet({ project, onClose }: { project: Project; onClose: (
             </button>
           </div>
         )}
-      </div>
+      </motion.div>
     </div>,
     document.body,
   )

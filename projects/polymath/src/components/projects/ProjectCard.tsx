@@ -303,7 +303,7 @@ export function ProjectCard({ project, prominent = false }: { project: Project, 
             onClick={() => setShowContextMenu(false)}
           >
             {/* Backdrop */}
-            <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
+            <div className="absolute inset-0 bg-black/75" />
 
             {/* Bottom sheet */}
             <motion.div
@@ -311,7 +311,7 @@ export function ProjectCard({ project, prominent = false }: { project: Project, 
               initial={{ y: 60, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: 60, opacity: 0 }}
-              transition={{ type: 'spring', damping: 26, stiffness: 300 }}
+              transition={{ type: 'spring', damping: 38, stiffness: 560, mass: 0.4 }}
               onClick={(e) => e.stopPropagation()}
             >
               <div

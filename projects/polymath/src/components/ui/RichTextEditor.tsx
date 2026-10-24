@@ -21,6 +21,7 @@ import { Markdown } from 'tiptap-markdown'
 import { Bold, Italic, Strikethrough, Link2, Heading1, Heading2, List, Quote, ImagePlus, Loader2 } from 'lucide-react'
 import { useToast } from './toast'
 import { uploadImageFile } from '../../lib/imageUpload'
+import { useSheetSettled } from './bottom-sheet'
 import { cn } from '../../lib/utils'
 import '../../styles/rich-text.css'
 
@@ -86,7 +87,7 @@ export function RichTextEditor({
     ],
     content: value || '',
     editable,
-    autofocus: autoFocus ? 'end' : false,
+    autofocus: false,
     editorProps: { attributes: { class: 'focus:outline-none' } },
     onUpdate: ({ editor }) => onChange?.(getMarkdown(editor)),
     onBlur: ({ editor }) => { onBlurSave?.(getMarkdown(editor)); onBlur?.() },
@@ -97,6 +98,16 @@ export function RichTextEditor({
       onFocus?.()
     },
   })
+
+  // Focus once any sheet around the editor has finished sliding in, so the
+  // keyboard doesn't rise under a moving sheet.
+  const sheetSettled = useSheetSettled()
+  const focused = useRef(false)
+  useEffect(() => {
+    if (!autoFocus || !editor || !sheetSettled || focused.current) return
+    focused.current = true
+    editor.commands.focus('end')
+  }, [autoFocus, editor, sheetSettled])
 
   // Pull in external changes (draft hydrate, reset, AI append) without clobbering
   // what the user is actively typing. An empty editor is always safe to fill —

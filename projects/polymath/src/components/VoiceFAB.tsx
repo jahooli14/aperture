@@ -12,17 +12,13 @@
  *         Release back on the FAB (no slide)  dismisses, no action.
  */
 
-import { useState, useRef, useCallback, useEffect } from 'react'
+import { useState, useRef, useCallback, useEffect, lazy, Suspense } from 'react'
 import { createPortal } from 'react-dom'
 import { Plus, X, Brain, Layers, Mic, CheckSquare } from 'lucide-react'
 import { VoiceInput } from './VoiceInput'
 import { cn } from '../lib/utils'
 import { useOnlineStatus } from '../hooks/useOnlineStatus'
 import { haptic } from '../utils/haptics'
-import { CreateMemoryDialog } from './memories/CreateMemoryDialog'
-import { CreateProjectDialog } from './projects/CreateProjectDialog'
-import { AddItemToListDialog } from './lists/AddItemToListDialog'
-import { SaveArticleDialog } from './reading/SaveArticleDialog'
 import { CreateMenuModal } from './CreateMenuModal'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useLocation } from 'react-router-dom'
@@ -36,10 +32,30 @@ interface VoiceFABProps {
   onTap?: () => boolean | void
 }
 
+// The four create sheets are heavy (the thought sheet pulls in the whole
+// rich-text editor) and used to be in the main bundle, mounted from the first
+// frame. They load on their own, are warmed when the app is idle, and mount
+// the first time they're asked for, so tapping + never waits on a download.
+const loadMemoryDialog = () => import('./memories/CreateMemoryDialog')
+const loadProjectDialog = () => import('./projects/CreateProjectDialog')
+const loadListDialog = () => import('./lists/AddItemToListDialog')
+const loadArticleDialog = () => import('./reading/SaveArticleDialog')
+const CreateMemoryDialog = lazy(() => loadMemoryDialog().then(m => ({ default: m.CreateMemoryDialog })))
+const CreateProjectDialog = lazy(() => loadProjectDialog().then(m => ({ default: m.CreateProjectDialog })))
+const AddItemToListDialog = lazy(() => loadListDialog().then(m => ({ default: m.AddItemToListDialog })))
+const SaveArticleDialog = lazy(() => loadArticleDialog().then(m => ({ default: m.SaveArticleDialog })))
+
+const warmCreateSheets = () => {
+  void loadMemoryDialog().catch(() => {})
+  void loadProjectDialog().catch(() => {})
+  void loadListDialog().catch(() => {})
+  void loadArticleDialog().catch(() => {})
+}
+
 const LONG_PRESS_DELAY = 400 // ms
 // Window to catch a second tap. A single tap opens the create menu, so we wait
 // this long before committing to it — if a second tap lands, it's voice instead.
-const DOUBLE_TAP_DELAY = 280 // ms
+const DOUBLE_TAP_DELAY = 220 // ms
 
 // FAB position in px (matches Tailwind bottom-28 right-6 on mobile)
 const FAB_BOTTOM = 112
@@ -122,6 +138,31 @@ export function VoiceFAB({
   const [showThoughtDialog, setShowThoughtDialog] = useState(false)
   const [showListDialog, setShowListDialog] = useState(false)
   const [showArticleDialog, setShowArticleDialog] = useState(false)
+  // A sheet mounts the first time it's opened and then stays (the thought
+  // sheet keeps its draft state), so unused ones cost nothing.
+  const [mounted, setMounted] = useState({ project: false, thought: false, list: false, article: false })
+  useEffect(() => {
+    if (showProjectDialog) setMounted(m => (m.project ? m : { ...m, project: true }))
+  }, [showProjectDialog])
+  useEffect(() => {
+    if (showThoughtDialog) setMounted(m => (m.thought ? m : { ...m, thought: true }))
+  }, [showThoughtDialog])
+  useEffect(() => {
+    if (showListDialog) setMounted(m => (m.list ? m : { ...m, list: true }))
+  }, [showListDialog])
+  useEffect(() => {
+    if (showArticleDialog) setMounted(m => (m.article ? m : { ...m, article: true }))
+  }, [showArticleDialog])
+  // Download the sheets in the background once the app has settled.
+  useEffect(() => {
+    const ric = (window as unknown as { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number }).requestIdleCallback
+    if (ric) {
+      const id = ric(warmCreateSheets, { timeout: 4000 })
+      return () => (window as unknown as { cancelIdleCallback?: (id: number) => void }).cancelIdleCallback?.(id)
+    }
+    const t = setTimeout(warmCreateSheets, 2000)
+    return () => clearTimeout(t)
+  }, [])
 
   const [shouldStopRecording, setShouldStopRecording] = useState(false)
   const [isLongPressRecording, setIsLongPressRecording] = useState(false)
@@ -455,7 +496,7 @@ export function VoiceFAB({
                 initial={{ y: '100%', opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 exit={{ y: '100%', opacity: 0 }}
-                transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                transition={{ type: 'spring', damping: 38, stiffness: 560, mass: 0.4 }}
                 className="sheet-surface relative w-full md:w-[500px] md:!rounded-2xl md:!border md:!border-white/15 z-10 overflow-hidden mb-0 md:mb-12"
               >
                 <div style={{ paddingBottom: 'env(safe-area-inset-bottom, 20px)' }}>
@@ -496,21 +537,31 @@ export function VoiceFAB({
         document.body
       )}
 
-      <CreateProjectDialog isOpen={showProjectDialog} onOpenChange={setShowProjectDialog} hideTrigger />
-      <CreateMemoryDialog
-        isOpen={showThoughtDialog}
-        onOpenChange={setShowThoughtDialog}
-        hideTrigger
-        projectId={pageProjectId ?? undefined}
-        onSwitchType={() => {
-          // Let the user jump from thought sheet into the full-type menu
-          // without losing what they typed (draft is auto-persisted).
-          setShowThoughtDialog(false)
-          requestAnimationFrame(() => setIsMenuOpen(true))
-        }}
-      />
-      <AddItemToListDialog isOpen={showListDialog} onOpenChange={setShowListDialog} />
-      <SaveArticleDialog isOpen={showArticleDialog} onOpenChange={setShowArticleDialog} />
+      <Suspense fallback={null}>
+        {(mounted.project || showProjectDialog) && (
+          <CreateProjectDialog isOpen={showProjectDialog} onOpenChange={setShowProjectDialog} hideTrigger />
+        )}
+        {(mounted.thought || showThoughtDialog) && (
+          <CreateMemoryDialog
+            isOpen={showThoughtDialog}
+            onOpenChange={setShowThoughtDialog}
+            hideTrigger
+            projectId={pageProjectId ?? undefined}
+            onSwitchType={() => {
+              // Let the user jump from thought sheet into the full-type menu
+              // without losing what they typed (draft is auto-persisted).
+              setShowThoughtDialog(false)
+              requestAnimationFrame(() => setIsMenuOpen(true))
+            }}
+          />
+        )}
+        {(mounted.list || showListDialog) && (
+          <AddItemToListDialog isOpen={showListDialog} onOpenChange={setShowListDialog} />
+        )}
+        {(mounted.article || showArticleDialog) && (
+          <SaveArticleDialog isOpen={showArticleDialog} onOpenChange={setShowArticleDialog} />
+        )}
+      </Suspense>
     </>
   )
 }

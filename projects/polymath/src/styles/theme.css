@@ -266,7 +266,17 @@ body[data-scrolling] .glass-sheet,
    backdrop-blur), which the class list above never matched — the biggest
    blurs on the page (32px on the answer card) were reblurring every frame. */
 body[data-scrolling] [style*="backdrop-filter"],
-body[data-scrolling] [class*="backdrop-blur"] {
+body[data-scrolling] [class*="backdrop-blur"],
+/* Same for an open sheet: everything behind it is under a near-opaque dim,
+   so its blur can't be seen but is still recomputed on every frame of the
+   sheet's slide. The sheets themselves are solid and don't need it. */
+body[data-modal-open] .glass-card,
+body[data-modal-open] .glass-card-strong,
+body[data-modal-open] .glass-card-subtle,
+body[data-modal-open] .attention-card,
+body[data-modal-open] .aperture-hero-card,
+body[data-modal-open] [style*="backdrop-filter"],
+body[data-modal-open] [class*="backdrop-blur"] {
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
 }

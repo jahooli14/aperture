@@ -152,7 +152,7 @@ export function FeedSearchSheet({ open, onOpenChange, onSubscribed }: FeedSearch
               placeholder="Search — tldr, stratechery, design…"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              autoFocus
+              data-autofocus
               autoCorrect="off"
               autoCapitalize="none"
               spellCheck={false}

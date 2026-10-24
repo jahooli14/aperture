@@ -240,9 +240,9 @@
    BottomSheet / Dialog components: same backdrop, same panel, same
    corner. Don't invent a new radius or blur per modal. */
 .modal-backdrop {
-  background: rgba(0, 0, 0, 0.7);
-  -webkit-backdrop-filter: blur(12px);
-  backdrop-filter: blur(12px);
+  /* Solid dim, deliberately no backdrop-filter: blurring the whole page
+     under a fading overlay is what made every sheet open stutter. */
+  background: rgba(0, 0, 0, 0.78);
 }
 
 .sheet-surface {
