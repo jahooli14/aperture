@@ -53,7 +53,7 @@ export function ContextMenu({ items, isOpen, onClose, title }: ContextMenuProps)
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="absolute inset-0 bg-black/70 backdrop-blur-md"
+            className="absolute inset-0 bg-black/75"
             onClick={onClose}
           />
 

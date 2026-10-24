@@ -87,7 +87,7 @@ export function ReaderSettingsSheet({ open, prefs, onChange, onClose }: ReaderSe
             initial={{ y: '100%' }}
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
-            transition={{ type: 'spring', damping: 28, stiffness: 320 }}
+            transition={{ type: 'spring', damping: 38, stiffness: 560, mass: 0.4 }}
             className="sheet-surface relative w-full md:w-[420px] md:!rounded-2xl md:!border md:!border-white/15 z-10 overflow-hidden"
           >
             <div style={{ paddingBottom: 'env(safe-area-inset-bottom, 16px)' }}>

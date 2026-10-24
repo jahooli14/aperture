@@ -490,7 +490,7 @@ export function CreateProjectDialog({
                         onFocus={handleInputFocus}
                         onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void handleSend() } }}
                         autoComplete="off"
-                        autoFocus
+                        data-autofocus
                         className="flex-1 border-0 focus:outline-none focus:ring-0 bg-transparent appearance-none text-base"
                         style={{ color: 'var(--brand-text-primary)' }}
                       />

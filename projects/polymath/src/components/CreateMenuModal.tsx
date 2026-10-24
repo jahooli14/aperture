@@ -90,12 +90,12 @@ export function CreateMenuModal({ isOpen, onClose, onAction, projectTitle }: Cre
                                 return (
                                     <motion.button
                                         key={action.id}
-                                        initial={{ opacity: 0, y: 8 }}
+                                        initial={{ opacity: 0, y: 6 }}
                                         animate={{ opacity: 1, y: 0 }}
-                                        transition={{ delay: i * 0.04, type: 'spring', damping: 24, stiffness: 420 }}
+                                        transition={{ delay: i * 0.02, duration: 0.16, ease: 'easeOut' }}
                                         onClick={() => {
-                                            onAction(action.id as any)
                                             onClose()
+                                            onAction(action.id)
                                         }}
                                         className="relative flex items-center gap-4 p-4 rounded-2xl text-left overflow-hidden active:scale-[0.99] transition-transform"
                                         style={{

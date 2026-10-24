@@ -18,7 +18,15 @@ export function useModalOpen(): boolean {
   const [open, setOpen] = useState(false)
 
   useEffect(() => {
-    const check = () => setOpen(document.querySelector(MODAL_SELECTOR) !== null)
+    const check = () => {
+      const isOpen = document.querySelector(MODAL_SELECTOR) !== null
+      setOpen(isOpen)
+      // CSS drops every frosted-glass blur behind an open sheet (theme.css):
+      // it's under a near-opaque dim anyway, and re-blurring it on each
+      // frame of the sheet's slide is what made sheets stutter.
+      if (isOpen) document.body.setAttribute('data-modal-open', '')
+      else document.body.removeAttribute('data-modal-open')
+    }
     check()
     // Coalesce bursts (animations, toasts) into one lookup per frame.
     let frame = 0
@@ -32,7 +40,11 @@ export function useModalOpen(): boolean {
       attributes: true,
       attributeFilter: ['aria-modal', 'data-hides-fab'],
     })
-    return () => { observer.disconnect(); if (frame) cancelAnimationFrame(frame) }
+    return () => {
+      observer.disconnect()
+      if (frame) cancelAnimationFrame(frame)
+      document.body.removeAttribute('data-modal-open')
+    }
   }, [])
 
   return open

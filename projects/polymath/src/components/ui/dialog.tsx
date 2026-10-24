@@ -95,11 +95,10 @@ const DialogOverlay = React.forwardRef<
       transition={{ duration: 0.15 }}
       className={cn(
         "fixed inset-0 z-50",
-        "backdrop-blur-md",
         className
       )}
       style={{
-        backgroundColor: 'rgba(10, 14, 26, 0.6)'
+        backgroundColor: 'rgba(6, 9, 18, 0.78)'
       }}
       onClick={() => onOpenChange(false)}
       {...(props as any)}
@@ -142,16 +141,14 @@ const DialogContent = React.forwardRef<
           }}
           className={cn(
             "relative w-full max-w-lg pointer-events-auto",
-            "backdrop-blur-xl rounded-2xl shadow-2xl border",
+            "rounded-2xl shadow-2xl border",
             "p-5 sm:p-6 pb-6 sm:pb-8",
             "max-h-[calc(100vh-3rem)] sm:max-h-[calc(100vh-4rem)]",
             "overflow-auto overscroll-contain",
             className
           )}
           style={{
-            background: 'rgba(20, 27, 38, 0.85)',
-            backdropFilter: 'blur(32px) saturate(200%)',
-            WebkitBackdropFilter: 'blur(32px) saturate(200%)',
+            background: 'rgb(20, 27, 38)',
             borderColor: 'rgba(255, 255, 255, 0.15)',
             boxShadow: '0 12px 48px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1)'
           }}
@@ -166,7 +163,7 @@ const DialogContent = React.forwardRef<
               "h-11 w-11",
               "flex items-center justify-center",
               "rounded-full",
-              "backdrop-blur-xl border shadow-md hover:shadow-lg",
+              "border shadow-md hover:shadow-lg",
               "transition-all duration-150",
               "focus:outline-none focus:ring-2",
               "active:scale-95",
@@ -174,8 +171,6 @@ const DialogContent = React.forwardRef<
             )}
             style={{
               background: 'rgba(var(--brand-primary-rgb), 0.15)',
-              backdropFilter: 'blur(12px) saturate(180%)',
-              WebkitBackdropFilter: 'blur(12px) saturate(180%)',
               borderColor: 'rgba(255, 255, 255, 0.2)',
               color: 'var(--brand-primary)'
             }}

@@ -31,12 +31,19 @@ export function AddItemToListDialog({ isOpen, onOpenChange }: AddItemToListDialo
     const [isSubmitting, setIsSubmitting] = useState(false)
 
     useEffect(() => {
-        if (isOpen) {
-            fetchLists()
-            setSelectedListId(null)
-            setContent('')
-            setSearchQuery('')
+        if (!isOpen) return
+        setSelectedListId(null)
+        setContent('')
+        setSearchQuery('')
+        // The persisted lists are already on screen, so the refresh waits
+        // until the sheet has stopped moving instead of re-rendering under it.
+        // Only a first-ever open has nothing to show and fetches at once.
+        if (useListStore.getState().lists.length === 0) {
+            void fetchLists()
+            return
         }
+        const t = setTimeout(() => { void fetchLists() }, 500)
+        return () => clearTimeout(t)
     }, [isOpen, fetchLists])
 
     const filteredLists = lists.filter(l =>
@@ -89,7 +96,7 @@ export function AddItemToListDialog({ isOpen, onOpenChange }: AddItemToListDialo
                                     onChange={(e) => setSearchQuery(e.target.value)}
                                     className="pl-10 bg-[var(--glass-surface)] border-[var(--glass-surface-hover)] focus:border-brand-primary placeholder:text-[var(--brand-text-primary)]/15"
                                     style={{ color: "var(--brand-text-secondary)" }}
-                                    autoFocus
+                                    data-autofocus
                                 />
                             </div>
 

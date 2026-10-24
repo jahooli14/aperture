@@ -75,7 +75,7 @@ export function CreateListDialog({ open, onOpenChange }: Props) {
                         onChange={e => setTitle(e.target.value)}
                         placeholder="What is it a list of?"
                         className="h-12 text-base bg-[var(--glass-surface)] border-[var(--glass-surface-hover)] focus:border-white/30 placeholder:text-white/20"
-                        autoFocus
+                        data-autofocus
                         autoComplete="off"
                     />
 

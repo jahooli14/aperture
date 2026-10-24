@@ -148,7 +148,7 @@ const CompletionCelebration = ({
             className="fixed inset-0 z-50 flex items-end justify-center pb-10 px-4"
             onClick={onClose}
         >
-            <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
+            <div className="absolute inset-0 bg-black/75" />
             <motion.div
                 initial={{ y: 60, scale: 0.95 }}
                 animate={{ y: 0, scale: 1 }}
