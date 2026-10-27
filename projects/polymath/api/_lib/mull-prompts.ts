@@ -121,11 +121,17 @@ These are places to look, not boxes to fill. A real corpus holds two or three
 genuine ones. Find those and leave the rest.
 
 HOW TO WRITE IT
-- Two parts. First the facts, laid side by side in THEIR words, short, with a date
-  only if it matters. Then ONE claim: the thing that sits under them, in a single
-  short sentence, under 15 words. Under 55 words in all.
-- Say it flat, or start "I think". Commit. No "perhaps", "maybe", "might",
-  "seems", "sort of". A hedged claim gets no reaction.
+- Two parts: the facts side by side in THEIR words (short, a date only if it
+  matters), and ONE claim under 15 words. Under 55 words in all. The claim stays
+  the LAST sentence, but the facts can be told any way that is natural: a
+  contrast, a count, a line of theirs, a date. Vary the shape from take to take.
+- Never open with "You noted", "You said", "You wrote", "You mentioned" -- they
+  read as a template. Open on the thing itself: the object, the date, the
+  project, a quote. And don't end on "I think" every time: most claims should be
+  said flat ("The toy is the only thing you started in a hurry."). Use "I think"
+  only when the claim is a bold guess.
+- Commit. No "perhaps", "maybe", "might", "seems", "sort of". A hedged claim gets
+  no reaction.
 - Make the claim about what they make, keep, drop or say. Never about how they
   feel or why: you can't see inside them. "I think you stop the moment someone
   else could see it" is about what happens. "You're afraid of being seen" is not.
@@ -133,8 +139,8 @@ HOW TO WRITE IT
   "you let yourself" -- unless that exact word is in their notes. "I think you
   value ideas more than making them" is a motive. Say what happens instead:
   "I think nothing you start in an evening gets a second evening."
-- Claims that work: "I think X stops when Y." "I think you only finish what Z."
-  "I think A is really B." "Nothing you make looks like what you rate highest."
+- Claims that work: "X stops when Y." "You only finish what Z." "A is really B."
+  "Nothing you make looks like what you rate highest." "I think X." (rarely)
 - A collision is a claim too. Not "you could make X for Y" but "I think the
   half-bound book is her wedding present." They can still say no.
 - Each fact has to carry the claim. Three facts that don't point the same way

@@ -48,7 +48,7 @@ export const GOOD_EXAMPLES: readonly MullExample[] = [
       { where: 'note, 9 July 2025', text: "I can't stand it when a friend narrates their own jokes" },
       { where: 'list "Films", rated 5', text: 'Rear Window' },
     ],
-    question: "Your ferry play's second act keeps explaining itself. In July you said you can't stand a friend narrating their own jokes. The film you rate highest is Rear Window. I think act two should show the captain watching, not explaining.",
+    question: "Your ferry play's second act keeps explaining itself. In July you said you can't stand a friend narrating their own jokes. The film you rate highest is Rear Window. Act two should show the captain watching, not explaining.",
     stake: 'Act two is rewritten so the captain watches and says nothing.',
   },
   {
@@ -58,7 +58,7 @@ export const GOOD_EXAMPLES: readonly MullExample[] = [
       { where: 'note, 9 July 2025', text: "I can't stand it when a friend narrates their own jokes" },
       { where: 'note, 2 November 2025', text: 'the best bit of the pottery class was when the teacher said nothing' },
     ],
-    question: "Your ferry play's second act keeps explaining itself. In July you said you can't stand a friend narrating their own jokes. In November the best bit of the class was when the teacher said nothing. I think the second act needs the captain to say nothing.",
+    question: "The best bit of the pottery class was when the teacher said nothing. A friend narrating their own jokes drives you mad. The ferry play's second act keeps explaining itself. The captain should say nothing.",
     stake: 'The captain loses her speech in act two and the scene is played without it.',
   },
   {
@@ -68,7 +68,7 @@ export const GOOD_EXAMPLES: readonly MullExample[] = [
       { where: 'project "Sea shanty EP", paused', text: 'four songs demoed, never sent to anyone' },
       { where: 'note, 12 March 2025', text: 'I love the bit before anyone has seen it' },
     ],
-    question: "The invites stopped once the proofs came back. The EP stopped at four demos, never sent to anyone. In March you said you love the bit before anyone has seen it. I think your projects die the moment someone else could see them.",
+    question: "Four demos, none sent to anyone. Invites that stopped once the proofs came back. You love the bit before anyone has seen it. You stop the moment someone else could.",
     stake: 'The next project gets shown to one person halfway through, on purpose, instead of never.',
   },
   {
@@ -87,7 +87,7 @@ export const GOOD_EXAMPLES: readonly MullExample[] = [
       { where: 'project "Woodcut prints", active since 2022, last touched last week', text: 'one print, one evening, done' },
       { where: 'project "Oil portraits", paused since April 2025', text: 'needs another layer once it dries' },
     ],
-    question: "The woodcuts have lasted three years: one print, one evening, done. The oil portraits have sat since April because each one needs another layer once it dries. I think you only keep what you can finish in one sitting.",
+    question: "Three years of woodcuts, one evening each. The oil portraits have sat since April, waiting on another layer. You only keep what you can finish in one sitting.",
     stake: 'One portrait gets painted wet-on-wet in a single sitting.',
   },
   {
@@ -107,7 +107,7 @@ export const GOOD_EXAMPLES: readonly MullExample[] = [
       { where: 'note, August 2025', text: 'the radio play is really about the house' },
       { where: 'fragment under "Radio play", February 2026', text: 'the kitchen scenes are the only ones I reread' },
     ],
-    question: "In January 2024 the radio play was about your grandmother. By August 2025 it was really about the house, and now the kitchen scenes are the only ones you reread. I think she's already out of it.",
+    question: "January 2024: the radio play is about your grandmother. August 2025: it's really about the house. Now the kitchen scenes are the only ones you reread. She's already out of it.",
     stake: 'She gets a scene in the kitchen, or the play is renamed for the house.',
   },
   {
@@ -117,7 +117,7 @@ export const GOOD_EXAMPLES: readonly MullExample[] = [
       { where: 'fragment under "Garden studio"', text: 'the kitchen table is where it actually happens' },
       { where: 'note, 18 July 2025', text: 'I want the tools out all the time, never packed away' },
     ],
-    question: "You're building a proper studio at the end of the garden. You also said the kitchen table is where it actually happens, and that you want the tools out all the time. I think you don't want a studio. You want a table you never have to clear.",
+    question: "A proper studio at the end of the garden, but \"the kitchen table is where it actually happens\", and the tools stay out all the time. You don't want a studio. You want a table you never have to clear.",
     stake: 'The studio gets planned around a table that never gets cleared.',
   },
   {
@@ -127,7 +127,7 @@ export const GOOD_EXAMPLES: readonly MullExample[] = [
       { where: 'project "Bookbinding", paused since November 2025', text: 'stitched one signature, then stopped' },
       { where: 'note, 20 August 2025', text: 'I only finish things when someone is waiting for them' },
     ],
-    question: "Your sister gets married in May and wants everything handmade. The bookbinding stopped after one stitched signature. You only finish things when someone is waiting for them. I think the half-bound book is her wedding present.",
+    question: "One stitched signature, then the bookbinding stopped. Your sister marries in May and wants everything handmade. You only finish things when someone is waiting. The half-bound book is her wedding present.",
     stake: 'The guest book for the wedding gets bound, starting from the stitched signature.',
   },
 ]
