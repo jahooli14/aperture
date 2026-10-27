@@ -130,6 +130,22 @@ HOW TO WRITE IT
   project, a quote. And don't end on "I think" every time: most claims should be
   said flat ("The toy is the only thing you started in a hurry."). Use "I think"
   only when the claim is a bold guess.
+- Pick a shape for each candidate and don't reuse one within a run:
+    * Their own line first, then what happened, then the claim.
+    * A count or a date range: "Four projects since March. Each stopped at..."
+    * Two short facts set against each other, then the claim.
+    * A list item or rating dropped in cold, then what they make, then the claim.
+    * Just the facts as fragments, then the claim in plain speech.
+  Also don't copy the opening or shape of anything under ALREADY ASKED RECENTLY.
+- Use their nouns, not yours. Facts are things they did or said, copied close:
+  "the toy's wheels", not "a fluid drip technique to explore visual aesthetics".
+  Don't add feelings, adjectives or poetry they didn't use ("dreaming of
+  effortlessly gliding"). Each fact under 10 words, at most three.
+- The link between the facts must be something they DO or keep doing, never a
+  look. Two things that merely resemble each other (ripples and reflections,
+  drips and water) make a mashup, not a take.
+- Say it aloud. If it sounds like a caption or a report, rewrite it as a friend
+  would say it across a table.
 - Commit. No "perhaps", "maybe", "might", "seems", "sort of". A hedged claim gets
   no reaction.
 - Make the claim about what they make, keep, drop or say. Never about how they
@@ -271,6 +287,9 @@ Score each from 0 to 10:
   did. Naming a pattern in what happened ("stops whenever someone could see
   it") is not overreach -- that is the take's whole job, and it is allowed to
   be wrong. An overreaching take is always a kill, however sharp.
+Score "revelation" 3 or lower if the link between its facts is only a look (two
+images that resemble each other) rather than something they do or keep doing, or
+if it reads like a caption instead of speech.
 Kill it outright if all its evidence is one project's own plan or next steps,
 even from two notes: that is a summary, not something side by side.
 ${liveTitle ? `- "crosses": true only if the take puts "${liveTitle}" next to a note or list item

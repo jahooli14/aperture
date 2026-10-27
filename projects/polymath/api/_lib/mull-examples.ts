@@ -172,6 +172,10 @@ export const BAD_EXAMPLES: readonly BadExample[] = [
     why: "Both rows are one project's plan, so nothing is put next to anything. It opens by reciting the plan, and the question hides a claim (the grief isn't already theirs) that nobody made and they can't push back on.",
   },
   {
+    question: 'You noted how smoke curls into shapes like handwriting, dreaming of calligraphy that drifts. For your glaze test, you planned a pooled technique to explore visual texture. I think the glaze needs smoke curls painted over it.',
+    why: 'The template opener, then paraphrase in the writer\'s own poetry instead of their words. The second fact is a plan. The claim joins two images that only look alike (smoke, handwriting, glaze), not something they do, so it is a mashup nobody can react to.',
+  },
+  {
     question: 'One card per idea was meant to stop the binders piling up. The sketch-a-day stopped after day one. In May you said ideas are worth more than gold. I think you value dreaming up projects far more than making them.',
     why: "Three facts that point three ways, the first one a plan. And the claim says what they value -- a motive nobody gave. Say what happens instead: what stopped, and when.",
   },
