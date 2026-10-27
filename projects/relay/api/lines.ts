@@ -4,6 +4,7 @@
  * GET   /api/lines?story=X[&from=1&limit=500]      -> lines in order, plus the total
  * POST  /api/lines?story=X                          -> add the next line
  * POST  /api/lines?story=X&resource=mark            -> mark a line, or unmark it
+ * POST  /api/lines?story=X&resource=chapter         -> name, rename or remove a chapter title
  * PATCH /api/lines?story=X&line=Y                   -> fix a typo, briefly
  */
 import type { VercelRequest, VercelResponse } from '@vercel/node'
@@ -13,7 +14,7 @@ import { cleanText, fail, firstParam, handleErrors } from './_lib/http.js'
 import { loadProfiles, loadStory } from './_lib/stories.js'
 import { canWrite, whoseTurn } from './_lib/turns.js'
 import { notifyStory } from './_lib/notify.js'
-import { editLine, toggleMark } from './_lib/line-actions.js'
+import { editLine, setChapterTitle, toggleMark } from './_lib/line-actions.js'
 
 const MAX_PAGE = 500
 
@@ -36,6 +37,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method === 'GET') return listLines(req, res, supabase, storyId, loaded.members, userId)
     if (req.method === 'POST' && firstParam(req, 'resource') === 'mark') {
       return toggleMark(req, res, supabase, userId, storyId)
+    }
+    if (req.method === 'POST' && firstParam(req, 'resource') === 'chapter') {
+      return setChapterTitle(req, res, supabase, storyId)
     }
     if (req.method === 'POST') return addLine(req, res, supabase, userId, storyId, loaded)
     if (req.method === 'PATCH') return editLine(req, res, supabase, userId, storyId)

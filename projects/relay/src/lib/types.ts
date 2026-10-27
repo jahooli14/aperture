@@ -91,6 +91,21 @@ export interface IndexEntry {
   name: string
   note: string
   lines: number[]
+  /** Counted from the lines as they stand now, not from the model. */
+  trail?: Trail
+}
+
+export interface Trail {
+  count: number
+  last: number
+  /** Lines written since it last appeared. */
+  ago: number
+  chapters: { title: string | null; lines: number[] }[]
+}
+
+export interface ChapterOpening {
+  position: number
+  title: string | null
 }
 
 export interface StoryIndex {
@@ -109,4 +124,7 @@ export interface StoryIndexResponse {
   enough_lines: boolean
   storage_ready: boolean
   key_env_names?: string[]
+  chapters?: ChapterOpening[]
+  /** Lines of silence before something counts as gone quiet. */
+  quiet_after?: number
 }

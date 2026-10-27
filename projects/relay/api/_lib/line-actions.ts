@@ -102,3 +102,36 @@ export async function toggleMark(
 
   return res.status(200).json({ marked: !existing, marks: count ?? 0 })
 }
+
+/**
+ * Name, rename or remove the chapter that opens at a line. Either of you can
+ * do it at any time: a title is for finding your way round, it doesn't change
+ * what anyone wrote. An empty title takes the chapter break away.
+ */
+export async function setChapterTitle(
+  req: VercelRequest,
+  res: VercelResponse,
+  supabase: RelayClient,
+  storyId: string
+) {
+  const position = Number(req.body?.position)
+  if (!Number.isInteger(position) || position < 1) return fail(res, 400, 'Which line?')
+
+  const raw = req.body?.title
+  if (raw !== null && raw !== undefined && typeof raw !== 'string') {
+    return fail(res, 400, 'The title has to be text')
+  }
+  const title = raw ? cleanText(raw, 120) || null : null
+
+  const { data, error } = await supabase
+    .from('lines')
+    .update({ chapter_title: title })
+    .eq('story_id', storyId)
+    .eq('position', position)
+    .select('id, position, chapter_title')
+    .maybeSingle()
+  if (error) throw error
+  if (!data) return fail(res, 404, 'That line is gone')
+
+  return res.status(200).json({ line: data })
+}

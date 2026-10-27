@@ -491,6 +491,9 @@
 }
 .book .chapter p.opening { text-indent: 0; }
 
+.book .contents { margin-top: 2.5rem; }
+.book .contents h2 { font-size: 1.05rem; margin: 0 0 0.9rem; }
+.book .contents ol { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 0.45rem; }
 .book .colophon {
   margin-top: 3.5rem;
   padding-top: 1.5rem;
@@ -518,6 +521,7 @@
   .book .chapter:first-of-type { break-before: auto; }
   .book .chapter h2 { break-after: avoid; }
   .book .chapter p { font-size: 11pt; line-height: 1.55; orphans: 2; widows: 2; }
+  .book .contents { break-before: page; break-after: page; margin-top: 0; padding-top: 18vh; }
   .book .colophon { break-before: page; color: #333; }
 }
 
