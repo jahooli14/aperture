@@ -380,6 +380,9 @@ other feature is downstream of that working.
     `up_to_position`, which is how the sheet knows it's behind.
   - `GEMINI_KEY` in Vercel. Without it everything else still works — the sheet
     just says so.
+  - **Trails are counted, not generated** (`index/trails.ts`, pure + tested). The model cites a few lines per entry; the API then scans every line for the name (whole words, so "Rod" isn't found in "product"), worked out fresh on each read so it's right between rebuilds. That gives "Not seen for a while" (silent for `quietAfter` lines, 20% of the story, min 12), "last at line N" on people and places, and each recurring thing laid out by chapter.
+  - **Chapters are renameable** by either writer at any time (`resource=chapter`, by line position; empty removes the break). Listed at the top of the index sheet, including an unnamed opening.
+- **The book tidies, the story doesn't.** Print gets a contents page (two or more titled chapters) and a capital at the start of each paragraph (`tidyLine.ts`). Nothing else is touched; on-screen lines stay exactly as sent.
 - **Sending is optimistic.** The line appears and the turn moves the moment you
   hit send; a failure pulls the placeholder back out and the composer restores
   your text, so a dropped connection never loses a line.

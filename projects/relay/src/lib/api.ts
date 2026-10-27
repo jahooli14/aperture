@@ -56,6 +56,12 @@ export const api = {
       body: JSON.stringify({ body }),
     }),
 
+  setChapterTitle: (storyId: string, position: number, title: string) =>
+    request<{ line: { id: string; position: number; chapter_title: string | null } }>(
+      `/api/lines?story=${storyId}&resource=chapter`,
+      { method: 'POST', body: JSON.stringify({ position, title }) }
+    ),
+
   markLine: (storyId: string, lineId: string) =>
     request<{ marked: boolean; marks: number }>(`/api/lines?story=${storyId}&resource=mark`, {
       method: 'POST',

@@ -14,6 +14,7 @@ import { fail, firstParam, handleErrors } from './_lib/http.js'
 import { loadStory } from './_lib/stories.js'
 import { generateIndex, geminiConfigured, geminiDiagnostics } from './_lib/index/generate.js'
 import { isEmptyIndex, type SourceLine, type StoryIndex } from './_lib/index/ground.js'
+import { chapterList, quietAfter, withTrails, type TrailLine } from './_lib/index/trails.js'
 
 const MIN_LINES = 6
 
@@ -53,6 +54,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       .limit(1)
     const lastPosition = latest?.[0]?.position ?? 0
 
+    // Read for every request: last-seen trails and the chapter list are worked
+    // out from the lines as they stand now, so they stay right between rebuilds.
+    const { data: allLines, error: linesError } = await supabase
+      .from('lines')
+      .select('position, body, chapter_title')
+      .eq('story_id', storyId)
+      .order('position')
+    if (linesError) throw linesError
+    const trailLines = (allLines ?? []) as TrailLine[]
+    const live = (index: StoryIndex | null) => (index ? withTrails(index, trailLines) : null)
+    const extras = { chapters: chapterList(trailLines), quiet_after: quietAfter(lastPosition) }
+
     if (req.method === 'GET') {
       const { data: cached, error: cacheError } = await supabase
         .from('story_index')
@@ -64,7 +77,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (cacheError && storageReady) throw cacheError
 
       return res.status(200).json({
-        index: (cached?.payload as StoryIndex) ?? null,
+        index: live((cached?.payload as StoryIndex) ?? null),
+        ...extras,
         generated_at: cached?.generated_at ?? null,
         up_to_position: cached?.up_to_position ?? 0,
         last_position: lastPosition,
@@ -88,14 +102,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return fail(res, 409, `Write a few more lines first — the index needs at least ${MIN_LINES}`)
     }
 
-    const { data: lines, error } = await supabase
-      .from('lines')
-      .select('position, body')
-      .eq('story_id', storyId)
-      .order('position')
-    if (error) throw error
-
-    const index = await generateIndex((lines ?? []) as SourceLine[])
+    const index = await generateIndex(trailLines as SourceLine[])
 
     if (isEmptyIndex(index)) {
       return fail(res, 422, "Nothing in the story could be indexed yet. Try again once there's more of it.")
@@ -117,7 +124,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (saveError) throw saveError
 
     return res.status(200).json({
-      index,
+      index: live(index),
+      ...extras,
       generated_at: new Date().toISOString(),
       up_to_position: lastPosition,
       last_position: lastPosition,

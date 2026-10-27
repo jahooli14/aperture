@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { api } from '../lib/api'
 import { duration } from '../lib/format'
+import { capitaliseOpening } from '../lib/tidyLine'
 import type { Line, StoryDetail } from '../lib/types'
 
 /**
@@ -41,6 +42,8 @@ export default function PrintPage() {
     else chapters[chapters.length - 1].lines.push(line)
   }
 
+  const titled = chapters.filter((chapter) => chapter.title)
+
   const year = (date: Date | null) => (date ? date.getFullYear() : '')
 
   return (
@@ -68,12 +71,23 @@ export default function PrintPage() {
         )}
       </section>
 
+      {titled.length >= 2 && (
+        <section className="contents">
+          <h2>Contents</h2>
+          <ol>
+            {titled.map((chapter) => (
+              <li key={chapter.lines[0].id}>{chapter.title}</li>
+            ))}
+          </ol>
+        </section>
+      )}
+
       {chapters.map((chapter) => (
         <section key={chapter.lines[0].id} className="chapter">
           {chapter.title && <h2>{chapter.title}</h2>}
           {chapter.lines.map((line, index) => (
             <p key={line.id} className={index === 0 ? 'opening' : undefined}>
-              {line.body}
+              {capitaliseOpening(line.body)}
             </p>
           ))}
         </section>

@@ -263,7 +263,12 @@ export default function StoryPage() {
         />
       )}
       {sheet === 'index' && id && (
-        <IndexSheet storyId={id} onJumpToLine={jumpToLine} onClose={() => setSheet('none')} />
+        <IndexSheet
+          storyId={id}
+          onJumpToLine={jumpToLine}
+          onChaptersChanged={() => void load()}
+          onClose={() => setSheet('none')}
+        />
       )}
     </div>
   )
