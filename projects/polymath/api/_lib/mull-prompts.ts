@@ -144,6 +144,12 @@ HOW TO WRITE IT
 - The link between the facts must be something they DO or keep doing, never a
   look. Two things that merely resemble each other (ripples and reflections,
   drips and water) make a mashup, not a take.
+- The claim only says what the facts have in common. It adds no new fact, no
+  reason ("because", "so that"), no person or thing that isn't in the facts. Test:
+  could you write it using only words from the facts? Best: "Nothing you make
+  goes to anyone until it cools down." Worst: "The toy is waiting for your dad."
+- Never write "you noted", "you mentioned" or "you said" anywhere in the take,
+  not only at the start. The fact is just stated.
 - Name what happens, don't give orders. "X should be Y" and "Z needs W" are
   advice, and invent details the notes don't have. Only a collision may propose
   something, and only from things they already have.
