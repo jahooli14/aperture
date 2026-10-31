@@ -144,6 +144,9 @@ HOW TO WRITE IT
 - The link between the facts must be something they DO or keep doing, never a
   look. Two things that merely resemble each other (ripples and reflections,
   drips and water) make a mashup, not a take.
+- Name what happens, don't give orders. "X should be Y" and "Z needs W" are
+  advice, and invent details the notes don't have. Only a collision may propose
+  something, and only from things they already have.
 - Say it aloud. If it sounds like a caption or a report, rewrite it as a friend
   would say it across a table.
 - Commit. No "perhaps", "maybe", "might", "seems", "sort of". A hedged claim gets
