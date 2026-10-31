@@ -121,11 +121,42 @@ These are places to look, not boxes to fill. A real corpus holds two or three
 genuine ones. Find those and leave the rest.
 
 HOW TO WRITE IT
-- Two parts. First the facts, laid side by side in THEIR words, short, with a date
-  only if it matters. Then ONE claim: the thing that sits under them, in a single
-  short sentence, under 15 words. Under 55 words in all.
-- Say it flat, or start "I think". Commit. No "perhaps", "maybe", "might",
-  "seems", "sort of". A hedged claim gets no reaction.
+- Two parts: the facts side by side in THEIR words (short, a date only if it
+  matters), and ONE claim under 15 words. Under 55 words in all. The claim stays
+  the LAST sentence, but the facts can be told any way that is natural: a
+  contrast, a count, a line of theirs, a date. Vary the shape from take to take.
+- Never open with "You noted", "You said", "You wrote", "You mentioned" -- they
+  read as a template. Open on the thing itself: the object, the date, the
+  project, a quote. And don't end on "I think" every time: most claims should be
+  said flat ("The toy is the only thing you started in a hurry."). Use "I think"
+  only when the claim is a bold guess.
+- Pick a shape for each candidate and don't reuse one within a run:
+    * Their own line first, then what happened, then the claim.
+    * A count or a date range: "Four projects since March. Each stopped at..."
+    * Two short facts set against each other, then the claim.
+    * A list item or rating dropped in cold, then what they make, then the claim.
+    * Just the facts as fragments, then the claim in plain speech.
+  Also don't copy the opening or shape of anything under ALREADY ASKED RECENTLY.
+- Use their nouns, not yours. Facts are things they did or said, copied close:
+  "the toy's wheels", not "a fluid drip technique to explore visual aesthetics".
+  Don't add feelings, adjectives or poetry they didn't use ("dreaming of
+  effortlessly gliding"). Each fact under 10 words, at most three.
+- The link between the facts must be something they DO or keep doing, never a
+  look. Two things that merely resemble each other (ripples and reflections,
+  drips and water) make a mashup, not a take.
+- The claim only says what the facts have in common. It adds no new fact, no
+  reason ("because", "so that"), no person or thing that isn't in the facts. Test:
+  could you write it using only words from the facts? Best: "Nothing you make
+  goes to anyone until it cools down." Worst: "The toy is waiting for your dad."
+- Never write "you noted", "you mentioned" or "you said" anywhere in the take,
+  not only at the start. The fact is just stated.
+- Name what happens, don't give orders. "X should be Y" and "Z needs W" are
+  advice, and invent details the notes don't have. Only a collision may propose
+  something, and only from things they already have.
+- Say it aloud. If it sounds like a caption or a report, rewrite it as a friend
+  would say it across a table.
+- Commit. No "perhaps", "maybe", "might", "seems", "sort of". A hedged claim gets
+  no reaction.
 - Make the claim about what they make, keep, drop or say. Never about how they
   feel or why: you can't see inside them. "I think you stop the moment someone
   else could see it" is about what happens. "You're afraid of being seen" is not.
@@ -133,8 +164,8 @@ HOW TO WRITE IT
   "you let yourself" -- unless that exact word is in their notes. "I think you
   value ideas more than making them" is a motive. Say what happens instead:
   "I think nothing you start in an evening gets a second evening."
-- Claims that work: "I think X stops when Y." "I think you only finish what Z."
-  "I think A is really B." "Nothing you make looks like what you rate highest."
+- Claims that work: "X stops when Y." "You only finish what Z." "A is really B."
+  "Nothing you make looks like what you rate highest." "I think X." (rarely)
 - A collision is a claim too. Not "you could make X for Y" but "I think the
   half-bound book is her wedding present." They can still say no.
 - Each fact has to carry the claim. Three facts that don't point the same way
@@ -265,6 +296,9 @@ Score each from 0 to 10:
   did. Naming a pattern in what happened ("stops whenever someone could see
   it") is not overreach -- that is the take's whole job, and it is allowed to
   be wrong. An overreaching take is always a kill, however sharp.
+Score "revelation" 3 or lower if the link between its facts is only a look (two
+images that resemble each other) rather than something they do or keep doing, or
+if it reads like a caption instead of speech.
 Kill it outright if all its evidence is one project's own plan or next steps,
 even from two notes: that is a summary, not something side by side.
 ${liveTitle ? `- "crosses": true only if the take puts "${liveTitle}" next to a note or list item
