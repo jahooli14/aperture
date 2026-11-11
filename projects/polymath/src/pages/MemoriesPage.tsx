@@ -475,12 +475,12 @@ function MemoriesPageInner() {
               {isAfterBedtime ? (
                 <>
                   <Moon className="h-3.5 w-3.5" />
-                  Bedtime mode — wind down
+                  Wind down for bed
                 </>
               ) : (
                 <>
                   <Wind className="h-3.5 w-3.5" />
-                  Drift mode — mental reset
+                  Clear your head
                 </>
               )}
             </button>
