@@ -759,7 +759,7 @@ export function ConsumingWidget() {
           <button
             type="button"
             onClick={() => setAddFeedOpen(true)}
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-white/[0.05] hover:bg-white/[0.08] border border-white/[0.08] text-[13px] font-medium text-[var(--brand-text-primary)] transition-colors"
+            className="quiet-pill min-h-[40px] px-4 text-[14px] font-medium"
           >
             <Plus className="h-3.5 w-3.5" />
             Add your first feed
