@@ -1053,7 +1053,7 @@ export function OnboardingChatPage() {
                       reporting an issue. */}
                   {diagnostics.length > 0 && (
                     <details className="w-full mt-2 text-left">
-                      <summary className="text-[11px] uppercase tracking-wide opacity-50 cursor-pointer">
+                      <summary className="text-[13px] min-h-[44px] flex items-center cursor-pointer" style={{ color: 'var(--brand-text-muted)' }}>
                         Diagnostic log (tap to expand)
                       </summary>
                       <pre

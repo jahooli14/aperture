@@ -707,7 +707,8 @@ export function ReaderPage() {
               ) : null}
               {!isOfflineCached && caching && (
                 <span
-                  className="text-[11px] uppercase tracking-[0.14em] flex items-center gap-1.5 opacity-40"
+                  className="text-[13px] flex items-center gap-1.5"
+                  style={{ color: 'var(--brand-text-muted)' }}
                   title="Saving a copy so this works offline"
                 >
                   <Loader2 className="h-3 w-3 animate-spin" /> saving offline
