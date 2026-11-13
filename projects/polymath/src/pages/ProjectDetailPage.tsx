@@ -400,7 +400,7 @@ export function ProjectDetailPage() {
             {/* Threads — a few things to hold onto, true for weeks. Always
                 here, so there is somewhere to add them. */}
             {project.status !== 'completed' && project.status !== 'graveyard' && (
-              <ProjectThemes project={project} onGo={() => setUpdateOpen(true)} />
+              <ProjectThemes project={project} onGo={() => setUpdateOpen(true)} quiet={oneOff} />
             )}
 
             <ProjectUpdates project={project} />

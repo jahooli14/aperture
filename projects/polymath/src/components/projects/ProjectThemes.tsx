@@ -17,7 +17,8 @@ import { MAX_THEMES, readThemes, type ProjectTheme } from '../../lib/projectThem
 import { ThemesUpdatedNote, useRefreshThemes } from './ThemesFollowNotes'
 import type { Project } from '../../types'
 
-export function ProjectThemes({ project, onGo }: { project: Project; onGo?: () => void }) {
+/** `quiet`: another card on the page already has the lit action, so this one steps back. */
+export function ProjectThemes({ project, onGo, quiet }: { project: Project; onGo?: () => void; quiet?: boolean }) {
   const themes = readThemes(project.metadata)
   useRefreshThemes(project)
   const [editing, setEditing] = useState(false)
@@ -143,7 +144,7 @@ export function ProjectThemes({ project, onGo }: { project: Project; onGo?: () =
         {note && <p className="text-[13px]" style={{ color: 'var(--brand-text-secondary)' }}>{note}</p>}
         <div className="flex flex-col gap-2 pt-1">
           <div
-            className="neon-button w-full py-3 rounded-xl font-semibold text-[15px] flex items-center justify-center gap-2"
+            className={`${quiet ? 'glass-card-subtle' : 'neon-button'} w-full py-3 rounded-xl font-semibold text-[15px] flex items-center justify-center gap-2`}
             onClick={e => { if (!(e.target as HTMLElement).closest('button')) e.currentTarget.querySelector('button')?.click() }}
           >
             <VoiceInput variant="icon" onTranscript={fromSpeech} maxDuration={60} />
