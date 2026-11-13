@@ -10,6 +10,7 @@ import { PWAInstallBanner } from './components/PWAInstallBanner'
 import { AuthProvider } from './contexts/AuthContext'
 import { AutoSuggestionProvider } from './contexts/AutoSuggestionContext'
 import { ScrollToTop } from './components/ScrollToTop'
+import { RouteTitle } from './components/RouteTitle'
 import { AnimatedPage } from './components/AnimatedPage'
 import { Loader2 } from 'lucide-react'
 import { App as CapacitorApp } from '@capacitor/app'
@@ -318,6 +319,7 @@ export default function App() {
             v7_relativeSplatPath: true,
           }}>
             <ScrollToTop />
+            <RouteTitle />
             <RouteTracker />
 
             {/* Floating Navigation - Placed high in DOM for robust fixed positioning */}
