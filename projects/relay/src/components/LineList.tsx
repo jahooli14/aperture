@@ -1,4 +1,5 @@
 import { authorColour, gapLabel, timeAgo } from '../lib/format'
+import { curlQuotes, opensOnSpeech, paragraphs } from '../lib/speech'
 import type { IndexEntry, Line, Member } from '../lib/types'
 
 export type ViewMode = 'thread' | 'read'
@@ -70,15 +71,23 @@ export function LineList({
               </div>
             )}
             <div className="prose-story reading">
-              {chapter.lines.map((line, index) => (
-                <p
-                  key={line.id}
-                  id={`line-${line.position}`}
-                  className={index === 0 && (chapter.title || chapterIndex === 0) ? 'dropcap' : undefined}
-                >
-                  {line.body}
-                </p>
-              ))}
+              {chapter.lines.flatMap((line, index) =>
+                paragraphs(line.body).map((para, p) => {
+                  const classes = [
+                    index === 0 && p === 0 && (chapter.title || chapterIndex === 0) ? 'dropcap' : '',
+                    opensOnSpeech(para) ? 'speech' : '',
+                  ].filter(Boolean)
+                  return (
+                    <p
+                      key={`${line.id}-${p}`}
+                      id={p === 0 ? `line-${line.position}` : undefined}
+                      className={classes.join(' ') || undefined}
+                    >
+                      {curlQuotes(para)}
+                    </p>
+                  )
+                })
+              )}
             </div>
           </section>
         ))}
@@ -118,7 +127,9 @@ export function LineList({
 
             <div
               id={`line-${line.position}`}
-              className={`line-row${landedOn === line.position ? ' landed' : ''}`}
+              className={`line-row${landedOn === line.position ? ' landed' : ''}${
+                index === lines.length - 1 ? ' latest' : ''
+              }`}
               style={line.pending ? { opacity: 0.55 } : undefined}
             >
               <span className="line-num" style={{ color: colour }}>
@@ -128,7 +139,8 @@ export function LineList({
                 className={`turn turn-tint${onSecondSide ? ' turn-b' : ''}`}
                 style={{
                   borderColor: colour,
-                  background: `color-mix(in srgb, ${colour} 6%, transparent)`,
+                  background: `color-mix(in srgb, ${colour} 9%, transparent)`,
+                  ['--who' as string]: colour,
                 }}
               >
                 {opensRun && (
@@ -142,15 +154,17 @@ export function LineList({
                     </span>
                   </div>
                 )}
-                <div className="prose-story">
-                  <p>
-                    <LineBody
-                      body={line.body}
-                      highlight={highlight}
-                      indexNames={indexNames}
-                      onOpenName={onOpenName}
-                    />
-                  </p>
+                <div className="prose-story turn-body">
+                  {paragraphs(line.body).map((para, p) => (
+                    <p key={p} className={opensOnSpeech(para) ? 'speech' : undefined}>
+                      <LineBody
+                        body={curlQuotes(para)}
+                        highlight={highlight}
+                        indexNames={indexNames}
+                        onOpenName={onOpenName}
+                      />
+                    </p>
+                  ))}
                 </div>
                 {!line.pending && (
                   <LineActions line={line} mine={mine} onMark={onMark} onEdit={onEdit} />
@@ -267,8 +281,10 @@ function LineBody({
 
 /** Case-insensitive split around every occurrence of `needle`. */
 function splitOn(body: string, needle: string): { text: string; hit: boolean }[] {
-  const lower = body.toLowerCase()
-  const target = needle.toLowerCase()
+  // Quotes are curled for display, so a typed ' or " still finds them.
+  const fold = (text: string) => text.toLowerCase().replace(/[\u2018\u2019]/g, "'").replace(/[\u201C\u201D]/g, '"')
+  const lower = fold(body)
+  const target = fold(needle)
   if (!target) return [{ text: body, hit: false }]
 
   const parts: { text: string; hit: boolean }[] = []
