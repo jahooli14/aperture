@@ -1,5 +1,5 @@
 import { authorColour, gapLabel, timeAgo } from '../lib/format'
-import { curlQuotes, opensOnSpeech, paragraphs } from '../lib/speech'
+import { typeset } from '../lib/typeset'
 import type { IndexEntry, Line, Member } from '../lib/types'
 
 export type ViewMode = 'thread' | 'read'
@@ -20,6 +20,7 @@ export function LineList({
   mode,
   currentUserId,
   landedOn,
+  newFrom,
   highlight,
   indexNames,
   onMark,
@@ -31,6 +32,8 @@ export function LineList({
   mode: ViewMode
   currentUserId: string
   landedOn?: number | null
+  /** First line written since this reader last looked; marked with a divider. */
+  newFrom?: number | null
   /** Search term, marked in the text where it appears. */
   highlight?: string
   /** Names the index knows about, made tappable in the prose. */
@@ -72,10 +75,10 @@ export function LineList({
             )}
             <div className="prose-story reading">
               {chapter.lines.flatMap((line, index) =>
-                paragraphs(line.body).map((para, p) => {
+                typeset(line.body).map((para, p) => {
                   const classes = [
                     index === 0 && p === 0 && (chapter.title || chapterIndex === 0) ? 'dropcap' : '',
-                    opensOnSpeech(para) ? 'speech' : '',
+                    para.speech ? 'speech' : '',
                   ].filter(Boolean)
                   return (
                     <p
@@ -83,7 +86,7 @@ export function LineList({
                       id={p === 0 ? `line-${line.position}` : undefined}
                       className={classes.join(' ') || undefined}
                     >
-                      {curlQuotes(para)}
+                      {para.text}
                     </p>
                   )
                 })
@@ -109,7 +112,17 @@ export function LineList({
 
         return (
           <li key={line.id}>
-            {gap && !line.chapter_title && (
+            {newFrom === line.position && (
+              <div className="new-marker" id="new-since">
+                <span className="new-rule" />
+                <span className="new-label">
+                  {lines.length - index === 1 ? '1 new line' : `${lines.length - index} new lines`}
+                </span>
+                <span className="new-rule" />
+              </div>
+            )}
+
+            {gap && !line.chapter_title && newFrom !== line.position && (
               <div className="gap-marker">
                 <span className="gap-rule" />
                 <span className="gap-label">{gap}</span>
@@ -155,10 +168,10 @@ export function LineList({
                   </div>
                 )}
                 <div className="prose-story turn-body">
-                  {paragraphs(line.body).map((para, p) => (
-                    <p key={p} className={opensOnSpeech(para) ? 'speech' : undefined}>
+                  {typeset(line.body).map((para, p) => (
+                    <p key={p} className={para.speech ? 'speech' : undefined}>
                       <LineBody
-                        body={curlQuotes(para)}
+                        body={para.text}
                         highlight={highlight}
                         indexNames={indexNames}
                         onOpenName={onOpenName}

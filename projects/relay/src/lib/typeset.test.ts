@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { curlQuotes, opensOnSpeech, paragraphs } from './speech'
+import { curlQuotes, glyphs, paragraphs, typeset, typesetInline } from './typeset'
 
 describe('paragraphs', () => {
   it('breaks between separate bits of speech', () => {
@@ -45,10 +45,27 @@ describe('curlQuotes', () => {
   })
 })
 
-describe('opensOnSpeech', () => {
-  it('spots a paragraph that opens on a quote', () => {
-    expect(opensOnSpeech('"Hi"')).toBe(true)
-    expect(opensOnSpeech('“Hi”')).toBe(true)
-    expect(opensOnSpeech('Hi')).toBe(false)
+describe('glyphs', () => {
+  it('sets dashes and ellipses', () => {
+    expect(glyphs('Garbage - sorry')).toBe('Garbage \u2014 sorry')
+    expect(glyphs('wait--no')).toBe('wait\u2014no')
+    expect(glyphs('and then...')).toBe('and then\u2026')
+  })
+
+  it('leaves hyphenated words alone', () => {
+    expect(glyphs('a well-known man')).toBe('a well-known man')
+  })
+})
+
+describe('typeset', () => {
+  it('sets the line from the screenshot', () => {
+    expect(typeset('Igor walked in. "Well, well - sorry, Senator".')).toEqual([
+      { text: 'Igor walked in.', speech: false },
+      { text: '\u201CWell, well \u2014 sorry, Senator\u201D.', speech: true },
+    ])
+  })
+
+  it('keeps a preview on one line', () => {
+    expect(typesetInline('"Yes."\n"No."')).toBe('\u201CYes.\u201D \u201CNo.\u201D')
   })
 })

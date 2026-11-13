@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { api } from '../lib/api'
 import { duration } from '../lib/format'
-import { curlQuotes, paragraphs } from '../lib/speech'
+import { typeset } from '../lib/typeset'
 import { capitaliseOpening } from '../lib/tidyLine'
 import type { Line, StoryDetail } from '../lib/types'
 
@@ -87,9 +87,9 @@ export default function PrintPage() {
         <section key={chapter.lines[0].id} className="chapter">
           {chapter.title && <h2>{chapter.title}</h2>}
           {chapter.lines.flatMap((line, index) =>
-            paragraphs(line.body).map((para, p) => (
+            typeset(capitaliseOpening(line.body)).map((para, p) => (
               <p key={`${line.id}-${p}`} className={index === 0 && p === 0 ? 'opening' : undefined}>
-                {curlQuotes(capitaliseOpening(para))}
+                {para.text}
               </p>
             ))
           )}

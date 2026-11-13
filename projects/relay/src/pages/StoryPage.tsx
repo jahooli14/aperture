@@ -88,11 +88,27 @@ export default function StoryPage() {
   useReadPosition(id, lines, readPosition)
   useTimezoneSync(id)
 
+  // Where this visit's new lines start, fixed on arrival so the marker stays
+  // put while you read even after the server records you've caught up.
+  const [newFrom, setNewFrom] = useState<number | null>(null)
+
+  // Open on what's new, so it reads in order and ends at the composer. With
+  // nothing new, open at the end as before.
   useEffect(() => {
-    if (lines.length === 0 || hasScrolled.current) return
+    if (lines.length === 0 || !detail || hasScrolled.current) return
     hasScrolled.current = true
-    endRef.current?.scrollIntoView()
-  }, [lines])
+    const newest = lines[lines.length - 1]
+    const from =
+      readPosition > 0 && newest.position > readPosition && newest.author_id !== userId
+        ? readPosition + 1
+        : null
+    setNewFrom(from)
+    requestAnimationFrame(() => {
+      const marker = from ? document.getElementById('new-since') : null
+      if (marker) marker.scrollIntoView({ block: 'start' })
+      else endRef.current?.scrollIntoView()
+    })
+  }, [lines, detail, readPosition, userId])
 
   const visibleLines = useMemo(() => {
     const needle = search.trim().toLowerCase()
@@ -188,7 +204,6 @@ export default function StoryPage() {
   const waitingOn = can_write ? null : upNext ? upNext.display_name : null
   const isOwner = members.find((m) => m.user_id === userId)?.role === 'owner'
   const lastLine = lines[lines.length - 1] ?? null
-  const unread = lastLine && readPosition > 0 && lastLine.position > readPosition ? readPosition + 1 : null
 
   return (
     <div className="flex min-h-dvh flex-col">
@@ -204,12 +219,6 @@ export default function StoryPage() {
         onOpenSheet={setSheet}
       />
 
-      {unread && !search && (
-        <button className="resume" onClick={() => jumpToLine(unread)}>
-          Pick up where you left off — line {unread}
-        </button>
-      )}
-
       {error && <p className="mx-auto max-w-reading px-4 pt-3 text-sm text-red-700 dark:text-red-400">{error}</p>}
 
       <main className="mx-auto w-full max-w-reading flex-1 px-4 pb-4">
@@ -219,6 +228,7 @@ export default function StoryPage() {
           mode={mode}
           currentUserId={userId}
           landedOn={landedOn}
+          newFrom={search ? null : newFrom}
           highlight={search}
           indexNames={indexNames}
           onMark={mark}
