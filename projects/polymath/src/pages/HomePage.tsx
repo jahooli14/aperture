@@ -31,7 +31,7 @@ import { AttentionSlot } from '../components/session/AttentionSlot'
 import { DeferMount } from '../components/DeferMount'
 import { UnauthHome } from '../components/onboarding/UnauthHome'
 import { ease, stagger } from '../lib/motion'
-import { AlertCircle, Search, Moon, Settings } from 'lucide-react'
+import { AlertCircle, Search, BookOpen, Moon, Settings } from 'lucide-react'
 
 export function HomePage() {
   const { isAuthenticated } = useAuthContext()
@@ -186,6 +186,14 @@ export function HomePage() {
                     <Moon className="h-5 w-5" />
                   </button>
                 )}
+                <button
+                  onClick={() => navigate('/reading')}
+                  aria-label="Reading"
+                  className="masthead-action press-spring"
+                  title="Reading"
+                >
+                  <BookOpen className="h-5 w-5" />
+                </button>
                 <button
                   onClick={() => navigate('/search')}
                   aria-label="Search everything"

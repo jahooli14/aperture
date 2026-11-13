@@ -314,7 +314,8 @@ export function ProjectDetailPage() {
             <button
               onClick={handleToggleLive}
               title={project.is_priority ? 'Take this off live' : 'Make this your live project'}
-              className="quiet-pill transition-colors"
+              className="quiet-pill min-h-[36px] transition-colors"
+              aria-pressed={!!project.is_priority}
               data-on={project.is_priority ? 'true' : 'false'}
             >
               <Star className={`h-3 w-3 ${project.is_priority ? 'fill-current' : ''}`} />
