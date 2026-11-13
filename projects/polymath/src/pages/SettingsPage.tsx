@@ -546,7 +546,7 @@ export function SettingsPage() {
                 <div className="flex items-center justify-between px-4 py-3.5">
                   <div>
                     <p className="text-[15px]" style={{ color: "var(--brand-text-secondary)" }}>Daily voice note</p>
-                    <p className="text-[12px]" style={{ color: "var(--brand-text-muted)" }}>A push reminder to record a thought — skipped once you've captured one that day</p>
+                    <p className="text-[12px]" style={{ color: "var(--brand-text-muted)" }}>One nudge a day to say something. Recent notes weigh most in your daily take. Skipped once you've captured one.</p>
                   </div>
                   <button
                     onClick={() => toggleVoiceNote(!voiceNoteEnabled)}

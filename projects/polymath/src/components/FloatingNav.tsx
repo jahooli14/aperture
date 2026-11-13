@@ -223,8 +223,8 @@ export function FloatingNav() {
 
         // Success! Show confirmation
         addToast({
-          title: projectId ? 'Thought saved & linked!' : 'Thought saved!',
-          description: projectId ? 'Auto-linked to this project.' : 'Your voice note has been captured.',
+          title: projectId ? 'Kept on this project.' : 'Kept.',
+          description: 'Tomorrow’s take can use it.',
           variant: 'success',
         })
       } else {

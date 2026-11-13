@@ -49,6 +49,9 @@ export interface CorpusRow {
    *  the project a fragment sits under. A question may state these facts,
    *  so the invented-specifics check has to count them as evidence. */
   meta: string
+  /** When the thought was had (ISO), for notes and fragments only. Lets the
+   *  card say "built from what you said yesterday". */
+  at?: string
 }
 
 export interface Corpus {
@@ -162,11 +165,12 @@ export async function loadCorpus(
     })),
     ...memories.map((m: any, i: number): CorpusRow => ({
       kind: 'memory', id: m.id, captureId: m.id, ref: `N${i + 1}`, projectId: null,
-      title: m.title ?? '', text: m.body ?? '', meta: dateOf(m),
+      title: m.title ?? '', text: m.body ?? '', meta: dateOf(m), at: m.created_at || undefined,
     })),
     ...fragments.map((f: any, i: number): CorpusRow => ({
       kind: 'fragment', id: f.id, captureId: f.memory_id ?? f.id, ref: `F${i + 1}`, projectId: f.project_id ?? null,
       title: f.projects?.title ?? '', text: f.text,
+      at: (f.memory_id && memoryDateById.get(f.memory_id)) || f.created_at || undefined,
       meta: `${dateOf(f)}${f.projects?.title ? `, filed under "${f.projects.title}"` : ', not filed under any project'}`,
     })),
     ...listItems.map((l: any, i: number): CorpusRow => ({

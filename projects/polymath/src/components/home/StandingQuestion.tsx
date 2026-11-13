@@ -16,6 +16,7 @@
 
 import { useEffect, useState, type ReactNode } from 'react'
 import { VoiceInput } from '../VoiceInput'
+import { freshNoteLabel } from '../../lib/freshNote'
 import { haptic } from '../../utils/haptics'
 import { api } from '../../lib/apiClient'
 import { isTake, splitSentences } from '../../lib/takeText'
@@ -29,7 +30,7 @@ export interface StandingQuestionSpark {
   project_id: string | null
   projects?: { title: string } | null
   /** What the question was built from -- what was put next to what. */
-  sources?: { kind: string; title: string }[] | null
+  sources?: { kind: string; title: string; at?: string }[] | null
   /** What they'd do differently if it's right (sparks.stake). */
   stake?: string | null
   /** How strongly the judge backed it, 0-100. Shown quietly. */
@@ -332,6 +333,7 @@ export function StandingQuestion() {
 
   const projectTitle = spark.projects?.title ?? null
   const hasSources = (spark.sources?.length ?? 0) >= 2
+  const freshNote = freshNoteLabel(spark.sources)
 
   return reveal(
     <div>
@@ -365,6 +367,10 @@ export function StandingQuestion() {
           </span>
         ))}
       </p>
+
+      {freshNote && (
+        <p className="text-[13px] mt-1" style={{ color: 'var(--brand-text-secondary)' }}>{freshNote}</p>
+      )}
 
       {hasSources && showSources && (
         <p className="text-[13px] mt-1 leading-snug line-clamp-1" style={{ color: 'var(--brand-text-secondary)' }}>

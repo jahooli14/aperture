@@ -117,7 +117,7 @@ export interface BakedSpark {
   subject_kind?: string
   /** Every row the question was built on, by plain title -- what was put
    *  next to what. Shown under the question. */
-  sources?: { kind: string; title: string }[]
+  sources?: { kind: string; title: string; at?: string }[]
   /** The judge's backing, 0-100 (mean of its four scores). Absent when unjudged. */
   score?: number
   /** Written now, shown later. */
@@ -482,14 +482,14 @@ function projectFor(c: Grounded, corpus: Corpus): string | null {
 }
 
 /** Titles of the distinct captures behind a question, for display. */
-export function sourcesOf(rows: CorpusRow[]): { kind: string; title: string }[] {
+export function sourcesOf(rows: CorpusRow[]): { kind: string; title: string; at?: string }[] {
   const seen = new Set<string>()
-  const out: { kind: string; title: string }[] = []
+  const out: { kind: string; title: string; at?: string }[] = []
   for (const r of rows) {
     const title = (r.title || r.text).replace(/\s+/g, ' ').trim().slice(0, 60)
     if (!title || seen.has(r.captureId)) continue
     seen.add(r.captureId)
-    out.push({ kind: r.kind, title })
+    out.push(r.at ? { kind: r.kind, title, at: r.at } : { kind: r.kind, title })
   }
   return out.slice(0, 4)
 }
