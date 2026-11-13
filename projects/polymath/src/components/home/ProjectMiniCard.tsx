@@ -150,14 +150,19 @@ export function ProjectMiniCard({
             // Puts this project on the home card, where Update lives.
             onClick={(e) => { e.stopPropagation(); haptic.medium(); showOnHome(project.id); window.scrollTo({ top: 0, behavior: 'smooth' }) }}
             aria-label={`Put ${project.title} on the home card`}
-            className="h-7 w-7 rounded-full flex items-center justify-center transition-transform hover:scale-110 active:scale-95 disabled:opacity-60"
-            style={{
-              background: 'rgba(var(--brand-primary-rgb), 0.10)',
-              border: '1px solid rgba(var(--brand-primary-rgb), 0.32)',
-              color: 'rgb(var(--brand-primary-rgb))',
-            }}
+            // 44px to hit, 28px to look at.
+            className="h-11 w-11 -m-2 flex items-center justify-center transition-transform active:scale-95 disabled:opacity-60"
+            style={{ color: 'rgb(var(--brand-primary-rgb))' }}
           >
-            <ArrowUp className="h-3.5 w-3.5" />
+            <span
+              className="h-7 w-7 rounded-full flex items-center justify-center"
+              style={{
+                background: 'rgba(var(--brand-primary-rgb), 0.10)',
+                border: '1px solid rgba(var(--brand-primary-rgb), 0.32)',
+              }}
+            >
+              <ArrowUp className="h-3.5 w-3.5" />
+            </span>
           </button>}
         </div>
       </div>

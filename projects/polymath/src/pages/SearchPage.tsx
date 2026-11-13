@@ -519,7 +519,17 @@ export function SearchPage() {
 
           {!loading && !results && !query && recent.length > 0 && (
             <div className="pt-6">
-              <p className="eyebrow mb-2">Recent</p>
+              <div className="flex items-center justify-between mb-2">
+                <p className="eyebrow">Recent</p>
+                <button
+                  type="button"
+                  className="text-[13px] min-h-[40px] px-2"
+                  style={{ color: 'var(--brand-text-muted)' }}
+                  onClick={() => { setRecent([]); try { localStorage.removeItem('recent-searches') } catch { /* private window */ } }}
+                >
+                  Clear
+                </button>
+              </div>
               <div className="flex flex-wrap gap-2">
                 {recent.map(r => (
                   <button
