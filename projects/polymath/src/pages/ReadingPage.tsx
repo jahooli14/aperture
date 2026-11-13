@@ -3,6 +3,7 @@
  * Displays saved articles with filtering and save functionality
  */
 
+import { useConfirmDialog } from '../components/ui/confirm-dialog'
 import React, { useEffect, useState, useCallback, useRef, lazy, Suspense } from 'react'
 import { lazyRetry } from '../lib/lazyRetry'
 import { useNavigate, useLocation } from 'react-router-dom'
@@ -64,6 +65,7 @@ export function ReadingPage() {
   const location = useLocation()
   const { articles, loading, fetchArticles, fetchShelf, currentFilter, setFilter, saveArticle, updateArticle, updateArticleStatus, deleteArticle } = useReadingStore()
   const articleListPath = useArticleListPath()
+  const { confirm, dialog: confirmDialog } = useConfirmDialog()
 
   // Sync processing articles with store deletions
   useEffect(() => {
@@ -756,9 +758,15 @@ export function ReadingPage() {
   }
 
   const handleBulkDelete = async () => {
-    if (!confirm(`Delete ${bulkSelection.selectedCount} article${bulkSelection.selectedCount > 1 ? 's' : ''}?`)) {
-      return
-    }
+    const count = bulkSelection.selectedCount
+    const ok = await confirm({
+      title: `Delete ${count} article${count > 1 ? 's' : ''}?`,
+      description: 'They will be removed from your reading for good.',
+      confirmText: 'Delete',
+      cancelText: 'Cancel',
+      variant: 'destructive',
+    })
+    if (!ok) return
 
     setBulkActionLoading(true)
     try {
@@ -785,6 +793,7 @@ export function ReadingPage() {
 
   return (
     <>
+      {confirmDialog}
       <SubtleBackground />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 pb-4 flex flex-col gap-4">
           <header className="page-masthead">
