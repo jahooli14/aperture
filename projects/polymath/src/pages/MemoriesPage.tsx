@@ -18,7 +18,7 @@ import { Button } from '../components/ui/button'
 import { useToast } from '../components/ui/toast'
 import { PremiumTabs } from '../components/ui/premium-tabs'
 import { SkeletonCard } from '../components/ui/skeleton-card'
-import { Brain, Zap, Search, X, Wind, Moon } from 'lucide-react'
+import { Brain, Mic, Zap, Search, X, Wind, Moon } from 'lucide-react'
 import { SubtleBackground } from '../components/SubtleBackground'
 import type { Memory } from '../types'
 import { MemoryDetailModal } from '../components/memories/MemoryDetailModal' // Import MemoryDetailModal
@@ -597,7 +597,7 @@ function MemoriesPageInner() {
 
                       <h3 className="page-hero-sm mb-3">Every great idea starts here.</h3>
                       <p className="meta-serif mb-8">
-                        Tap the mic below, say something interesting — and watch it become part of your universe.
+                        Tap one to start talking, or say anything that's on your mind.
                       </p>
 
                       {/* Three gentle prompts */}
@@ -607,11 +607,13 @@ function MemoriesPageInner() {
                           'An idea you keep coming back to',
                           'A question you can\'t stop asking',
                         ].map((prompt) => (
-                          <div key={prompt} className="flex items-start gap-3 px-4 py-3 rounded-xl"
+                          <button key={prompt} type="button"
+                            onClick={() => window.dispatchEvent(new Event('openVoiceCapture'))}
+                            className="w-full flex items-center gap-3 px-4 py-3 min-h-[48px] rounded-xl text-left press-spring"
                             style={{ background: 'rgba(var(--brand-primary-rgb),0.05)', border: '1px solid rgba(var(--brand-primary-rgb),0.1)' }}>
-                            <span className="text-brand-primary opacity-75 mt-0.5 text-xs">-</span>
-                            <p className="text-sm text-[var(--brand-text-muted)] italic">{prompt}</p>
-                          </div>
+                            <Mic className="h-4 w-4 flex-shrink-0 text-brand-primary" />
+                            <span className="text-sm text-[var(--brand-text-secondary)] italic">{prompt}</span>
+                          </button>
                         ))}
                       </div>
 

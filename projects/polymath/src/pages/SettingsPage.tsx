@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
-import { Check, Bug, ToggleRight, ToggleLeft, RefreshCw, Search, Type, RotateCcw, LogOut } from 'lucide-react'
+import { ChevronDown, Check, Bug, ToggleRight, ToggleLeft, RefreshCw, Search, Type, RotateCcw, LogOut } from 'lucide-react'
 import { api } from '../lib/apiClient'
 import { supabase } from '../lib/supabase'
 import { useThemeStore, DEFAULT_ACCENT_COLOR, DEFAULT_BG_ACCENT_COLOR } from '../stores/useThemeStore'
@@ -157,6 +157,7 @@ function CatchUpRow() {
 
 export function SettingsPage() {
   const navigate = useNavigate()
+  const [bonnetOpen, setBonnetOpen] = useState(false)
   const onboardingCompletedAt = useJourneyStore(s => s.onboardingCompletedAt)
   const {
     accentColor, bgAccentColor, intensity, fontSize, showBugTracker,
@@ -686,9 +687,22 @@ export function SettingsPage() {
         {/* System & Maintenance */}
         <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mb-10">
           <div>
-            <h2 className="section-heading">under the <span className="accent">bonnet</span></h2>
+            {/* Admin and repair tools: out of the way until wanted. */}
+            <button
+              type="button"
+              onClick={() => setBonnetOpen(o => !o)}
+              aria-expanded={bonnetOpen}
+              className="w-full flex items-center justify-between text-left min-h-[44px]"
+            >
+              <h2 className="section-heading" style={{ margin: 0 }}>under the <span className="accent">bonnet</span></h2>
+              <ChevronDown
+                className="h-5 w-5 transition-transform"
+                style={{ color: 'var(--brand-text-muted)', transform: bonnetOpen ? 'rotate(180deg)' : 'none' }}
+              />
+            </button>
 
-            <div className="space-y-4">
+            {bonnetOpen && (
+            <div className="space-y-4 mt-4">
               <CatchUpRow />
 
               {/* Setup status — tells the user plainly whether onboarding
@@ -912,6 +926,7 @@ export function SettingsPage() {
                 </div>
               )}
             </div>
+            )}
           </div>
         </section>
 

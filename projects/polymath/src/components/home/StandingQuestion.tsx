@@ -388,7 +388,7 @@ export function StandingQuestion() {
                 <button
                   className="quiet-pill min-h-[40px] px-4 text-[14px] font-medium transition-opacity hover:opacity-90"
                   style={quietActionStyle}
-                  onClick={() => { setStance(st.id); setAnswering(true) }}
+                  onClick={() => { haptic.light(); setStance(st.id); setAnswering(true) }}
                 >
                   {st.label}
                 </button>
