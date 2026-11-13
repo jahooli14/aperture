@@ -1053,8 +1053,16 @@ export function ReadingPage() {
                   ) : (!feeds || !Array.isArray(feeds) || feeds.length === 0) ? (
                     <EmptyState
                       icon={Rss}
-                      title="No RSS feeds yet"
-                      description="Subscribe to RSS feeds in Settings to see updates here"
+                      title="No feeds yet"
+                      description="Subscribe to a few sources and their headlines show up here."
+                      action={
+                        <button
+                          onClick={() => navigate('/rss')}
+                          className="neon-button inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium"
+                        >
+                          Add your first feed
+                        </button>
+                      }
                     />
                   ) : (!rssItems || !Array.isArray(rssItems) || rssItems.length === 0) ? (
                     <EmptyState

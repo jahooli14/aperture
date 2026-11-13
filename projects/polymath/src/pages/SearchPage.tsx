@@ -442,6 +442,15 @@ export function SearchPage() {
                   icon={Search}
                   title="No matches"
                   description="Try a different word, or tap the mic."
+                  action={
+                    <button
+                      type="button"
+                      className="quiet-pill min-h-[40px] px-4"
+                      onClick={() => { setQuery(''); setResults(null); setSearchParams({}) }}
+                    >
+                      Clear search
+                    </button>
+                  }
                 />
               ) : (
                 <div className="space-y-3">
