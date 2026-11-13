@@ -630,6 +630,13 @@ function MemoriesPageInner() {
                       <p className="text-sm text-[var(--brand-text-muted)] leading-relaxed">
                         Nothing to revisit right now. Keep capturing thoughts and they'll resurface when the time is right.
                       </p>
+                      <button
+                        type="button"
+                        onClick={() => window.dispatchEvent(new Event('openVoiceCapture'))}
+                        className="quiet-pill min-h-[44px] px-5 mx-auto"
+                      >
+                        Say something now
+                      </button>
                     </div>
                   )}
                 </div>

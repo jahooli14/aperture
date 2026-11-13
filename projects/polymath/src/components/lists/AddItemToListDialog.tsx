@@ -134,7 +134,7 @@ export function AddItemToListDialog({ isOpen, onOpenChange }: AddItemToListDialo
                                     ))
                                 ) : (
                                     <div className="text-center py-8">
-                                        <p className="text-sm" style={{ color: "var(--brand-text-secondary)" }}>No lists found</p>
+                                        <p className="text-sm" style={{ color: "var(--brand-text-secondary)" }}>You don't have a list yet. Make one on the Lists page first.</p>
                                     </div>
                                 )}
                             </div>
