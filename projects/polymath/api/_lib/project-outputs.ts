@@ -25,9 +25,10 @@ export interface OutputInput {
 }
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-// Object names the upload route mints: `<timestamp>_<random>.<ext>`. No
-// slashes, so a row can't reach outside the bucket's top level.
-const OBJECT_NAME = /^[\w.-]{1,120}$/
+// Object names the upload route mints: `<user id>/<timestamp>_<random>.<ext>`
+// (older uploads have no folder). One folder at most, so a row can't reach
+// outside the bucket.
+const OBJECT_NAME = /^(?:([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\/)?[\w.-]{1,120}$/i
 
 export function outputKind(value: unknown): OutputKind | null {
   return value === 'image' || value === 'audio' ? value : null
@@ -36,24 +37,29 @@ export function outputKind(value: unknown): OutputKind | null {
 /**
  * The bucket object name inside a public URL for it, or null when the URL
  * isn't one of ours. `publicPrefix` is the bucket's public URL with a
- * trailing slash.
+ * trailing slash. When `userId` is given, a file in someone else's folder
+ * is refused.
  */
-export function pathFromPublicUrl(url: unknown, publicPrefix: string): string | null {
+export function pathFromPublicUrl(url: unknown, publicPrefix: string, userId?: string): string | null {
   if (typeof url !== 'string' || !url.startsWith(publicPrefix)) return null
   const rest = url.slice(publicPrefix.length)
-  return OBJECT_NAME.test(rest) ? rest : null
+  const m = OBJECT_NAME.exec(rest)
+  if (!m) return null
+  if (userId && m[1] && m[1].toLowerCase() !== userId.toLowerCase()) return null
+  return rest
 }
 
 /** Reads a POST body into a row, or says in plain words what was wrong. */
 export function parseOutputInput(
   body: unknown,
   publicPrefix: string,
+  userId?: string,
 ): { ok: true; value: OutputInput } | { ok: false; error: string } {
   const b = (body && typeof body === 'object' ? body : {}) as Record<string, unknown>
   if (typeof b.project_id !== 'string' || !UUID.test(b.project_id)) {
     return { ok: false, error: 'project_id required' }
   }
-  const path = pathFromPublicUrl(b.url, publicPrefix)
+  const path = pathFromPublicUrl(b.url, publicPrefix, userId)
   if (!path) return { ok: false, error: 'url must be an uploaded file' }
   const kind = outputKind(b.kind)
   if (!kind) return { ok: false, error: 'kind must be image or audio' }
@@ -103,7 +109,7 @@ export async function handleProjectOutputs(
   }
 
   if (req.method === 'POST') {
-    const parsed = parseOutputInput(req.body, publicPrefix)
+    const parsed = parseOutputInput(req.body, publicPrefix, userId)
     if (!parsed.ok) return res.status(400).json({ error: parsed.error })
 
     // The project has to be theirs. RLS doesn't apply to the service key.
