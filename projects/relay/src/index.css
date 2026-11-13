@@ -182,6 +182,40 @@
     letter-spacing: 0.02em;
   }
 
+  /* Each paragraph of a turn, including each separate bit of speech. */
+  .turn-body p + p {
+    margin-top: 0.55rem;
+  }
+
+  /* In Read view speech hangs its opening quote into the margin, so the
+     words line up. The thread's turns are too narrow for it. */
+  .reading > p.speech {
+    text-indent: -0.42em;
+  }
+  .reading > p + p.speech {
+    text-indent: 0.88rem;
+  }
+
+  /* The newest line is where the story is now: lit a little brighter, with a
+     soft glow in its writer's colour. */
+  .line-row.latest .turn {
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--who) 28%, transparent),
+      0 6px 24px -10px color-mix(in srgb, var(--who) 55%, transparent);
+    background: color-mix(in srgb, var(--who) 13%, transparent) !important;
+  }
+  .line-row.latest .prose-story {
+    color: rgb(var(--ink));
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .line-row.latest .turn {
+      animation: arrive 0.5s ease-out;
+    }
+  }
+  @keyframes arrive {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: none; }
+  }
+
   .line-who {
     font-size: 0.68rem;
     text-transform: uppercase;
@@ -213,6 +247,30 @@
     flex: 1;
     height: 1px;
     background: rgb(var(--rule));
+  }
+
+  /* Where this visit's new lines begin. The thread opens here. */
+  .new-marker {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    padding: 1.1rem 0 0.55rem;
+    scroll-margin-top: 6.5rem;
+  }
+
+  .new-rule {
+    flex: 1;
+    height: 1px;
+    background: color-mix(in srgb, rgb(var(--accent)) 55%, transparent);
+  }
+
+  .new-label {
+    font-size: 0.66rem;
+    font-weight: 600;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: rgb(var(--accent));
+    white-space: nowrap;
   }
 
   .gap-label {
@@ -379,17 +437,6 @@
     color: rgb(var(--muted));
   }
 
-  /* Offered only when there is genuinely something new since you last read. */
-  .resume {
-    display: block;
-    width: 100%;
-    background: rgb(var(--sunk));
-    border-bottom: 1px solid rgb(var(--rule));
-    color: rgb(var(--accent));
-    font-size: 0.78rem;
-    font-weight: 600;
-    padding: 0.55rem 1rem;
-  }
 
   .sheet {
     background: rgb(var(--surface));
@@ -399,19 +446,7 @@
     box-shadow: 0 -8px 40px -12px rgb(0 0 0 / 0.28);
   }
   @media (min-width: 640px) {
-    /* Offered only when there is genuinely something new since you last read. */
-  .resume {
-    display: block;
-    width: 100%;
-    background: rgb(var(--sunk));
-    border-bottom: 1px solid rgb(var(--rule));
-    color: rgb(var(--accent));
-    font-size: 0.78rem;
-    font-weight: 600;
-    padding: 0.55rem 1rem;
-  }
-
-  .sheet { border-radius: 18px; }
+    .sheet { border-radius: 18px; }
   }
 
   .pill {

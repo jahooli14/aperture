@@ -1,3 +1,4 @@
+import { typesetInline } from '../lib/typeset'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { clearDraft, readDraft, saveDraft } from '../lib/outbox'
 
@@ -85,7 +86,7 @@ export function Composer({
           className="prose-story mb-2 line-clamp-1 border-l-2 pl-3 text-[0.9rem] italic"
           style={{ borderColor: 'rgb(var(--rule))', color: 'rgb(var(--faint))' }}
         >
-          {previousLine.body}
+          {typesetInline(previousLine.body)}
         </p>
       )}
 
