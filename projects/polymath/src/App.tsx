@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { useEffect, lazy, Suspense } from 'react'
+import { MotionConfig } from 'framer-motion'
 import { ToastProvider } from './components/ui/toast'
 import { OfflineIndicator } from './components/OfflineIndicator'
 import { ErrorBoundary } from './components/ErrorBoundary'
@@ -307,6 +308,8 @@ export default function App() {
   }, [])
 
   return (
+    // Motion library animations follow the phone's reduced-motion setting too.
+    <MotionConfig reducedMotion="user">
     <AuthProvider>
       <AutoSuggestionProvider>
         <ToastProvider>
@@ -375,6 +378,7 @@ export default function App() {
         </ToastProvider>
       </AutoSuggestionProvider>
     </AuthProvider>
+    </MotionConfig>
   )
 }
 // Force redeploy Wed 29 Oct 2025 13:24:27 GMT
