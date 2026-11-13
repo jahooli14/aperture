@@ -380,8 +380,25 @@ export function SettingsPage() {
           </header>
         </div>
 
+        {/* Quick jump: the page is long, so each part is one tap away. */}
+        <nav aria-label="Settings sections" className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mb-6 flex gap-2 overflow-x-auto no-scrollbar">
+          {[['set-now','Now'],['set-takes','Takes'],['set-nudges','Nudges'],['set-looks','Looks'],['set-ideas','Ideas'],['set-bonnet','Admin']].map(([id,label]) => (
+            <button
+              key={id}
+              type="button"
+              className="quiet-pill min-h-[36px] px-4 flex-shrink-0"
+              onClick={() => {
+                if (id === 'set-bonnet') setBonnetOpen(true)
+                document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+              }}
+            >
+              {label}
+            </button>
+          ))}
+        </nav>
+
         {/* The season: what matters for a stretch of time. */}
-        <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mb-10">
+        <section id="set-now" className="scroll-mt-4 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mb-10">
           <div>
             <h2 className="section-heading">what <span className="accent">matters now</span></h2>
             <SeasonRow />
@@ -389,7 +406,7 @@ export function SettingsPage() {
         </section>
 
         {/* What you want from the to-mull takes, in your own words. */}
-        <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mb-10">
+        <section id="set-takes" className="scroll-mt-4 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mb-10">
           <div>
             <h2 className="section-heading">what you want from <span className="accent">takes</span></h2>
             <TakeBriefRow />
@@ -399,7 +416,7 @@ export function SettingsPage() {
         </section>
 
         {/* Notifications Section */}
-        <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mb-10">
+        <section id="set-nudges" className="scroll-mt-4 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mb-10">
           <div>
             <h2 className="section-heading">when it <span className="accent">nudges you</span></h2>
 
@@ -511,7 +528,7 @@ export function SettingsPage() {
         </section>
 
         {/* Appearance Section */}
-        <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mb-10">
+        <section id="set-looks" className="scroll-mt-4 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mb-10">
           <div>
             <h2 className="section-heading">how it <span className="accent">looks</span></h2>
 
@@ -617,7 +634,7 @@ export function SettingsPage() {
             home "suggest a project" button produces. Plain English, free
             text, saved per-user. NULL in the DB means "use the default";
             saving the unchanged default behaves the same as a reset. */}
-        <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mb-10">
+        <section id="set-ideas" className="scroll-mt-4 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mb-10">
           <div>
             <h2 className="section-heading">the idea <span className="accent">brief</span></h2>
 
@@ -685,7 +702,7 @@ export function SettingsPage() {
         </section>
 
         {/* System & Maintenance */}
-        <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mb-10">
+        <section id="set-bonnet" className="scroll-mt-4 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mb-10">
           <div>
             {/* Admin and repair tools: out of the way until wanted. */}
             <button
