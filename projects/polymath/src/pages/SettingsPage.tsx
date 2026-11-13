@@ -398,6 +398,7 @@ export function SettingsPage() {
         </nav>
 
         {/* The season: what matters for a stretch of time. */}
+        <p className="eyebrow max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mb-3 mt-2">Your day</p>
         <section id="set-now" className="scroll-mt-4 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mb-10">
           <div>
             <h2 className="section-heading">what <span className="accent">matters now</span></h2>
@@ -528,6 +529,7 @@ export function SettingsPage() {
         </section>
 
         {/* Appearance Section */}
+        <p className="eyebrow max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mb-3 mt-2">Look and feel</p>
         <section id="set-looks" className="scroll-mt-4 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mb-10">
           <div>
             <h2 className="section-heading">how it <span className="accent">looks</span></h2>
@@ -702,6 +704,7 @@ export function SettingsPage() {
         </section>
 
         {/* System & Maintenance */}
+        <p className="eyebrow max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mb-3 mt-2">Admin</p>
         <section id="set-bonnet" className="scroll-mt-4 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mb-10">
           <div>
             {/* Admin and repair tools: out of the way until wanted. */}
@@ -947,6 +950,7 @@ export function SettingsPage() {
           </div>
         </section>
 
+        <p className="eyebrow max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mb-3 mt-2">Account</p>
         <section className="mt-8">
           <button
             onClick={handleSignOut}
