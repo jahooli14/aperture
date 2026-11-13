@@ -3,7 +3,7 @@
  *
  * Two jobs, and nothing else competing with them:
  *   - a project you're working on: the one next move, Go, and a box to tell
- *     it what changed (NextMovePanel);
+ *     it what changed (ProjectBrief);
  *   - a project you've put down: enough to remember what it is and where you
  *     stopped — what it's about, when you last touched it, your own last
  *     note, a move that gets you back in — so you can pick it up in a minute.
@@ -19,11 +19,10 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { Loader2, MoreVertical, Star, Sprout, ArrowLeft } from 'lucide-react'
 import { useProjectStore } from '../stores/useProjectStore'
 import { ProjectNotes } from '../components/projects/ProjectNotes'
-import { NextMovePanel } from '../components/projects/NextMovePanel'
+import { ProjectBrief } from '../components/projects/ProjectBrief'
 import { ProjectThemes } from '../components/projects/ProjectThemes'
 import { UpdateSheet } from '../components/projects/UpdateSheet'
-import { ProjectUpdates } from '../components/projects/ProjectUpdates'
-import { UpToSpeed } from '../components/projects/UpToSpeed'
+import { ProjectUpdates, useProjectUpdates } from '../components/projects/ProjectUpdates'
 import { isActivelyWorked, projectKind, readThemes } from '../lib/projectThemes'
 import { readStoredMove } from '../stores/useMoveStore'
 import { Button } from '../components/ui/button'
@@ -59,6 +58,7 @@ export function ProjectDetailPage() {
   const [updateOpen, setUpdateOpen] = useState(false)
 
   const project = useProjectStore(state => state.allProjects.find(p => p.id === id))
+  const updates = useProjectUpdates(project)
 
   const [sparkedByMemories, setSparkedByMemories] = useState<Memory[]>([])
 
@@ -227,12 +227,10 @@ export function ProjectDetailPage() {
     && readThemes(project.metadata).length > 0 && isActivelyWorked(project)
     && projectKind(project, !!readStoredMove(project.metadata)) === 'ongoing'
 
-  // A one-off leads with its next move, threads under it; an ongoing one
-  // leads with its threads and keeps the move as the way back in.
+  // A one-off leads with its next move; an ongoing one leads with its
+  // threads. A blocked small finish gets thinking, never a move.
   const oneOff = projectKind(project, !!readStoredMove(project.metadata)) === 'one-off'
-  const movePanel = !steering && !blockedReason(project)
-    ? <NextMovePanel project={project} onUpdate={() => setUpdateOpen(true)} />
-    : null
+  const hideMove = steering || !!blockedReason(project)
 
   return (
     <div className="min-h-screen page-bottom relative" style={{ backgroundColor: 'var(--brand-bg)' }}>
@@ -391,23 +389,16 @@ export function ProjectDetailPage() {
       <div className="max-w-2xl mx-auto px-5 sm:px-6 space-y-8">
         {updateOpen && project && <UpdateSheet project={project} onClose={() => setUpdateOpen(false)} />}
 
-            {/* Back after a while: where things stand, from your own notes.
-                The move panel under it is the way back in. */}
-            <UpToSpeed project={project} />
+            {/* One card answers where you are, what you've said since and
+                what's next, each once (ProjectBrief). Threads are yours to
+                edit under it; the full history is folded under those. */}
+            <ProjectBrief project={project} updates={updates} oneOff={oneOff} hideMove={hideMove} onUpdate={() => setUpdateOpen(true)} />
 
-            {oneOff && movePanel}
-
-            {/* Threads — a few things to hold onto, true for weeks. Always
-                here, so there is somewhere to add them. */}
             {project.status !== 'completed' && project.status !== 'graveyard' && (
-              <ProjectThemes project={project} onGo={() => setUpdateOpen(true)} quiet={oneOff} />
+              <ProjectThemes project={project} quiet />
             )}
 
-            <ProjectUpdates project={project} />
-
-            {/* The way back in, for an ongoing project: the move, unless
-                threads are leading or it can't be started yet. */}
-            {!oneOff && movePanel}
+            <ProjectUpdates items={updates} />
 
             <FinishedItButton project={project} />
 
