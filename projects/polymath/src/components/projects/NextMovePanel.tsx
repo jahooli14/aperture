@@ -75,7 +75,7 @@ export function NextMovePanel({ project, onUpdate }: { project: Project; onUpdat
       </button>
       {move && (
         <>
-          <button onClick={() => setTweaking(t => !t)} className="w-full text-[13px] py-1" style={{ color: 'var(--brand-text-muted)' }}>
+          <button onClick={() => setTweaking(t => !t)} className="w-full text-[13px] min-h-[44px] py-1" style={{ color: 'var(--brand-text-muted)' }}>
             {tweaking ? 'Keep this one' : 'Not this — change it'}
           </button>
           {tweaking && <MoveTweak projectId={project.id} onClose={() => setTweaking(false)} />}

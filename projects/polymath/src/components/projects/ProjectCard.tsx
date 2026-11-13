@@ -326,7 +326,7 @@ export function ProjectCard({ project, prominent = false }: { project: Project, 
                 <div className="px-5 pt-5 pb-4 flex items-start justify-between gap-3" style={{ borderBottom: `1px solid rgba(${theme.rgb}, 0.15)` }}>
                   <div>
                     {((project.metadata?.tags as string[] | undefined) ?? []).slice(0, 3).length > 0 && (
-                      <span className="text-[11px] font-semibold uppercase tracking-[0.14em] opacity-50" style={{ color: theme.text }}>
+                      <span className="text-[11px] font-semibold uppercase tracking-[0.14em] opacity-75" style={{ color: theme.text }}>
                         {((project.metadata?.tags as string[]).slice(0, 3)).join(' · ')}
                       </span>
                     )}

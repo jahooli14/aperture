@@ -16,6 +16,7 @@
 
 import { useEffect, useState, type ReactNode } from 'react'
 import { VoiceInput } from '../VoiceInput'
+import { freshNoteLabel } from '../../lib/freshNote'
 import { haptic } from '../../utils/haptics'
 import { api } from '../../lib/apiClient'
 import { isTake, splitSentences } from '../../lib/takeText'
@@ -29,7 +30,7 @@ export interface StandingQuestionSpark {
   project_id: string | null
   projects?: { title: string } | null
   /** What the question was built from -- what was put next to what. */
-  sources?: { kind: string; title: string }[] | null
+  sources?: { kind: string; title: string; at?: string }[] | null
   /** What they'd do differently if it's right (sparks.stake). */
   stake?: string | null
   /** How strongly the judge backed it, 0-100. Shown quietly. */
@@ -332,6 +333,7 @@ export function StandingQuestion() {
 
   const projectTitle = spark.projects?.title ?? null
   const hasSources = (spark.sources?.length ?? 0) >= 2
+  const freshNote = freshNoteLabel(spark.sources)
 
   return reveal(
     <div>
@@ -366,6 +368,10 @@ export function StandingQuestion() {
         ))}
       </p>
 
+      {freshNote && (
+        <p className="text-[13px] mt-1" style={{ color: 'var(--brand-text-secondary)' }}>{freshNote}</p>
+      )}
+
       {hasSources && showSources && (
         <p className="text-[13px] mt-1 leading-snug line-clamp-1" style={{ color: 'var(--brand-text-secondary)' }}>
           <span className="text-[11px] uppercase tracking-[0.14em] font-medium mr-1.5" style={{ color: 'var(--brand-text-muted)' }}>
@@ -380,16 +386,15 @@ export function StandingQuestion() {
           state of this whole block is three lines. */}
       {!answering && (
         <div className="mt-1.5 space-y-1.5">
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+        <div className="flex flex-wrap items-center gap-2">
           {isTake(spark.text) ? (
             // A claim gets a reaction first: one tap, then optionally why.
-            STANCES.map((st, i) => (
-              <span key={st.id} className="flex items-center gap-3">
-                {i > 0 && <span style={{ color: 'var(--brand-text-muted)' }}>·</span>}
+            STANCES.map(st => (
+              <span key={st.id} className="flex items-center">
                 <button
-                  className="text-[13px] font-medium transition-opacity hover:opacity-90"
+                  className="quiet-pill min-h-[40px] px-4 text-[14px] font-medium transition-opacity hover:opacity-90"
                   style={quietActionStyle}
-                  onClick={() => { setStance(st.id); setAnswering(true) }}
+                  onClick={() => { haptic.light(); setStance(st.id); setAnswering(true) }}
                 >
                   {st.label}
                 </button>
@@ -397,10 +402,9 @@ export function StandingQuestion() {
             )).concat(
               // Something to add that isn't a yes or no -- open the box
               // without picking a side.
-              <span key="more" className="flex items-center gap-3">
-                <span style={{ color: 'var(--brand-text-muted)' }}>·</span>
+              <span key="more" className="flex items-center">
                 <button
-                  className="text-[13px] font-medium transition-opacity hover:opacity-90"
+                  className="text-[13px] font-medium min-h-[40px] px-2 transition-opacity hover:opacity-90"
                   style={quietActionStyle}
                   onClick={() => { setStance(null); setAnswering(true) }}
                 >
@@ -410,7 +414,7 @@ export function StandingQuestion() {
             )
           ) : (
             <button
-              className="text-[13px] transition-opacity hover:opacity-90"
+              className="text-[13px] min-h-[40px] px-2 transition-opacity hover:opacity-90"
               style={quietActionStyle}
               onClick={() => setAnswering(true)}
             >
@@ -422,7 +426,7 @@ export function StandingQuestion() {
             around a dangling dot. */}
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
           <button
-            className="text-[13px] transition-opacity hover:opacity-90 disabled:opacity-30"
+            className="text-[13px] min-h-[40px] pr-3 transition-opacity hover:opacity-90 disabled:opacity-30"
             style={{ color: 'var(--brand-text-muted)' }}
             disabled={rerolling}
             onClick={() => reroll()}

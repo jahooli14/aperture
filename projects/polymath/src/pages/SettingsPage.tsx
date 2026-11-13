@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
-import { Check, Bug, ToggleRight, ToggleLeft, RefreshCw, Search, Type, RotateCcw, LogOut } from 'lucide-react'
+import { ChevronDown, Check, Bug, ToggleRight, ToggleLeft, RefreshCw, Search, Type, RotateCcw, LogOut } from 'lucide-react'
 import { api } from '../lib/apiClient'
 import { supabase } from '../lib/supabase'
 import { useThemeStore, DEFAULT_ACCENT_COLOR, DEFAULT_BG_ACCENT_COLOR } from '../stores/useThemeStore'
@@ -157,6 +157,7 @@ function CatchUpRow() {
 
 export function SettingsPage() {
   const navigate = useNavigate()
+  const [bonnetOpen, setBonnetOpen] = useState(false)
   const onboardingCompletedAt = useJourneyStore(s => s.onboardingCompletedAt)
   const {
     accentColor, bgAccentColor, intensity, fontSize, showBugTracker,
@@ -379,8 +380,26 @@ export function SettingsPage() {
           </header>
         </div>
 
+        {/* Quick jump: the page is long, so each part is one tap away. */}
+        <nav aria-label="Settings sections" className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mb-6 flex gap-2 overflow-x-auto no-scrollbar">
+          {[['set-now','Now'],['set-takes','Takes'],['set-ideas','Ideas'],['set-nudges','Nudges'],['set-looks','Looks'],['set-bonnet','Admin']].map(([id,label]) => (
+            <button
+              key={id}
+              type="button"
+              className="quiet-pill min-h-[36px] px-4 flex-shrink-0"
+              onClick={() => {
+                if (id === 'set-bonnet') setBonnetOpen(true)
+                document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+              }}
+            >
+              {label}
+            </button>
+          ))}
+        </nav>
+
         {/* The season: what matters for a stretch of time. */}
-        <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mb-10">
+        <p className="eyebrow max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mb-3 mt-2">Your day</p>
+        <section id="set-now" className="scroll-mt-4 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mb-10">
           <div>
             <h2 className="section-heading">what <span className="accent">matters now</span></h2>
             <SeasonRow />
@@ -388,7 +407,7 @@ export function SettingsPage() {
         </section>
 
         {/* What you want from the to-mull takes, in your own words. */}
-        <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mb-10">
+        <section id="set-takes" className="scroll-mt-4 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mb-10">
           <div>
             <h2 className="section-heading">what you want from <span className="accent">takes</span></h2>
             <TakeBriefRow />
@@ -397,8 +416,79 @@ export function SettingsPage() {
           </div>
         </section>
 
+        {/* Suggest-an-idea brief — user-editable prompt that shapes what the
+            home "suggest a project" button produces. Plain English, free
+            text, saved per-user. NULL in the DB means "use the default";
+            saving the unchanged default behaves the same as a reset. */}
+        <section id="set-ideas" className="scroll-mt-4 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mb-10">
+          <div>
+            <h2 className="section-heading">the idea <span className="accent">brief</span></h2>
+
+            <p className="text-sm mb-4" style={{ color: 'var(--brand-text-secondary)' }}>
+              This is what the home "suggest a project" button asks the model. Rewrite it in your own words — what kind of idea you want, what to avoid, how to phrase it. Leave it blank to use the default. Voice notes, projects, and the JSON output stay structural; only this brief is editable.
+            </p>
+
+            <div
+              className="rounded-xl p-1"
+              style={{
+                background: 'var(--glass-surface)',
+                border: briefDirty ? '1px solid rgba(var(--brand-primary-rgb), 0.4)' : '1px solid var(--glass-surface-hover)',
+              }}
+            >
+              <textarea
+                value={draftBrief}
+                onChange={(e) => setDraftBrief(e.target.value)}
+                disabled={!briefLoaded || briefSaving}
+                placeholder={briefLoaded ? '' : 'Loading…'}
+                spellCheck={false}
+                rows={16}
+                className="w-full p-3 rounded-lg text-sm leading-relaxed font-mono resize-y outline-none bg-transparent"
+                style={{
+                  color: 'var(--brand-text-primary)',
+                  minHeight: '320px',
+                }}
+              />
+            </div>
+
+            <div className="flex items-center justify-between gap-3 mt-4 flex-wrap">
+              <div className="text-xs" style={{ color: 'var(--brand-text-secondary)' }}>
+                {briefIsDefault ? 'On the default brief.' : 'Using your custom brief.'}
+                {' '}
+                {draftBrief.length} chars
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleResetBrief}
+                  disabled={!briefLoaded || briefSaving || briefIsDefault}
+                  className="px-4 py-2 rounded-lg text-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                  style={{
+                    background: 'var(--glass-surface)',
+                    color: 'var(--brand-text-secondary)',
+                    border: '1px solid var(--glass-surface-hover)',
+                  }}
+                  title="Throw away your changes and go back to the default brief"
+                >
+                  Reset to default
+                </button>
+                <button
+                  onClick={handleSaveBrief}
+                  disabled={!briefLoaded || briefSaving || !briefDirty}
+                  className="px-4 py-2 rounded-lg text-sm font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                  style={{
+                    background: briefDirty ? 'rgb(var(--brand-primary-rgb))' : 'var(--glass-surface)',
+                    color: briefDirty ? 'white' : 'var(--brand-text-secondary)',
+                  }}
+                >
+                  {briefSaving ? 'Saving…' : 'Save'}
+                </button>
+              </div>
+            </div>
+            <FullPrompt which="ideas" label="the whole prompt, with your brief in it" />
+          </div>
+        </section>
+
         {/* Notifications Section */}
-        <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mb-10">
+        <section id="set-nudges" className="scroll-mt-4 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mb-10">
           <div>
             <h2 className="section-heading">when it <span className="accent">nudges you</span></h2>
 
@@ -456,7 +546,7 @@ export function SettingsPage() {
                 <div className="flex items-center justify-between px-4 py-3.5">
                   <div>
                     <p className="text-[15px]" style={{ color: "var(--brand-text-secondary)" }}>Daily voice note</p>
-                    <p className="text-[12px]" style={{ color: "var(--brand-text-muted)" }}>A push reminder to record a thought — skipped once you've captured one that day</p>
+                    <p className="text-[12px]" style={{ color: "var(--brand-text-muted)" }}>One nudge a day to say something. Recent notes weigh most in your daily take. Skipped once you've captured one.</p>
                   </div>
                   <button
                     onClick={() => toggleVoiceNote(!voiceNoteEnabled)}
@@ -510,7 +600,8 @@ export function SettingsPage() {
         </section>
 
         {/* Appearance Section */}
-        <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mb-10">
+        <p className="eyebrow max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mb-3 mt-2">Look and feel</p>
+        <section id="set-looks" className="scroll-mt-4 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mb-10">
           <div>
             <h2 className="section-heading">how it <span className="accent">looks</span></h2>
 
@@ -612,83 +703,26 @@ export function SettingsPage() {
           </div>
         </section>
 
-        {/* Suggest-an-idea brief — user-editable prompt that shapes what the
-            home "suggest a project" button produces. Plain English, free
-            text, saved per-user. NULL in the DB means "use the default";
-            saving the unchanged default behaves the same as a reset. */}
-        <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mb-10">
-          <div>
-            <h2 className="section-heading">the idea <span className="accent">brief</span></h2>
-
-            <p className="text-sm mb-4" style={{ color: 'var(--brand-text-secondary)' }}>
-              This is what the home "suggest a project" button asks the model. Rewrite it in your own words — what kind of idea you want, what to avoid, how to phrase it. Leave it blank to use the default. Voice notes, projects, and the JSON output stay structural; only this brief is editable.
-            </p>
-
-            <div
-              className="rounded-xl p-1"
-              style={{
-                background: 'var(--glass-surface)',
-                border: briefDirty ? '1px solid rgba(var(--brand-primary-rgb), 0.4)' : '1px solid var(--glass-surface-hover)',
-              }}
-            >
-              <textarea
-                value={draftBrief}
-                onChange={(e) => setDraftBrief(e.target.value)}
-                disabled={!briefLoaded || briefSaving}
-                placeholder={briefLoaded ? '' : 'Loading…'}
-                spellCheck={false}
-                rows={16}
-                className="w-full p-3 rounded-lg text-sm leading-relaxed font-mono resize-y outline-none bg-transparent"
-                style={{
-                  color: 'var(--brand-text-primary)',
-                  minHeight: '320px',
-                }}
-              />
-            </div>
-
-            <div className="flex items-center justify-between gap-3 mt-4 flex-wrap">
-              <div className="text-xs" style={{ color: 'var(--brand-text-secondary)' }}>
-                {briefIsDefault ? 'On the default brief.' : 'Using your custom brief.'}
-                {' '}
-                {draftBrief.length} chars
-              </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={handleResetBrief}
-                  disabled={!briefLoaded || briefSaving || briefIsDefault}
-                  className="px-4 py-2 rounded-lg text-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-                  style={{
-                    background: 'var(--glass-surface)',
-                    color: 'var(--brand-text-secondary)',
-                    border: '1px solid var(--glass-surface-hover)',
-                  }}
-                  title="Throw away your changes and go back to the default brief"
-                >
-                  Reset to default
-                </button>
-                <button
-                  onClick={handleSaveBrief}
-                  disabled={!briefLoaded || briefSaving || !briefDirty}
-                  className="px-4 py-2 rounded-lg text-sm font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-                  style={{
-                    background: briefDirty ? 'rgb(var(--brand-primary-rgb))' : 'var(--glass-surface)',
-                    color: briefDirty ? 'white' : 'var(--brand-text-secondary)',
-                  }}
-                >
-                  {briefSaving ? 'Saving…' : 'Save'}
-                </button>
-              </div>
-            </div>
-            <FullPrompt which="ideas" label="the whole prompt, with your brief in it" />
-          </div>
-        </section>
-
         {/* System & Maintenance */}
-        <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mb-10">
+        <p className="eyebrow max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mb-3 mt-2">Admin</p>
+        <section id="set-bonnet" className="scroll-mt-4 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mb-10">
           <div>
-            <h2 className="section-heading">under the <span className="accent">bonnet</span></h2>
+            {/* Admin and repair tools: out of the way until wanted. */}
+            <button
+              type="button"
+              onClick={() => setBonnetOpen(o => !o)}
+              aria-expanded={bonnetOpen}
+              className="w-full flex items-center justify-between text-left min-h-[44px]"
+            >
+              <h2 className="section-heading" style={{ margin: 0 }}>under the <span className="accent">bonnet</span></h2>
+              <ChevronDown
+                className="h-5 w-5 transition-transform"
+                style={{ color: 'var(--brand-text-muted)', transform: bonnetOpen ? 'rotate(180deg)' : 'none' }}
+              />
+            </button>
 
-            <div className="space-y-4">
+            {bonnetOpen && (
+            <div className="space-y-4 mt-4">
               <CatchUpRow />
 
               {/* Setup status — tells the user plainly whether onboarding
@@ -912,9 +946,11 @@ export function SettingsPage() {
                 </div>
               )}
             </div>
+            )}
           </div>
         </section>
 
+        <p className="eyebrow max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mb-3 mt-2">Account</p>
         <section className="mt-8">
           <button
             onClick={handleSignOut}

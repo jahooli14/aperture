@@ -18,7 +18,7 @@ import { Button } from '../components/ui/button'
 import { useToast } from '../components/ui/toast'
 import { PremiumTabs } from '../components/ui/premium-tabs'
 import { SkeletonCard } from '../components/ui/skeleton-card'
-import { Brain, Zap, Search, X, Wind, Moon } from 'lucide-react'
+import { Brain, Mic, Zap, Search, X, Wind, Moon } from 'lucide-react'
 import { SubtleBackground } from '../components/SubtleBackground'
 import type { Memory } from '../types'
 import { MemoryDetailModal } from '../components/memories/MemoryDetailModal' // Import MemoryDetailModal
@@ -475,12 +475,12 @@ function MemoriesPageInner() {
               {isAfterBedtime ? (
                 <>
                   <Moon className="h-3.5 w-3.5" />
-                  Bedtime mode — wind down
+                  Wind down for bed
                 </>
               ) : (
                 <>
                   <Wind className="h-3.5 w-3.5" />
-                  Drift mode — mental reset
+                  Clear your head
                 </>
               )}
             </button>
@@ -597,7 +597,7 @@ function MemoriesPageInner() {
 
                       <h3 className="page-hero-sm mb-3">Every great idea starts here.</h3>
                       <p className="meta-serif mb-8">
-                        Tap the mic below, say something interesting — and watch it become part of your universe.
+                        Tap one to start talking, or say anything that's on your mind.
                       </p>
 
                       {/* Three gentle prompts */}
@@ -607,11 +607,13 @@ function MemoriesPageInner() {
                           'An idea you keep coming back to',
                           'A question you can\'t stop asking',
                         ].map((prompt) => (
-                          <div key={prompt} className="flex items-start gap-3 px-4 py-3 rounded-xl"
+                          <button key={prompt} type="button"
+                            onClick={() => window.dispatchEvent(new Event('openVoiceCapture'))}
+                            className="w-full flex items-center gap-3 px-4 py-3 min-h-[48px] rounded-xl text-left press-spring"
                             style={{ background: 'rgba(var(--brand-primary-rgb),0.05)', border: '1px solid rgba(var(--brand-primary-rgb),0.1)' }}>
-                            <span className="text-brand-primary opacity-75 mt-0.5 text-xs">-</span>
-                            <p className="text-sm text-[var(--brand-text-muted)] italic">{prompt}</p>
-                          </div>
+                            <Mic className="h-4 w-4 flex-shrink-0 text-brand-primary" />
+                            <span className="text-sm text-[var(--brand-text-secondary)] italic">{prompt}</span>
+                          </button>
                         ))}
                       </div>
 
@@ -628,6 +630,13 @@ function MemoriesPageInner() {
                       <p className="text-sm text-[var(--brand-text-muted)] leading-relaxed">
                         Nothing to revisit right now. Keep capturing thoughts and they'll resurface when the time is right.
                       </p>
+                      <button
+                        type="button"
+                        onClick={() => window.dispatchEvent(new Event('openVoiceCapture'))}
+                        className="quiet-pill min-h-[44px] px-5 mx-auto"
+                      >
+                        Say something now
+                      </button>
                     </div>
                   )}
                 </div>
@@ -645,7 +654,7 @@ function MemoriesPageInner() {
                   <MasonryGrid memories={displayMemories.slice(0, visibleCount)} onEdit={handleOpenDetail} onDelete={handleDelete} />
                   {visibleCount < displayMemories.length && (
                     <div className="flex flex-col items-center justify-center gap-2 py-6">
-                      <span className="text-xs opacity-50" style={{ color: 'var(--brand-text-muted)' }}>
+                      <span className="text-[13px]" style={{ color: 'var(--brand-text-muted)' }}>
                         showing {visibleCount} of {displayMemories.length}
                       </span>
                       {/* Manual button fallback. The window-scroll listener
@@ -655,8 +664,7 @@ function MemoriesPageInner() {
                       <button
                         type="button"
                         onClick={() => setVisibleCount(c => c + PAGE_SIZE)}
-                        className="text-[11px] opacity-60 hover:opacity-100 transition-opacity px-3 py-1.5 rounded-full border"
-                        style={{ color: 'var(--brand-text-secondary)', borderColor: 'var(--glass-surface)' }}
+                        className="quiet-pill min-h-[44px] px-5 text-[13px]"
                       >
                         load more
                       </button>

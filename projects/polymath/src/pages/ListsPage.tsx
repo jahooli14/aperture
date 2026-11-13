@@ -453,7 +453,8 @@ function ListsPageInner() {
             {/* Normal Mode - Responsive Grid */}
             {lists.length > 0 && !isReordering && (
                 <div className="grid gap-3 pb-20" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(min(140px, calc(50% - 6px)), 1fr))' }}>
-                {lists.map((list) => {
+                {/* The Reading banner above is the way into the article list, so it isn't a card too. */}
+                {lists.filter(l => l.type !== 'article').map((list) => {
                     const typeRgb = ListColor(list.type)
                     // User overrides win over the auto-derived cover. Image
                     // beats palette beats backend-derived. When a palette
@@ -624,7 +625,7 @@ function ListsPageInner() {
 
             {/* Long press hint - only show when there are lists and not reordering */}
             {lists.length > 0 && !isReordering && (
-                <p className="text-center text-[11px] pb-4" style={{ color: 'var(--brand-text-muted)', opacity: 0.72 }}>
+                <p className="text-center text-[13px] pb-4" style={{ color: 'var(--brand-text-muted)' }}>
                     Hold a card for options.
                 </p>
             )}

@@ -14,6 +14,7 @@
  * - /api/cron/jobs?job=process_stuck (manual)
  */
 
+import { voiceReminderCopy } from '../_lib/voice-reminder-copy.js'
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { getSupabaseClient } from '../_lib/supabase.js'
 import { getUserId } from '../_lib/auth.js'
@@ -563,6 +564,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         if (!subscriptions || subscriptions.length === 0) continue
 
+        // Offer something tied to what they're already carrying: the take
+        // they haven't answered, else the live project. A failed lookup just
+        // means the plain wording.
+        const { data: openTake } = await supabase
+          .from('sparks')
+          .select('text')
+          .eq('user_id', schedule.user_id)
+          .not('shown_at', 'is', null)
+          .is('answered_at', null)
+          .is('dismissed_at', null)
+          .gt('expires_at', now.toISOString())
+          .order('shown_at', { ascending: false })
+          .limit(1)
+        const { data: liveProject } = await supabase
+          .from('projects')
+          .select('title')
+          .eq('user_id', schedule.user_id)
+          .eq('state', 'live')
+          .limit(1)
+        const copy = voiceReminderCopy({ take: openTake?.[0]?.text ?? null, project: liveProject?.[0]?.title ?? null })
+
         let anySent = false
         for (const sub of subscriptions) {
           try {
@@ -570,8 +592,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               endpoint: sub.endpoint,
               keys: { p256dh: sub.p256dh, auth: sub.auth },
             }, JSON.stringify({
-              title: 'What\'s on your mind today?',
-              body: 'Tap to record a voice note.',
+              title: copy.title,
+              body: copy.body,
               url: '/',
             }))
             anySent = true

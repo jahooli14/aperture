@@ -294,7 +294,7 @@ export function TodaysAnswerCard() {
             ) : nextMove && !steering ? (
               <button
                 onClick={() => setTweaking(t => !t)}
-                className="text-[13px] py-1.5 text-left"
+                className="text-[13px] min-h-[44px] py-1.5 text-left"
                 style={muted}
               >
                 {tweaking ? 'Keep this one' : 'Not this — change it'}

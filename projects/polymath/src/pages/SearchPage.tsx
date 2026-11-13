@@ -116,6 +116,16 @@ export function SearchPage() {
   // slow earlier search can't overwrite a faster later one.
   const searchReqRef = useRef(0)
 
+  // Last few searches, per device, so the empty page isn't blank.
+  const [recent, setRecent] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem('recent-searches') || '[]') as string[] } catch { return [] }
+  })
+  const remember = (q: string) => {
+    const next = [q, ...recent.filter(r => r !== q)].slice(0, 5)
+    setRecent(next)
+    try { localStorage.setItem('recent-searches', JSON.stringify(next)) } catch { /* private window */ }
+  }
+
   // Handle ?similar=<id> parameter for "find similar" searches
   useEffect(() => {
     const params = new URLSearchParams(location.search)
@@ -166,6 +176,7 @@ export function SearchPage() {
   }, [searchParams])
 
   const performSearch = async (searchQuery: string) => {
+    remember(searchQuery)
     if (!searchQuery || searchQuery.length < 2) {
       addToast({
         title: 'Invalid search',
@@ -431,6 +442,15 @@ export function SearchPage() {
                   icon={Search}
                   title="No matches"
                   description="Try a different word, or tap the mic."
+                  action={
+                    <button
+                      type="button"
+                      className="quiet-pill min-h-[40px] px-4"
+                      onClick={() => { setQuery(''); setResults(null); setSearchParams({}) }}
+                    >
+                      Clear search
+                    </button>
+                  }
                 />
               ) : (
                 <div className="space-y-3">
@@ -504,6 +524,33 @@ export function SearchPage() {
                 </div>
               )}
             </>
+          )}
+
+          {!loading && !results && !query && recent.length > 0 && (
+            <div className="pt-6">
+              <div className="flex items-center justify-between mb-2">
+                <p className="eyebrow">Recent</p>
+                <button
+                  type="button"
+                  className="text-[13px] min-h-[40px] px-2"
+                  style={{ color: 'var(--brand-text-muted)' }}
+                  onClick={() => { setRecent([]); try { localStorage.removeItem('recent-searches') } catch { /* private window */ } }}
+                >
+                  Clear
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {recent.map(r => (
+                  <button
+                    key={r}
+                    className="quiet-pill py-2"
+                    onClick={() => { setQuery(r); setSearchParams({ q: r }); performSearch(r) }}
+                  >
+                    {r}
+                  </button>
+                ))}
+              </div>
+            </div>
           )}
 
           {!loading && !results && query && (

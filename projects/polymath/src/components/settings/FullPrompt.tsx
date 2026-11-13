@@ -39,8 +39,7 @@ export function FullPrompt({ which, label }: { which: PromptKey; label: string }
       <button
         onClick={toggle}
         aria-expanded={open}
-        className="text-[13px] underline"
-        style={{ color: 'var(--brand-text-secondary)' }}
+        className="quiet-pill min-h-[40px] px-4 text-[13px]"
       >
         {open ? 'Hide' : 'See'} {label}
       </button>

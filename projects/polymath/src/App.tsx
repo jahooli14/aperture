@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { useEffect, lazy, Suspense } from 'react'
+import { MotionConfig } from 'framer-motion'
 import { ToastProvider } from './components/ui/toast'
 import { OfflineIndicator } from './components/OfflineIndicator'
 import { ErrorBoundary } from './components/ErrorBoundary'
@@ -9,6 +10,7 @@ import { PWAInstallBanner } from './components/PWAInstallBanner'
 import { AuthProvider } from './contexts/AuthContext'
 import { AutoSuggestionProvider } from './contexts/AutoSuggestionContext'
 import { ScrollToTop } from './components/ScrollToTop'
+import { RouteTitle } from './components/RouteTitle'
 import { AnimatedPage } from './components/AnimatedPage'
 import { Loader2 } from 'lucide-react'
 import { App as CapacitorApp } from '@capacitor/app'
@@ -307,6 +309,8 @@ export default function App() {
   }, [])
 
   return (
+    // Motion library animations follow the phone's reduced-motion setting too.
+    <MotionConfig reducedMotion="user">
     <AuthProvider>
       <AutoSuggestionProvider>
         <ToastProvider>
@@ -315,6 +319,7 @@ export default function App() {
             v7_relativeSplatPath: true,
           }}>
             <ScrollToTop />
+            <RouteTitle />
             <RouteTracker />
 
             {/* Floating Navigation - Placed high in DOM for robust fixed positioning */}
@@ -375,6 +380,7 @@ export default function App() {
         </ToastProvider>
       </AutoSuggestionProvider>
     </AuthProvider>
+    </MotionConfig>
   )
 }
 // Force redeploy Wed 29 Oct 2025 13:24:27 GMT

@@ -198,8 +198,8 @@ export function VoiceInput({
           type="button"
           onClick={toggleRecording}
           aria-label="Tap to talk"
-          className="p-1 transition-opacity hover:opacity-100"
-          style={{ color: 'var(--brand-text-secondary)', opacity: 0.84 }}
+          className="min-h-[44px] min-w-[44px] flex items-center justify-center transition-opacity hover:opacity-100"
+          style={{ color: 'var(--brand-text-secondary)' }}
         >
           <Mic className="h-4 w-4" />
         </button>

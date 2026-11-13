@@ -17,7 +17,8 @@ import { MAX_THEMES, readThemes, type ProjectTheme } from '../../lib/projectThem
 import { ThemesUpdatedNote, useRefreshThemes } from './ThemesFollowNotes'
 import type { Project } from '../../types'
 
-export function ProjectThemes({ project, onGo }: { project: Project; onGo?: () => void }) {
+/** `quiet`: another card on the page already has the lit action, so this one steps back. */
+export function ProjectThemes({ project, onGo, quiet }: { project: Project; onGo?: () => void; quiet?: boolean }) {
   const themes = readThemes(project.metadata)
   useRefreshThemes(project)
   const [editing, setEditing] = useState(false)
@@ -25,6 +26,8 @@ export function ProjectThemes({ project, onGo }: { project: Project; onGo?: () =
   const [drafting, setDrafting] = useState(false)
   const [saving, setSaving] = useState(false)
   const [note, setNote] = useState<string | null>(null)
+  // A project made today has no notes to read yet, so don't offer to.
+  const hasNotes = Date.now() - new Date(project.created_at).getTime() > 24 * 3600 * 1000
 
   const open = (start: string[]) => {
     const filled = [...start]
@@ -139,23 +142,30 @@ export function ProjectThemes({ project, onGo }: { project: Project; onGo?: () =
           Two or three things to hold onto while you work on this. A few words each, like "keep it simple".
         </p>
         {note && <p className="text-[13px]" style={{ color: 'var(--brand-text-secondary)' }}>{note}</p>}
-        <div className="flex flex-wrap items-center gap-x-5 gap-y-1 pt-1">
-          <span className="flex items-center gap-1.5 text-[13px] whitespace-nowrap" style={{ color: 'rgb(var(--brand-primary-rgb))' }}>
+        <div className="flex flex-col gap-2 pt-1">
+          <div
+            className={`${quiet ? 'glass-card-subtle' : 'neon-button'} w-full py-3 rounded-xl font-semibold text-[15px] flex items-center justify-center gap-2`}
+            onClick={e => { if (!(e.target as HTMLElement).closest('button')) e.currentTarget.querySelector('button')?.click() }}
+          >
             <VoiceInput variant="icon" onTranscript={fromSpeech} maxDuration={60} />
             Say them
-          </span>
-          <button onClick={() => open([])} className="text-[13px] py-2 whitespace-nowrap" style={{ color: 'var(--brand-text-secondary)' }}>
-            Write them
-          </button>
-          <button
-            onClick={() => { void fromNotes() }}
-            disabled={drafting}
-            className="flex items-center gap-1.5 text-[13px] py-2 whitespace-nowrap"
-            style={{ color: 'var(--brand-text-secondary)' }}
-          >
-            {drafting ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
-            {drafting ? 'Reading your notes…' : 'Draft from my notes'}
-          </button>
+          </div>
+          <div className="flex items-center gap-x-5">
+            <button onClick={() => open([])} className="text-[13px] py-2 whitespace-nowrap" style={{ color: 'var(--brand-text-secondary)' }}>
+              Write them
+            </button>
+            {hasNotes && (
+              <button
+                onClick={() => { void fromNotes() }}
+                disabled={drafting}
+                className="flex items-center gap-1.5 text-[13px] py-2 whitespace-nowrap"
+                style={{ color: 'var(--brand-text-secondary)' }}
+              >
+                {drafting ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
+                {drafting ? 'Reading your notes…' : 'Draft from my notes'}
+              </button>
+            )}
+          </div>
         </div>
       </div>
     )

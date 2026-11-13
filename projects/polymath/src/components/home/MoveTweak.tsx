@@ -45,7 +45,7 @@ export function MoveTweak({ projectId, onClose }: { projectId: string; onClose: 
     <div className="space-y-2 pt-1">
       <div className="flex gap-2">
         <button
-          className="flex-1 py-2 rounded-xl text-[12.5px] flex items-center justify-center gap-1.5 disabled:opacity-40"
+          className="flex-1 min-h-[44px] py-2 rounded-xl text-[12.5px] flex items-center justify-center gap-1.5 disabled:opacity-40"
           style={quiet}
           disabled={busy}
           onClick={() => void change({ action: 'feedback', reason: 'too_big' })}
@@ -53,7 +53,7 @@ export function MoveTweak({ projectId, onClose }: { projectId: string; onClose: 
           <Minimize2 size={13} /> Too big
         </button>
         <button
-          className="flex-1 py-2 rounded-xl text-[12.5px] flex items-center justify-center gap-1.5 disabled:opacity-40"
+          className="flex-1 min-h-[44px] py-2 rounded-xl text-[12.5px] flex items-center justify-center gap-1.5 disabled:opacity-40"
           style={quiet}
           disabled={busy}
           onClick={() => void change({ action: 'feedback', reason: 'wrong_thing' })}
@@ -71,7 +71,7 @@ export function MoveTweak({ projectId, onClose }: { projectId: string; onClose: 
           className="flex-1 min-w-0 bg-transparent text-[13px] outline-none py-1.5 disabled:opacity-50"
           style={{ color: 'var(--brand-text-primary)' }}
         />
-        <button onClick={send} disabled={busy || !say.trim()} className="p-1.5 disabled:opacity-30" aria-label="Send">
+        <button onClick={send} disabled={busy || !say.trim()} className="p-3 disabled:opacity-30" aria-label="Send">
           <ArrowUp size={16} style={{ color: 'rgb(var(--brand-primary-rgb))' }} />
         </button>
       </div>

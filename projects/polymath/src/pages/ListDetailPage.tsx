@@ -1265,10 +1265,17 @@ function ArticleListMode({ list, navigate }: ArticleListModeProps) {
                         ))}
                     </div>
                 ) : readingArticles.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-40 text-zinc-600">
-                        <BookOpen className="h-12 w-12 mb-4 opacity-20" />
-                        <p className="text-brand-text-muted font-medium text-lg mb-1">Your queue is empty.</p>
-                        <p className="text-sm text-brand-text-muted opacity-80">Paste a URL above to start reading.</p>
+                    <div className="flex flex-col items-center justify-center py-24 px-6 text-center">
+                        <BookOpen className="h-12 w-12 mb-4" style={{ color: 'var(--brand-text-muted)' }} />
+                        <p className="font-medium text-lg mb-1" style={{ color: 'var(--brand-text-primary)' }}>Your queue is empty.</p>
+                        <p className="text-sm mb-5" style={{ color: 'var(--brand-text-secondary)' }}>Paste a link above, or pick something from your feeds.</p>
+                        <button
+                            type="button"
+                            onClick={() => navigate('/rss')}
+                            className="quiet-pill min-h-[44px] px-5"
+                        >
+                            Open your feeds
+                        </button>
                     </div>
                 ) : (
                     <div className="space-y-8">
