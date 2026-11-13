@@ -654,7 +654,7 @@ function MemoriesPageInner() {
                   <MasonryGrid memories={displayMemories.slice(0, visibleCount)} onEdit={handleOpenDetail} onDelete={handleDelete} />
                   {visibleCount < displayMemories.length && (
                     <div className="flex flex-col items-center justify-center gap-2 py-6">
-                      <span className="text-xs opacity-50" style={{ color: 'var(--brand-text-muted)' }}>
+                      <span className="text-[13px]" style={{ color: 'var(--brand-text-muted)' }}>
                         showing {visibleCount} of {displayMemories.length}
                       </span>
                       {/* Manual button fallback. The window-scroll listener
@@ -664,8 +664,7 @@ function MemoriesPageInner() {
                       <button
                         type="button"
                         onClick={() => setVisibleCount(c => c + PAGE_SIZE)}
-                        className="text-[11px] opacity-60 hover:opacity-100 transition-opacity px-3 py-1.5 rounded-full border"
-                        style={{ color: 'var(--brand-text-secondary)', borderColor: 'var(--glass-surface)' }}
+                        className="quiet-pill min-h-[44px] px-5 text-[13px]"
                       >
                         load more
                       </button>

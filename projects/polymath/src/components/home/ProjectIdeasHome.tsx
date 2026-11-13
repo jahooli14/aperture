@@ -358,7 +358,7 @@ export function ProjectIdeasHome({ startExpanded = false, onClose }: { startExpa
         {loading && (
           <div className="flex items-center justify-center py-1">
             <span
-              className="text-[11px] uppercase tracking-[0.14em] italic opacity-50"
+              className="text-[11px] uppercase tracking-[0.14em] italic opacity-75"
               style={{ color: 'var(--brand-text-muted)' }}
             >
               checking your queue…
@@ -473,7 +473,7 @@ export function ProjectIdeasHome({ startExpanded = false, onClose }: { startExpa
             </div>
 
             <p
-              className="text-[11px] tracking-[0.1em] uppercase mt-1 opacity-50"
+              className="text-[11px] tracking-[0.1em] uppercase mt-1 opacity-75"
               style={{ color: 'var(--brand-text-muted)' }}
             >
               A few seconds.

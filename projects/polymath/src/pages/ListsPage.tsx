@@ -625,7 +625,7 @@ function ListsPageInner() {
 
             {/* Long press hint - only show when there are lists and not reordering */}
             {lists.length > 0 && !isReordering && (
-                <p className="text-center text-[11px] pb-4" style={{ color: 'var(--brand-text-muted)', opacity: 0.72 }}>
+                <p className="text-center text-[13px] pb-4" style={{ color: 'var(--brand-text-muted)' }}>
                     Hold a card for options.
                 </p>
             )}
