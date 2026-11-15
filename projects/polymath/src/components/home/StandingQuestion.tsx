@@ -458,6 +458,21 @@ export function StandingQuestion() {
           state of this whole block is three lines. */}
       {!answering && (
         <div className="mt-1.5 space-y-1.5">
+        {spark.stake ? (
+          // An older take (a claim with a stake) still gets yes / no / sort of.
+          <div className="flex flex-wrap items-center gap-2">
+            {STANCES.map(st => (
+              <button
+                key={st.id}
+                className="quiet-pill min-h-[40px] px-4 text-[14px] font-medium transition-opacity hover:opacity-90"
+                style={quietActionStyle}
+                onClick={() => { haptic.light(); setStance(st.id); setAnswering(true) }}
+              >
+                {st.label}
+              </button>
+            ))}
+          </div>
+        ) : null}
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
           {/* A line of a rabbit hole: the one thing to do is pull it. */}
           <button
