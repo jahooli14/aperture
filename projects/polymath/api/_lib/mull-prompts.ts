@@ -104,6 +104,18 @@ WHAT A REVELATION IS
 A claim that restates one note is a summary. One they already say every day is
 a quote. One nobody could disagree with is a platitude. None of those.
 
+WHAT IT'S ABOUT -- SOMETHING THEY MAKE
+- The claim is about one of their projects, or how their making goes: what
+  finishes, what stalls, what a piece needs, what it is really doing. A note
+  about the rest of their life can be one of the facts; the claim still lands
+  on something they make.
+- Never a verdict on who they are -- their character, taste, family,
+  friendships, body, money, clothes, animals, sport. "You treat friendship like
+  an initiation test." "Animals only catch your attention when they act like
+  people." "You obsess over single garments but ignore your wardrobe." Those
+  are horoscopes. Kill them.
+- The test: could they use it the next time they sit down to that project?
+
 ${ctx.liveTitle ? crossingBlock(ctx.liveTitle, ctx.alsoTitles ?? [], !!ctx.seasonActive, ctx.waitingTitles ?? []) : ''}WHERE TO LOOK -- read everything first, then look for:
 - The same stall: two projects that stopped at the same kind of step.
 - The survivors: what the things they keep going back to share, that the
@@ -164,8 +176,11 @@ HOW TO WRITE IT
   "you let yourself" -- unless that exact word is in their notes. "I think you
   value ideas more than making them" is a motive. Say what happens instead:
   "I think nothing you start in an evening gets a second evening."
-- Claims that work: "X stops when Y." "You only finish what Z." "A is really B."
-  "Nothing you make looks like what you rate highest." "I think X." (rarely)
+- Say it about the piece, not as a law about them. Two facts can't prove an
+  "only", "never" or "always", and one counterexample kills it -- that is how
+  most of the takes they said no to died. "Your edit needs cutting, not
+  explaining" beats "you only finish music outside". Claims that work: "A is
+  really B." "X needs Y." "The toy is the first thing you started in a hurry."
 - A collision is a claim too. Not "you could make X for Y" but "I think the
   half-bound book is her wedding present." They can still say no.
 - Each fact has to carry the claim. Three facts that don't point the same way
@@ -201,7 +216,7 @@ ${PLAIN_ENGLISH_RULES}
 then one committed claim, no question mark.)
 
 WHAT TO RETURN
-${ctx.seedRef ? `START FROM [${ctx.seedRef}]. Every candidate leans on that row plus at least one other row that looks nothing like it on the surface. If [${ctx.seedRef}] has no honest partner, start from the nearest row that does; a forced link is worse than a different start.\n` : ''}${ctx.lens === 'live' ? 'THIS ROUND: lean on the project they are deep in and the ones that matter this season.\n' : ctx.lens === 'elsewhere' ? 'THIS ROUND: stay away from the project they are deep in and the ones that matter this season. Find what runs across everything else: other projects, notes, list items. Prefer the two captures that look least alike on the surface.\n' : ''}Up to ${ctx.howMany} candidates, best first, each built on different rows. For each:
+${ctx.seedRef ? `START FROM [${ctx.seedRef}]. Every candidate leans on that row plus at least one other row that looks nothing like it on the surface. If [${ctx.seedRef}] has no honest partner, start from the nearest row that does; a forced link is worse than a different start.\n` : ''}${ctx.lens === 'live' ? 'THIS ROUND: lean on the project they are deep in and the ones that matter this season.\n' : ctx.lens === 'elsewhere' ? 'THIS ROUND: stay away from the project they are deep in and the ones that matter this season. Land on one of their OTHER projects: what it needs, why it stalled, what it is really doing. Prefer evidence that looks least alike on the surface.\n' : ''}Up to ${ctx.howMany} candidates, best first, each built on different rows. For each:
 - "noticing": the pattern, under 12 words. Private -- they never see it.
 - "doubt": under 10 words: the strongest reason this is a coincidence of
   wording, not something real, or that they would just say "no, that's not it".
@@ -232,11 +247,11 @@ the rest of them. Make your FIRST candidate a crossing:
 - Put something they did or said about "${title}" next to something else of
   theirs: a note about another project, a person, a place, a habit, something
   that annoyed them. Neither mentions the other.
-- Something from one of their lists counts too -- a film, book, album or place
-  they chose. Name it; don't quote it as something they said.
-- The best one is all three: the project, a note about something else, and a
-  list item. Three unlike things that only meet in this one person. Look for that
-  first, and settle for two only when three don't hold together.
+- A book, film or album from their lists can be the other half when it bears
+  on how they are making "${title}" -- its form, its voice, its ending. Name
+  it; don't quote it as something they said, and never read it as a sign of
+  their character.
+- Two things that really meet beat three that are made to.
 - The claim is about "${title}": what it needs, what it's doing, what it is
   really about. They should be able to use it the next time they sit down to it.
 - The other things must not be about "${title}" at all. If they are, it isn't a
@@ -266,7 +281,7 @@ function rowForJudge(r: CorpusRow): string {
   return `    [${r.ref}] ${r.title ? `"${r.title}" ` : ''}(${r.meta}): ${text}`
 }
 
-export function judgePrompt(candidates: Grounded[], liveTitle?: string | null): string {
+export function judgePrompt(candidates: Grounded[], liveTitle?: string | null, history = ''): string {
   const list = candidates.map((c, i) =>
     `#${i + 1}\n  SHOWN TO THEM: "${c.question}"\n  CLAIMED PATTERN: ${c.noticing || '(none given)'}\n` +
     `  THE WRITER'S OWN DOUBT: ${c.doubt || '(none given)'}\n  BUILT ON:\n${c.rows.map(rowForJudge).join('\n')}`,
@@ -279,7 +294,11 @@ built from.
 
 ${list}
 
-Score each from 0 to 10:
+${history ? `WHAT THEY HAVE ALREADY TOLD US -- a take that rests on a premise they corrected, or
+repeats a claim they said "no" to, gets truth 0, however it is worded:
+${history.trim()}
+
+` : ''}Score each from 0 to 10:
 - "revelation": would reacting to it show them something about their own work
   or life they haven't put together -- a pattern, or two things of theirs that
   belong together? 10 = they'd stop walking. 0 = they already know, or it's a
@@ -289,13 +308,17 @@ Score each from 0 to 10:
   doubt: if it's right, truth is low. 0 = forced or false.
 - "specific": could only this person be shown this? 0 = it fits anyone.
 - "answerable": could they react at once AND have something to say after? 0 = a
-  platitude nobody could disagree with, or a riddle.
+  platitude nobody could disagree with, or a riddle. A sweeping "you only /
+  you never / you always" built from two facts is brittle: score it 4 or lower.
 - "overreach": true if it says more than the notes show: a feeling, a motive or
   value put on them ("you value", "you're scared"), a reason WHY they did
   something that nobody gave, or a plan read back as if it were something they
   did. Naming a pattern in what happened ("stops whenever someone could see
   it") is not overreach -- that is the take's whole job, and it is allowed to
   be wrong. An overreaching take is always a kill, however sharp.
+Score "revelation" 2 or lower if the claim is a verdict on who they are (their
+character, taste, family, friendships, clothes, animals) rather than on
+something they make. Those read as a horoscope.
 Score "revelation" 3 or lower if the link between its facts is only a look (two
 images that resemble each other) rather than something they do or keep doing, or
 if it reads like a caption instead of speech.

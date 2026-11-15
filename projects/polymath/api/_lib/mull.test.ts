@@ -85,21 +85,23 @@ describe('a real name the draft forgot to cite', () => {
 })
 
 describe('pickSeeds', () => {
-  const mk = (n: number, kind: CorpusRow['kind']) => Array.from({ length: n }, (_, i) => row(`${kind[0].toUpperCase()}${i}`, `row ${kind} ${i}`, { kind, id: `${kind}${i}`, captureId: `${kind}${i}` }))
-  const rows = [...mk(40, 'memory'), ...mk(3, 'list_item')]
+  const mk = (n: number, kind: CorpusRow['kind'], extra: Partial<CorpusRow> = {}) => Array.from({ length: n }, (_, i) => row(`${kind[0].toUpperCase()}${i}`, `row ${kind} ${i}`, { kind, id: `${kind}${i}`, captureId: `${kind}${i}`, ...extra }))
+  const projects = mk(4, 'project').map(r => ({ ...r, projectId: r.id }))
+  const rows = [...projects, ...mk(40, 'memory'), ...mk(3, 'list_item')]
   const corpus: Corpus = { rows, byRef: new Map(rows.map(r => [r.ref, r])), projectIdByTitle: new Map(), text: '' }
   let k = 0
   const rand = () => ((k = (k * 7 + 3) % 11) / 11)
 
-  it('spreads over recent notes, list items and older notes, all different', () => {
-    const seeds = pickSeeds(corpus, new Set(), 4, rand)
-    expect(seeds).toHaveLength(4)
-    expect(new Set(seeds.map(s => s.id)).size).toBe(4)
-    expect(seeds.some(s => s.kind === 'list_item')).toBe(true)
+  it('starts from projects, all different, never the live one', () => {
+    const seeds = pickSeeds(corpus, new Set(), 3, rand, 'project0')
+    expect(seeds).toHaveLength(3)
+    expect(new Set(seeds.map(s => s.id)).size).toBe(3)
+    expect(seeds.filter(s => s.kind === 'project').length).toBeGreaterThanOrEqual(2)
+    expect(seeds.some(s => s.id === 'project0')).toBe(false)
   })
   it('never starts from a row a recent take used', () => {
-    const avoid = new Set(rows.filter(r => r.kind === 'list_item').map(r => r.id))
-    expect(pickSeeds(corpus, avoid, 6, rand).every(s => s.kind === 'memory')).toBe(true)
+    const avoid = new Set(projects.map(r => r.id))
+    expect(pickSeeds(corpus, avoid, 4, rand).every(s => s.kind === 'memory')).toBe(true)
   })
   it('returns fewer when the corpus is small', () => {
     const tiny: Corpus = { ...corpus, rows: rows.slice(0, 2) }

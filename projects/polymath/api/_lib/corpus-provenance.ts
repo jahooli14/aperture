@@ -75,3 +75,14 @@ export function isAppAuthored(row: MaybeTagged | null | undefined): boolean {
 export function userSaid<T extends MaybeTagged>(rows: T[] | null | undefined): T[] {
   return (rows ?? []).filter(r => !isAppAuthored(r))
 }
+
+/**
+ * A spark answer saved before answers were tagged. They open with the words
+ * "Spark response" and are otherwise ordinary notes, so the corpus read
+ * them as captures -- the owner's correction "it was never going to be a
+ * single word on the willow block" became the evidence for the same wrong
+ * take twice more.
+ */
+export function isElicitedAnswer(body: string | null | undefined): boolean {
+  return typeof body === 'string' && /^\s*spark response\b/i.test(body)
+}

@@ -252,21 +252,29 @@ export function claimSentence(text: string): string {
 /**
  * Where each parallel draft starts. Left to itself the model finds the same
  * two or three strong patterns every time, and each run's candidates echo
- * the last run's. So code picks different starting rows, spread over recent
- * notes, list items and older notes, none used by a recent take, and each
- * draft is told to build from its own. Pure; `rand` is injected for tests.
+ * the last run's. So code picks different starting rows, none used by a
+ * recent take, and each draft is told to build from its own.
+ *
+ * Projects first, the live one aside (it has its own draft). Seeding from
+ * any note was measured on the owner's corpus (Nov 2026) and the seeded
+ * drafts wrote horoscopes off whatever the seed was about -- a USB cable,
+ * new shoes, a fox: "Animals only catch your attention when they act like
+ * people." A take is about something they make, so it starts from one.
+ * Then notes about a project, then any note. Pure; `rand` is injected.
  */
-export function pickSeeds(corpus: Corpus, avoid: Set<string>, n: number, rand: () => number = Math.random): CorpusRow[] {
-  const free = (r: CorpusRow) => !avoid.has(r.id) && !avoid.has(r.captureId)
-  const notes = corpus.rows.filter(r => r.kind === 'memory' && free(r))
-  const recent = notes.slice(0, 30)
-  const older = notes.slice(30)
-  const items = corpus.rows.filter(r => r.kind === 'list_item' && free(r))
+export function pickSeeds(
+  corpus: Corpus, avoid: Set<string>, n: number, rand: () => number = Math.random, liveId?: string | null,
+): CorpusRow[] {
+  const free = (r: CorpusRow) => !avoid.has(r.id) && !avoid.has(r.captureId) && r.projectId !== liveId
+  const projects = corpus.rows.filter(r => r.kind === 'project' && free(r) && r.id !== liveId)
+  const filed = corpus.rows.filter(r => r.kind !== 'project' && r.projectId && free(r))
+  const notes = corpus.rows.filter(r => r.kind === 'memory' && free(r) && !r.projectId)
   const out: CorpusRow[] = []
-  for (const pool of [recent, items, older, recent, older, items]) {
+  for (const pool of [projects, filed, projects, notes, projects, notes]) {
     if (out.length >= n) break
     if (pool.length === 0) continue
-    out.push(pool.splice(Math.floor(rand() * pool.length), 1)[0])
+    const pick = pool.splice(Math.floor(rand() * pool.length), 1)[0]
+    if (!out.includes(pick)) out.push(pick)
   }
   return out
 }

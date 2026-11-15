@@ -32,9 +32,9 @@ function corpus() {
       { user_id: 'u1', id: 'p-dead', title: 'Abandoned mural', description: 'A wall mural nobody finished', state: 'mull', status: 'abandoned', is_priority: false, metadata: {}, created_at: ago(500), last_active: ago(400) },
     ],
     memories: [
-      { user_id: 'u1', id: 'm1', title: 'Dad', body: 'Ten more proper conversations with dad, probably, and we spend them on the greenhouse. It is the only tidy room in a messy house.', created_at: ago(280), tags: [], source_reference: null },
-      { user_id: 'u1', id: 'm2', title: 'Recording', body: 'It only works if it is one take. The second take is always worse.', created_at: ago(90), tags: [], source_reference: null },
-      { user_id: 'u1', id: 'm-spark', title: 'Answered', body: 'This whole reply only exists because the app asked me something.', created_at: ago(2), tags: ['spark-response'], source_reference: null },
+      { user_id: 'u1', id: 'm1', title: 'Dad', body: 'Ten more proper conversations with dad, probably, and we spend them on the greenhouse. It is the only tidy room in a messy house.', created_at: ago(280), tags: [], source_reference: null, triage: null },
+      { user_id: 'u1', id: 'm2', title: 'Recording', body: 'It only works if it is one take. The second take is always worse.', created_at: ago(90), tags: [], source_reference: null, triage: null },
+      { user_id: 'u1', id: 'm-spark', title: 'Answered', body: 'This whole reply only exists because the app asked me something.', created_at: ago(2), tags: ['spark-response'], source_reference: null, triage: null },
     ],
     fragments: [
       { user_id: 'u1', id: 'f1', text: 'rewrote chapter nine for the fourth time', created_at: ago(40), memory_id: null, project_id: 'p-book', projects: { title: 'The book', state: 'mull', status: 'active' } },
@@ -87,6 +87,7 @@ function fakeSupabase(data: Record<string, Row[]>) {
         return chain
       },
       contains: (c: string, v: unknown[]) => { rows = rows.filter(r => Array.isArray(r[c]) && v.every(x => r[c].includes(x))); return chain },
+      ilike: (c: string, pattern: string) => { const re = new RegExp('^' + pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/%/g, '.*') + '$', 'i'); rows = rows.filter(r => typeof r[c] === 'string' && re.test(r[c])); return chain },
       order: () => chain,
       limit: () => chain,
       insert: (payload: Row | Row[]) => { inserted.push(...(Array.isArray(payload) ? payload : [payload])); return chain },
@@ -452,7 +453,7 @@ describe('the mull channel, end to end', () => {
       onDay(false)
       const data = withSeason()
       data.projects.push({ user_id: 'u1', id: 'p-st', title: 'Graham stencil', description: 'A stencil for a friend', state: 'on-deck', status: 'active', is_priority: false, metadata: { season: { role: 'also', until: '2999-12-25', label: 'Christmas' } }, created_at: ago(30), last_active: ago(3) })
-      data.memories.push({ user_id: 'u1', id: 'm3', title: 'Glue', body: 'The glue never sets when it is cold.', created_at: ago(50), tags: [], source_reference: null })
+      data.memories.push({ user_id: 'u1', id: 'm3', title: 'Glue', body: 'The glue never sets when it is cold.', created_at: ago(50), tags: [], source_reference: null, triage: null })
       data.fragments.push({ user_id: 'u1', id: 'f-st', text: 'masked the stencil edges twice', created_at: ago(4), memory_id: null, project_id: 'p-st', projects: { title: 'Graham stencil', state: 'on-deck', status: 'active' } })
       const ALSO2 = {
         noticing: 'Cold glue and the stencil both want a warm room.',

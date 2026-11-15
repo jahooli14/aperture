@@ -78,7 +78,7 @@ export const GOOD_EXAMPLES: readonly MullExample[] = [
       { where: 'list "Books", rated 5', text: 'Stoner by John Williams' },
       { where: 'note, 2 June 2025', text: "everything I make has to be funny or I don't trust it" },
     ],
-    question: "Your five-star shelf is Paris, Texas and Stoner. In June you said everything you make has to be funny or you don't trust it. Nothing you make looks like anything you rate highest.",
+    question: "Your five-star shelf is Paris, Texas and Stoner. In June you said everything you make has to be funny or you don't trust it. Your sketches are the opposite of everything on that shelf.",
     stake: 'One sketch gets written with no joke in it.',
   },
   {
@@ -87,7 +87,7 @@ export const GOOD_EXAMPLES: readonly MullExample[] = [
       { where: 'project "Woodcut prints", active since 2022, last touched last week', text: 'one print, one evening, done' },
       { where: 'project "Oil portraits", paused since April 2025', text: 'needs another layer once it dries' },
     ],
-    question: "Three years of woodcuts, one evening each. The oil portraits have sat since April, waiting on another layer. You only keep what you can finish in one sitting.",
+    question: "Three years of woodcuts, one evening each. The oil portraits have sat since April, waiting on another layer. The portraits need doing in one sitting, like a woodcut.",
     stake: 'One portrait gets painted wet-on-wet in a single sitting.',
   },
   {

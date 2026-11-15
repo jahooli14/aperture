@@ -35,9 +35,10 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { generateText } from './gemini-chat.js'
 import { parseModelJson } from './schemas.js'
 import { echoesRecent, fetchRecentSparkTexts, fetchRecentSparkProjectIds, fetchRecentSparkSubjectIds } from './spark-echo.js'
-import { SPARK_CORRECTION_TAG, isAppAuthored } from './corpus-provenance.js'
+import { SPARK_CORRECTION_TAG, isAppAuthored, isElicitedAnswer } from './corpus-provenance.js'
+import { isSensitive } from './sensitive.js'
 import { loadCorpus, normaliseTitle, type Corpus, type CorpusRow } from './mull-corpus.js'
-import { checkCandidate, crossingDepth, CROSSING_BONUS, TRIFECTA_BONUS, slotOf, orderBySlots, type Slot, judgePercent, judgeRank, pickSeeds, parseJudgeScores, type Candidate, type Grounded, type JudgeScore } from './mull.js'
+import { checkCandidate, crossingDepth, CROSSING_BONUS, TRIFECTA_BONUS, slotOf, orderBySlots, type Slot, judgePercent, judgeRank, pickSeeds, claimSentence, parseJudgeScores, type Candidate, type Grounded, type JudgeScore } from './mull.js'
 import { draftPrompt, judgePrompt } from './mull-prompts.js'
 
 /**
@@ -137,6 +138,8 @@ export interface EchoContext {
   resonance: string
   /** Premises earlier questions got wrong. Context, never corpus. */
   corrections: string
+  /** Takes they tapped "no" on, verbatim. The judge reads these. */
+  saidNo?: string[]
   /** Where they are now; see loadFocus. */
   focus?: string
   /** Their own words about what they want from takes (Settings). */
@@ -250,13 +253,29 @@ export function tapLines(rows: { text?: unknown; stance?: unknown }[]): string[]
  * question around, just a standing note of what's actually true now.
  */
 async function loadCorrections(supabase: SupabaseClient, userId: string): Promise<string> {
-  const { data, error } = await supabase
-    .from('memories')
-    .select('body, source_reference')
-    .eq('user_id', userId)
-    .contains('tags', [SPARK_CORRECTION_TAG])
-    .order('created_at', { ascending: false })
-    .limit(15)
+  const [tagged, legacy] = await Promise.all([
+    supabase
+      .from('memories')
+      .select('body, source_reference')
+      .eq('user_id', userId)
+      .contains('tags', [SPARK_CORRECTION_TAG])
+      .order('created_at', { ascending: false })
+      .limit(15),
+    // Answers saved before answers were tagged ("Spark response - ..."):
+    // out of the corpus (isElicitedAnswer), but what they put right still
+    // has to reach the draft.
+    supabase
+      .from('memories')
+      .select('body, source_reference')
+      .eq('user_id', userId)
+      .ilike('body', 'spark response%')
+      .order('created_at', { ascending: false })
+      .limit(10),
+  ])
+  const error = tagged.error
+  const seen = new Set<string>()
+  const data = [...(tagged.data ?? []), ...(legacy.error ? [] : legacy.data ?? [])]
+    .filter((m: any) => !seen.has(m.body) && !!seen.add(m.body))
   if (error) {
     console.warn('[mull] could not read past corrections:', error.message)
     return ''
@@ -281,6 +300,28 @@ mistake.
 `
 }
 
+/** Takes they said "no" to. The draft already sees the latest few; the
+ *  judge needs them too -- measured, it scored 50% a take repeating a claim
+ *  they had tapped no on and corrected out loud. Empty on any failure. */
+async function loadSaidNo(supabase: SupabaseClient, userId: string): Promise<string[]> {
+  try {
+    const { data, error } = await supabase.from('sparks').select('text')
+      .eq('user_id', userId).eq('stance', 'no')
+      .order('answered_at', { ascending: false }).limit(15)
+    if (error) return []
+    return (data ?? []).map((s: any) => s.text).filter((t: unknown): t is string => typeof t === 'string')
+  } catch {
+    return []
+  }
+}
+
+/** What the judge is told they have already said: corrections, then the
+ *  takes they said no to. */
+export function judgeHistory(echo: Pick<EchoContext, 'corrections' | 'saidNo'>): string {
+  const no = (echo.saidNo ?? []).map(t => `  - they said no to: "${t}"`).join('\n')
+  return [echo.corrections.trim(), no].filter(Boolean).join('\n\n')
+}
+
 /**
  * What they're on right now: the live project and its next move, plus the
  * last few things they captured. The draft leans toward these so the
@@ -303,7 +344,7 @@ async function readFocus(supabase: SupabaseClient, userId: string): Promise<stri
       .eq('user_id', userId).eq('status', 'active')
       .or('state.eq.live,is_priority.eq.true')
       .order('last_active', { ascending: false }).limit(1),
-    supabase.from('memories').select('title, tags')
+    supabase.from('memories').select('title, body, tags')
       .eq('user_id', userId).eq('processed', true)
       .order('created_at', { ascending: false }).limit(15),
   ])
@@ -318,7 +359,7 @@ async function readFocus(supabase: SupabaseClient, userId: string): Promise<stri
   // Notes the app elicited (spark answers, corrections) aren't fresh
   // capture -- same rule as the corpus. Filtered in JS: `tags` is nullable.
   const recent = (notes ?? [])
-    .filter((n: any) => !isAppAuthored(n.tags))
+    .filter((n: any) => !isAppAuthored(n) && !isElicitedAnswer(n.body) && !isSensitive(`${n.title ?? ''} ${n.body ?? ''}`))
     .map((n: any) => n.title)
     .filter((t: unknown): t is string => typeof t === 'string' && !!t)
     .slice(0, 5)
@@ -392,7 +433,7 @@ export function buildDraftPrompt(
 export async function loadEchoContext(
   supabase: SupabaseClient, userId: string,
 ): Promise<EchoContext> {
-  const [recentTexts, recentProjectIds, recentSubjectIds, resonance, corrections, focus, season, brief] = await Promise.all([
+  const [recentTexts, recentProjectIds, recentSubjectIds, resonance, corrections, focus, season, brief, saidNo] = await Promise.all([
     fetchRecentSparkTexts(supabase, userId),
     fetchRecentSparkProjectIds(supabase, userId),
     fetchRecentSparkSubjectIds(supabase, userId),
@@ -401,8 +442,9 @@ export async function loadEchoContext(
     loadFocus(supabase, userId),
     loadSeason(supabase, userId),
     loadTakeBrief(supabase, userId),
+    loadSaidNo(supabase, userId),
   ])
-  return { recentTexts, recentProjectIds, recentSubjectIds, resonance, corrections, focus, brief, live: season?.main ?? null, season }
+  return { recentTexts, recentProjectIds, recentSubjectIds, resonance, corrections, focus, brief, saidNo, live: season?.main ?? null, season }
 }
 
 function expiresAt(hours: number): string {
@@ -453,11 +495,11 @@ async function draft(prompt: string, timeoutMs: number, trace: MullTrace): Promi
   }
 }
 
-async function judge(grounded: Grounded[], timeoutMs: number, trace: MullTrace, liveTitle?: string | null): Promise<Map<number, JudgeScore> | null> {
+async function judge(grounded: Grounded[], timeoutMs: number, trace: MullTrace, liveTitle?: string | null, history = ''): Promise<Map<number, JudgeScore> | null> {
   const start = Date.now()
   let usage: Usage = null
   try {
-    const raw = await generateText(judgePrompt(grounded, liveTitle), {
+    const raw = await generateText(judgePrompt(grounded, liveTitle, history), {
       responseFormat: 'json', model: MODEL, maxTokens: 8192,
       thinkingLevel: 'low', timeoutMs, onUsage: u => { usage = u },
     })
@@ -549,7 +591,7 @@ export async function generateMull(
   // Parallel path: one draft on the live project (when there is one) and
   // the rest each starting from a different row picked in code.
   const callsWanted = PARALLEL_CALLS
-  const seeds = parallel ? pickSeeds(corpus, recentIds, callsWanted - (echo.live ? 1 : 0)) : []
+  const seeds = parallel ? pickSeeds(corpus, recentIds, callsWanted - (echo.live ? 1 : 0), Math.random, echo.season?.main?.id ?? echo.live?.id ?? null) : []
   const drafted = parallel
     ? (await Promise.all([
         ...(echo.live ? [draft(prompt, draftBudget, trace)] : []),
@@ -579,7 +621,10 @@ export async function generateMull(
       trace.push(`dropped: built on a row a recent question used -- ${label(g)}`)
       continue
     }
-    if (echoesRecent(g.question, recentTexts)) {
+    // The claim is what repeats, not the facts. Comparing whole takes, a
+    // word two recent ones shared was banned outright -- measured, that was
+    // "book", which killed every take on the book they're writing.
+    if (echoesRecent(claimSentence(g.question), recentTexts.map(claimSentence))) {
       trace.push(`dropped: echoes a recent question -- ${label(g)}`)
       continue
     }
@@ -592,7 +637,7 @@ export async function generateMull(
 
   const judgeBudget = deadline - Date.now() - TAIL_MS
   const scores = judgeBudget >= MIN_JUDGE_MS
-    ? await judge(grounded, judgeBudget, trace, echo.live?.title ?? null)
+    ? await judge(grounded, judgeBudget, trace, echo.live?.title ?? null, judgeHistory(echo))
     : (trace.push(`judge skipped: ${judgeBudget}ms left`), null)
   // The Venn: a take that crosses the live project outranks one that stays
   // inside it (mull.ts, CROSSING_BONUS). Judged by the rows it cites, and
