@@ -366,10 +366,8 @@ async function readFocus(supabase: SupabaseClient, userId: string): Promise<stri
   if (!p?.title && recent.length === 0) return ''
   return `
 WHERE THEY ARE RIGHT NOW (context -- never quote it, evidence still comes from rows):
-${p?.title ? `- Live project: "${p.title}"${move ? `. Next move: ${move}` : ''}\n` : ''}${p?.title && themes.length ? `- What it's steering by (their words): ${themes.map(t => `"${t}"`).join('; ')}\n` : ''}${recent.length ? `- Just captured: ${recent.map(t => `"${t}"`).join('; ')}\n` : ''}Use these as one half of a collision, not as a filter. The best question puts
-something from here next to something that looks unrelated -- a person or
-occasion in their life beside a material, skill or old project. Don't stay inside
-the live project; reach out from it.
+${p?.title ? `- Live project: "${p.title}"${move ? `. Next move: ${move}` : ''}\n` : ''}${p?.title && themes.length ? `- What it's steering by (their words): ${themes.map(t => `"${t}"`).join('; ')}\n` : ''}${recent.length ? `- Just captured: ${recent.map(t => `"${t}"`).join('; ')}\n` : ''}What they're thinking about lately is a good place to start. Nothing has to be
+about the project.
 `
 }
 
@@ -465,6 +463,7 @@ export function readCandidates(raw: unknown): Candidate[] {
     doubt: str(c?.doubt) || undefined,
     stake: str(c?.stake),
     project: str(c?.project) || null,
+    outside: str(c?.outside) || undefined,
     evidence: Array.isArray(c?.evidence)
       ? c.evidence.map((e: any) => ({ ref: str(e?.ref), quote: str(e?.quote) })).filter((e: { quote: string }) => e.quote)
       : [],
@@ -591,7 +590,7 @@ export async function generateMull(
   // Parallel path: one draft on the live project (when there is one) and
   // the rest each starting from a different row picked in code.
   const callsWanted = PARALLEL_CALLS
-  const seeds = parallel ? pickSeeds(corpus, recentIds, callsWanted - (echo.live ? 1 : 0), Math.random, echo.season?.main?.id ?? echo.live?.id ?? null) : []
+  const seeds = parallel ? pickSeeds(corpus, recentIds, callsWanted - (echo.live ? 1 : 0)) : []
   const drafted = parallel
     ? (await Promise.all([
         ...(echo.live ? [draft(prompt, draftBudget, trace)] : []),

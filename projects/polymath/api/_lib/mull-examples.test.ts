@@ -14,15 +14,15 @@ describe('the teaching examples', () => {
       }))
       const corpus: Corpus = { rows, byRef: new Map(rows.map(r => [r.ref, r])), projectIdByTitle: new Map(), text: '' }
       const r = checkCandidate({
-        question: e.question, noticing: '', stake: e.stake, project: null,
+        question: e.question, noticing: '', stake: '', project: null, outside: e.outside,
         evidence: rows.map(row => ({ ref: row.ref, quote: row.text })),
       }, corpus)
       expect(r.ok ? 'ok' : r.reason).toBe('ok')
     })
   })
 
-  it('every good example builds on at least two things', () => {
-    for (const e of GOOD_EXAMPLES) expect(e.evidence.length).toBeGreaterThanOrEqual(2)
+  it('every good example either adds a fact from outside or puts two of theirs together', () => {
+    for (const e of GOOD_EXAMPLES) expect(!!e.outside || e.evidence.length >= 2).toBe(true)
   })
 
   it('every bad example says why', () => {

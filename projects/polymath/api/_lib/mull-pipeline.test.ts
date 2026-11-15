@@ -204,27 +204,28 @@ describe('the mull channel, end to end', () => {
     expect(trace.join('\n')).toMatch(/judge SHIP r8 t9/)
   })
 
-  it('refuses a question built on one row -- that is a summary, not a pattern', async () => {
-    respond({ draft: [{ ...ONE_TAKE, evidence: [ONE_TAKE.evidence[0]] }], judge: [ship(1)] })
-    const trace: string[] = []
-    expect(await bakeMull(fakeSupabase(corpus()).client, 'u1', undefined, trace)).toEqual([])
-    expect(trace.join('\n')).toMatch(/needs 2 real rows of evidence, has 1/)
+  it('ships a thought that starts from one note and adds a fact from outside', async () => {
+    const one = { ...ONE_TAKE, evidence: [ONE_TAKE.evidence[0]], outside: 'Glenn Gould spliced his records from many takes.',
+      question: 'You said a recording only works if it is one take. Glenn Gould spliced his records from many takes. Is one take a rule or a mood?' }
+    respond({ draft: [one], judge: [ship(1)] })
+    expect((await bakeMull(fakeSupabase(corpus()).client, 'u1')).map(b => b.text)).toEqual([one.question])
   })
 
-  it('a fragment and the note it was cut from are one capture, not two', async () => {
+  it('a fragment whose note is in the corpus is not a second row', async () => {
     const data = corpus() as any
     data.fragments.push({ user_id: 'u1', id: 'f-cut', text: 'the second take is always worse', created_at: ago(90), memory_id: 'm2', project_id: 'p-book', projects: { title: 'The book', state: 'mull', status: 'active' } })
-    respond({ draft: [{ ...ONE_TAKE, evidence: [ONE_TAKE.evidence[0], { ref: 'F1', quote: 'the second take is always worse' }] }], judge: [ship(1)] })
+    respond({ draft: [{ ...ONE_TAKE, evidence: [ONE_TAKE.evidence[0], { ref: 'F2', quote: 'the second take is always worse' }] }], judge: [ship(1)] })
     const trace: string[] = []
-    expect(await bakeMull(fakeSupabase(data).client, 'u1', undefined, trace)).toEqual([])
-    expect(trace.join('\n')).toMatch(/needs 2 real rows of evidence, has 1/)
+    const baked = await bakeMull(fakeSupabase(data).client, 'u1', undefined, trace)
+    expect(baked).toHaveLength(1)
+    expect(baked[0].sources?.length).toBe(1)
   })
 
   it('refuses a quote that is in no row, and says which', async () => {
     respond({ draft: [{ ...ONE_TAKE, evidence: [ONE_TAKE.evidence[0], { ref: 'F1', quote: 'a sentence nobody ever wrote down' }] }], judge: [ship(1)] })
     const trace: string[] = []
     expect(await bakeMull(fakeSupabase(corpus()).client, 'u1', undefined, trace)).toEqual([])
-    expect(trace.join('\n')).toMatch(/not in the corpus: F1 "a sentence nobody ever wrote down"/)
+    expect(trace.join('\n')).toMatch(/quotes something in no row: F1 "a sentence nobody ever wrote down"/)
   })
 
   it('forgives a wrong ref when the quote is real somewhere else', async () => {
@@ -248,9 +249,10 @@ describe('the mull channel, end to end', () => {
     expect(baked.map(b => b.text)).toEqual([take])
   })
 
-  it('refuses a yes/no question', async () => {
-    respond({ draft: [{ ...ONE_TAKE, question: 'You said a recording only works if it is one take. You rewrote chapter nine for the fourth time. Should the book be one take too?' }], judge: [ship(1)] })
-    expect(await bakeMull(fakeSupabase(corpus()).client, 'u1')).toEqual([])
+  it('lets an open yes/no question through -- they picked several in a blind test', async () => {
+    const q = 'You said a recording only works if it is one take. You rewrote chapter nine for the fourth time. Should the book be one take too?'
+    respond({ draft: [{ ...ONE_TAKE, question: q }], judge: [ship(1)] })
+    expect((await bakeMull(fakeSupabase(corpus()).client, 'u1')).map(b => b.text)).toEqual([q])
   })
 
   it('ships what the judge kills too, with a low percentage', async () => {
@@ -283,11 +285,11 @@ describe('the mull channel, end to end', () => {
       return data
     }
 
-    it('asks the drafter for a crossing, naming the live project', async () => {
+    it('never forces the live project into the draft', async () => {
       respond({ draft: [ONE_TAKE], judge: [ship(1)] })
       await bakeMull(fakeSupabase(withLiveBook()).client, 'u1')
-      expect(draftPromptSent()).toMatch(/THE ONE THAT MATTERS MOST -- THE CROSSING/)
-      expect(draftPromptSent()).toMatch(/deep in "The book" right now/)
+      expect(draftPromptSent()).toMatch(/never force one in/)
+      expect(draftPromptSent()).not.toMatch(/THE CROSSING/)
     })
 
     it('asks for nothing of the kind when nothing is live', async () => {
@@ -503,12 +505,11 @@ describe('the mull channel, end to end', () => {
       expect(draftPromptSent()).not.toMatch(/blue really should dominate/) // the abandoned mural stays out
     })
 
-    it('asks the drafter for the other project and for a wild one', async () => {
+    it('does not steer the draft toward the season', async () => {
       onDay(false)
       respond({ draft: [ONE_TAKE], judge: [ship(1)] })
       await bakeMull(fakeSupabase(withSeason()).client, 'u1')
-      expect(draftPromptSent()).toMatch(/ALSO THIS SEASON: "Oscar's toy"/)
-      expect(draftPromptSent()).toMatch(/THE WILD ONE/)
+      expect(draftPromptSent()).not.toMatch(/ALSO THIS SEASON|THE WILD ONE/)
     })
 
     it('ignores the other project once its date has passed', async () => {
@@ -718,7 +719,7 @@ describe('the prompts Settings shows', () => {
     const p = previewTakePrompts('Leave my dad out of it.')
     expect(p.draft).toContain('Leave my dad out of it.')
     expect(p.draft).toContain('YOUR CORPUS GOES HERE')
-    expect(p.draft).toContain('WHAT COUNTS AS EVIDENCE')
+    expect(p.draft).toContain('FROM THE WORLD')
     expect(p.judge).toContain('revelation')
   })
   it('the idea prompt carries the brief in its slot', async () => {

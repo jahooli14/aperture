@@ -23,8 +23,11 @@ export { isGraveyarded } from './project-state.js'
  *  a one-note question did. */
 export const MAX_MULL_WORDS = 70
 
-/** A pattern is two things at least. One note played back is a summary. */
-export const MIN_EVIDENCE_ROWS = 2
+/** One thing they said is enough when the take adds something from the
+ *  world to it (Nov 2026: the owner picked 7 of 8 such takes in a blind
+ *  test). Played back with nothing added, one note is still a summary --
+ *  that is the judge's call now, not a count. */
+export const MIN_EVIDENCE_ROWS = 1
 
 export interface Evidence { ref: string; quote: string }
 
@@ -42,6 +45,9 @@ export interface Candidate {
   /** What they would do differently once they have answered. */
   stake: string
   project: string | null
+  /** The fact from outside their notes the take adds, said plainly. Its
+   *  names may appear in the take; the judge checks it is true. */
+  outside?: string
 }
 
 export interface Grounded extends Candidate {
@@ -251,30 +257,22 @@ export function claimSentence(text: string): string {
 
 /**
  * Where each parallel draft starts. Left to itself the model finds the same
- * two or three strong patterns every time, and each run's candidates echo
- * the last run's. So code picks different starting rows, none used by a
- * recent take, and each draft is told to build from its own.
- *
- * Projects first, the live one aside (it has its own draft). Seeding from
- * any note was measured on the owner's corpus (Nov 2026) and the seeded
- * drafts wrote horoscopes off whatever the seed was about -- a USB cable,
- * new shoes, a fox: "Animals only catch your attention when they act like
- * people." A take is about something they make, so it starts from one.
- * Then notes about a project, then any note. Pure; `rand` is injected.
+ * two or three things every run, so code picks different starting rows --
+ * recent notes, older notes, list items (their "Linguid" lines are some of
+ * the best) -- none used by a recent take, and each draft starts from its
+ * own. Pure; `rand` is injected for tests.
  */
-export function pickSeeds(
-  corpus: Corpus, avoid: Set<string>, n: number, rand: () => number = Math.random, liveId?: string | null,
-): CorpusRow[] {
-  const free = (r: CorpusRow) => !avoid.has(r.id) && !avoid.has(r.captureId) && r.projectId !== liveId
-  const projects = corpus.rows.filter(r => r.kind === 'project' && free(r) && r.id !== liveId)
-  const filed = corpus.rows.filter(r => r.kind !== 'project' && r.projectId && free(r))
-  const notes = corpus.rows.filter(r => r.kind === 'memory' && free(r) && !r.projectId)
+export function pickSeeds(corpus: Corpus, avoid: Set<string>, n: number, rand: () => number = Math.random): CorpusRow[] {
+  const free = (r: CorpusRow) => !avoid.has(r.id) && !avoid.has(r.captureId)
+  const notes = corpus.rows.filter(r => r.kind === 'memory' && free(r))
+  const recent = notes.slice(0, 30)
+  const older = notes.slice(30)
+  const items = corpus.rows.filter(r => r.kind === 'list_item' && free(r))
   const out: CorpusRow[] = []
-  for (const pool of [projects, filed, projects, notes, projects, notes]) {
+  for (const pool of [recent, older, items, recent, older, items]) {
     if (out.length >= n) break
     if (pool.length === 0) continue
-    const pick = pool.splice(Math.floor(rand() * pool.length), 1)[0]
-    if (!out.includes(pick)) out.push(pick)
+    out.push(pool.splice(Math.floor(rand() * pool.length), 1)[0])
   }
   return out
 }
@@ -306,6 +304,9 @@ export function checkCandidate(
   if (text.split(/\s+/).length > MAX_MULL_WORDS) return { ok: false, reason: 'too long to carry around' }
 
   const { rows, bad } = resolveEvidence(c.evidence, corpus)
+  // One note is enough now, so a quote found nowhere can't simply be
+  // dropped: the rest would ship on a draft that invented part of itself.
+  if (bad.length > 0) return { ok: false, reason: `quotes something in no row: ${bad.join('; ')}` }
   // Distinct captures, not rows: a fragment and the note it was cut from
   // are one thought said once, and a pattern needs two.
   const captures = new Set(rows.map(r => r.captureId)).size
@@ -320,7 +321,8 @@ export function checkCandidate(
   // Checked against the full rows the quotes resolved to, never the quotes
   // alone: a real quote with an invented detail dressed around it passes a
   // quote-only check and fails this one.
-  let invented = unsupportedSpecifics(text, rows.map(evidenceText))
+  const sources = () => [...rows.map(evidenceText), c.outside ?? '']
+  let invented = unsupportedSpecifics(text, sources())
   if (invented.length > 0) {
     // A real person the draft named without citing the note they're in.
     // If exactly the names it used sit together in one row of the corpus,
@@ -330,7 +332,7 @@ export function checkCandidate(
     const source = rowNaming(invented, rows, corpus)
     if (source) {
       rows.push(source)
-      invented = unsupportedSpecifics(text, rows.map(evidenceText))
+      invented = unsupportedSpecifics(text, sources())
     }
   }
   if (invented.length > 0) {
@@ -348,8 +350,6 @@ export function checkCandidate(
     const explainer = EXPLAINER_PATTERNS.find(re => re.test(text))
     if (explainer) return { ok: false, reason: `explains the pattern instead of showing it: ${explainer.source}` }
     if (OPENS_ON_A_PLAN.test(text)) return { ok: false, reason: 'opens by reciting a plan' }
-    // Yes or no is the whole point of a take, so this only bites a question.
-    if (text.includes('?') && isClosed(text)) return { ok: false, reason: 'answerable with yes or no' }
     if (!text.includes('?')) {
       const claim = claimSentence(text)
       if (HEDGES.test(claim)) return { ok: false, reason: 'hedges the claim, so nobody can disagree with it' }

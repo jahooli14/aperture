@@ -85,23 +85,22 @@ describe('a real name the draft forgot to cite', () => {
 })
 
 describe('pickSeeds', () => {
-  const mk = (n: number, kind: CorpusRow['kind'], extra: Partial<CorpusRow> = {}) => Array.from({ length: n }, (_, i) => row(`${kind[0].toUpperCase()}${i}`, `row ${kind} ${i}`, { kind, id: `${kind}${i}`, captureId: `${kind}${i}`, ...extra }))
-  const projects = mk(4, 'project').map(r => ({ ...r, projectId: r.id }))
-  const rows = [...projects, ...mk(40, 'memory'), ...mk(3, 'list_item')]
+  const mk = (n: number, kind: CorpusRow['kind']) => Array.from({ length: n }, (_, i) => row(`${kind[0].toUpperCase()}${i}`, `row ${kind} ${i}`, { kind, id: `${kind}${i}`, captureId: `${kind}${i}` }))
+  const rows = [...mk(4, 'project'), ...mk(40, 'memory'), ...mk(3, 'list_item')]
   const corpus: Corpus = { rows, byRef: new Map(rows.map(r => [r.ref, r])), projectIdByTitle: new Map(), text: '' }
   let k = 0
   const rand = () => ((k = (k * 7 + 3) % 11) / 11)
 
-  it('starts from projects, all different, never the live one', () => {
-    const seeds = pickSeeds(corpus, new Set(), 3, rand, 'project0')
+  it('spreads over recent notes, older notes and list items, all different, never a project', () => {
+    const seeds = pickSeeds(corpus, new Set(), 3, rand)
     expect(seeds).toHaveLength(3)
     expect(new Set(seeds.map(s => s.id)).size).toBe(3)
-    expect(seeds.filter(s => s.kind === 'project').length).toBeGreaterThanOrEqual(2)
-    expect(seeds.some(s => s.id === 'project0')).toBe(false)
+    expect(seeds.some(s => s.kind === 'list_item')).toBe(true)
+    expect(seeds.some(s => s.kind === 'project')).toBe(false)
   })
   it('never starts from a row a recent take used', () => {
-    const avoid = new Set(projects.map(r => r.id))
-    expect(pickSeeds(corpus, avoid, 4, rand).every(s => s.kind === 'memory')).toBe(true)
+    const avoid = new Set(rows.filter(r => r.kind === 'list_item').map(r => r.id))
+    expect(pickSeeds(corpus, avoid, 6, rand).every(s => s.kind === 'memory')).toBe(true)
   })
   it('returns fewer when the corpus is small', () => {
     const tiny: Corpus = { ...corpus, rows: rows.slice(0, 2) }
@@ -133,9 +132,19 @@ describe('checkCandidate', () => {
     const r = checkCandidate(candidate("In March you said it only works if it's one take. What would one take look like for the book?"), CORPUS)
     expect(r.ok).toBe(false)
   })
-  it('refuses one row of evidence', () => {
+  it('one row of evidence is enough', () => {
     const r = checkCandidate(candidate('What would one take look like for the book?', [{ ref: 'N2', quote: "it only works if it's one take" }]), CORPUS)
-    expect(r).toMatchObject({ ok: false, reason: expect.stringMatching(/needs 2 real rows/) })
+    expect(r.ok).toBe(true)
+  })
+  it('refuses no evidence at all', () => {
+    const r = checkCandidate(candidate('What would one take look like for the book?', []), CORPUS)
+    expect(r).toMatchObject({ ok: false, reason: expect.stringMatching(/needs 1 real rows/) })
+  })
+  it('lets in the names from the outside fact it declares, and no others', () => {
+    const ev = [{ ref: 'N2', quote: "it only works if it's one take" }]
+    const take = 'One take only. Glenn Gould spliced his records from many takes. Is one take a rule or a mood?'
+    expect(checkCandidate({ ...candidate(take, ev), outside: 'Glenn Gould spliced his records from many takes.' }, CORPUS).ok).toBe(true)
+    expect(checkCandidate(candidate(take, ev), CORPUS).ok).toBe(false)
   })
   it('refuses the model explaining its own pattern', () => {
     const r = checkCandidate(candidate("You said one take, which mirrors how the book swaps characters. What would that look like?"), CORPUS)
