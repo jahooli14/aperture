@@ -109,6 +109,10 @@ NEVER
 - Psychoanalysis: what they feel, value, fear or "really" want. Never about their
   health, family, money or habits.
 - Advice or tasks: "you should", "try", "make".
+- Cleverness. No big-concept reframes (Gödel, Kolmogorov, "it's really just...")
+  and no debunking what they liked. A plain, surprising, true fact about the thing
+  itself beats a clever idea about it: "the stripes aren't for lions; horseflies
+  crash into them" works, "a paradox is where logic itself runs out" doesn't.
 - A summary of one note with nothing added.
 - Two things that merely share a word. The shared idea has to be real.
 

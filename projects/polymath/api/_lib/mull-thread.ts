@@ -43,6 +43,7 @@ Take it ONE step further. Not sideways to a new topic, and not back over the sam
 - Under 50 words, two or three short sentences, spoken plainly.
 - Only facts you are certain are true. If unsure, pick another. It is checked against the web: say it the way an encyclopedia would, with modest verbs and no absolutes ("made it harder", not "made it impossible").
 - No advice, no tasks, no psychoanalysis, nothing about their health or family.
+- Not clever: no big-concept reframes, no debunking. A plain, surprising, true fact about the thing itself beats a clever idea about it.
 - Every few steps, bring it back to what they said, or to something they make, if it fits naturally. Never force it.
 ${retryNote ? `- ${retryNote}\n` : ''}${PLAIN_ENGLISH_RULES}
 
