@@ -40,6 +40,7 @@ import { isSensitive } from './sensitive.js'
 import { loadCorpus, normaliseTitle, type Corpus, type CorpusRow } from './mull-corpus.js'
 import { checkCandidate, crossingDepth, CROSSING_BONUS, TRIFECTA_BONUS, slotOf, orderBySlots, type Slot, judgePercent, judgeRank, pickSeeds, claimSentence, parseJudgeScores, type Candidate, type Grounded, type JudgeScore } from './mull.js'
 import { draftPrompt, judgePrompt } from './mull-prompts.js'
+import { checkFactSafely } from './fact-check.js'
 
 /**
  * Four days.
@@ -732,6 +733,8 @@ export async function generateMull(
 
   // Four slots (main, two others, wild) need four takes; otherwise three.
   const perRun = parallel || (seasonOn && alsoIds.length > 1) ? QUESTIONS_PER_RUN + 1 : QUESTIONS_PER_RUN
+  const checked = await checkOutsideFacts(ranked, perRun, deadline, trace)
+  ranked = checked.ranked
   const baked: BakedSpark[] = []
   for (const g of ranked) {
     if (baked.length >= perRun) break
@@ -749,13 +752,47 @@ export async function generateMull(
       stake: g.stake || undefined,
       subject_id: g.rows[0].id,
       subject_kind: g.rows[0].kind,
-      sources: sourcesOf(g.rows),
+      sources: [...sourcesOf(g.rows), ...(checked.sources.get(g) ? [{ kind: 'link', ...checked.sources.get(g)! }] : [])],
       score: percents.get(g),
       banked: baked.length > 0,
     })
   }
   if (baked.length === 0) trace.push('the judge shipped nothing')
   return baked
+}
+
+/** Below this there is no time for a search, so facts ship unchecked. */
+const MIN_CHECK_MS = 3_000
+
+/**
+ * The outside facts of the takes about to ship, checked against the web in
+ * parallel (fact-check.ts). False or unsure drops the take; the next one in
+ * rank order takes its place. A take with no outside fact needs no check.
+ */
+export async function checkOutsideFacts(
+  ranked: Grounded[], want: number, deadline: number, trace: MullTrace,
+): Promise<{ ranked: Grounded[]; sources: Map<Grounded, { title: string; url: string }> }> {
+  const sources = new Map<Grounded, { title: string; url: string }>()
+  const budget = deadline - Date.now() - TAIL_MS
+  // A few spares, so a dropped one has a replacement already checked.
+  const head = ranked.slice(0, want + 2)
+  if (!head.some(g => g.outside)) return { ranked, sources }
+  if (budget < MIN_CHECK_MS) {
+    trace.push(`fact check skipped: ${budget}ms left`)
+    return { ranked, sources }
+  }
+  const verdicts = await Promise.all(head.map(g => g.outside ? checkFactSafely(g.outside, budget) : Promise.resolve(null)))
+  const dropped = new Set<Grounded>()
+  head.forEach((g, i) => {
+    const v = verdicts[i]
+    if (!v) return
+    trace.push(`fact ${v.verdict.toUpperCase()}${v.source ? ` (${v.source.url})` : ''}: ${v.why ?? ''} -- "${g.outside!.slice(0, 80)}"`)
+    if (v.verdict !== 'true') dropped.add(g)
+    else if (v.source) sources.set(g, v.source)
+  })
+  // Unchecked spares past the head are left out rather than shipped on trust.
+  const rest = ranked.slice(head.length).filter(g => !g.outside)
+  return { ranked: [...head.filter(g => !dropped.has(g)), ...rest], sources }
 }
 
 /**

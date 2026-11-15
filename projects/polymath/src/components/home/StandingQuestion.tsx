@@ -30,7 +30,7 @@ export interface StandingQuestionSpark {
   project_id: string | null
   projects?: { title: string } | null
   /** What the question was built from -- what was put next to what. */
-  sources?: { kind: string; title: string; at?: string }[] | null
+  sources?: { kind: string; title: string; at?: string; url?: string }[] | null
   /** What they'd do differently if it's right (sparks.stake). */
   stake?: string | null
   /** How strongly the judge backed it, 0-100. Shown quietly. */
@@ -66,6 +66,10 @@ export function StandingQuestion() {
   const [text, setText] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [rerolling, setRerolling] = useState(false)
+  // "Go further": the next step of this thread, written and fact-checked
+  // on the spot (mull-thread.ts). What they said back, if anything, steers it.
+  const [furthering, setFurthering] = useState(false)
+  const [lastAnswer, setLastAnswer] = useState('')
   // A take is a claim, so the first reaction is a stance, tapped. Saying why
   // is optional and comes second.
   const [stance, setStance] = useState<Stance | null>(null)
@@ -150,6 +154,7 @@ export function StandingQuestion() {
         stance,
       }) as { project_title?: string; processed?: boolean }
       haptic.success()
+      setLastAnswer(turns.join(' ').trim())
       setReceipt(
         turns.length === 0
           // A bare "no" is the most useful tap there is: the next take is
@@ -203,6 +208,45 @@ export function StandingQuestion() {
     await save([text])
   }
 
+  /** Clear everything about the take on the card before the next one. */
+  const resetFor = (next: StandingQuestionSpark) => {
+    setSpark(next)
+    setShowSources(false)
+    setAnswering(false)
+    setText('')
+    setStance(null)
+    setFollowUp(null)
+    setFollowUpText('')
+    setFollowUpReason(null)
+    setKept('idle')
+    setReceipt(null)
+    setSubmitting(false)
+  }
+
+  const further = async (answer?: string) => {
+    if (!spark) return
+    setFurthering(true)
+    setNote(null)
+    try {
+      // A draft plus a web check on its fact: seconds, not milliseconds.
+      const data = await api.post('utilities?resource=spark-further', { spark_id: spark.id, answer }, { timeout: 90_000 }) as {
+        spark?: StandingQuestionSpark | null
+      }
+      if (data.spark) {
+        haptic.light()
+        resetFor(data.spark)
+        setLastAnswer('')
+      } else {
+        setNote("Couldn't find a next step that checked out. Try again.")
+      }
+    } catch (err) {
+      const status = (err as { status?: number } | null)?.status
+      setNote(status === 408 ? 'That took too long. Try again.' : "Couldn't reach the server.")
+    } finally {
+      setFurthering(false)
+    }
+  }
+
   const reroll = async (retry = false) => {
     setRerolling(true)
     setNote(null)
@@ -220,15 +264,7 @@ export function StandingQuestion() {
         // Restock behind it. Nobody waits on this, and it fails quietly: the
         // next tap just generates live instead.
         void api.post('utilities?resource=topup-bank', {}, { timeout: 120_000 }).catch(() => undefined)
-        setSpark(data.spark)
-        setShowSources(false)
-        setAnswering(false)
-        setText('')
-        setStance(null)
-        setFollowUp(null)
-        setFollowUpText('')
-        setFollowUpReason(null)
-        setKept('idle')
+        resetFor(data.spark)
       } else {
         // Nothing came back (a rare run of bad luck, not a verdict on the
         // notes). Never say so: quietly ask once more; if that is empty too,
@@ -327,12 +363,25 @@ export function StandingQuestion() {
             <span className="font-medium">{keepLine}</span>
           </button>
         ) : null}
+        {/* What they said is the best place to go next from. */}
+        <button
+          className="block text-left text-[13px] font-medium min-h-[40px] mt-1 transition-opacity hover:opacity-90 disabled:opacity-40"
+          style={quietActionStyle}
+          disabled={furthering}
+          onClick={() => { void further(lastAnswer || undefined) }}
+        >
+          {furthering ? 'following it…' : lastAnswer ? 'go further from what you said' : 'go further'}
+        </button>
+        {note && <p className="text-[13px] mt-1" style={{ color: 'var(--brand-text-secondary)' }}>{note}</p>}
       </div>
     )
   }
 
   const projectTitle = spark.projects?.title ?? null
-  const hasSources = (spark.sources?.length ?? 0) >= 2
+  // Where it came from (their notes), and the page that backs its fact.
+  const origin = (spark.sources ?? []).filter(x => x.kind !== 'link')
+  const link = (spark.sources ?? []).find(x => x.kind === 'link' && x.url)
+  const hasSources = origin.length >= 1
   const freshNote = freshNoteLabel(spark.sources)
 
   return reveal(
@@ -377,8 +426,20 @@ export function StandingQuestion() {
           <span className="text-[11px] uppercase tracking-[0.14em] font-medium mr-1.5" style={{ color: 'var(--brand-text-muted)' }}>
             from
           </span>
-          {spark.sources!.map(x => x.title).filter(Boolean).join(' + ')}
+          {origin.map(x => x.title).filter(Boolean).join(' + ')}
         </p>
+      )}
+
+      {link && (
+        <a
+          href={link.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-block text-[13px] mt-1 transition-opacity hover:opacity-90"
+          style={quietActionStyle}
+        >
+          read: {link.title} ↗
+        </a>
       )}
 
       {/* Two quiet words, not two buttons. Answering is opt-in — the voice
@@ -426,9 +487,17 @@ export function StandingQuestion() {
             around a dangling dot. */}
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
           <button
+            className="text-[13px] font-medium min-h-[40px] pr-3 transition-opacity hover:opacity-90 disabled:opacity-30"
+            style={quietActionStyle}
+            disabled={furthering || rerolling}
+            onClick={() => { void further() }}
+          >
+            {furthering ? 'following it…' : 'go further'}
+          </button>
+          <button
             className="text-[13px] min-h-[40px] pr-3 transition-opacity hover:opacity-90 disabled:opacity-30"
             style={{ color: 'var(--brand-text-muted)' }}
-            disabled={rerolling}
+            disabled={rerolling || furthering}
             onClick={() => reroll()}
           >
             {rerolling ? 'thinking…' : 'ask me something else'}

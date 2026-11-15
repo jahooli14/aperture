@@ -80,7 +80,7 @@ const EXECUTION_SESSIONS_RESOURCES = new Set([
   'harvest', 'mirror', 'book',
   'next-cycle', 'move',
 ])
-const EXECUTION_SPARKS_RESOURCES = new Set(['bake', 'today', 'respond', 'spark-followup', 'dismiss-spark', 'reroll-spark', 'retire-and-rebake', 'topup-bank', 'take-brief', 'prompt-preview', 'project-update', 'project-updates', 'catch-up'])
+const EXECUTION_SPARKS_RESOURCES = new Set(['bake', 'today', 'respond', 'spark-followup', 'dismiss-spark', 'reroll-spark', 'spark-further', 'retire-and-rebake', 'topup-bank', 'take-brief', 'prompt-preview', 'project-update', 'project-updates', 'catch-up'])
 const EXECUTION_PROPOSALS_RESOURCES = new Set([
   'drift-decay', 'reembed-articles', 'backfill-embeddings', 'reprocess-backlog',
 ])
@@ -2521,6 +2521,22 @@ async function handleExecutionSparks(req: VercelRequest, res: VercelResponse) {
   // honest: an unanswered question stays unanswered, which is what the type
   // rotation reads to decide what to ask next (and so what comes back is a
   // different kind of question, not the same one reworded).
+  // ─── SPARK-FURTHER (pull the thread) ────────────────────────────────
+  // The next step of the take on the card, from the steps before it and
+  // what they said back (mull-thread.ts). Fact-checked like a nightly take.
+  if (resource === 'spark-further') {
+    if (req.method !== 'POST') return res.status(405).json({ error: 'POST required' })
+    const userId = await getUserId(req)
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' })
+    const { spark_id, answer } = req.body || {}
+    if (typeof spark_id !== 'string' || !spark_id) return res.status(400).json({ error: 'spark_id required' })
+    if (answer !== undefined && typeof answer !== 'string') return res.status(400).json({ error: 'answer must be text' })
+    const { goFurther } = await import('./_lib/mull-thread.js')
+    const out = await goFurther(supabase, userId, spark_id, answer)
+    if (out.ok) return res.status(200).json({ spark: out.spark })
+    return out.slow ? res.status(200).json({ spark: null, slow: true }) : res.status(out.status).json({ error: out.error })
+  }
+
   if (resource === 'reroll-spark') {
     if (req.method !== 'POST') return res.status(405).json({ error: 'POST required' })
     const userId = await getUserId(req)

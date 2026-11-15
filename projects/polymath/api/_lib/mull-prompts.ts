@@ -101,7 +101,11 @@ WHAT MAKES ONE GOOD
 
 NEVER
 - Anything from outside that you are not sure is true and well known. A wrong fact
-  ruins it. If unsure, pick another.
+  ruins it. If unsure, pick another. Every outside fact is checked against the
+  web before they see it, and most that fail are not invented but OVERSTATED:
+  "made it impossible" when it made it harder, "only" when it was mostly,
+  "invented to" when nobody knows why. Say it the way an encyclopedia would:
+  textbook facts, modest verbs, no absolutes.
 - Psychoanalysis: what they feel, value, fear or "really" want. Never about their
   health, family, money or habits.
 - Advice or tasks: "you should", "try", "make".

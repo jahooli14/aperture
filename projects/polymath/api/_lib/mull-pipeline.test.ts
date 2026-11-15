@@ -14,6 +14,9 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 const generateText = vi.fn()
 vi.mock('./gemini-chat.js', () => ({ generateText: (...a: unknown[]) => generateText(...a) }))
+// The web check on outside facts (fact-check.ts): true with a link unless a test says otherwise.
+const checkFactSafely = vi.fn(async (_claim: string) => ({ verdict: 'true', source: { title: 'Glenn Gould', url: 'https://en.wikipedia.org/wiki/Glenn_Gould' } }))
+vi.mock('./fact-check.js', () => ({ checkFactSafely: (c: string) => checkFactSafely(c) }))
 
 const { bakeMull, generateMull, loadEchoContext } = await import('./mull-generator.js')
 
@@ -209,6 +212,25 @@ describe('the mull channel, end to end', () => {
       question: 'You said a recording only works if it is one take. Glenn Gould spliced his records from many takes. Is one take a rule or a mood?' }
     respond({ draft: [one], judge: [ship(1)] })
     expect((await bakeMull(fakeSupabase(corpus()).client, 'u1')).map(b => b.text)).toEqual([one.question])
+  })
+
+  it('a true outside fact ships with its source link', async () => {
+    const one = { ...ONE_TAKE, evidence: [ONE_TAKE.evidence[0]], outside: 'Glenn Gould spliced his records from many takes.',
+      question: 'You said a recording only works if it is one take. Glenn Gould spliced his records from many takes. Is one take a rule or a mood?' }
+    respond({ draft: [one], judge: [ship(1)] })
+    const baked = await bakeMull(fakeSupabase(corpus()).client, 'u1')
+    expect(baked[0].sources).toContainEqual({ kind: 'link', title: 'Glenn Gould', url: 'https://en.wikipedia.org/wiki/Glenn_Gould' })
+  })
+
+  it('a false or unsure outside fact never ships', async () => {
+    checkFactSafely.mockResolvedValueOnce({ verdict: 'false' } as never)
+    const one = { ...ONE_TAKE, evidence: [ONE_TAKE.evidence[0]], outside: 'Glenn Gould only ever recorded in one take.',
+      question: 'You said a recording only works if it is one take. Glenn Gould only ever recorded in one take. Was he right?' }
+    respond({ draft: [one, GREENHOUSE], judge: [ship(1), ship(2)] })
+    const trace: string[] = []
+    const baked = await bakeMull(fakeSupabase(corpus()).client, 'u1', undefined, trace)
+    expect(baked.map(b => b.text)).toEqual([GREENHOUSE.question])
+    expect(trace.join('\n')).toMatch(/fact FALSE/)
   })
 
   it('a fragment whose note is in the corpus is not a second row', async () => {
