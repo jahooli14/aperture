@@ -34,21 +34,21 @@ const BUDGET_MS = 40_000
 export interface ThreadStep { text: string }
 
 export function threadPrompt(chain: string[], answer?: string, retryNote?: string): string {
-  return `A curious, well-read friend is following one idea with someone, a step at a time, on their walks. It started from something they said, quoted in step 1.
+  return `A curious friend is following one thread with someone, a line at a time. It started from something they said, in line 1.
 
 THE THREAD SO FAR:
 ${chain.map((t, i) => `${i + 1}. ${t}`).join('\n')}
 ${answer ? `\nWHAT THEY SAID BACK TO THE LAST STEP, in their words -- build on this, it matters more than anything above:\n"${answer}"\n` : ''}
-Take it ONE step further. Not sideways to a new topic, and not back over the same ground: the next thing a curious person would find if they kept pulling this thread${answer ? ', starting from what they just said' : ''}. Add one new, true, well-known fact, idea, person, experiment or work that opens a new door. End on an open end -- a question or a surprising claim -- sharper than the last one.
-- Under 50 words, two or three short sentences, spoken plainly.
-- Only facts you are certain are true. If unsure, pick another. It is checked against the web: say it the way an encyclopedia would, with modest verbs and no absolutes ("made it harder", not "made it impossible").
-- No advice, no tasks, no psychoanalysis, nothing about their health or family.
-- Not clever: no big-concept reframes, no debunking. A plain, surprising, true fact about the thing itself beats a clever idea about it.
-- Every few steps, bring it back to what they said, or to something they make, if it fits naturally. Never force it.
+Write the NEXT LINE. One plain, surprising fact that follows from the last line: the next thing a curious person would find if they kept pulling this thread${answer ? ', starting from what they just said' : ''}. Not sideways, not back over old ground.
+- One sentence, under 15 words. Like: "Horseflies crash into the stripes and can't land." Then: "Japanese farmers painted stripes on cows, and fly bites halved."
+- No question. No "you". No moral, no wondering, no "what if". Just the fact.
+- Only facts you are certain are true; it is checked against the web. Encyclopedia wording, no absolutes ("halved", not "stopped").
+- Never clever: no big ideas, no debunking. A fact about the thing itself.
+- Every few lines, it may land back on something of theirs -- a note or a project -- in one plain line. Never force it.
+- No advice, no tasks, nothing about their health or family.
 ${retryNote ? `- ${retryNote}\n` : ''}${PLAIN_ENGLISH_RULES}
 
-JSON only:
-{"take": "EVERYTHING they see: the new fact, then the open end, two or three sentences", "outside": "the new fact alone, one plain sentence, so it can be checked"}`
+JSON only: {"take": "the line", "outside": "the same fact, said plainly enough to check"}`
 }
 
 /** Pure: the model's answer, or null if it isn't usable. */
@@ -56,9 +56,9 @@ export function readStep(raw: unknown): { take: string; outside: string } | null
   const r = (raw ?? {}) as Record<string, unknown>
   const take = typeof r.take === 'string' ? r.take.trim() : ''
   const outside = typeof r.outside === 'string' ? r.outside.trim() : ''
-  if (!take || take.split(/\s+/).length > 70) return null
-  // A one-line take with the fact left in "outside" says nothing new.
-  if (outside && take.split(/\s+/).length < 14) return null
+  // One line: a fact, not a paragraph and not a question.
+  const words = take.split(/\s+/).length
+  if (!take || words < 4 || words > 25 || take.includes('?')) return null
   if (findVoiceViolations(take).length > 0) return null
   return { take, outside }
 }
@@ -71,6 +71,15 @@ interface SparkRow {
   subject_kind: string | null
   sources: { kind: string; title: string; at?: string; url?: string }[] | null
   answered_at: string | null
+}
+
+/** The lines before this one, oldest first, for the card. Empty for a fresh take. */
+export async function earlierLines(
+  supabase: SupabaseClient, userId: string, spark: { text: string; subject_id?: string | null; subject_kind?: string | null },
+): Promise<string[]> {
+  if (spark.subject_kind !== 'thread' || !spark.subject_id) return []
+  const chain = await loadChain(supabase, userId, spark as SparkRow)
+  return chain.slice(0, -1)
 }
 
 /** The steps up to and including this one, oldest first. */
@@ -163,5 +172,5 @@ export async function goFurther(
   if (!spark.answered_at) {
     await supabase.from('sparks').update({ answered_at: now.toISOString() }).eq('id', spark.id).eq('user_id', userId)
   }
-  return { ok: true, spark: (ins.data as Record<string, unknown>[])[0] }
+  return { ok: true, spark: { ...(ins.data as Record<string, unknown>[])[0], earlier: chain } }
 }

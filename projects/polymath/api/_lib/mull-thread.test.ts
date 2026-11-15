@@ -8,16 +8,11 @@ describe('the thread', () => {
     expect(p).toMatch(/WHAT THEY SAID BACK[\s\S]*flies, not lions/)
   })
   it('reads a usable step and refuses an empty or rambling one', () => {
-    const take = 'Horseflies find a host by the polarised light off a dark coat. Stripes break that light into bits. Are the stripes for the flies, not the lions?'
+    const take = 'Horseflies crash into the stripes and cannot land.'
     expect(readStep({ take, outside: 'Horseflies find hosts by polarised light.' })).toEqual({ take, outside: 'Horseflies find hosts by polarised light.' })
     expect(readStep({ take: '' })).toBeNull()
-    expect(readStep({ take: Array(80).fill('word').join(' ') })).toBeNull()
+    expect(readStep({ take: Array(30).fill('word').join(' ') })).toBeNull()
     expect(readStep(null)).toBeNull()
   })
 })
 
-describe('readStep, the fact left out', () => {
-  it('refuses a bare claim whose fact went into "outside" only', () => {
-    expect(readStep({ take: 'A loop has no room for an ending.', outside: 'Joyce ended Finnegans Wake mid-sentence.' })).toBeNull()
-  })
-})

@@ -76,28 +76,24 @@ Give them something to think about on a walk. It sits on their home screen for
 four days. Not a task, not advice, not a verdict on who they are, not about
 finishing anything. A genuinely interesting thought that starts from one of theirs.
 
-TWO KINDS -- mix them:
-1. FROM THE WORLD. Pick something they were turning over -- an idea, a musing, a
-   question they asked out loud, a line they loved -- and add ONE thing from the
-   world they may not know: a real fact, a concept, a thinker, a bit of history or
-   science, a work of art, that pushes their thought a step further or turns it on
-   its head. End on the open end: a sharp question or a surprising claim.
-2. TWO OF THEIRS. Two things they said, months apart and about unrelated things,
-   that are secretly the same idea -- or that argue with each other. Put them side
-   by side and say what the shared idea, or the argument, is.
+THE SHAPE -- two short lines, nothing else:
+1. Their thing, in a few words, the way they'd say it: "Zebras and dazzle ships."
+2. ONE plain, surprising fact about it they probably don't know, under 15 words:
+   "Dazzle never hid ships. It scrambled their heading."
+That's it. No question. No "you". No "You noted". No moral, no wondering, no
+"what if". The fact does the work; they'll pull the thread if it grabs them.
+It's the first line of a rabbit hole, not a lesson.
+
+Or, now and then, two of THEIRS: two things they said months apart about unrelated
+things that turn out to be one thing. Line 1 one of them, line 2 the other, said so
+the link is obvious without being named.
 
 WHAT MAKES ONE GOOD
-- It starts from THEIR words: name what they said plainly and briefly, quoted
-  close. Ideas, musings and asides are the best material -- a paradox, a word
-  they liked, a question about how something works.
-- The outside thing is not the obvious next fact. "Where does a snake's tail
-  start? At the vent" answers the riddle and kills it. Pick the fact that opens
-  it up.
-- It leaves them with something to chew on. They should still be turning it over
-  at the end of the walk.
-- Their projects can come up, but never force one in. Most of the best ones won't
-  mention a project at all.
-- Under 55 words. Two or three short sentences, the way a friend would say it.
+- It starts from something they actually said or loved -- ideas, musings and asides
+  are the best material.
+- The fact is about the thing itself and surprising: "horseflies crash into the
+  stripes" beats anything about what stripes "mean".
+- Their projects can come up, but never force one in.
 
 NEVER
 - Anything from outside that you are not sure is true and well known. A wrong fact
@@ -171,8 +167,8 @@ ${history.trim()}
   well known? If you are not sure the fact is true, score 3 or lower. 0 = wrong.
 - "specific": does it start from something only they said, and go somewhere they
   wouldn't have gone alone? 0 = generic trivia or a thought anyone could have.
-- "answerable": does it leave an open end worth chewing -- something they could
-  say back? 0 = closed, a riddle, or a lecture.
+- "answerable": does it make them want the next line? 10 = they'd tap "go
+  further" at once. 0 = closed, a lecture, or a question dressed up.
 - "overreach": true if it psychoanalyses them (a feeling, motive, value or trait),
   touches their health, family or habits, gives advice or a task, or links two
   things that only share a word. Always a kill.

@@ -741,7 +741,7 @@ describe('the prompts Settings shows', () => {
     const p = previewTakePrompts('Leave my dad out of it.')
     expect(p.draft).toContain('Leave my dad out of it.')
     expect(p.draft).toContain('YOUR CORPUS GOES HERE')
-    expect(p.draft).toContain('FROM THE WORLD')
+    expect(p.draft).toContain('THE SHAPE')
     expect(p.judge).toContain('revelation')
   })
   it('the idea prompt carries the brief in its slot', async () => {

@@ -32,19 +32,19 @@ export const GOOD_EXAMPLES: readonly MullExample[] = [
     move: 'from the world -- a musing of theirs, and the fact that opens it up',
     evidence: [{ where: 'note, 3 March 2025', text: 'why does the bridge hum when the wind gets up' }],
     outside: 'In 1940 the Tacoma Narrows bridge twisted itself apart in a steady wind, no storm needed.',
-    question: 'You wondered why the bridge hums when the wind gets up. In 1940 the Tacoma Narrows bridge twisted itself apart in a steady wind, no storm needed. What else is fine until the wind finds its note?',
+    question: 'The bridge that hums in the wind. In 1940 the Tacoma Narrows bridge twisted itself apart in a steady wind.',
   },
   {
     move: 'from the world -- a thing they love, turned on its head',
     evidence: [{ where: 'note, 9 June 2025', text: 'the best bit of a jigsaw is the last missing piece' }],
     outside: 'Japanese kintsugi mends broken bowls with gold, so the crack becomes the part you look at.',
-    question: "You said the best bit of a jigsaw is the last missing piece. Japanese kintsugi mends broken bowls with gold, so the crack becomes the part you look at. Is the gap the point, not the picture?",
+    question: "The jigsaw's last missing piece. Japanese kintsugi mends broken bowls with gold, so the crack is the part you look at.",
   },
   {
     move: 'from the world -- a line from their list',
     evidence: [{ where: 'on their "Lines" list, added 2 May 2025', text: 'the sea is the same sea everywhere' }],
     outside: 'Before satellites, sailors found how far east or west they were by carrying the time of home in a clock.',
-    question: "You kept the line 'the sea is the same sea everywhere'. Sailors once worked out where they were on it by carrying the time of home in a clock. Is the sameness what lets you measure the distance?",
+    question: "The sea that is the same sea everywhere. Sailors found where they were on it by carrying home's time in a clock.",
   },
   {
     move: 'two of theirs -- the same idea, said about unrelated things months apart',
@@ -52,7 +52,7 @@ export const GOOD_EXAMPLES: readonly MullExample[] = [
       { where: 'note, 14 March 2025', text: 'love that bread makes you wait and do nothing' },
       { where: 'note, 2 October 2025', text: 'the best bit of the quiz is when nobody knows' },
     ],
-    question: "In March, bread was good because it makes you wait and do nothing. In October, the quiz was best when nobody knew the answer. Each time, the good part is the bit you can't hurry.",
+    question: "Bread is good because it makes you wait and do nothing. The quiz is best when nobody knows the answer.",
   },
   {
     move: 'two of theirs -- two things they said that argue with each other',
@@ -60,7 +60,7 @@ export const GOOD_EXAMPLES: readonly MullExample[] = [
       { where: 'note, 5 April 2024', text: 'a good map is one that leaves things out' },
       { where: 'note, 20 August 2025', text: 'I want every recipe written down exactly, no guessing' },
     ],
-    question: 'In April 2024 a good map was one that leaves things out. In August 2025 every recipe had to be written down exactly, no guessing. Is a recipe a map, or the opposite of one?',
+    question: 'A good map is one that leaves things out. Every recipe has to be written down exactly, no guessing.',
   },
 ]
 
@@ -71,6 +71,10 @@ export interface BadExample {
 
 /** The shapes that fail, on foreign subjects. */
 export const BAD_EXAMPLES: readonly BadExample[] = [
+  {
+    question: "Zebras and dazzle ships. What if the stripes are really about direction, not hiding?",
+    why: 'A question dressed up as a fact. Give the fact; they will wonder on their own.',
+  },
   {
     question: "You wondered where a snake's tail starts. It starts at the vent, where the organs end.",
     why: 'The obvious fact. It answers their riddle and kills it -- there is nothing left to think about.',

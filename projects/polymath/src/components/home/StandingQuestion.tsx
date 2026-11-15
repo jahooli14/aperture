@@ -19,7 +19,7 @@ import { VoiceInput } from '../VoiceInput'
 import { freshNoteLabel } from '../../lib/freshNote'
 import { haptic } from '../../utils/haptics'
 import { api } from '../../lib/apiClient'
-import { isTake, splitSentences } from '../../lib/takeText'
+import { splitSentences } from '../../lib/takeText'
 import { useProjectStore } from '../../stores/useProjectStore'
 import { MAX_THEMES, readThemes } from '../../lib/projectThemes'
 
@@ -35,6 +35,8 @@ export interface StandingQuestionSpark {
   stake?: string | null
   /** How strongly the judge backed it, 0-100. Shown quietly. */
   score?: number | null
+  /** The lines of the thread before this one, oldest first (mull-thread.ts). */
+  earlier?: string[] | null
 }
 
 /** Every spark is a question now. The one kind that wasn't -- the
@@ -401,6 +403,15 @@ export function StandingQuestion() {
           .mull-line in theme.css). It settles sharp and still, so it's
           dreamy on arrival and readable at rest. Keyed on the spark so a
           new question arrives the same way. */}
+      {/* The thread so far: each earlier line, quiet, then the newest one. */}
+      {(spark.earlier?.length ?? 0) > 0 && (
+        <div className="mt-0.5 mb-1 space-y-0.5">
+          {spark.earlier!.slice(-4).map((line, i) => (
+            <p key={i} className="text-[13px] leading-snug" style={{ color: 'var(--brand-text-muted)' }}>{line}</p>
+          ))}
+        </div>
+      )}
+
       <p
         key={spark.id}
         className={`mull-text text-[16px] leading-[1.45] mt-0.5 ${hasSources ? 'cursor-pointer' : ''}`}
@@ -447,60 +458,30 @@ export function StandingQuestion() {
           state of this whole block is three lines. */}
       {!answering && (
         <div className="mt-1.5 space-y-1.5">
-        <div className="flex flex-wrap items-center gap-2">
-          {isTake(spark.text) ? (
-            // A claim gets a reaction first: one tap, then optionally why.
-            STANCES.map(st => (
-              <span key={st.id} className="flex items-center">
-                <button
-                  className="quiet-pill min-h-[40px] px-4 text-[14px] font-medium transition-opacity hover:opacity-90"
-                  style={quietActionStyle}
-                  onClick={() => { haptic.light(); setStance(st.id); setAnswering(true) }}
-                >
-                  {st.label}
-                </button>
-              </span>
-            )).concat(
-              // Something to add that isn't a yes or no -- open the box
-              // without picking a side.
-              <span key="more" className="flex items-center">
-                <button
-                  className="text-[13px] font-medium min-h-[40px] px-2 transition-opacity hover:opacity-90"
-                  style={quietActionStyle}
-                  onClick={() => { setStance(null); setAnswering(true) }}
-                >
-                  say more
-                </button>
-              </span>
-            )
-          ) : (
-            <button
-              className="text-[13px] min-h-[40px] px-2 transition-opacity hover:opacity-90"
-              style={quietActionStyle}
-              onClick={() => setAnswering(true)}
-            >
-              answer it
-            </button>
-          )}
-        </div>
-        {/* The way out, on its own line so the reactions above never wrap
-            around a dangling dot. */}
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          {/* A line of a rabbit hole: the one thing to do is pull it. */}
           <button
-            className="text-[13px] font-medium min-h-[40px] pr-3 transition-opacity hover:opacity-90 disabled:opacity-30"
+            className="quiet-pill min-h-[40px] px-4 text-[14px] font-medium transition-opacity hover:opacity-90 disabled:opacity-40"
             style={quietActionStyle}
             disabled={furthering || rerolling}
-            onClick={() => { void further() }}
+            onClick={() => { haptic.light(); void further() }}
           >
             {furthering ? 'following it…' : 'go further'}
           </button>
           <button
-            className="text-[13px] min-h-[40px] pr-3 transition-opacity hover:opacity-90 disabled:opacity-30"
+            className="text-[13px] min-h-[40px] px-2 transition-opacity hover:opacity-90"
+            style={quietActionStyle}
+            onClick={() => { setStance(null); setAnswering(true) }}
+          >
+            say something
+          </button>
+          <button
+            className="text-[13px] min-h-[40px] px-2 transition-opacity hover:opacity-90 disabled:opacity-30"
             style={{ color: 'var(--brand-text-muted)' }}
             disabled={rerolling || furthering}
             onClick={() => reroll()}
           >
-            {rerolling ? 'thinking…' : 'ask me something else'}
+            {rerolling ? 'thinking…' : 'something else'}
           </button>
         </div>
         </div>

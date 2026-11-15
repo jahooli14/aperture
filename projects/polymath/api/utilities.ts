@@ -2415,7 +2415,7 @@ async function handleExecutionSparks(req: VercelRequest, res: VercelResponse) {
       // means the queue needs no created_at juggling to stay in order.
       .order('expires_at', { ascending: true })
       .limit(1)
-    const BASE_COLS = 'id, type, text, project_id, shown_at, answered_at, expires_at, projects(title)'
+    const BASE_COLS = 'id, type, text, project_id, shown_at, answered_at, expires_at, subject_id, subject_kind, projects(title)'
     // `stake` (20260916_spark_stake.sql) rides along so a "yes" can offer to
     // keep it in mind. Each optional column is dropped, in turn, if it
     // isn't there yet.
@@ -2449,6 +2449,11 @@ async function handleExecutionSparks(req: VercelRequest, res: VercelResponse) {
         .eq('id', spark.id)
     }
 
+    // A step of a thread arrives with the lines before it (mull-thread.ts).
+    if (spark?.subject_kind === 'thread') {
+      const { earlierLines } = await import('./_lib/mull-thread.js')
+      spark.earlier = await earlierLines(supabase, userId, spark).catch(() => [])
+    }
     return res.status(200).json({ spark })
   }
 
