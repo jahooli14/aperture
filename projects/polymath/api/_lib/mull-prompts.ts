@@ -55,6 +55,10 @@ export interface DraftContext {
   brief?: string
   /** Leave out the worked examples: ~half the prompt, for the many small calls of the A/B swarm. */
   lean?: boolean
+  /** The picture of them (portrait.ts): each line with the corpus refs that show it. */
+  lines?: { name: string; refs: string[] }[]
+  /** Two lines this draft must cross, picked in code so parallel drafts differ. */
+  linePair?: [string, string]
 }
 
 export function draftPrompt(ctx: DraftContext): string {
@@ -76,24 +80,21 @@ Give them something to think about on a walk. It sits on their home screen for
 four days. Not a task, not advice, not a verdict on who they are, not about
 finishing anything. A genuinely interesting thought that starts from one of theirs.
 
-THE SHAPE -- two short lines, nothing else:
-1. Their thing, in a few words, the way they'd say it: "Zebras and dazzle ships."
-2. ONE plain, surprising fact about it they probably don't know, under 15 words:
-   "Dazzle never hid ships. It scrambled their heading."
-That's it. No question. No "you". No "You noted". No moral, no wondering, no
-"what if". The fact does the work; they'll pull the thread if it grabs them.
-It's the first line of a rabbit hole, not a lesson.
+${ctx.lines?.length ? `WHAT YOU KNOW ABOUT THEM -- the lines they keep coming back to, and the rows that show each:
+${ctx.lines.map(l => `- ${l.name}: ${l.refs.join(', ')}`).join('\n')}
 
-Or, now and then, two of THEIRS: two things they said months apart about unrelated
-things that turn out to be one thing. Line 1 one of them, line 2 the other, said so
-the link is obvious without being named.
-
-WHAT MAKES ONE GOOD
-- It starts from something they actually said or loved -- ideas, musings and asides
-  are the best material.
-- The fact is about the thing itself and surprising: "horseflies crash into the
-  stripes" beats anything about what stripes "mean".
-- Their projects can come up, but never force one in.
+` : ''}WHAT TO GIVE THEM -- one thing to mull on a walk, from where two of those lines
+CROSS, or where a line meets one of their projects. That overlap is what only they
+could be asked: someone else with the same project would have different lines.
+- Two or three short sentences: the two things side by side, in their words, then
+  ONE question that only makes sense because both are true of them.
+- Example of the move (foreign subject): "The quilt only got finished because Nan
+  was coming. The rug has no one waiting. Who is the rug for?"
+- Their projects are as they are NOW (each project row is its current summary).
+  Never tell them what their work should say: ask, don't direct.
+- No "You noted". No moral, no verdict on who they are. The question is the end.
+- If the lines are empty, use two things they said months apart that turn out
+  to be one thing.
 
 NEVER
 - Anything from outside that you are not sure is true and well known. A wrong fact
@@ -121,7 +122,7 @@ ${badExamplesBlock()}
 ${PLAIN_ENGLISH_RULES}
 
 WHAT TO RETURN
-${ctx.seedRef ? `START FROM [${ctx.seedRef}]: your first candidate begins with that row. If nothing genuinely interesting comes from it, start from the nearest row that gives you one; a forced thought is worse than a different start.\n` : ''}Up to ${ctx.howMany} candidates, best first, each starting from a different row. For each:
+${ctx.linePair ? `CROSS THESE TWO: "${ctx.linePair[0]}" and "${ctx.linePair[1]}". If they don't honestly meet, cross the nearest pair that does.\n` : ''}${ctx.seedRef && !ctx.linePair ? `START FROM [${ctx.seedRef}]: your first candidate begins with that row. If nothing genuinely interesting comes from it, start from the nearest row that gives you one; a forced thought is worse than a different start.\n` : ''}Up to ${ctx.howMany} candidates, best first, each starting from a different row. For each:
 - "noticing": under 12 words: what makes it interesting. Private.
 - "doubt": under 10 words: the strongest reason it's obvious, forced or wrong.
   If the doubt wins, leave it out.
@@ -161,14 +162,15 @@ repeats a claim they said "no" to, gets truth 0:
 ${history.trim()}
 
 ` : ''}Score each from 0 to 10:
-- "revelation": would they still be turning it over at the end of the walk? 10 =
-  it changes how they see their own idea. 0 = obvious, or a summary of one note.
+- "revelation": does putting these two things of theirs side by side show them
+  something they hadn't put together? 10 = they'd stop walking. 0 = obvious, or
+  one note read back.
 - "truth": is their side read right, in full? AND is any outside fact true and
   well known? If you are not sure the fact is true, score 3 or lower. 0 = wrong.
 - "specific": does it start from something only they said, and go somewhere they
   wouldn't have gone alone? 0 = generic trivia or a thought anyone could have.
-- "answerable": does it make them want the next line? 10 = they'd tap "go
-  further" at once. 0 = closed, a lecture, or a question dressed up.
+- "answerable": would they still be turning it over at the end of a walk, with
+  something to say back? 0 = closed, a riddle, or a lecture.
 - "overreach": true if it psychoanalyses them (a feeling, motive, value or trait),
   touches their health, family or habits, gives advice or a task, or links two
   things that only share a word. Always a kill.

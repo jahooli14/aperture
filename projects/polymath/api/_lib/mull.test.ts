@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   quoteIsReal, resolveEvidence, specifics, unsupportedSpecifics, ordinalSupported,
   offersAChoice, isClosed, checkCandidate, crossesLiveProject, crossingDepth, judgePercent, judgeRank, parseJudgeScores, readsAnInnerState,
-  rowNaming, pickSeeds, type Candidate, type JudgeScore,
+  rowNaming, pickSeeds, pickLinePairs, type Candidate, type JudgeScore,
 } from './mull.js'
 import type { Corpus, CorpusRow } from './mull-corpus.js'
 
@@ -286,5 +286,16 @@ describe('crossesLiveProject', () => {
 
   it('never crosses without the live project in it', () => {
     expect(crossesLiveProject([dad, otherFrag], corpus, 'p-book')).toBe(false)
+  })
+})
+
+describe('pickLinePairs', () => {
+  it('uses every line once before reusing any, and never pairs a line with itself', () => {
+    const pairs = pickLinePairs(['a', 'b', 'c', 'd'], 2, () => 0.3)
+    expect(pairs).toHaveLength(2)
+    expect(new Set(pairs.flat()).size).toBe(4)
+  })
+  it('nothing to cross with fewer than two lines', () => {
+    expect(pickLinePairs(['a'], 3)).toEqual([])
   })
 })

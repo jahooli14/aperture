@@ -29,38 +29,36 @@ export interface MullExample {
 
 export const GOOD_EXAMPLES: readonly MullExample[] = [
   {
-    move: 'from the world -- a musing of theirs, and the fact that opens it up',
-    evidence: [{ where: 'note, 3 March 2025', text: 'why does the bridge hum when the wind gets up' }],
-    outside: 'In 1940 the Tacoma Narrows bridge twisted itself apart in a steady wind, no storm needed.',
-    question: 'The bridge that hums in the wind. In 1940 the Tacoma Narrows bridge twisted itself apart in a steady wind.',
-  },
-  {
-    move: 'from the world -- a thing they love, turned on its head',
-    evidence: [{ where: 'note, 9 June 2025', text: 'the best bit of a jigsaw is the last missing piece' }],
-    outside: 'Japanese kintsugi mends broken bowls with gold, so the crack becomes the part you look at.',
-    question: "The jigsaw's last missing piece. Japanese kintsugi mends broken bowls with gold, so the crack is the part you look at.",
-  },
-  {
-    move: 'from the world -- a line from their list',
-    evidence: [{ where: 'on their "Lines" list, added 2 May 2025', text: 'the sea is the same sea everywhere' }],
-    outside: 'Before satellites, sailors found how far east or west they were by carrying the time of home in a clock.',
-    question: "The sea that is the same sea everywhere. Sailors found where they were on it by carrying home's time in a clock.",
-  },
-  {
-    move: 'two of theirs -- the same idea, said about unrelated things months apart',
+    move: 'a line meets a project -- who it is for',
     evidence: [
-      { where: 'note, 14 March 2025', text: 'love that bread makes you wait and do nothing' },
-      { where: 'note, 2 October 2025', text: 'the best bit of the quiz is when nobody knows' },
+      { where: 'note, 2 April 2025', text: 'the quilt got done because Nan was coming at Easter' },
+      { where: 'project "Rag rug", started January 2025, never touched since', text: 'just something to have around' },
     ],
-    question: "Bread is good because it makes you wait and do nothing. The quiz is best when nobody knows the answer.",
+    question: 'The quilt only got finished because Nan was coming at Easter. The rag rug is just something to have around. Who is the rug for?',
   },
   {
-    move: 'two of theirs -- two things they said that argue with each other',
+    move: 'two lines cross -- the same move, opposite directions',
+    evidence: [
+      { where: 'project "Ferry play"', text: 'every scene ends back at the harbour' },
+      { where: 'project "Lighthouse stories"', text: 'each story starts one island further out' },
+    ],
+    question: 'Every scene of the ferry play ends back at the harbour. Each lighthouse story starts one island further out. Are they one story told in opposite directions?',
+  },
+  {
+    move: 'a line meets a project -- taste against what they make',
+    evidence: [
+      { where: 'on their "Films" list, rated 5', text: 'Rear Window' },
+      { where: 'note, 14 January 2026, about "Ferry play"', text: 'the second act keeps explaining itself' },
+    ],
+    question: "Rear Window is your five-star film, and nobody in it explains anything. The ferry play's second act keeps explaining itself. What would the captain do if she couldn't speak?",
+  },
+  {
+    move: 'two lines cross -- what they say about one thing, against another',
     evidence: [
       { where: 'note, 5 April 2024', text: 'a good map is one that leaves things out' },
       { where: 'note, 20 August 2025', text: 'I want every recipe written down exactly, no guessing' },
     ],
-    question: 'A good map is one that leaves things out. Every recipe has to be written down exactly, no guessing.',
+    question: 'A good map leaves things out. Every recipe has to be written down exactly, no guessing. Is a recipe a map, or the opposite of one?',
   },
 ]
 
@@ -71,10 +69,6 @@ export interface BadExample {
 
 /** The shapes that fail, on foreign subjects. */
 export const BAD_EXAMPLES: readonly BadExample[] = [
-  {
-    question: "Zebras and dazzle ships. What if the stripes are really about direction, not hiding?",
-    why: 'A question dressed up as a fact. Give the fact; they will wonder on their own.',
-  },
   {
     question: "You wondered where a snake's tail starts. It starts at the vent, where the organs end.",
     why: 'The obvious fact. It answers their riddle and kills it -- there is nothing left to think about.',

@@ -410,6 +410,9 @@ export function SettingsPage() {
         <section id="set-takes" className="scroll-mt-4 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mb-10">
           <div>
             <h2 className="section-heading">what you want from <span className="accent">takes</span></h2>
+            <button className="text-[15px] min-h-[44px] font-medium" style={{ color: 'rgb(var(--brand-primary-rgb))' }} onClick={() => navigate('/you')}>
+              What it knows about you →
+            </button>
             <TakeBriefRow />
             <FullPrompt which="take_draft" label="the whole prompt that writes a take" />
             <FullPrompt which="take_judge" label="the whole prompt that scores a take" />

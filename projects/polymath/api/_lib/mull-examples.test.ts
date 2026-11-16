@@ -21,8 +21,8 @@ describe('the teaching examples', () => {
     })
   })
 
-  it('every good example either adds a fact from outside or puts two of theirs together', () => {
-    for (const e of GOOD_EXAMPLES) expect(!!e.outside || e.evidence.length >= 2).toBe(true)
+  it('every good example crosses two things of theirs', () => {
+    for (const e of GOOD_EXAMPLES) expect(e.evidence.length).toBeGreaterThanOrEqual(2)
   })
 
   it('every bad example says why', () => {

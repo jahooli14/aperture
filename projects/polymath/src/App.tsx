@@ -43,6 +43,7 @@ const ProjectsPage = lazy(lazyRetry(() => import('./pages/ProjectsPage').then(m 
 const ProjectDetailPage = lazy(lazyRetry(() => import('./pages/ProjectDetailPage')))
 const OnboardingChatPage = lazy(lazyRetry(() => import('./pages/OnboardingChatPage').then(m => ({ default: m.OnboardingChatPage }))))
 const SettingsPage = lazy(lazyRetry(() => import('./pages/SettingsPage').then(m => ({ default: m.SettingsPage }))))
+const WhatItKnowsPage = lazy(lazyRetry(() => import('./pages/WhatItKnowsPage').then(m => ({ default: m.WhatItKnowsPage }))))
 const SearchPage = lazy(lazyRetry(() => import('./pages/SearchPage').then(m => ({ default: m.SearchPage }))))
 const BedtimePage = lazy(lazyRetry(() => import('./pages/BedtimePage').then(m => ({ default: m.BedtimePage }))))
 const ListsPage = lazy(lazyRetry(() => import('./pages/ListsPage')))
@@ -355,6 +356,7 @@ export default function App() {
                       <Route path="/projects" element={<AnimatedPage page="projects"><ProjectsPage /></AnimatedPage>} />
                       <Route path="/projects/:id" element={<AnimatedPage page="projects"><ProjectDetailPage /></AnimatedPage>} />
                       <Route path="/settings" element={<AnimatedPage page="settings"><SettingsPage /></AnimatedPage>} />
+                      <Route path="/you" element={<AnimatedPage page="settings"><WhatItKnowsPage /></AnimatedPage>} />
                       <Route path="/search" element={<AnimatedPage page="search"><SearchPage /></AnimatedPage>} />
                       <Route path="/bedtime" element={<AnimatedPage page="bedtime"><BedtimePage /></AnimatedPage>} />
                       <Route path="/lists" element={<AnimatedPage page="lists"><ListsPage /></AnimatedPage>} />

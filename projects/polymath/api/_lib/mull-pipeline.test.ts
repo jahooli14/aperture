@@ -310,7 +310,7 @@ describe('the mull channel, end to end', () => {
     it('never forces the live project into the draft', async () => {
       respond({ draft: [ONE_TAKE], judge: [ship(1)] })
       await bakeMull(fakeSupabase(withLiveBook()).client, 'u1')
-      expect(draftPromptSent()).toMatch(/never force one in/)
+      expect(draftPromptSent()).toMatch(/ask, don't direct/)
       expect(draftPromptSent()).not.toMatch(/THE CROSSING/)
     })
 
@@ -741,7 +741,7 @@ describe('the prompts Settings shows', () => {
     const p = previewTakePrompts('Leave my dad out of it.')
     expect(p.draft).toContain('Leave my dad out of it.')
     expect(p.draft).toContain('YOUR CORPUS GOES HERE')
-    expect(p.draft).toContain('THE SHAPE')
+    expect(p.draft).toContain('WHAT TO GIVE THEM')
     expect(p.judge).toContain('revelation')
   })
   it('the idea prompt carries the brief in its slot', async () => {

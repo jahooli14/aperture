@@ -128,6 +128,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (!userId) return res.status(401).json({ error: 'Unauthorized' })
     return handleSeason(req, res, getSupabaseClient(), userId)
   }
+  // The picture of them (portrait.ts): read by the "What it knows" page.
+  if (resource === 'portrait') {
+    const userId = await getUserId(req)
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' })
+    const supabase = getSupabaseClient()
+    const { loadPortrait, buildPortrait } = await import('./_lib/portrait.js')
+    if (req.method === 'GET') {
+      // First visit before any nightly build: build it now.
+      const portrait = (await loadPortrait(supabase, userId)) ?? (await buildPortrait(supabase, userId, { force: true }))
+      return res.status(200).json({ portrait })
+    }
+    if (req.method !== 'POST') return res.status(405).json({ error: 'GET or POST required' })
+    return res.status(200).json({ portrait: await buildPortrait(supabase, userId, { force: true }) })
+  }
+
   // "What it is now" -- one paragraph per project (project-summary.ts).
   // GET drafts or refreshes it from the notes; POST {text} makes it theirs.
   if (resource === 'project-summary') {
@@ -2327,6 +2342,16 @@ async function handleExecutionSparks(req: VercelRequest, res: VercelResponse) {
       return res.status(200).json({ experiment: true, trace: lines })
     }
 
+    // The picture of them is rebuilt every night, standing question or
+    // not: everything that gives back reads it (portrait.ts).
+    const portraitTrace: string[] = []
+    {
+      const { buildPortrait } = await import('./_lib/portrait.js')
+      const { loadEchoContext, judgeHistory } = await import('./_lib/mull-generator.js')
+      const echoForPortrait = await loadEchoContext(supabase, userId)
+      await buildPortrait(supabase, userId, { corrections: judgeHistory(echoForPortrait), trace: portraitTrace, force: explain })
+    }
+
     // A question that's still standing is not replaced by a fresh one. It
     // now lives for days precisely so it can sit unanswered, and baking over
     // it every morning would take it away on exactly the day the answer was
@@ -2345,7 +2370,7 @@ async function handleExecutionSparks(req: VercelRequest, res: VercelResponse) {
       return res.status(200).json({ baked: false, reason: 'question still standing' })
     }
 
-    const trace: string[] = []
+    const trace: string[] = [...portraitTrace]
     if (explain) {
       // Only on explain. Five table reads is nothing next to two model
       // calls, but the nightly bake has no use for it — and "the corpus is

@@ -38,9 +38,10 @@ import { echoesRecent, fetchRecentSparkTexts, fetchRecentSparkProjectIds, fetchR
 import { SPARK_CORRECTION_TAG, isAppAuthored, isElicitedAnswer } from './corpus-provenance.js'
 import { isSensitive } from './sensitive.js'
 import { loadCorpus, normaliseTitle, type Corpus, type CorpusRow } from './mull-corpus.js'
-import { checkCandidate, crossingDepth, CROSSING_BONUS, TRIFECTA_BONUS, slotOf, orderBySlots, type Slot, judgePercent, judgeRank, pickSeeds, claimSentence, parseJudgeScores, type Candidate, type Grounded, type JudgeScore } from './mull.js'
+import { checkCandidate, crossingDepth, CROSSING_BONUS, TRIFECTA_BONUS, slotOf, orderBySlots, type Slot, judgePercent, judgeRank, pickSeeds, pickLinePairs, claimSentence, parseJudgeScores, type Candidate, type Grounded, type JudgeScore } from './mull.js'
 import { draftPrompt, judgePrompt } from './mull-prompts.js'
 import { checkFactSafely } from './fact-check.js'
+import { loadPortrait } from './portrait.js'
 
 /**
  * Four days.
@@ -141,6 +142,8 @@ export interface EchoContext {
   corrections: string
   /** Takes they tapped "no" on, verbatim. The judge reads these. */
   saidNo?: string[]
+  /** The picture of them (portrait.ts), by row id. */
+  lines?: { name: string; rowIds: string[] }[]
   /** Where they are now; see loadFocus. */
   focus?: string
   /** Their own words about what they want from takes (Settings). */
@@ -408,9 +411,15 @@ export async function loadTakeBrief(supabase: SupabaseClient, userId: string): P
  *  overrides the corpus for a small slice. */
 export function buildDraftPrompt(
   corpus: Corpus, echo: EchoContext, recentIds: Set<string>, recentTexts: string[],
-  o: { howMany: number; lens?: 'live' | 'elsewhere'; seedRef?: string; corpusText?: string; liveTitle?: string | null; recentRefs?: string[]; lean?: boolean },
+  o: { howMany: number; lens?: 'live' | 'elsewhere'; seedRef?: string; corpusText?: string; liveTitle?: string | null; recentRefs?: string[]; lean?: boolean; linePair?: [string, string] },
 ): string {
+  const refById = new Map(corpus.rows.map(r => [r.id, r.ref]))
+  const lines = (echo.lines ?? [])
+    .map(l => ({ name: l.name, refs: l.rowIds.map(id => refById.get(id)).filter((x): x is string => !!x) }))
+    .filter(l => l.refs.length > 0)
   return draftPrompt({
+    lines,
+    linePair: o.linePair,
     corpusText: o.corpusText ?? corpus.text,
     howMany: o.howMany,
     lens: o.lens,
@@ -432,7 +441,7 @@ export function buildDraftPrompt(
 export async function loadEchoContext(
   supabase: SupabaseClient, userId: string,
 ): Promise<EchoContext> {
-  const [recentTexts, recentProjectIds, recentSubjectIds, resonance, corrections, focus, season, brief, saidNo] = await Promise.all([
+  const [recentTexts, recentProjectIds, recentSubjectIds, resonance, corrections, focus, season, brief, saidNo, portrait] = await Promise.all([
     fetchRecentSparkTexts(supabase, userId),
     fetchRecentSparkProjectIds(supabase, userId),
     fetchRecentSparkSubjectIds(supabase, userId),
@@ -442,8 +451,10 @@ export async function loadEchoContext(
     loadSeason(supabase, userId),
     loadTakeBrief(supabase, userId),
     loadSaidNo(supabase, userId),
+    loadPortrait(supabase, userId).catch(() => null),
   ])
-  return { recentTexts, recentProjectIds, recentSubjectIds, resonance, corrections, focus, brief, saidNo, live: season?.main ?? null, season }
+  const lines = portrait?.lines.map(l => ({ name: l.name, rowIds: l.rows.map(r => r.id) }))
+  return { recentTexts, recentProjectIds, recentSubjectIds, resonance, corrections, focus, brief, saidNo, lines, live: season?.main ?? null, season }
 }
 
 function expiresAt(hours: number): string {
@@ -573,12 +584,13 @@ export async function generateMull(
   const recentTexts = creative ? [] : echo.recentTexts
 
   const parallel = !reach && deadline - Date.now() >= PARALLEL_DRAFT_MIN_MS
-  const promptFor = (lens?: 'live' | 'elsewhere', seedRef?: string) => buildDraftPrompt(corpus, echo, recentIds, recentTexts, {
+  const promptFor = (lens?: 'live' | 'elsewhere', seedRef?: string, linePair?: [string, string]) => buildDraftPrompt(corpus, echo, recentIds, recentTexts, {
     // Never more, season or not: every extra candidate is output the model
     // has to write inside the ceiling.
     howMany: parallel ? CANDIDATES_PER_CALL : CANDIDATES_PER_RUN,
     lens,
     seedRef,
+    linePair,
   })
   const prompt = promptFor(reach ? 'elsewhere' : parallel && echo.live ? 'live' : undefined)
   trace.push(`draft prompt: ${prompt.length} chars`)
@@ -591,13 +603,19 @@ export async function generateMull(
   // Parallel path: one draft on the live project (when there is one) and
   // the rest each starting from a different row picked in code.
   const callsWanted = PARALLEL_CALLS
-  const seeds = parallel ? pickSeeds(corpus, recentIds, callsWanted - (echo.live ? 1 : 0)) : []
+  // With a picture of them, each parallel draft crosses a different pair of
+  // lines (picked in code, like the seeds were); without one, seeds.
+  const pairs = parallel ? pickLinePairs((echo.lines ?? []).map(l => l.name), callsWanted) : []
+  const seeds = parallel && pairs.length === 0 ? pickSeeds(corpus, recentIds, callsWanted - (echo.live ? 1 : 0)) : []
   const drafted = parallel
-    ? (await Promise.all([
-        ...(echo.live ? [draft(prompt, draftBudget, trace)] : []),
-        ...seeds.map(r => draft(promptFor('elsewhere', r.ref), draftBudget, trace)),
-      ])).flat()
+    ? (await Promise.all(pairs.length
+        ? pairs.map(p => draft(promptFor(undefined, undefined, p), draftBudget, trace))
+        : [
+            ...(echo.live ? [draft(prompt, draftBudget, trace)] : []),
+            ...seeds.map(r => draft(promptFor('elsewhere', r.ref), draftBudget, trace)),
+          ])).flat()
     : await draft(prompt, draftBudget, trace)
+  if (pairs.length) trace.push(`crossing lines: ${pairs.map(p => `${p[0]} × ${p[1]}`).join('; ')}`)
   if (parallel) trace.push(`${seeds.length + (echo.live ? 1 : 0)} drafts in parallel (seeds ${seeds.map(r => r.ref).join(', ') || 'none'}): ${drafted.length} candidates between them`)
 
   // Drop a question written twice in one response.

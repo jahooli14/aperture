@@ -277,6 +277,23 @@ export function pickSeeds(corpus: Corpus, avoid: Set<string>, n: number, rand: (
   return out
 }
 
+/**
+ * Pairs of lines for the parallel drafts to cross, each pair different and
+ * spread so no line is used twice before every line is used once. Pure;
+ * `rand` is injected for tests.
+ */
+export function pickLinePairs(names: string[], n: number, rand: () => number = Math.random): [string, string][] {
+  if (names.length < 2) return []
+  const all: [string, string][] = []
+  for (let i = 0; i < names.length; i++) for (let j = i + 1; j < names.length; j++) all.push([names[i], names[j]])
+  for (let i = all.length - 1; i > 0; i--) { const k = Math.floor(rand() * (i + 1)); [all[i], all[k]] = [all[k], all[i]] }
+  const out: [string, string][] = []
+  const used = new Set<string>()
+  for (const p of all) if (out.length < n && !used.has(p[0]) && !used.has(p[1])) { out.push(p); used.add(p[0]); used.add(p[1]) }
+  for (const p of all) if (out.length < n && !out.includes(p)) out.push(p)
+  return out
+}
+
 const MONTHS_AND_DAYS = /^(jan(uary)?|feb(ruary)?|mar(ch)?|apr(il)?|may|june?|july?|aug(ust)?|sep(t(ember)?)?|oct(ober)?|nov(ember)?|dec(ember)?|mon(day)?|tue(s(day)?)?|wed(nesday)?|thu(r(s(day)?)?)?|fri(day)?|sat(urday)?|sun(day)?)$/
 
 /**

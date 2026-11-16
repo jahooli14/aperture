@@ -30,7 +30,7 @@ const MIN_ARTICLE_CHARS = 120
  *  quote can only ever be checked against text the model was shown. */
 const ARTICLE_CHARS = 1500
 
-export type CorpusRowKind = 'project' | 'memory' | 'fragment' | 'list_item' | 'article'
+export type CorpusRowKind = 'project' | 'memory' | 'fragment' | 'list_item' | 'article' | 'answer'
 
 export interface CorpusRow {
   kind: CorpusRowKind
@@ -101,6 +101,10 @@ async function withRetry(
 
 export async function loadCorpus(
   supabase: SupabaseClient, userId: string, trace: string[] = [],
+  /** Their answers to the app's questions, as their own rows. What they
+   *  think, so the picture of them reads them (portrait.ts); kept out of
+   *  takes, where a fresh answer would read as a fresh capture. */
+  opts: { withAnswers?: boolean } = {},
 ): Promise<Corpus> {
   const [memoriesRes, fragmentsRes, projectsRes, listItemsRes, readingRes] = await Promise.all([
     withRetry(() => supabase.from('memories').select('id, title, body, created_at, tags, triage, source_reference')
@@ -126,6 +130,12 @@ export async function loadCorpus(
   // built on (sensitive.ts). Their fragments go with them.
   const memories = userSaid((memoriesRes.data ?? []) as any[])
     .filter(m => !isElicitedAnswer(m.body) && !isSensitive(`${m.title ?? ''} ${m.body ?? ''}`))
+  const answers = opts.withAnswers
+    ? ((memoriesRes.data ?? []) as any[]).filter(m =>
+        !memories.includes(m) && typeof m.body === 'string' && m.body.trim() &&
+        !isSensitive(`${m.title ?? ''} ${m.body}`) &&
+        ((m.tags ?? []).some((t: string) => t === 'spark-response' || t === 'spark-correction') || isElicitedAnswer(m.body)))
+    : []
   const appAuthoredMemoryIds = new Set(
     ((memoriesRes.data ?? []) as any[]).filter(m => !memories.includes(m)).map(m => m.id),
   )
@@ -197,6 +207,12 @@ export async function loadCorpus(
       at: (f.memory_id && memoryDateById.get(f.memory_id)) || f.created_at || undefined,
       meta: `${dateOf(f)}${f.projects?.title ? `, filed under "${f.projects.title}"` : ', not filed under any project'}`,
     })),
+    ...answers.map((m: any, i: number): CorpusRow => ({
+      kind: 'answer', id: m.id, captureId: m.id, ref: `Q${i + 1}`, projectId: filedProjectId(m),
+      title: m.title ?? '', text: String(m.body).replace(/^\s*spark response\s*[-,:]?\s*/i, ''),
+      meta: `${readableDate(m.created_at)}, their answer to one of the app's questions${m.source_reference?.type === 'spark' && m.source_reference.title ? ` ("${String(m.source_reference.title).slice(0, 120)}")` : ''}`,
+      at: m.created_at || undefined,
+    })),
     ...listItems.map((l: any, i: number): CorpusRow => ({
       kind: 'list_item', id: l.id, captureId: l.id, ref: `L${i + 1}`, projectId: null,
       title: l.lists?.title ?? 'a list', text: l.content,
@@ -217,6 +233,7 @@ export async function loadCorpus(
     section('project', 'PROJECTS -- what they said they would make'),
     section('memory', 'NOTES -- voice notes, tidied, in their words'),
     section('fragment', 'FRAGMENTS -- short things said in passing'),
+    ...(answers.length ? [section('answer', 'ANSWERS -- what they said back to the app, in their words')] : []),
     section('list_item', 'LIST ITEMS -- films, books, music, places they chose. Taste, not their words'),
     section('article', 'ARTICLES THEY FINISHED AND VOUCHED FOR -- not their words'),
   ].join('\n\n')
