@@ -474,7 +474,12 @@ function buildFastSinglePrompt(
 ═══════ VOICE RULES (non-negotiable) ═══════
 
 ${PLAIN_ENGLISH_RULES}
-${feelingBlock}
+${feelingBlock}${g.lines?.length ? `
+═══════ WHAT YOU KNOW ABOUT THEM ═══════
+The lines they keep coming back to, from everything they've said:
+${g.lines.map(l => `- ${l}`).join('\n')}
+The best idea sits where two or three of these lines meet and doesn't exist yet: the thing only this person would make. Name the lines it comes from in "why".
+` : ''}
 ═══════ WHO THEY ARE ═══════
 
 ${deriveTasteLine(g)}
@@ -610,7 +615,12 @@ function buildFastHourPrompt(g: GatherResult, feeling: SessionFeeling | null): s
 ═══════ VOICE RULES (non-negotiable) ═══════
 
 ${PLAIN_ENGLISH_RULES}
-${feelingBlock}
+${feelingBlock}${g.lines?.length ? `
+═══════ WHAT YOU KNOW ABOUT THEM ═══════
+The lines they keep coming back to, from everything they've said:
+${g.lines.map(l => `- ${l}`).join('\n')}
+The best idea sits where two or three of these lines meet and doesn't exist yet: the thing only this person would make. Name the lines it comes from in "why".
+` : ''}
 ═══════ WHO THEY ARE ═══════
 
 ${deriveTasteLine(g)}

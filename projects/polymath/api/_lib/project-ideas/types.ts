@@ -106,6 +106,8 @@ export interface StoredProjectIdea extends ProjectIdea {
 }
 
 export interface GatherResult {
+  /** The picture of them (portrait.ts): the lines they keep coming back to. */
+  lines?: string[]
   // `embedding` is the stored pgvector for the row, used by the seed picker
   // to score centre×arrival relatedness by meaning (cosine) instead of shared
   // keywords (Jaccard). Supabase returns vectors as a JSON string; cosine and
