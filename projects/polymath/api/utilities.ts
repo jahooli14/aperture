@@ -322,14 +322,20 @@ async function handleUploadImage(req: VercelRequest, res: VercelResponse) {
       })
     }
 
-    console.log('[utilities/upload-image] Generating signed URL for:', { fileName, fileType })
+    // The client's name only lends its extension. The object name is minted
+    // here under the caller's id, so nobody can sign an upload over someone
+    // else's file (uploads are upserts).
+    const ext = (String(fileName).split('.').pop() || '').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 8) || 'bin'
+    const objectName = `${userId}/${Date.now()}_${Math.random().toString(36).slice(2, 10)}.${ext}`
+
+    console.log('[utilities/upload-image] Generating signed URL for:', { objectName, fileType })
 
     // Create a Signed Upload URL
     // Tries to upload to 'thought-images' bucket
     // The token allows uploading a specific file for a limited time (e.g. 60s)
     const { data, error } = await supabase.storage
       .from('thought-images')
-      .createSignedUploadUrl(fileName)
+      .createSignedUploadUrl(objectName)
 
     if (error) {
       console.error('[utilities/upload-image] Supabase error creating signed URL:', {
@@ -354,9 +360,9 @@ async function handleUploadImage(req: VercelRequest, res: VercelResponse) {
     // And the public URL for reference after upload
     const { data: publicUrlData } = supabase.storage
       .from('thought-images')
-      .getPublicUrl(fileName)
+      .getPublicUrl(objectName)
 
-    console.log('[utilities/upload-image] Successfully generated URLs for:', fileName)
+    console.log('[utilities/upload-image] Successfully generated URLs for:', objectName)
 
     return res.status(200).json({
       success: true,

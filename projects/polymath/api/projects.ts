@@ -2114,6 +2114,7 @@ async function generateNextSteps(projectId: string, userId: string, supabase: an
     .from('projects')
     .select('title, description, metadata')
     .eq('id', projectId)
+    .eq('user_id', userId)
     .single()
 
   if (!project) throw new Error('Project not found')
