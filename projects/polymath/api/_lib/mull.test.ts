@@ -295,6 +295,11 @@ describe('pickLinePairs', () => {
     expect(pairs).toHaveLength(2)
     expect(new Set(pairs.flat()).size).toBe(4)
   })
+  it('every pair touches a project when some line does', () => {
+    const pairs = pickLinePairs(['shoes', 'sleep', 'the book', 'loops'], 3, () => 0.5, new Set(['the book']))
+    expect(pairs.length).toBeGreaterThan(0)
+    expect(pairs.every(p => p.includes('the book'))).toBe(true)
+  })
   it('nothing to cross with fewer than two lines', () => {
     expect(pickLinePairs(['a'], 3)).toEqual([])
   })

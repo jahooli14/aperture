@@ -41,7 +41,7 @@ import { loadCorpus, normaliseTitle, type Corpus, type CorpusRow } from './mull-
 import { checkCandidate, crossingDepth, CROSSING_BONUS, TRIFECTA_BONUS, slotOf, orderBySlots, type Slot, judgePercent, judgeRank, pickSeeds, pickLinePairs, claimSentence, parseJudgeScores, type Candidate, type Grounded, type JudgeScore } from './mull.js'
 import { draftPrompt, judgePrompt } from './mull-prompts.js'
 import { checkFactSafely } from './fact-check.js'
-import { loadPortrait } from './portrait.js'
+import { loadPortrait, type Portrait } from './portrait.js'
 
 /**
  * Four days.
@@ -143,7 +143,7 @@ export interface EchoContext {
   /** Takes they tapped "no" on, verbatim. The judge reads these. */
   saidNo?: string[]
   /** The picture of them (portrait.ts), by row id. */
-  lines?: { name: string; rowIds: string[] }[]
+  lines?: { name: string; rowIds: string[]; touchesProject?: boolean }[]
   /** Where they are now; see loadFocus. */
   focus?: string
   /** Their own words about what they want from takes (Settings). */
@@ -326,6 +326,11 @@ export function judgeHistory(echo: Pick<EchoContext, 'corrections' | 'saidNo'>):
   return [echo.corrections.trim(), no].filter(Boolean).join('\n\n')
 }
 
+/** The picture as the draft reads it. */
+export function linesFrom(portrait: Portrait): NonNullable<EchoContext['lines']> {
+  return portrait.lines.map(l => ({ name: l.name, rowIds: l.rows.map(r => r.id), touchesProject: l.rows.some(r => r.kind === 'project') }))
+}
+
 /**
  * What they're on right now: the live project and its next move, plus the
  * last few things they captured. The draft leans toward these so the
@@ -453,7 +458,7 @@ export async function loadEchoContext(
     loadSaidNo(supabase, userId),
     loadPortrait(supabase, userId).catch(() => null),
   ])
-  const lines = portrait?.lines.map(l => ({ name: l.name, rowIds: l.rows.map(r => r.id) }))
+  const lines = portrait ? linesFrom(portrait) : undefined
   return { recentTexts, recentProjectIds, recentSubjectIds, resonance, corrections, focus, brief, saidNo, lines, live: season?.main ?? null, season }
 }
 
@@ -605,7 +610,12 @@ export async function generateMull(
   const callsWanted = PARALLEL_CALLS
   // With a picture of them, each parallel draft crosses a different pair of
   // lines (picked in code, like the seeds were); without one, seeds.
-  const pairs = parallel ? pickLinePairs((echo.lines ?? []).map(l => l.name), callsWanted) : []
+  // Every pair has a line that touches a project of theirs: two lines about
+  // life alone made "your shoes × your dreams" (measured, judged 26%).
+  const pairs = parallel ? pickLinePairs(
+    (echo.lines ?? []).map(l => l.name), callsWanted, Math.random,
+    new Set((echo.lines ?? []).filter(l => l.touchesProject).map(l => l.name)),
+  ) : []
   const seeds = parallel && pairs.length === 0 ? pickSeeds(corpus, recentIds, callsWanted - (echo.live ? 1 : 0)) : []
   const drafted = parallel
     ? (await Promise.all(pairs.length
@@ -876,9 +886,13 @@ export async function bakeMull(
   /** Whole-run budget. Defaults to the reroll's ten seconds. */
   budgetMs = TOTAL_BUDGET_MS,
   reach = false,
+  /** A picture built this run, for when it can't be stored yet (portrait.ts). */
+  portrait?: Portrait | null,
 ): Promise<BakedSpark[]> {
+  const echoed = (echo ? Promise.resolve(echo) : loadEchoContext(supabase, userId))
+    .then(e => (!e.lines?.length && portrait ? { ...e, lines: linesFrom(portrait) } : e))
   const mulls = await generateMull(
-    supabase, userId, echo ?? loadEchoContext(supabase, userId), trace, creative, Date.now() + budgetMs, reach,
+    supabase, userId, echoed, trace, creative, Date.now() + budgetMs, reach,
   )
   if (mulls.length === 0) trace.push('nothing worth asking -- empty slot')
   return mulls

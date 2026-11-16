@@ -282,10 +282,15 @@ export function pickSeeds(corpus: Corpus, avoid: Set<string>, n: number, rand: (
  * spread so no line is used twice before every line is used once. Pure;
  * `rand` is injected for tests.
  */
-export function pickLinePairs(names: string[], n: number, rand: () => number = Math.random): [string, string][] {
+export function pickLinePairs(
+  names: string[], n: number, rand: () => number = Math.random,
+  /** Lines that touch a project: when any exist, every pair has one. */
+  anchors: Set<string> = new Set(),
+): [string, string][] {
   if (names.length < 2) return []
-  const all: [string, string][] = []
+  let all: [string, string][] = []
   for (let i = 0; i < names.length; i++) for (let j = i + 1; j < names.length; j++) all.push([names[i], names[j]])
+  if (anchors.size > 0) all = all.filter(([a, b]) => anchors.has(a) || anchors.has(b))
   for (let i = all.length - 1; i > 0; i--) { const k = Math.floor(rand() * (i + 1)); [all[i], all[k]] = [all[k], all[i]] }
   const out: [string, string][] = []
   const used = new Set<string>()

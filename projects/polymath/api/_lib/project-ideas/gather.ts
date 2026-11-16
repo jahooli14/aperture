@@ -470,7 +470,7 @@ export async function gatherForIdeas(supabase: Supabase, userId: string): Promis
   // The picture of them: the best idea sits where several lines meet.
   const portrait = await loadPortrait(supabase as never, userId).catch(() => null)
   return {
-    lines: portrait?.lines.map(l => `${l.name} (${l.rows.length} things)`) ?? [],
+    lines: portrait?.lines.map(l => `${l.name} -- ${l.rows.slice(0, 6).map(r => r.title).join('; ')}`) ?? [],
     memories,
     list_items,
     active_projects,

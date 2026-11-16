@@ -2282,7 +2282,10 @@ async function topUpBank(
   if (waiting >= BANK_TARGET) return { added: 0, waiting }
 
   const trace: string[] = []
-  const baked = await bakeMull(supabase, userId, undefined, trace, false, NIGHTLY_BUDGET_MS)
+  // The picture, built here if it can't be stored yet (portrait.ts).
+  const { buildPortrait } = await import('./_lib/portrait.js')
+  const portrait = await buildPortrait(supabase, userId, { trace })
+  const baked = await bakeMull(supabase, userId, undefined, trace, false, NIGHTLY_BUDGET_MS, false, portrait)
   if (baked.length === 0) return { added: 0, waiting, reason: 'nothing else to ask' }
 
   // Behind whatever is already banked, so they come out in the order made.
@@ -2345,11 +2348,12 @@ async function handleExecutionSparks(req: VercelRequest, res: VercelResponse) {
     // The picture of them is rebuilt every night, standing question or
     // not: everything that gives back reads it (portrait.ts).
     const portraitTrace: string[] = []
+    let portrait: Awaited<ReturnType<typeof import('./_lib/portrait.js')['buildPortrait']>> = null
     {
       const { buildPortrait } = await import('./_lib/portrait.js')
       const { loadEchoContext, judgeHistory } = await import('./_lib/mull-generator.js')
       const echoForPortrait = await loadEchoContext(supabase, userId)
-      await buildPortrait(supabase, userId, { corrections: judgeHistory(echoForPortrait), trace: portraitTrace, force: explain })
+      portrait = await buildPortrait(supabase, userId, { corrections: judgeHistory(echoForPortrait), trace: portraitTrace, force: explain })
     }
 
     // A question that's still standing is not replaced by a fresh one. It
@@ -2386,7 +2390,7 @@ async function handleExecutionSparks(req: VercelRequest, res: VercelResponse) {
         'a real bake would stop here and write nothing; this run continues so you can see why',
       )
     }
-    const baked = await bakeMull(supabase, userId, undefined, trace, false, NIGHTLY_BUDGET_MS)
+    const baked = await bakeMull(supabase, userId, undefined, trace, false, NIGHTLY_BUDGET_MS, false, portrait)
 
     if (explain) {
       await probeLatency(supabase, userId, trace)
