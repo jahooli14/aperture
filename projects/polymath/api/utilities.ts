@@ -128,6 +128,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (!userId) return res.status(401).json({ error: 'Unauthorized' })
     return handleSeason(req, res, getSupabaseClient(), userId)
   }
+  // "What it is now" -- one paragraph per project (project-summary.ts).
+  // GET drafts or refreshes it from the notes; POST {text} makes it theirs.
+  if (resource === 'project-summary') {
+    const userId = await getUserId(req)
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' })
+    const supabase = getSupabaseClient()
+    const projectId = (req.method === 'GET' ? req.query.project_id : req.body?.project_id)
+    if (typeof projectId !== 'string' || !projectId) return res.status(400).json({ error: 'project_id required' })
+    const { currentSummary, setSummary } = await import('./_lib/project-summary.js')
+    if (req.method === 'GET') return res.status(200).json({ summary: await currentSummary(supabase, userId, projectId) })
+    if (req.method !== 'POST') return res.status(405).json({ error: 'GET or POST required' })
+    const text = req.body?.text
+    if (typeof text !== 'string') return res.status(400).json({ error: 'text required' })
+    try {
+      return res.status(200).json({ summary: await setSummary(supabase, userId, projectId, text) })
+    } catch (e) {
+      return res.status(500).json({ error: e instanceof Error ? e.message : String(e) })
+    }
+  }
+
   if (resource === 'themes' || resource === 'up-to-speed') {
     const userId = await getUserId(req)
     if (!userId) return res.status(401).json({ error: 'Unauthorized' })

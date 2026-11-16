@@ -20,6 +20,7 @@ import { Loader2, MoreVertical, Star, Sprout, ArrowLeft } from 'lucide-react'
 import { useProjectStore } from '../stores/useProjectStore'
 import { ProjectNotes } from '../components/projects/ProjectNotes'
 import { ProjectBrief } from '../components/projects/ProjectBrief'
+import { WhatItIs } from '../components/projects/WhatItIs'
 import { ProjectThemes } from '../components/projects/ProjectThemes'
 import { UpdateSheet } from '../components/projects/UpdateSheet'
 import { ProjectUpdates, useProjectUpdates } from '../components/projects/ProjectUpdates'
@@ -68,7 +69,6 @@ export function ProjectDetailPage() {
   const [showEditDialog, setShowEditDialog] = useState(false)
   const [showCompletionModal, setShowCompletionModal] = useState(false)
   const [showRetroRitual, setShowRetroRitual] = useState(false)
-  const [showAbout, setShowAbout] = useState(false)
 
   const { addToast } = useToast()
   const { confirm, dialog: confirmDialog } = useConfirmDialog()
@@ -220,7 +220,6 @@ export function ProjectDetailPage() {
 
   const parked = project.status === 'dormant'
   const lastTouched = project.last_active || project.updated_at || null
-  const description = project.description?.trim() || ''
   // An ongoing project being worked on, with threads: they lead and the move
   // steps aside. A one-off keeps its move even if it has threads. Otherwise the move is the way back in. Either way: notes below.
   const steering = project.status !== 'completed' && project.status !== 'graveyard'
@@ -354,21 +353,8 @@ export function ProjectDetailPage() {
           )}
         </div>
 
-        {/* What it is — for the project you've put down and want to remember. */}
-        {description && (
-          <button
-            onClick={() => setShowAbout(v => !v)}
-            className="text-left w-full mb-4"
-            aria-expanded={showAbout}
-          >
-            <p
-              className={`text-[15px] leading-relaxed ${showAbout ? '' : 'line-clamp-3'}`}
-              style={{ color: 'var(--brand-text-secondary)', fontFamily: 'var(--brand-font-body)' }}
-            >
-              {description}
-            </p>
-          </button>
-        )}
+        {/* What it is now: drafted from your notes, or in your own words. */}
+        <WhatItIs project={project} />
 
         {/* Where it came from. */}
         {sparkedByMemories.length > 0 && (

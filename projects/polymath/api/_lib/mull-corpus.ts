@@ -180,7 +180,7 @@ export async function loadCorpus(
       // An app-suggested project keeps its title (they took it up) but not
       // the app's own prose: "You keep trying to build complex knowledge
       // systems..." was being quoted back as theirs.
-      title: p.title ?? '', text: isAppSuggested(p) ? '' : p.description ?? '',
+      title: p.title ?? '', text: summaryText(p) ?? (isAppSuggested(p) ? '' : p.description ?? ''),
       meta: `${p.status ?? ''}, started ${readableDate(p.created_at)}, last touched ${readableDate(p.last_active) || 'never'}${isAppSuggested(p) ? ', an idea the app suggested' : ''}`,
     })),
     ...memories.map((m: any, i: number): CorpusRow => {
@@ -233,6 +233,13 @@ export function filedProjectId(m: { source_reference?: unknown; triage?: unknown
   if (ref && typeof ref === 'object' && ref.type === 'project' && typeof ref.id === 'string') return ref.id
   const t = m.triage as any
   return t && typeof t.project_id === 'string' && t.project_id ? t.project_id : null
+}
+
+/** "What it is now" (project-summary.ts), when there is one: what the
+ *  project really is today, not the line written the day it was made. */
+export function summaryText(p: { metadata?: unknown }): string | null {
+  const s = (p.metadata as { summary?: { text?: unknown } } | null)?.summary
+  return s && typeof s.text === 'string' && s.text.trim() ? s.text.trim() : null
 }
 
 /** A project the app proposed and they accepted. Its description is the
