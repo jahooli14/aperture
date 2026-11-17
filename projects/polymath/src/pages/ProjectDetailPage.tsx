@@ -21,6 +21,7 @@ import { useProjectStore } from '../stores/useProjectStore'
 import { ProjectNotes } from '../components/projects/ProjectNotes'
 import { ProjectBrief } from '../components/projects/ProjectBrief'
 import { WhatItIs } from '../components/projects/WhatItIs'
+import { ProjectParts } from '../components/projects/ProjectParts'
 import { ProjectThemes } from '../components/projects/ProjectThemes'
 import { UpdateSheet } from '../components/projects/UpdateSheet'
 import { ProjectUpdates, useProjectUpdates } from '../components/projects/ProjectUpdates'
@@ -355,6 +356,7 @@ export function ProjectDetailPage() {
 
         {/* What it is now: drafted from your notes, or in your own words. */}
         <WhatItIs project={project} />
+        <ProjectParts project={project} />
 
         {/* Where it came from. */}
         {sparkedByMemories.length > 0 && (

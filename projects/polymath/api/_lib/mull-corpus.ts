@@ -18,6 +18,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { userSaid, isElicitedAnswer } from './corpus-provenance.js'
 import { isSensitive } from './sensitive.js'
+import { readParts, partsLine } from './project-parts.js'
 import { isOutOfCorpus } from './project-state.js'
 import { isCorpusEligible, type CorpusArticle } from './reading-corpus.js'
 import { articleBody } from './article-text.js'
@@ -190,7 +191,7 @@ export async function loadCorpus(
       // An app-suggested project keeps its title (they took it up) but not
       // the app's own prose: "You keep trying to build complex knowledge
       // systems..." was being quoted back as theirs.
-      title: p.title ?? '', text: summaryText(p) ?? (isAppSuggested(p) ? '' : p.description ?? ''),
+      title: p.title ?? '', text: [summaryText(p) ?? (isAppSuggested(p) ? '' : p.description ?? ''), partsLine(readParts(p.metadata))].filter(Boolean).join(' '),
       meta: `${p.status ?? ''}, started ${readableDate(p.created_at)}, last touched ${readableDate(p.last_active) || 'never'}${isAppSuggested(p) ? ', an idea the app suggested' : ''}`,
     })),
     ...memories.map((m: any, i: number): CorpusRow => {

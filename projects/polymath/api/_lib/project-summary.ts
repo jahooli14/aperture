@@ -21,6 +21,7 @@ import { parseModelJson } from './schemas.js'
 import { PLAIN_ENGLISH_RULES, findVoiceViolations } from './plain-english.js'
 import { unsupportedSpecifics } from './mull.js'
 import { loadProjectMaterial } from './project-material.js'
+import { readParts, partsLine } from './project-parts.js'
 
 const MODEL = 'gemini-flash-latest'
 export const SUMMARY_MAX_WORDS = 110
@@ -39,6 +40,8 @@ export interface SummaryMaterial {
   title: string
   description: string | null
   endGoal: string | null
+  /** What's ticked off and what isn't (project-parts.ts). */
+  progress?: string
   /** Newest first: what they said, and when. */
   said: { at: string; text: string; answer?: string }[]
 }
@@ -51,14 +54,14 @@ export function readSummary(metadata: unknown): ProjectSummary | null {
 
 /** Changes when something new has been said about the project. Pure. */
 export function basisOf(m: SummaryMaterial): string {
-  return `${m.said.length}:${m.said[0]?.at ?? ''}:${(m.description ?? '').length}`
+  return `${m.said.length}:${m.said[0]?.at ?? ''}:${(m.description ?? '').length}:${m.progress ?? ''}`
 }
 
 export function summaryPrompt(m: SummaryMaterial): string {
   return `Write what this project is NOW, in one paragraph, for the top of its page.
 
 PROJECT: "${m.title}"
-${m.description ? `WHAT THEY WROTE WHEN THEY STARTED IT (may be out of date): ${m.description}\n` : ''}${m.endGoal ? `WHERE IT'S HEADED: ${m.endGoal}\n` : ''}
+${m.description ? `WHAT THEY WROTE WHEN THEY STARTED IT (may be out of date): ${m.description}\n` : ''}${m.progress ? `WHAT THEY'VE TICKED OFF (this is current, trust it): ${m.progress}\n` : ''}${m.endGoal ? `WHERE IT'S HEADED: ${m.endGoal}\n` : ''}
 EVERYTHING THEY'VE SAID ABOUT IT, NEWEST FIRST:
 ${m.said.map(s => `- ${s.at.slice(0, 10)}: ${s.answer ? `(answering "${s.answer.slice(0, 160)}") ` : ''}${s.text}`).join('\n')}
 
@@ -78,7 +81,7 @@ export function checkSummary(text: string, m: SummaryMaterial): string | null {
   if (text.split(/\s+/).length > SUMMARY_MAX_WORDS) return 'too long'
   const voice = findVoiceViolations(text)
   if (voice.length) return `voice: ${voice[0]}`
-  const evidence = [m.title, m.description ?? '', m.endGoal ?? '', ...m.said.map(s => `${s.at} ${s.text} ${s.answer ?? ''}`)]
+  const evidence = [m.title, m.description ?? '', m.endGoal ?? '', m.progress ?? '', ...m.said.map(s => `${s.at} ${s.text} ${s.answer ?? ''}`)]
   const invented = unsupportedSpecifics(text, evidence)
   if (invented.length) return `names something nobody said: ${invented.join(', ')}`
   return null
@@ -109,6 +112,7 @@ export async function loadSummaryMaterial(supabase: SupabaseClient, userId: stri
     title: material.title,
     description: material.description,
     endGoal: material.endGoal,
+    progress: partsLine(readParts(material.metadata)) || undefined,
     said: said.filter(s => { const k = s.text.slice(0, 80); if (seen.has(k)) return false; seen.add(k); return true }).slice(0, 24),
   }
 }

@@ -143,6 +143,33 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(200).json({ portrait: await buildPortrait(supabase, userId, { force: true }) })
   }
 
+  // The parts of a project you tick off (project-parts.ts).
+  if (resource === 'project-parts') {
+    const userId = await getUserId(req)
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' })
+    const supabase = getSupabaseClient()
+    const projectId = req.method === 'GET' ? req.query.project_id : req.body?.project_id
+    if (typeof projectId !== 'string' || !projectId) return res.status(400).json({ error: 'project_id required' })
+    const { readParts, setPartLabels, tickPart } = await import('./_lib/project-parts.js')
+    try {
+      if (req.method === 'GET') {
+        const { data } = await supabase.from('projects').select('metadata').eq('id', projectId).eq('user_id', userId).single()
+        return res.status(200).json({ parts: readParts(data?.metadata) })
+      }
+      if (req.method !== 'POST') return res.status(405).json({ error: 'GET or POST required' })
+      const { action, labels, id, done } = req.body || {}
+      if (action === 'set' && Array.isArray(labels) && labels.every((l: unknown) => typeof l === 'string')) {
+        return res.status(200).json({ parts: await setPartLabels(supabase, userId, projectId, labels) })
+      }
+      if (action === 'tick' && typeof id === 'string' && typeof done === 'boolean') {
+        return res.status(200).json({ parts: await tickPart(supabase, userId, projectId, id, done) })
+      }
+      return res.status(400).json({ error: 'action must be set (labels) or tick (id, done)' })
+    } catch (e) {
+      return res.status(500).json({ error: e instanceof Error ? e.message : String(e) })
+    }
+  }
+
   // "What it is now" -- one paragraph per project (project-summary.ts).
   // GET drafts or refreshes it from the notes; POST {text} makes it theirs.
   if (resource === 'project-summary') {

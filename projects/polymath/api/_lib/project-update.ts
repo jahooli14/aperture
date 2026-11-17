@@ -9,6 +9,7 @@
  * the days you touched it.
  */
 
+import { tickFromSaid } from './project-parts.js'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { processMemory } from './process-memory.js'
 import { refreshThemes } from './project-catchup-routes.js'
@@ -75,10 +76,13 @@ export async function saveProjectUpdate(
 
   // One after the other: both read-then-write the project's metadata, and
   // run together the second write would wipe the first.
+  // "Finished chapter 4" ticks Chapter 4 (project-parts.ts).
+  const ticked = await tickFromSaid(supabase, userId, projectId, clean).catch(() => [] as string[])
   const refreshed = await refreshThemes(supabase, userId, projectId, true)
   const moved = await moveFromUpdate(supabase, userId, projectId, clean)
   return {
     ok: true,
+    ...(ticked.length ? { ticked } : {}),
     themes: refreshed?.themes ?? [],
     changed: !!refreshed?.changed,
     previous: refreshed?.previous,

@@ -33,6 +33,7 @@ interface Result {
   move?: { text: string; kind: 'move' | 'fork' }
   logged?: string
   projectDone?: boolean
+  ticked?: string[]
 }
 
 export function UpdateSheet({ project, onClose }: { project: Project; onClose: () => void }) {
@@ -62,11 +63,12 @@ export function UpdateSheet({ project, onClose }: { project: Project; onClose: (
       } else {
         const r = await api.post('utilities?resource=project-update', { project_id: project.id, text: text.trim() }, { timeout: 60_000 }) as {
           themes?: ProjectTheme[]; changed?: boolean; previous?: string[]
-          move?: { text: string; kind: 'move' | 'fork' }; logged?: string; project_done?: boolean
+          move?: { text: string; kind: 'move' | 'fork' }; logged?: string; project_done?: boolean; ticked?: string[]
         }
         setResult({
           themes: Array.isArray(r.themes) ? r.themes : readThemes(project.metadata),
           changed: !!r.changed, previous: r.previous, move: r.move, logged: r.logged, projectDone: !!r.project_done,
+          ticked: Array.isArray(r.ticked) ? r.ticked : [],
         })
       }
       await useProjectStore.getState().fetchProjects()
@@ -127,6 +129,12 @@ export function UpdateSheet({ project, onClose }: { project: Project; onClose: (
 
         {result ? (
           <div className="space-y-4">
+            {(result.ticked?.length ?? 0) > 0 && (
+              <p className="flex items-start gap-1.5 text-[13px]" style={{ color: 'var(--brand-text-secondary)' }}>
+                <Check size={13} className="mt-0.5 flex-shrink-0" style={{ color: 'rgb(var(--brand-primary-rgb))' }} />
+                Ticked off: {result.ticked!.join(', ')}
+              </p>
+            )}
             {result.logged && (
               <p className="flex items-start gap-1.5 text-[13px]" style={{ color: 'var(--brand-text-secondary)' }}>
                 <Check size={13} className="mt-0.5 flex-shrink-0" style={{ color: 'rgb(var(--brand-primary-rgb))' }} />
