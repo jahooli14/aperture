@@ -36,7 +36,12 @@ interface Result {
   ticked?: string[]
 }
 
-export function UpdateSheet({ project, onClose }: { project: Project; onClose: () => void }) {
+export function UpdateSheet({ project, onClose, onAddMade }: {
+  project: Project
+  onClose: () => void
+  /** On the project page: offer to add a photo or link of what was made. */
+  onAddMade?: () => void
+}) {
   const stored = readStoredMove(project.metadata)
   const fork = stored?.kind === 'fork' ? stored.text : null
   const repeating = !!(project.metadata as { cycle?: unknown } | undefined)?.cycle
@@ -171,6 +176,11 @@ export function UpdateSheet({ project, onClose }: { project: Project; onClose: (
                   {finishing ? 'One moment…' : repeating ? 'Line up the next one' : 'Mark it done'}
                 </button>
               </div>
+            )}
+            {onAddMade && (
+              <button onClick={() => { onClose(); onAddMade() }} className="text-[13px] min-h-[40px]" style={{ color: 'rgb(var(--brand-primary-rgb))' }}>
+                Made something? Add a photo or link of it
+              </button>
             )}
             <button onClick={onClose} className="neon-button w-full py-3 rounded-xl font-semibold text-[15px]">Done</button>
           </div>

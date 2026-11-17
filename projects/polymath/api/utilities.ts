@@ -2050,8 +2050,12 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
         .eq('user_id', userId)
         .gte('created_at', start.toISOString()),
       supabase.from('projects').select('id, title, state').eq('user_id', userId).neq('state', 'harvested'),
-      // (a note said on a project's page is read off its own tag, below)
-      Promise.resolve({ data: [] as { source_id: string; created_at: string }[] }),
+      // Something made on it that day (a painting, a mix), dated by the day made.
+      supabase
+        .from('project_outputs')
+        .select('project_id, made_on')
+        .eq('user_id', userId)
+        .gte('made_on', start.toISOString().slice(0, 10)),
       // A line typed into the box on its page (not a fragment cut from a note).
       supabase
         .from('fragments')
@@ -2063,7 +2067,7 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
     ])
 
     const traces = [
-      ...((linkData ?? []) as { source_id: string; created_at: string }[]).map(c => ({ project_id: c.source_id, at: c.created_at })),
+      ...((linkData ?? []) as { project_id: string; made_on: string | null }[]).filter(o => o.made_on).map(o => ({ project_id: o.project_id, at: `${o.made_on}T12:00:00Z` })),
       ...((sayData ?? []) as { project_id: string; created_at: string }[]).map(f => ({ project_id: f.project_id, at: f.created_at })),
       ...((sessionsData ?? []) as { project_id: string; started_at: string }[]).map(s => ({ project_id: s.project_id, at: s.started_at })),
       ...((notesData ?? []) as { created_at: string; tags: string[] | null; triage: { project_id?: string | null } | null; source_reference: unknown }[])

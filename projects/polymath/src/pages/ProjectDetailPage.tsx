@@ -22,6 +22,7 @@ import { ProjectNotes } from '../components/projects/ProjectNotes'
 import { ProjectBrief } from '../components/projects/ProjectBrief'
 import { WhatItIs } from '../components/projects/WhatItIs'
 import { ProjectParts } from '../components/projects/ProjectParts'
+import { MadeShelf } from '../components/made/MadeShelf'
 import { ProjectThemes } from '../components/projects/ProjectThemes'
 import { UpdateSheet } from '../components/projects/UpdateSheet'
 import { ProjectUpdates, useProjectUpdates } from '../components/projects/ProjectUpdates'
@@ -58,6 +59,7 @@ export function ProjectDetailPage() {
 
   const { fetchProjects, deleteProject, updateProject, syncProject, setPriority } = useProjectStore()
   const [updateOpen, setUpdateOpen] = useState(false)
+  const [addingMade, setAddingMade] = useState(false)
 
   const project = useProjectStore(state => state.allProjects.find(p => p.id === id))
   const updates = useProjectUpdates(project)
@@ -385,18 +387,28 @@ export function ProjectDetailPage() {
       </div>
 
       <div className="max-w-2xl mx-auto px-5 sm:px-6 space-y-8">
-        {updateOpen && project && <UpdateSheet project={project} onClose={() => setUpdateOpen(false)} />}
+        {updateOpen && project && <UpdateSheet project={project} onClose={() => setUpdateOpen(false)} onAddMade={() => setAddingMade(true)} />}
 
             {/* One card answers where you are, what you've said since and
                 what's next, each once (ProjectBrief). Threads are yours to
                 edit under it; the full history is folded under those. */}
             <ProjectBrief project={project} updates={updates} oneOff={oneOff} hideMove={hideMove} onUpdate={() => setUpdateOpen(true)} />
 
+            {/* Something you keep at is its pieces (each painting, each mix):
+                they sit high. Everything else keeps them under its history. */}
+            {shape === 'ongoing' && (
+              <MadeShelf project={project} adding={addingMade} onAddingChange={setAddingMade} />
+            )}
+
             {project.status !== 'completed' && project.status !== 'graveyard' && (
               <ProjectThemes project={project} quiet />
             )}
 
             <ProjectUpdates items={updates} />
+
+            {shape !== 'ongoing' && (
+              <MadeShelf project={project} adding={addingMade} onAddingChange={setAddingMade} />
+            )}
 
             <FinishedItButton project={project} />
 

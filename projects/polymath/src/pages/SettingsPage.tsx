@@ -413,6 +413,9 @@ export function SettingsPage() {
             <button className="text-[15px] min-h-[44px] font-medium" style={{ color: 'rgb(var(--brand-primary-rgb))' }} onClick={() => navigate('/you')}>
               What it knows about you →
             </button>
+            <button className="text-[15px] min-h-[44px] font-medium block" style={{ color: 'rgb(var(--brand-primary-rgb))' }} onClick={() => navigate('/made')}>
+              Everything you've made →
+            </button>
             <TakeBriefRow />
             <FullPrompt which="take_draft" label="the whole prompt that writes a take" />
             <FullPrompt which="take_judge" label="the whole prompt that scores a take" />

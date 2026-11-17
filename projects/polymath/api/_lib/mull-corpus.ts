@@ -19,6 +19,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { userSaid, isElicitedAnswer } from './corpus-provenance.js'
 import { isSensitive } from './sensitive.js'
 import { readParts, partsLine } from './project-parts.js'
+import { madeSummary } from './made.js'
 import { isOutOfCorpus } from './project-state.js'
 import { isCorpusEligible, type CorpusArticle } from './reading-corpus.js'
 import { articleBody } from './article-text.js'
@@ -100,6 +101,19 @@ async function withRetry(
   return res
 }
 
+/** What they've made, by project (made.ts). Best effort: a missing table is no pieces. */
+async function loadMade(supabase: SupabaseClient, userId: string): Promise<Map<string, any[]>> {
+  const out = new Map<string, any[]>()
+  try {
+    const { data } = await supabase.from('project_outputs').select('project_id, kind, title, note, link_meta, made_on, created_at').eq('user_id', userId).limit(1000)
+    for (const r of (data ?? []) as any[]) {
+      const row = r.note && isSensitive(r.note) ? { ...r, note: null } : r
+      out.set(r.project_id, [...(out.get(r.project_id) ?? []), row])
+    }
+  } catch { /* none */ }
+  return out
+}
+
 export async function loadCorpus(
   supabase: SupabaseClient, userId: string, trace: string[] = [],
   /** Their answers to the app's questions, as their own rows. What they
@@ -120,6 +134,7 @@ export async function loadCorpus(
     withRetry(() => supabase.from('reading_queue').select('id, title, excerpt, content, resonance, created_at')
       .eq('user_id', userId).order('created_at', { ascending: false }).limit(CORPUS_LIMIT), trace, 'corpus/reading'),
   ])
+  const madeByProject = await loadMade(supabase, userId)
   noteQuery(trace, 'corpus/memories', memoriesRes)
   noteQuery(trace, 'corpus/fragments', fragmentsRes)
   noteQuery(trace, 'corpus/projects', projectsRes)
@@ -191,7 +206,7 @@ export async function loadCorpus(
       // An app-suggested project keeps its title (they took it up) but not
       // the app's own prose: "You keep trying to build complex knowledge
       // systems..." was being quoted back as theirs.
-      title: p.title ?? '', text: [summaryText(p) ?? (isAppSuggested(p) ? '' : p.description ?? ''), partsLine(readParts(p.metadata))].filter(Boolean).join(' '),
+      title: p.title ?? '', text: [summaryText(p) ?? (isAppSuggested(p) ? '' : p.description ?? ''), partsLine(readParts(p.metadata)), madeSummary(madeByProject.get(p.id) ?? [])].filter(Boolean).join(' '),
       meta: `${p.status ?? ''}, started ${readableDate(p.created_at)}, last touched ${readableDate(p.last_active) || 'never'}${isAppSuggested(p) ? ', an idea the app suggested' : ''}`,
     })),
     ...memories.map((m: any, i: number): CorpusRow => {

@@ -37,7 +37,7 @@ export function FinishedItButton({ project }: { project: Project }) {
     setSaving(true)
     try {
       await updateProject(project.id, { status: 'completed' })
-      addToast({ title: 'Done.', description: `${project.title} is on your shelf.`, variant: 'success' })
+      addToast({ title: 'Done.', description: `${project.title} is on your shelf. Add a photo of it below.`, variant: 'success' })
     } catch {
       addToast({ title: "Couldn't save that", description: 'Try again in a moment.', variant: 'destructive' })
     } finally {
