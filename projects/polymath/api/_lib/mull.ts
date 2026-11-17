@@ -23,8 +23,11 @@ export { isGraveyarded } from './project-state.js'
  *  a one-note question did. */
 export const MAX_MULL_WORDS = 70
 
-/** A pattern is two things at least. One note played back is a summary. */
-export const MIN_EVIDENCE_ROWS = 2
+/** One thing they said is enough when the take adds something from the
+ *  world to it (Nov 2026: the owner picked 7 of 8 such takes in a blind
+ *  test). Played back with nothing added, one note is still a summary --
+ *  that is the judge's call now, not a count. */
+export const MIN_EVIDENCE_ROWS = 1
 
 export interface Evidence { ref: string; quote: string }
 
@@ -42,6 +45,9 @@ export interface Candidate {
   /** What they would do differently once they have answered. */
   stake: string
   project: string | null
+  /** The fact from outside their notes the take adds, said plainly. Its
+   *  names may appear in the take; the judge checks it is true. */
+  outside?: string
 }
 
 export interface Grounded extends Candidate {
@@ -251,10 +257,10 @@ export function claimSentence(text: string): string {
 
 /**
  * Where each parallel draft starts. Left to itself the model finds the same
- * two or three strong patterns every time, and each run's candidates echo
- * the last run's. So code picks different starting rows, spread over recent
- * notes, list items and older notes, none used by a recent take, and each
- * draft is told to build from its own. Pure; `rand` is injected for tests.
+ * two or three things every run, so code picks different starting rows --
+ * recent notes, older notes, list items (their "Linguid" lines are some of
+ * the best) -- none used by a recent take, and each draft starts from its
+ * own. Pure; `rand` is injected for tests.
  */
 export function pickSeeds(corpus: Corpus, avoid: Set<string>, n: number, rand: () => number = Math.random): CorpusRow[] {
   const free = (r: CorpusRow) => !avoid.has(r.id) && !avoid.has(r.captureId)
@@ -263,11 +269,33 @@ export function pickSeeds(corpus: Corpus, avoid: Set<string>, n: number, rand: (
   const older = notes.slice(30)
   const items = corpus.rows.filter(r => r.kind === 'list_item' && free(r))
   const out: CorpusRow[] = []
-  for (const pool of [recent, items, older, recent, older, items]) {
+  for (const pool of [recent, older, items, recent, older, items]) {
     if (out.length >= n) break
     if (pool.length === 0) continue
     out.push(pool.splice(Math.floor(rand() * pool.length), 1)[0])
   }
+  return out
+}
+
+/**
+ * Pairs of lines for the parallel drafts to cross, each pair different and
+ * spread so no line is used twice before every line is used once. Pure;
+ * `rand` is injected for tests.
+ */
+export function pickLinePairs(
+  names: string[], n: number, rand: () => number = Math.random,
+  /** Lines that touch a project: when any exist, every pair has one. */
+  anchors: Set<string> = new Set(),
+): [string, string][] {
+  if (names.length < 2) return []
+  let all: [string, string][] = []
+  for (let i = 0; i < names.length; i++) for (let j = i + 1; j < names.length; j++) all.push([names[i], names[j]])
+  if (anchors.size > 0) all = all.filter(([a, b]) => anchors.has(a) || anchors.has(b))
+  for (let i = all.length - 1; i > 0; i--) { const k = Math.floor(rand() * (i + 1)); [all[i], all[k]] = [all[k], all[i]] }
+  const out: [string, string][] = []
+  const used = new Set<string>()
+  for (const p of all) if (out.length < n && !used.has(p[0]) && !used.has(p[1])) { out.push(p); used.add(p[0]); used.add(p[1]) }
+  for (const p of all) if (out.length < n && !out.includes(p)) out.push(p)
   return out
 }
 
@@ -298,6 +326,9 @@ export function checkCandidate(
   if (text.split(/\s+/).length > MAX_MULL_WORDS) return { ok: false, reason: 'too long to carry around' }
 
   const { rows, bad } = resolveEvidence(c.evidence, corpus)
+  // One note is enough now, so a quote found nowhere can't simply be
+  // dropped: the rest would ship on a draft that invented part of itself.
+  if (bad.length > 0) return { ok: false, reason: `quotes something in no row: ${bad.join('; ')}` }
   // Distinct captures, not rows: a fragment and the note it was cut from
   // are one thought said once, and a pattern needs two.
   const captures = new Set(rows.map(r => r.captureId)).size
@@ -312,7 +343,8 @@ export function checkCandidate(
   // Checked against the full rows the quotes resolved to, never the quotes
   // alone: a real quote with an invented detail dressed around it passes a
   // quote-only check and fails this one.
-  let invented = unsupportedSpecifics(text, rows.map(evidenceText))
+  const sources = () => [...rows.map(evidenceText), c.outside ?? '']
+  let invented = unsupportedSpecifics(text, sources())
   if (invented.length > 0) {
     // A real person the draft named without citing the note they're in.
     // If exactly the names it used sit together in one row of the corpus,
@@ -322,7 +354,7 @@ export function checkCandidate(
     const source = rowNaming(invented, rows, corpus)
     if (source) {
       rows.push(source)
-      invented = unsupportedSpecifics(text, rows.map(evidenceText))
+      invented = unsupportedSpecifics(text, sources())
     }
   }
   if (invented.length > 0) {
@@ -340,8 +372,6 @@ export function checkCandidate(
     const explainer = EXPLAINER_PATTERNS.find(re => re.test(text))
     if (explainer) return { ok: false, reason: `explains the pattern instead of showing it: ${explainer.source}` }
     if (OPENS_ON_A_PLAN.test(text)) return { ok: false, reason: 'opens by reciting a plan' }
-    // Yes or no is the whole point of a take, so this only bites a question.
-    if (text.includes('?') && isClosed(text)) return { ok: false, reason: 'answerable with yes or no' }
     if (!text.includes('?')) {
       const claim = claimSentence(text)
       if (HEDGES.test(claim)) return { ok: false, reason: 'hedges the claim, so nobody can disagree with it' }

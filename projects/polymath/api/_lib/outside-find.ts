@@ -77,12 +77,13 @@ Answer with JSON only, no other text:
 or {"none": true}`
 }
 
-/** Fetches the page and checks it's really about the find. */
-async function checkPage(find: Find): Promise<string | null> {
+/** Fetches the page and checks it's really about the find. Null = it holds.
+ *  Also used by fact-check.ts for a take's source link. */
+export async function checkPage(find: Pick<Find, 'title' | 'url'>, timeoutMs = PAGE_TIMEOUT_MS): Promise<string | null> {
   try {
     const res = await fetch(find.url, {
       redirect: 'follow',
-      signal: AbortSignal.timeout(PAGE_TIMEOUT_MS),
+      signal: AbortSignal.timeout(timeoutMs),
       headers: { 'User-Agent': 'Mozilla/5.0 (compatible; Polymath/1.0)', Accept: 'text/html,*/*' },
     })
     if (!res.ok) return `page returned ${res.status}`

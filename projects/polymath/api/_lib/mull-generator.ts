@@ -35,10 +35,13 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { generateText } from './gemini-chat.js'
 import { parseModelJson } from './schemas.js'
 import { echoesRecent, fetchRecentSparkTexts, fetchRecentSparkProjectIds, fetchRecentSparkSubjectIds } from './spark-echo.js'
-import { SPARK_CORRECTION_TAG, isAppAuthored } from './corpus-provenance.js'
+import { SPARK_CORRECTION_TAG, isAppAuthored, isElicitedAnswer } from './corpus-provenance.js'
+import { isSensitive } from './sensitive.js'
 import { loadCorpus, normaliseTitle, type Corpus, type CorpusRow } from './mull-corpus.js'
-import { checkCandidate, crossingDepth, CROSSING_BONUS, TRIFECTA_BONUS, slotOf, orderBySlots, type Slot, judgePercent, judgeRank, pickSeeds, parseJudgeScores, type Candidate, type Grounded, type JudgeScore } from './mull.js'
+import { checkCandidate, crossingDepth, CROSSING_BONUS, TRIFECTA_BONUS, slotOf, orderBySlots, type Slot, judgePercent, judgeRank, pickSeeds, pickLinePairs, claimSentence, parseJudgeScores, type Candidate, type Grounded, type JudgeScore } from './mull.js'
 import { draftPrompt, judgePrompt } from './mull-prompts.js'
+import { checkFactSafely } from './fact-check.js'
+import { loadPortrait, type Portrait } from './portrait.js'
 
 /**
  * Four days.
@@ -137,6 +140,10 @@ export interface EchoContext {
   resonance: string
   /** Premises earlier questions got wrong. Context, never corpus. */
   corrections: string
+  /** Takes they tapped "no" on, verbatim. The judge reads these. */
+  saidNo?: string[]
+  /** The picture of them (portrait.ts), by row id. */
+  lines?: { name: string; rowIds: string[]; touchesProject?: boolean }[]
   /** Where they are now; see loadFocus. */
   focus?: string
   /** Their own words about what they want from takes (Settings). */
@@ -250,13 +257,29 @@ export function tapLines(rows: { text?: unknown; stance?: unknown }[]): string[]
  * question around, just a standing note of what's actually true now.
  */
 async function loadCorrections(supabase: SupabaseClient, userId: string): Promise<string> {
-  const { data, error } = await supabase
-    .from('memories')
-    .select('body, source_reference')
-    .eq('user_id', userId)
-    .contains('tags', [SPARK_CORRECTION_TAG])
-    .order('created_at', { ascending: false })
-    .limit(15)
+  const [tagged, legacy] = await Promise.all([
+    supabase
+      .from('memories')
+      .select('body, source_reference')
+      .eq('user_id', userId)
+      .contains('tags', [SPARK_CORRECTION_TAG])
+      .order('created_at', { ascending: false })
+      .limit(15),
+    // Answers saved before answers were tagged ("Spark response - ..."):
+    // out of the corpus (isElicitedAnswer), but what they put right still
+    // has to reach the draft.
+    supabase
+      .from('memories')
+      .select('body, source_reference')
+      .eq('user_id', userId)
+      .ilike('body', 'spark response%')
+      .order('created_at', { ascending: false })
+      .limit(10),
+  ])
+  const error = tagged.error
+  const seen = new Set<string>()
+  const data = [...(tagged.data ?? []), ...(legacy.error ? [] : legacy.data ?? [])]
+    .filter((m: any) => !seen.has(m.body) && !!seen.add(m.body))
   if (error) {
     console.warn('[mull] could not read past corrections:', error.message)
     return ''
@@ -281,6 +304,33 @@ mistake.
 `
 }
 
+/** Takes they said "no" to. The draft already sees the latest few; the
+ *  judge needs them too -- measured, it scored 50% a take repeating a claim
+ *  they had tapped no on and corrected out loud. Empty on any failure. */
+async function loadSaidNo(supabase: SupabaseClient, userId: string): Promise<string[]> {
+  try {
+    const { data, error } = await supabase.from('sparks').select('text')
+      .eq('user_id', userId).eq('stance', 'no')
+      .order('answered_at', { ascending: false }).limit(15)
+    if (error) return []
+    return (data ?? []).map((s: any) => s.text).filter((t: unknown): t is string => typeof t === 'string')
+  } catch {
+    return []
+  }
+}
+
+/** What the judge is told they have already said: corrections, then the
+ *  takes they said no to. */
+export function judgeHistory(echo: Pick<EchoContext, 'corrections' | 'saidNo'>): string {
+  const no = (echo.saidNo ?? []).map(t => `  - they said no to: "${t}"`).join('\n')
+  return [echo.corrections.trim(), no].filter(Boolean).join('\n\n')
+}
+
+/** The picture as the draft reads it. */
+export function linesFrom(portrait: Portrait): NonNullable<EchoContext['lines']> {
+  return portrait.lines.map(l => ({ name: l.name, rowIds: l.rows.map(r => r.id), touchesProject: l.rows.some(r => r.kind === 'project') }))
+}
+
 /**
  * What they're on right now: the live project and its next move, plus the
  * last few things they captured. The draft leans toward these so the
@@ -303,7 +353,7 @@ async function readFocus(supabase: SupabaseClient, userId: string): Promise<stri
       .eq('user_id', userId).eq('status', 'active')
       .or('state.eq.live,is_priority.eq.true')
       .order('last_active', { ascending: false }).limit(1),
-    supabase.from('memories').select('title, tags')
+    supabase.from('memories').select('title, body, tags')
       .eq('user_id', userId).eq('processed', true)
       .order('created_at', { ascending: false }).limit(15),
   ])
@@ -318,17 +368,15 @@ async function readFocus(supabase: SupabaseClient, userId: string): Promise<stri
   // Notes the app elicited (spark answers, corrections) aren't fresh
   // capture -- same rule as the corpus. Filtered in JS: `tags` is nullable.
   const recent = (notes ?? [])
-    .filter((n: any) => !isAppAuthored(n.tags))
+    .filter((n: any) => !isAppAuthored(n) && !isElicitedAnswer(n.body) && !isSensitive(`${n.title ?? ''} ${n.body ?? ''}`))
     .map((n: any) => n.title)
     .filter((t: unknown): t is string => typeof t === 'string' && !!t)
     .slice(0, 5)
   if (!p?.title && recent.length === 0) return ''
   return `
 WHERE THEY ARE RIGHT NOW (context -- never quote it, evidence still comes from rows):
-${p?.title ? `- Live project: "${p.title}"${move ? `. Next move: ${move}` : ''}\n` : ''}${p?.title && themes.length ? `- What it's steering by (their words): ${themes.map(t => `"${t}"`).join('; ')}\n` : ''}${recent.length ? `- Just captured: ${recent.map(t => `"${t}"`).join('; ')}\n` : ''}Use these as one half of a collision, not as a filter. The best question puts
-something from here next to something that looks unrelated -- a person or
-occasion in their life beside a material, skill or old project. Don't stay inside
-the live project; reach out from it.
+${p?.title ? `- Live project: "${p.title}"${move ? `. Next move: ${move}` : ''}\n` : ''}${p?.title && themes.length ? `- What it's steering by (their words): ${themes.map(t => `"${t}"`).join('; ')}\n` : ''}${recent.length ? `- Just captured: ${recent.map(t => `"${t}"`).join('; ')}\n` : ''}What they're thinking about lately is a good place to start. Nothing has to be
+about the project.
 `
 }
 
@@ -368,9 +416,15 @@ export async function loadTakeBrief(supabase: SupabaseClient, userId: string): P
  *  overrides the corpus for a small slice. */
 export function buildDraftPrompt(
   corpus: Corpus, echo: EchoContext, recentIds: Set<string>, recentTexts: string[],
-  o: { howMany: number; lens?: 'live' | 'elsewhere'; seedRef?: string; corpusText?: string; liveTitle?: string | null; recentRefs?: string[]; lean?: boolean },
+  o: { howMany: number; lens?: 'live' | 'elsewhere'; seedRef?: string; corpusText?: string; liveTitle?: string | null; recentRefs?: string[]; lean?: boolean; linePair?: [string, string] },
 ): string {
+  const refById = new Map(corpus.rows.map(r => [r.id, r.ref]))
+  const lines = (echo.lines ?? [])
+    .map(l => ({ name: l.name, refs: l.rowIds.map(id => refById.get(id)).filter((x): x is string => !!x) }))
+    .filter(l => l.refs.length > 0)
   return draftPrompt({
+    lines,
+    linePair: o.linePair,
     corpusText: o.corpusText ?? corpus.text,
     howMany: o.howMany,
     lens: o.lens,
@@ -392,7 +446,7 @@ export function buildDraftPrompt(
 export async function loadEchoContext(
   supabase: SupabaseClient, userId: string,
 ): Promise<EchoContext> {
-  const [recentTexts, recentProjectIds, recentSubjectIds, resonance, corrections, focus, season, brief] = await Promise.all([
+  const [recentTexts, recentProjectIds, recentSubjectIds, resonance, corrections, focus, season, brief, saidNo, portrait] = await Promise.all([
     fetchRecentSparkTexts(supabase, userId),
     fetchRecentSparkProjectIds(supabase, userId),
     fetchRecentSparkSubjectIds(supabase, userId),
@@ -401,8 +455,11 @@ export async function loadEchoContext(
     loadFocus(supabase, userId),
     loadSeason(supabase, userId),
     loadTakeBrief(supabase, userId),
+    loadSaidNo(supabase, userId),
+    loadPortrait(supabase, userId).catch(() => null),
   ])
-  return { recentTexts, recentProjectIds, recentSubjectIds, resonance, corrections, focus, brief, live: season?.main ?? null, season }
+  const lines = portrait ? linesFrom(portrait) : undefined
+  return { recentTexts, recentProjectIds, recentSubjectIds, resonance, corrections, focus, brief, saidNo, lines, live: season?.main ?? null, season }
 }
 
 function expiresAt(hours: number): string {
@@ -423,6 +480,7 @@ export function readCandidates(raw: unknown): Candidate[] {
     doubt: str(c?.doubt) || undefined,
     stake: str(c?.stake),
     project: str(c?.project) || null,
+    outside: str(c?.outside) || undefined,
     evidence: Array.isArray(c?.evidence)
       ? c.evidence.map((e: any) => ({ ref: str(e?.ref), quote: str(e?.quote) })).filter((e: { quote: string }) => e.quote)
       : [],
@@ -453,11 +511,11 @@ async function draft(prompt: string, timeoutMs: number, trace: MullTrace): Promi
   }
 }
 
-async function judge(grounded: Grounded[], timeoutMs: number, trace: MullTrace, liveTitle?: string | null): Promise<Map<number, JudgeScore> | null> {
+async function judge(grounded: Grounded[], timeoutMs: number, trace: MullTrace, liveTitle?: string | null, history = ''): Promise<Map<number, JudgeScore> | null> {
   const start = Date.now()
   let usage: Usage = null
   try {
-    const raw = await generateText(judgePrompt(grounded, liveTitle), {
+    const raw = await generateText(judgePrompt(grounded, liveTitle, history), {
       responseFormat: 'json', model: MODEL, maxTokens: 8192,
       thinkingLevel: 'low', timeoutMs, onUsage: u => { usage = u },
     })
@@ -531,12 +589,13 @@ export async function generateMull(
   const recentTexts = creative ? [] : echo.recentTexts
 
   const parallel = !reach && deadline - Date.now() >= PARALLEL_DRAFT_MIN_MS
-  const promptFor = (lens?: 'live' | 'elsewhere', seedRef?: string) => buildDraftPrompt(corpus, echo, recentIds, recentTexts, {
+  const promptFor = (lens?: 'live' | 'elsewhere', seedRef?: string, linePair?: [string, string]) => buildDraftPrompt(corpus, echo, recentIds, recentTexts, {
     // Never more, season or not: every extra candidate is output the model
     // has to write inside the ceiling.
     howMany: parallel ? CANDIDATES_PER_CALL : CANDIDATES_PER_RUN,
     lens,
     seedRef,
+    linePair,
   })
   const prompt = promptFor(reach ? 'elsewhere' : parallel && echo.live ? 'live' : undefined)
   trace.push(`draft prompt: ${prompt.length} chars`)
@@ -549,13 +608,24 @@ export async function generateMull(
   // Parallel path: one draft on the live project (when there is one) and
   // the rest each starting from a different row picked in code.
   const callsWanted = PARALLEL_CALLS
-  const seeds = parallel ? pickSeeds(corpus, recentIds, callsWanted - (echo.live ? 1 : 0)) : []
+  // With a picture of them, each parallel draft crosses a different pair of
+  // lines (picked in code, like the seeds were); without one, seeds.
+  // Every pair has a line that touches a project of theirs: two lines about
+  // life alone made "your shoes × your dreams" (measured, judged 26%).
+  const pairs = parallel ? pickLinePairs(
+    (echo.lines ?? []).map(l => l.name), callsWanted, Math.random,
+    new Set((echo.lines ?? []).filter(l => l.touchesProject).map(l => l.name)),
+  ) : []
+  const seeds = parallel && pairs.length === 0 ? pickSeeds(corpus, recentIds, callsWanted - (echo.live ? 1 : 0)) : []
   const drafted = parallel
-    ? (await Promise.all([
-        ...(echo.live ? [draft(prompt, draftBudget, trace)] : []),
-        ...seeds.map(r => draft(promptFor('elsewhere', r.ref), draftBudget, trace)),
-      ])).flat()
+    ? (await Promise.all(pairs.length
+        ? pairs.map(p => draft(promptFor(undefined, undefined, p), draftBudget, trace))
+        : [
+            ...(echo.live ? [draft(prompt, draftBudget, trace)] : []),
+            ...seeds.map(r => draft(promptFor('elsewhere', r.ref), draftBudget, trace)),
+          ])).flat()
     : await draft(prompt, draftBudget, trace)
+  if (pairs.length) trace.push(`crossing lines: ${pairs.map(p => `${p[0]} × ${p[1]}`).join('; ')}`)
   if (parallel) trace.push(`${seeds.length + (echo.live ? 1 : 0)} drafts in parallel (seeds ${seeds.map(r => r.ref).join(', ') || 'none'}): ${drafted.length} candidates between them`)
 
   // Drop a question written twice in one response.
@@ -579,7 +649,10 @@ export async function generateMull(
       trace.push(`dropped: built on a row a recent question used -- ${label(g)}`)
       continue
     }
-    if (echoesRecent(g.question, recentTexts)) {
+    // The claim is what repeats, not the facts. Comparing whole takes, a
+    // word two recent ones shared was banned outright -- measured, that was
+    // "book", which killed every take on the book they're writing.
+    if (echoesRecent(claimSentence(g.question), recentTexts.map(claimSentence))) {
       trace.push(`dropped: echoes a recent question -- ${label(g)}`)
       continue
     }
@@ -592,7 +665,7 @@ export async function generateMull(
 
   const judgeBudget = deadline - Date.now() - TAIL_MS
   const scores = judgeBudget >= MIN_JUDGE_MS
-    ? await judge(grounded, judgeBudget, trace, echo.live?.title ?? null)
+    ? await judge(grounded, judgeBudget, trace, echo.live?.title ?? null, judgeHistory(echo))
     : (trace.push(`judge skipped: ${judgeBudget}ms left`), null)
   // The Venn: a take that crosses the live project outranks one that stays
   // inside it (mull.ts, CROSSING_BONUS). Judged by the rows it cites, and
@@ -688,6 +761,8 @@ export async function generateMull(
 
   // Four slots (main, two others, wild) need four takes; otherwise three.
   const perRun = parallel || (seasonOn && alsoIds.length > 1) ? QUESTIONS_PER_RUN + 1 : QUESTIONS_PER_RUN
+  const checked = await checkOutsideFacts(ranked, perRun, deadline, trace)
+  ranked = checked.ranked
   const baked: BakedSpark[] = []
   for (const g of ranked) {
     if (baked.length >= perRun) break
@@ -705,13 +780,47 @@ export async function generateMull(
       stake: g.stake || undefined,
       subject_id: g.rows[0].id,
       subject_kind: g.rows[0].kind,
-      sources: sourcesOf(g.rows),
+      sources: [...sourcesOf(g.rows), ...(checked.sources.get(g) ? [{ kind: 'link', ...checked.sources.get(g)! }] : [])],
       score: percents.get(g),
       banked: baked.length > 0,
     })
   }
   if (baked.length === 0) trace.push('the judge shipped nothing')
   return baked
+}
+
+/** Below this there is no time for a search, so facts ship unchecked. */
+const MIN_CHECK_MS = 3_000
+
+/**
+ * The outside facts of the takes about to ship, checked against the web in
+ * parallel (fact-check.ts). False or unsure drops the take; the next one in
+ * rank order takes its place. A take with no outside fact needs no check.
+ */
+export async function checkOutsideFacts(
+  ranked: Grounded[], want: number, deadline: number, trace: MullTrace,
+): Promise<{ ranked: Grounded[]; sources: Map<Grounded, { title: string; url: string }> }> {
+  const sources = new Map<Grounded, { title: string; url: string }>()
+  const budget = deadline - Date.now() - TAIL_MS
+  // A few spares, so a dropped one has a replacement already checked.
+  const head = ranked.slice(0, want + 2)
+  if (!head.some(g => g.outside)) return { ranked, sources }
+  if (budget < MIN_CHECK_MS) {
+    trace.push(`fact check skipped: ${budget}ms left`)
+    return { ranked, sources }
+  }
+  const verdicts = await Promise.all(head.map(g => g.outside ? checkFactSafely(g.outside, budget) : Promise.resolve(null)))
+  const dropped = new Set<Grounded>()
+  head.forEach((g, i) => {
+    const v = verdicts[i]
+    if (!v) return
+    trace.push(`fact ${v.verdict.toUpperCase()}${v.source ? ` (${v.source.url})` : ''}: ${v.why ?? ''} -- "${g.outside!.slice(0, 80)}"`)
+    if (v.verdict !== 'true') dropped.add(g)
+    else if (v.source) sources.set(g, v.source)
+  })
+  // Unchecked spares past the head are left out rather than shipped on trust.
+  const rest = ranked.slice(head.length).filter(g => !g.outside)
+  return { ranked: [...head.filter(g => !dropped.has(g)), ...rest], sources }
 }
 
 /**
@@ -777,9 +886,13 @@ export async function bakeMull(
   /** Whole-run budget. Defaults to the reroll's ten seconds. */
   budgetMs = TOTAL_BUDGET_MS,
   reach = false,
+  /** A picture built this run, for when it can't be stored yet (portrait.ts). */
+  portrait?: Portrait | null,
 ): Promise<BakedSpark[]> {
+  const echoed = (echo ? Promise.resolve(echo) : loadEchoContext(supabase, userId))
+    .then(e => (!e.lines?.length && portrait ? { ...e, lines: linesFrom(portrait) } : e))
   const mulls = await generateMull(
-    supabase, userId, echo ?? loadEchoContext(supabase, userId), trace, creative, Date.now() + budgetMs, reach,
+    supabase, userId, echoed, trace, creative, Date.now() + budgetMs, reach,
   )
   if (mulls.length === 0) trace.push('nothing worth asking -- empty slot')
   return mulls

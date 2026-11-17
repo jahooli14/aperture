@@ -80,7 +80,7 @@ const EXECUTION_SESSIONS_RESOURCES = new Set([
   'harvest', 'mirror', 'book',
   'next-cycle', 'move',
 ])
-const EXECUTION_SPARKS_RESOURCES = new Set(['bake', 'today', 'respond', 'spark-followup', 'dismiss-spark', 'reroll-spark', 'retire-and-rebake', 'topup-bank', 'take-brief', 'prompt-preview', 'project-update', 'project-updates', 'catch-up'])
+const EXECUTION_SPARKS_RESOURCES = new Set(['bake', 'today', 'respond', 'spark-followup', 'dismiss-spark', 'reroll-spark', 'spark-further', 'retire-and-rebake', 'topup-bank', 'take-brief', 'prompt-preview', 'project-update', 'project-updates', 'catch-up'])
 const EXECUTION_PROPOSALS_RESOURCES = new Set([
   'drift-decay', 'reembed-articles', 'backfill-embeddings', 'reprocess-backlog',
 ])
@@ -128,6 +128,68 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (!userId) return res.status(401).json({ error: 'Unauthorized' })
     return handleSeason(req, res, getSupabaseClient(), userId)
   }
+  // The picture of them (portrait.ts): read by the "What it knows" page.
+  if (resource === 'portrait') {
+    const userId = await getUserId(req)
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' })
+    const supabase = getSupabaseClient()
+    const { loadPortrait, buildPortrait } = await import('./_lib/portrait.js')
+    if (req.method === 'GET') {
+      // First visit before any nightly build: build it now.
+      const portrait = (await loadPortrait(supabase, userId)) ?? (await buildPortrait(supabase, userId, { force: true }))
+      return res.status(200).json({ portrait })
+    }
+    if (req.method !== 'POST') return res.status(405).json({ error: 'GET or POST required' })
+    return res.status(200).json({ portrait: await buildPortrait(supabase, userId, { force: true }) })
+  }
+
+  // The parts of a project you tick off (project-parts.ts).
+  if (resource === 'project-parts') {
+    const userId = await getUserId(req)
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' })
+    const supabase = getSupabaseClient()
+    const projectId = req.method === 'GET' ? req.query.project_id : req.body?.project_id
+    if (typeof projectId !== 'string' || !projectId) return res.status(400).json({ error: 'project_id required' })
+    const { readParts, setPartLabels, tickPart } = await import('./_lib/project-parts.js')
+    try {
+      if (req.method === 'GET') {
+        const { data } = await supabase.from('projects').select('metadata').eq('id', projectId).eq('user_id', userId).single()
+        return res.status(200).json({ parts: readParts(data?.metadata) })
+      }
+      if (req.method !== 'POST') return res.status(405).json({ error: 'GET or POST required' })
+      const { action, labels, id, done } = req.body || {}
+      if (action === 'set' && Array.isArray(labels) && labels.every((l: unknown) => typeof l === 'string')) {
+        return res.status(200).json({ parts: await setPartLabels(supabase, userId, projectId, labels) })
+      }
+      if (action === 'tick' && typeof id === 'string' && typeof done === 'boolean') {
+        return res.status(200).json({ parts: await tickPart(supabase, userId, projectId, id, done) })
+      }
+      return res.status(400).json({ error: 'action must be set (labels) or tick (id, done)' })
+    } catch (e) {
+      return res.status(500).json({ error: e instanceof Error ? e.message : String(e) })
+    }
+  }
+
+  // "What it is now" -- one paragraph per project (project-summary.ts).
+  // GET drafts or refreshes it from the notes; POST {text} makes it theirs.
+  if (resource === 'project-summary') {
+    const userId = await getUserId(req)
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' })
+    const supabase = getSupabaseClient()
+    const projectId = (req.method === 'GET' ? req.query.project_id : req.body?.project_id)
+    if (typeof projectId !== 'string' || !projectId) return res.status(400).json({ error: 'project_id required' })
+    const { currentSummary, setSummary } = await import('./_lib/project-summary.js')
+    if (req.method === 'GET') return res.status(200).json({ summary: await currentSummary(supabase, userId, projectId) })
+    if (req.method !== 'POST') return res.status(405).json({ error: 'GET or POST required' })
+    const text = req.body?.text
+    if (typeof text !== 'string') return res.status(400).json({ error: 'text required' })
+    try {
+      return res.status(200).json({ summary: await setSummary(supabase, userId, projectId, text) })
+    } catch (e) {
+      return res.status(500).json({ error: e instanceof Error ? e.message : String(e) })
+    }
+  }
+
   if (resource === 'themes' || resource === 'up-to-speed') {
     const userId = await getUserId(req)
     if (!userId) return res.status(401).json({ error: 'Unauthorized' })
@@ -1994,8 +2056,12 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
         .eq('user_id', userId)
         .gte('created_at', start.toISOString()),
       supabase.from('projects').select('id, title, state').eq('user_id', userId).neq('state', 'harvested'),
-      // (a note said on a project's page is read off its own tag, below)
-      Promise.resolve({ data: [] as { source_id: string; created_at: string }[] }),
+      // Something made on it that day (a painting, a mix), dated by the day made.
+      supabase
+        .from('project_outputs')
+        .select('project_id, made_on')
+        .eq('user_id', userId)
+        .gte('made_on', start.toISOString().slice(0, 10)),
       // A line typed into the box on its page (not a fragment cut from a note).
       supabase
         .from('fragments')
@@ -2007,7 +2073,7 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
     ])
 
     const traces = [
-      ...((linkData ?? []) as { source_id: string; created_at: string }[]).map(c => ({ project_id: c.source_id, at: c.created_at })),
+      ...((linkData ?? []) as { project_id: string; made_on: string | null }[]).filter(o => o.made_on).map(o => ({ project_id: o.project_id, at: `${o.made_on}T12:00:00Z` })),
       ...((sayData ?? []) as { project_id: string; created_at: string }[]).map(f => ({ project_id: f.project_id, at: f.created_at })),
       ...((sessionsData ?? []) as { project_id: string; started_at: string }[]).map(s => ({ project_id: s.project_id, at: s.started_at })),
       ...((notesData ?? []) as { created_at: string; tags: string[] | null; triage: { project_id?: string | null } | null; source_reference: unknown }[])
@@ -2253,7 +2319,10 @@ async function topUpBank(
   if (waiting >= BANK_TARGET) return { added: 0, waiting }
 
   const trace: string[] = []
-  const baked = await bakeMull(supabase, userId, undefined, trace, false, NIGHTLY_BUDGET_MS)
+  // The picture, built here if it can't be stored yet (portrait.ts).
+  const { buildPortrait } = await import('./_lib/portrait.js')
+  const portrait = await buildPortrait(supabase, userId, { trace })
+  const baked = await bakeMull(supabase, userId, undefined, trace, false, NIGHTLY_BUDGET_MS, false, portrait)
   if (baked.length === 0) return { added: 0, waiting, reason: 'nothing else to ask' }
 
   // Behind whatever is already banked, so they come out in the order made.
@@ -2313,6 +2382,17 @@ async function handleExecutionSparks(req: VercelRequest, res: VercelResponse) {
       return res.status(200).json({ experiment: true, trace: lines })
     }
 
+    // The picture of them is rebuilt every night, standing question or
+    // not: everything that gives back reads it (portrait.ts).
+    const portraitTrace: string[] = []
+    let portrait: Awaited<ReturnType<typeof import('./_lib/portrait.js')['buildPortrait']>> = null
+    {
+      const { buildPortrait } = await import('./_lib/portrait.js')
+      const { loadEchoContext, judgeHistory } = await import('./_lib/mull-generator.js')
+      const echoForPortrait = await loadEchoContext(supabase, userId)
+      portrait = await buildPortrait(supabase, userId, { corrections: judgeHistory(echoForPortrait), trace: portraitTrace, force: explain })
+    }
+
     // A question that's still standing is not replaced by a fresh one. It
     // now lives for days precisely so it can sit unanswered, and baking over
     // it every morning would take it away on exactly the day the answer was
@@ -2331,7 +2411,7 @@ async function handleExecutionSparks(req: VercelRequest, res: VercelResponse) {
       return res.status(200).json({ baked: false, reason: 'question still standing' })
     }
 
-    const trace: string[] = []
+    const trace: string[] = [...portraitTrace]
     if (explain) {
       // Only on explain. Five table reads is nothing next to two model
       // calls, but the nightly bake has no use for it — and "the corpus is
@@ -2347,7 +2427,7 @@ async function handleExecutionSparks(req: VercelRequest, res: VercelResponse) {
         'a real bake would stop here and write nothing; this run continues so you can see why',
       )
     }
-    const baked = await bakeMull(supabase, userId, undefined, trace, false, NIGHTLY_BUDGET_MS)
+    const baked = await bakeMull(supabase, userId, undefined, trace, false, NIGHTLY_BUDGET_MS, false, portrait)
 
     if (explain) {
       await probeLatency(supabase, userId, trace)
@@ -2421,7 +2501,7 @@ async function handleExecutionSparks(req: VercelRequest, res: VercelResponse) {
       // means the queue needs no created_at juggling to stay in order.
       .order('expires_at', { ascending: true })
       .limit(1)
-    const BASE_COLS = 'id, type, text, project_id, shown_at, answered_at, expires_at, projects(title)'
+    const BASE_COLS = 'id, type, text, project_id, shown_at, answered_at, expires_at, subject_id, subject_kind, projects(title)'
     // `stake` (20260916_spark_stake.sql) rides along so a "yes" can offer to
     // keep it in mind. Each optional column is dropped, in turn, if it
     // isn't there yet.
@@ -2455,6 +2535,11 @@ async function handleExecutionSparks(req: VercelRequest, res: VercelResponse) {
         .eq('id', spark.id)
     }
 
+    // A step of a thread arrives with the lines before it (mull-thread.ts).
+    if (spark?.subject_kind === 'thread') {
+      const { earlierLines } = await import('./_lib/mull-thread.js')
+      spark.earlier = await earlierLines(supabase, userId, spark).catch(() => [])
+    }
     return res.status(200).json({ spark })
   }
 
@@ -2527,6 +2612,22 @@ async function handleExecutionSparks(req: VercelRequest, res: VercelResponse) {
   // honest: an unanswered question stays unanswered, which is what the type
   // rotation reads to decide what to ask next (and so what comes back is a
   // different kind of question, not the same one reworded).
+  // ─── SPARK-FURTHER (pull the thread) ────────────────────────────────
+  // The next step of the take on the card, from the steps before it and
+  // what they said back (mull-thread.ts). Fact-checked like a nightly take.
+  if (resource === 'spark-further') {
+    if (req.method !== 'POST') return res.status(405).json({ error: 'POST required' })
+    const userId = await getUserId(req)
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' })
+    const { spark_id, answer } = req.body || {}
+    if (typeof spark_id !== 'string' || !spark_id) return res.status(400).json({ error: 'spark_id required' })
+    if (answer !== undefined && typeof answer !== 'string') return res.status(400).json({ error: 'answer must be text' })
+    const { goFurther } = await import('./_lib/mull-thread.js')
+    const out = await goFurther(supabase, userId, spark_id, answer)
+    if (out.ok) return res.status(200).json({ spark: out.spark })
+    return out.slow ? res.status(200).json({ spark: null, slow: true }) : res.status(out.status).json({ error: out.error })
+  }
+
   if (resource === 'reroll-spark') {
     if (req.method !== 'POST') return res.status(405).json({ error: 'POST required' })
     const userId = await getUserId(req)

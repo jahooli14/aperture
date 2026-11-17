@@ -16,7 +16,10 @@
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { userSaid } from './corpus-provenance.js'
+import { userSaid, isElicitedAnswer } from './corpus-provenance.js'
+import { isSensitive } from './sensitive.js'
+import { readParts, partsLine } from './project-parts.js'
+import { madeSummary } from './made.js'
 import { isOutOfCorpus } from './project-state.js'
 import { isCorpusEligible, type CorpusArticle } from './reading-corpus.js'
 import { articleBody } from './article-text.js'
@@ -29,7 +32,7 @@ const MIN_ARTICLE_CHARS = 120
  *  quote can only ever be checked against text the model was shown. */
 const ARTICLE_CHARS = 1500
 
-export type CorpusRowKind = 'project' | 'memory' | 'fragment' | 'list_item' | 'article'
+export type CorpusRowKind = 'project' | 'memory' | 'fragment' | 'list_item' | 'article' | 'answer'
 
 export interface CorpusRow {
   kind: CorpusRowKind
@@ -98,15 +101,32 @@ async function withRetry(
   return res
 }
 
+/** What they've made, by project (made.ts). Best effort: a missing table is no pieces. */
+async function loadMade(supabase: SupabaseClient, userId: string): Promise<Map<string, any[]>> {
+  const out = new Map<string, any[]>()
+  try {
+    const { data } = await supabase.from('project_outputs').select('project_id, kind, title, note, link_meta, made_on, created_at').eq('user_id', userId).limit(1000)
+    for (const r of (data ?? []) as any[]) {
+      const row = r.note && isSensitive(r.note) ? { ...r, note: null } : r
+      out.set(r.project_id, [...(out.get(r.project_id) ?? []), row])
+    }
+  } catch { /* none */ }
+  return out
+}
+
 export async function loadCorpus(
   supabase: SupabaseClient, userId: string, trace: string[] = [],
+  /** Their answers to the app's questions, as their own rows. What they
+   *  think, so the picture of them reads them (portrait.ts); kept out of
+   *  takes, where a fresh answer would read as a fresh capture. */
+  opts: { withAnswers?: boolean } = {},
 ): Promise<Corpus> {
   const [memoriesRes, fragmentsRes, projectsRes, listItemsRes, readingRes] = await Promise.all([
-    withRetry(() => supabase.from('memories').select('id, title, body, created_at, tags')
+    withRetry(() => supabase.from('memories').select('id, title, body, created_at, tags, triage, source_reference')
       .eq('user_id', userId).order('created_at', { ascending: false }).limit(CORPUS_LIMIT), trace, 'corpus/memories'),
     withRetry(() => supabase.from('fragments').select('id, text, created_at, memory_id, project_id, projects(title, state, status)')
       .eq('user_id', userId).order('created_at', { ascending: false }).limit(CORPUS_LIMIT), trace, 'corpus/fragments'),
-    withRetry(() => supabase.from('projects').select('id, title, description, state, status, created_at, last_active')
+    withRetry(() => supabase.from('projects').select('id, title, description, state, status, created_at, last_active, metadata')
       .eq('user_id', userId).order('created_at', { ascending: false }).limit(CORPUS_LIMIT), trace, 'corpus/projects'),
     withRetry(() => supabase.from('list_items').select('id, content, user_rating, status, created_at, lists(title, type)')
       .eq('user_id', userId).in('status', ['pending', 'active', 'completed'])
@@ -114,16 +134,28 @@ export async function loadCorpus(
     withRetry(() => supabase.from('reading_queue').select('id, title, excerpt, content, resonance, created_at')
       .eq('user_id', userId).order('created_at', { ascending: false }).limit(CORPUS_LIMIT), trace, 'corpus/reading'),
   ])
+  const madeByProject = await loadMade(supabase, userId)
   noteQuery(trace, 'corpus/memories', memoriesRes)
   noteQuery(trace, 'corpus/fragments', fragmentsRes)
   noteQuery(trace, 'corpus/projects', projectsRes)
   noteQuery(trace, 'corpus/list_items', listItemsRes)
   noteQuery(trace, 'corpus/reading', readingRes)
 
+  // Out: app-authored notes, an old spark answer saved before answers were
+  // tagged ("Spark response - ..."), and anything a take must never be
+  // built on (sensitive.ts). Their fragments go with them.
   const memories = userSaid((memoriesRes.data ?? []) as any[])
+    .filter(m => !isElicitedAnswer(m.body) && !isSensitive(`${m.title ?? ''} ${m.body ?? ''}`))
+  const answers = opts.withAnswers
+    ? ((memoriesRes.data ?? []) as any[]).filter(m =>
+        !memories.includes(m) && typeof m.body === 'string' && m.body.trim() &&
+        !isSensitive(`${m.title ?? ''} ${m.body}`) &&
+        ((m.tags ?? []).some((t: string) => t === 'spark-response' || t === 'spark-correction') || isElicitedAnswer(m.body)))
+    : []
   const appAuthoredMemoryIds = new Set(
     ((memoriesRes.data ?? []) as any[]).filter(m => !memories.includes(m)).map(m => m.id),
   )
+  const keptMemoryIds = new Set(memories.map(m => m.id))
   const memoryDateById = new Map<string, string>()
   for (const m of memories) if (m.created_at) memoryDateById.set(m.id, m.created_at)
 
@@ -136,11 +168,22 @@ export async function loadCorpus(
   // ran on the fetched project list, but a fragment can reference a
   // project already filtered out of `projects` -- so it's re-checked from
   // the fragment's own embedded join, not by membership in the array above.
+  // A fragment whose note is already a row is the same capture twice --
+  // measured, 74 of 78 were the note copied whole -- and its only addition
+  // was a "filed under" label the note's own triage agreed with 8 times in
+  // 74. So the note stands alone and is filed by what it says
+  // (filedProjectId); only a fragment with no note of its own is kept.
   const fragments = ((fragmentsRes.data ?? []) as any[]).filter(f =>
     f.text?.trim() &&
-    !(f.memory_id && appAuthoredMemoryIds.has(f.memory_id)) &&
-    !(f.projects && isOutOfCorpus(f.projects)),
+    !(f.memory_id && (appAuthoredMemoryIds.has(f.memory_id) || keptMemoryIds.has(f.memory_id))) &&
+    !(f.projects && isOutOfCorpus(f.projects)) &&
+    !isSensitive(f.text),
   )
+  const projectTitleById = new Map(projects.map((p: any) => [p.id as string, p.title as string]))
+  const filedUnder = (m: any): string | null => {
+    const id = filedProjectId(m)
+    return id && projectTitleById.has(id) ? id : null
+  }
 
   const articles = ((readingRes.data ?? []) as (CorpusArticle & {
     id: string; title: string | null; excerpt: string | null; content: string | null
@@ -160,18 +203,31 @@ export async function loadCorpus(
   const rows: CorpusRow[] = [
     ...projects.map((p: any, i: number): CorpusRow => ({
       kind: 'project', id: p.id, captureId: p.id, ref: `P${i + 1}`, projectId: p.id,
-      title: p.title ?? '', text: p.description ?? '',
-      meta: `${p.status ?? ''}, started ${readableDate(p.created_at)}, last touched ${readableDate(p.last_active) || 'never'}`,
+      // An app-suggested project keeps its title (they took it up) but not
+      // the app's own prose: "You keep trying to build complex knowledge
+      // systems..." was being quoted back as theirs.
+      title: p.title ?? '', text: [summaryText(p) ?? (isAppSuggested(p) ? '' : p.description ?? ''), partsLine(readParts(p.metadata)), madeSummary(madeByProject.get(p.id) ?? [])].filter(Boolean).join(' '),
+      meta: `${p.status ?? ''}, started ${readableDate(p.created_at)}, last touched ${readableDate(p.last_active) || 'never'}${isAppSuggested(p) ? ', an idea the app suggested' : ''}`,
     })),
-    ...memories.map((m: any, i: number): CorpusRow => ({
-      kind: 'memory', id: m.id, captureId: m.id, ref: `N${i + 1}`, projectId: null,
-      title: m.title ?? '', text: m.body ?? '', meta: dateOf(m), at: m.created_at || undefined,
-    })),
+    ...memories.map((m: any, i: number): CorpusRow => {
+      const pid = filedUnder(m)
+      return {
+        kind: 'memory', id: m.id, captureId: m.id, ref: `N${i + 1}`, projectId: pid,
+        title: m.title ?? '', text: m.body ?? '', at: m.created_at || undefined,
+        meta: `${dateOf(m)}${pid ? `, about "${projectTitleById.get(pid)}"` : ''}`,
+      }
+    }),
     ...fragments.map((f: any, i: number): CorpusRow => ({
       kind: 'fragment', id: f.id, captureId: f.memory_id ?? f.id, ref: `F${i + 1}`, projectId: f.project_id ?? null,
       title: f.projects?.title ?? '', text: f.text,
       at: (f.memory_id && memoryDateById.get(f.memory_id)) || f.created_at || undefined,
       meta: `${dateOf(f)}${f.projects?.title ? `, filed under "${f.projects.title}"` : ', not filed under any project'}`,
+    })),
+    ...answers.map((m: any, i: number): CorpusRow => ({
+      kind: 'answer', id: m.id, captureId: m.id, ref: `Q${i + 1}`, projectId: filedProjectId(m),
+      title: m.title ?? '', text: String(m.body).replace(/^\s*spark response\s*[-,:]?\s*/i, ''),
+      meta: `${readableDate(m.created_at)}, their answer to one of the app's questions${m.source_reference?.type === 'spark' && m.source_reference.title ? ` ("${String(m.source_reference.title).slice(0, 120)}")` : ''}`,
+      at: m.created_at || undefined,
     })),
     ...listItems.map((l: any, i: number): CorpusRow => ({
       kind: 'list_item', id: l.id, captureId: l.id, ref: `L${i + 1}`, projectId: null,
@@ -193,11 +249,37 @@ export async function loadCorpus(
     section('project', 'PROJECTS -- what they said they would make'),
     section('memory', 'NOTES -- voice notes, tidied, in their words'),
     section('fragment', 'FRAGMENTS -- short things said in passing'),
+    ...(answers.length ? [section('answer', 'ANSWERS -- what they said back to the app, in their words')] : []),
     section('list_item', 'LIST ITEMS -- films, books, music, places they chose. Taste, not their words'),
     section('article', 'ARTICLES THEY FINISHED AND VOUCHED FOR -- not their words'),
   ].join('\n\n')
 
   return { rows, byRef: new Map(rows.map(r => [r.ref, r])), projectIdByTitle, text }
+}
+
+/** Which project a note is about, by what the note itself says: filed from
+ *  the project's own page (source_reference) first, then capture triage.
+ *  Never the nearest-vector guess -- that's what mislabelled the corpus. */
+export function filedProjectId(m: { source_reference?: unknown; triage?: unknown }): string | null {
+  const ref = m.source_reference as any
+  if (typeof ref === 'string' && ref.startsWith('project:')) return ref.slice('project:'.length) || null
+  if (ref && typeof ref === 'object' && ref.type === 'project' && typeof ref.id === 'string') return ref.id
+  const t = m.triage as any
+  return t && typeof t.project_id === 'string' && t.project_id ? t.project_id : null
+}
+
+/** "What it is now" (project-summary.ts), when there is one: what the
+ *  project really is today, not the line written the day it was made. */
+export function summaryText(p: { metadata?: unknown }): string | null {
+  const s = (p.metadata as { summary?: { text?: unknown } } | null)?.summary
+  return s && typeof s.text === 'string' && s.text.trim() ? s.text.trim() : null
+}
+
+/** A project the app proposed and they accepted. Its description is the
+ *  app's words, not theirs. */
+export function isAppSuggested(p: { metadata?: unknown }): boolean {
+  const md = p.metadata as Record<string, unknown> | null | undefined
+  return !!(md && (md.from_idea || md.from_suggestion || md.shaped_from_intersection))
 }
 
 export function formatRow(r: CorpusRow): string {

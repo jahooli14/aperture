@@ -20,6 +20,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { isAppAuthored } from './corpus-provenance.js'
+import { isSensitive } from './sensitive.js'
 import { pinnedTriage } from './explicit-project.js'
 import type { Evidence } from './session-grounding.js'
 
@@ -56,7 +57,7 @@ export async function loadProjectMaterial(
       .select('title, description, status, metadata, notes_doc, last_active, last_session_ended_at')
       .eq('id', projectId).eq('user_id', userId).single(),
     supabase.from('fragments')
-      .select('text, created_at')
+      .select('text, created_at, memory_id')
       .eq('project_id', projectId).eq('user_id', userId)
       .order('created_at', { ascending: false }).limit(PER_SOURCE),
     supabase.from('memories')
@@ -102,10 +103,15 @@ export async function loadProjectMaterial(
   const metadata = (p.metadata as Record<string, unknown>) ?? {}
   const rows: MaterialRow[] = []
 
+  // A fragment cut from a note is that note, filed by a nearest-vector guess
+  // the note's own triage agreed with 8 times in 74 (Nov 2026): dad's heart
+  // attack under Custom t-shirts. The note itself arrives via triage when it
+  // really is about this project, so only a fragment with no note counts.
   for (const f of fragRes.data ?? []) {
-    if (typeof f.text === 'string' && f.text.trim()) rows.push({ kind: 'note', text: f.text.trim(), at: f.created_at })
+    if ((f as { memory_id?: string | null }).memory_id) continue
+    if (typeof f.text === 'string' && f.text.trim() && !isSensitive(f.text)) rows.push({ kind: 'note', text: f.text.trim(), at: f.created_at })
   }
-  for (const m of [...(memRes.data ?? []), ...(linkedRes.data ?? [])].filter(m => !isAppAuthored(m))) {
+  for (const m of [...(memRes.data ?? []), ...(linkedRes.data ?? [])].filter(m => !isAppAuthored(m) && !isSensitive(`${m.title ?? ''} ${m.body ?? ''}`))) {
     const text = [m.title, m.body].filter((t: unknown) => typeof t === 'string' && t.trim()).join(' — ')
     if (text) rows.push({ kind: 'note', text, at: m.created_at })
   }

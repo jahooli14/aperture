@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   quoteIsReal, resolveEvidence, specifics, unsupportedSpecifics, ordinalSupported,
   offersAChoice, isClosed, checkCandidate, crossesLiveProject, crossingDepth, judgePercent, judgeRank, parseJudgeScores, readsAnInnerState,
-  rowNaming, pickSeeds, type Candidate, type JudgeScore,
+  rowNaming, pickSeeds, pickLinePairs, type Candidate, type JudgeScore,
 } from './mull.js'
 import type { Corpus, CorpusRow } from './mull-corpus.js'
 
@@ -86,16 +86,17 @@ describe('a real name the draft forgot to cite', () => {
 
 describe('pickSeeds', () => {
   const mk = (n: number, kind: CorpusRow['kind']) => Array.from({ length: n }, (_, i) => row(`${kind[0].toUpperCase()}${i}`, `row ${kind} ${i}`, { kind, id: `${kind}${i}`, captureId: `${kind}${i}` }))
-  const rows = [...mk(40, 'memory'), ...mk(3, 'list_item')]
+  const rows = [...mk(4, 'project'), ...mk(40, 'memory'), ...mk(3, 'list_item')]
   const corpus: Corpus = { rows, byRef: new Map(rows.map(r => [r.ref, r])), projectIdByTitle: new Map(), text: '' }
   let k = 0
   const rand = () => ((k = (k * 7 + 3) % 11) / 11)
 
-  it('spreads over recent notes, list items and older notes, all different', () => {
-    const seeds = pickSeeds(corpus, new Set(), 4, rand)
-    expect(seeds).toHaveLength(4)
-    expect(new Set(seeds.map(s => s.id)).size).toBe(4)
+  it('spreads over recent notes, older notes and list items, all different, never a project', () => {
+    const seeds = pickSeeds(corpus, new Set(), 3, rand)
+    expect(seeds).toHaveLength(3)
+    expect(new Set(seeds.map(s => s.id)).size).toBe(3)
     expect(seeds.some(s => s.kind === 'list_item')).toBe(true)
+    expect(seeds.some(s => s.kind === 'project')).toBe(false)
   })
   it('never starts from a row a recent take used', () => {
     const avoid = new Set(rows.filter(r => r.kind === 'list_item').map(r => r.id))
@@ -131,9 +132,19 @@ describe('checkCandidate', () => {
     const r = checkCandidate(candidate("In March you said it only works if it's one take. What would one take look like for the book?"), CORPUS)
     expect(r.ok).toBe(false)
   })
-  it('refuses one row of evidence', () => {
+  it('one row of evidence is enough', () => {
     const r = checkCandidate(candidate('What would one take look like for the book?', [{ ref: 'N2', quote: "it only works if it's one take" }]), CORPUS)
-    expect(r).toMatchObject({ ok: false, reason: expect.stringMatching(/needs 2 real rows/) })
+    expect(r.ok).toBe(true)
+  })
+  it('refuses no evidence at all', () => {
+    const r = checkCandidate(candidate('What would one take look like for the book?', []), CORPUS)
+    expect(r).toMatchObject({ ok: false, reason: expect.stringMatching(/needs 1 real rows/) })
+  })
+  it('lets in the names from the outside fact it declares, and no others', () => {
+    const ev = [{ ref: 'N2', quote: "it only works if it's one take" }]
+    const take = 'One take only. Glenn Gould spliced his records from many takes. Is one take a rule or a mood?'
+    expect(checkCandidate({ ...candidate(take, ev), outside: 'Glenn Gould spliced his records from many takes.' }, CORPUS).ok).toBe(true)
+    expect(checkCandidate(candidate(take, ev), CORPUS).ok).toBe(false)
   })
   it('refuses the model explaining its own pattern', () => {
     const r = checkCandidate(candidate("You said one take, which mirrors how the book swaps characters. What would that look like?"), CORPUS)
@@ -275,5 +286,21 @@ describe('crossesLiveProject', () => {
 
   it('never crosses without the live project in it', () => {
     expect(crossesLiveProject([dad, otherFrag], corpus, 'p-book')).toBe(false)
+  })
+})
+
+describe('pickLinePairs', () => {
+  it('uses every line once before reusing any, and never pairs a line with itself', () => {
+    const pairs = pickLinePairs(['a', 'b', 'c', 'd'], 2, () => 0.3)
+    expect(pairs).toHaveLength(2)
+    expect(new Set(pairs.flat()).size).toBe(4)
+  })
+  it('every pair touches a project when some line does', () => {
+    const pairs = pickLinePairs(['shoes', 'sleep', 'the book', 'loops'], 3, () => 0.5, new Set(['the book']))
+    expect(pairs.length).toBeGreaterThan(0)
+    expect(pairs.every(p => p.includes('the book'))).toBe(true)
+  })
+  it('nothing to cross with fewer than two lines', () => {
+    expect(pickLinePairs(['a'], 3)).toEqual([])
   })
 })

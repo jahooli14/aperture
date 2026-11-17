@@ -9,6 +9,7 @@
  * the days you touched it.
  */
 
+import { tickFromSaid, readParts } from './project-parts.js'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { processMemory } from './process-memory.js'
 import { refreshThemes } from './project-catchup-routes.js'
@@ -75,13 +76,24 @@ export async function saveProjectUpdate(
 
   // One after the other: both read-then-write the project's metadata, and
   // run together the second write would wipe the first.
+  // "Finished chapter 4" ticks Chapter 4 (project-parts.ts).
+  const ticked = await tickFromSaid(supabase, userId, projectId, clean).catch(() => [] as string[])
+  // The last row just ticked: offer to call it finished.
+  let allTicked = false
+  if (ticked.length) {
+    const { data: fresh } = await supabase.from('projects').select('metadata').eq('id', projectId).eq('user_id', userId).single()
+    const parts = readParts(fresh?.metadata)
+    allTicked = parts.length > 0 && parts.every(p => p.done)
+  }
   const refreshed = await refreshThemes(supabase, userId, projectId, true)
   const moved = await moveFromUpdate(supabase, userId, projectId, clean)
   return {
     ok: true,
+    ...(ticked.length ? { ticked } : {}),
     themes: refreshed?.themes ?? [],
     changed: !!refreshed?.changed,
     previous: refreshed?.previous,
     ...(moved ? { move: { text: moved.move.text, kind: moved.move.kind }, ...(moved.logged ? { logged: moved.logged } : {}), ...(moved.projectDone ? { project_done: true } : {}) } : {}),
+    ...(allTicked ? { project_done: true } : {}),
   }
 }

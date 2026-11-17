@@ -29,7 +29,8 @@ import { MoveTweak } from './MoveTweak'
 import { useMoveStore, readStoredMove } from '../../stores/useMoveStore'
 import { splitDoneWhen } from '../../lib/moveText'
 import { haptic } from '../../utils/haptics'
-import { isActivelyWorked, projectKind, readThemes } from '../../lib/projectThemes'
+import { isActivelyWorked, readThemes } from '../../lib/projectThemes'
+import { projectShape, nextPart } from '../../lib/projectShape'
 import { seasonLine } from '../../lib/season'
 import { ThemeList } from '../projects/ProjectThemes'
 import { ThemesUpdatedNote, useRefreshThemes } from '../projects/ThemesFollowNotes'
@@ -158,8 +159,10 @@ export function TodaysAnswerCard() {
   // session; themes stay true for weeks. Gone quiet, the move comes back:
   // a way back in is what a cold project needs.
   const themes = readThemes(focusProject.metadata)
-  const steering = themes.length > 0 && isActivelyWorked(focusProject)
-    && projectKind(focusProject, !!nextMove) === 'ongoing'
+  const shape = projectShape(focusProject)
+  const steering = themes.length > 0 && isActivelyWorked(focusProject) && shape !== 'quick'
+  // A big project's next row to tick ("Chapter 2"), never a count.
+  const upNext = shape === 'big' ? nextPart(focusProject.metadata) : null
 
   // No timestamp at all means never touched, not touched in 1970 — the
   // `|| 0` fallback here dated the project to the epoch and stamped a
@@ -187,8 +190,20 @@ export function TodaysAnswerCard() {
   // plain text on the card itself -- no panel inside a panel.
   const label = 'text-[11px] font-medium uppercase tracking-[0.14em] mb-1.5'
   const muted = { color: 'var(--brand-text-muted)' }
-  const readout = steering ? (
+  const readout = upNext && !steering ? (
     <>
+      <p className={label} style={muted}>up next</p>
+      <p className="type-lead">{upNext}</p>
+      {reEntry && <p className="text-[13px] mt-2 line-clamp-1" style={muted}>You stopped with “{reEntry}”</p>}
+    </>
+  ) : steering ? (
+    <>
+      {upNext && (
+        <>
+          <p className={label} style={muted}>up next</p>
+          <p className="type-lead mb-3">{upNext}</p>
+        </>
+      )}
       <p className={label} style={muted}>threads</p>
       <ThemeList themes={themes} rgb={theme.rgb} />
       <ThemesUpdatedNote project={focusProject} />

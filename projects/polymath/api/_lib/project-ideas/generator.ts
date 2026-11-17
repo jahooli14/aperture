@@ -351,9 +351,16 @@ async function runFastSingleAttempt(
   scope: IdeaScope,
   opts: { attempt: number; temperature: number; timeoutMs: number },
 ): Promise<ProjectIdea | null> {
+  // With a picture of them (portrait.ts), the first try is the middle of
+  // their lines: a brand-new project, every existing one off-limits.
+  // Measured: given the lines inside the big prompt, three presses of three
+  // all revived the same abandoned project.
+  const fromLines = scope !== 'hour' && opts.attempt === 1 && (gathered.lines?.length ?? 0) >= 2
   const prompt = scope === 'hour'
     ? buildFastHourPrompt(gathered, feeling)
-    : buildFastSinglePrompt(gathered, dormant, allDormantSeen, feeling, brief)
+    : fromLines
+      ? buildLinesIdeaPrompt(gathered, brief)
+      : buildFastSinglePrompt(gathered, dormant, allDormantSeen, feeling, brief)
   console.log(`[project-ideas] fast/single prompt (scope=${scope}): ${prompt.length} chars; attempt=${opts.attempt}; dormant=${dormant.length}${allDormantSeen ? ' (all seen — relaxed)' : ''}; timeout=${opts.timeoutMs}ms`)
   const t0 = Date.now()
   let raw: string
@@ -474,7 +481,12 @@ function buildFastSinglePrompt(
 ═══════ VOICE RULES (non-negotiable) ═══════
 
 ${PLAIN_ENGLISH_RULES}
-${feelingBlock}
+${feelingBlock}${g.lines?.length ? `
+═══════ WHAT YOU KNOW ABOUT THEM ═══════
+The lines they keep coming back to, from everything they've said:
+${g.lines.map(l => `- ${l}`).join('\n')}
+THIS IS THE MOST IMPORTANT INPUT. Use move "name": a brand-new project that sits where two or three of these lines meet and doesn't exist yet -- the thing only this person would make. Not a restart, reshape or extension of a project they already have (they know about those). "why_now" names the lines it comes from, in plain words. "revive"/"extend" only if no new thing honestly sits at a meeting point.
+` : ''}
 ═══════ WHO THEY ARE ═══════
 
 ${deriveTasteLine(g)}
@@ -532,6 +544,40 @@ ${ideaBrief}
 }
 
 revive = restart a dormant project (optionally reshaped for who they are NOW — see THE ARC). extend = a specific NEW direction/output for a dormant OR active project. name = a brand-new project the captures point at (centre_id null). Use ALL of it — every project (dormant and active), every voice note, every list item, reading and highlights — not just one section. Decide the move from where the strongest real energy is, not from a fixed preference order. If the brief and the data don't line up cleanly, follow the brief.`
+}
+
+/** "Suggest a project" from the middle of their lines (portrait.ts). */
+export function buildLinesIdeaPrompt(g: GatherResult, brief: string | null): string {
+  const existing = [...g.active_projects, ...g.dormant_projects].map(p => `  • "${p.title}"`).join('\n') || '  (none)'
+  const rejected = g.prior_ideas.rejected.map(r => `  • "${r.title}"${r.feedback ? ` — they said: ${truncate(r.feedback, 140)}` : ''}`).join('\n') || '  (none yet)'
+  const shown = [...g.recent_titles.map(t => `  • "${t.title}"`), ...g.prior_ideas.saved.map(t => `  • "${t.title}"`)].join('\n') || '  (none yet)'
+  return `You are a friend who knows this person well. They asked for one new thing to make.
+
+WHAT YOU KNOW ABOUT THEM -- the lines they keep coming back to, and what each is made of:
+${(g.lines ?? []).map(l => `- ${l}`).join('\n')}
+
+${(() => { const ls = g.lines ?? []; if (ls.length < 3) return ''; const i = Math.floor(Math.random() * ls.length); let j = Math.floor(Math.random() * (ls.length - 1)); if (j >= i) j++; return `START WHERE THESE TWO MEET (picked so each press goes somewhere new): "${ls[i].split(' -- ')[0]}" and "${ls[j].split(' -- ')[0]}". If nothing honest sits there, pick the nearest meeting point.\n\n` })()}Find where two or three of these lines MEET, and name the project that sits there and doesn't exist yet: the thing only this person would make, because nobody else has these lines crossing. Small enough to start this week.
+
+NOT ANY OF THESE -- they already have them, or the restart or reshape of one:
+${existing}
+
+THEY SAID NO TO THESE (learn the rule, stay out of the category):
+${rejected}
+
+ALREADY SHOWN:
+${shown}
+${brief && brief.trim() ? `\nTHEIR BRIEF (follow it):\n${brief.trim()}\n` : ''}
+${PLAIN_ENGLISH_RULES}
+
+JSON only:
+{
+  "move": "name",
+  "centre_id": null,
+  "title": "≤6 words, names the thing",
+  "pitch": "2 sentences. What it is. What done looks like.",
+  "why_now": "ONE sentence naming the two or three lines it comes from, plainly",
+  "next_step": "ONE physical action they can do today"
+}`
 }
 
 /** The whole "Suggest a project" prompt as the model gets it, with one
@@ -610,7 +656,12 @@ function buildFastHourPrompt(g: GatherResult, feeling: SessionFeeling | null): s
 ═══════ VOICE RULES (non-negotiable) ═══════
 
 ${PLAIN_ENGLISH_RULES}
-${feelingBlock}
+${feelingBlock}${g.lines?.length ? `
+═══════ WHAT YOU KNOW ABOUT THEM ═══════
+The lines they keep coming back to, from everything they've said:
+${g.lines.map(l => `- ${l}`).join('\n')}
+THIS IS THE MOST IMPORTANT INPUT. Use move "name": a brand-new project that sits where two or three of these lines meet and doesn't exist yet -- the thing only this person would make. Not a restart, reshape or extension of a project they already have (they know about those). "why_now" names the lines it comes from, in plain words. "revive"/"extend" only if no new thing honestly sits at a meeting point.
+` : ''}
 ═══════ WHO THEY ARE ═══════
 
 ${deriveTasteLine(g)}

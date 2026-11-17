@@ -33,9 +33,15 @@ interface Result {
   move?: { text: string; kind: 'move' | 'fork' }
   logged?: string
   projectDone?: boolean
+  ticked?: string[]
 }
 
-export function UpdateSheet({ project, onClose }: { project: Project; onClose: () => void }) {
+export function UpdateSheet({ project, onClose, onAddMade }: {
+  project: Project
+  onClose: () => void
+  /** On the project page: offer to add a photo or link of what was made. */
+  onAddMade?: () => void
+}) {
   const stored = readStoredMove(project.metadata)
   const fork = stored?.kind === 'fork' ? stored.text : null
   const repeating = !!(project.metadata as { cycle?: unknown } | undefined)?.cycle
@@ -62,11 +68,12 @@ export function UpdateSheet({ project, onClose }: { project: Project; onClose: (
       } else {
         const r = await api.post('utilities?resource=project-update', { project_id: project.id, text: text.trim() }, { timeout: 60_000 }) as {
           themes?: ProjectTheme[]; changed?: boolean; previous?: string[]
-          move?: { text: string; kind: 'move' | 'fork' }; logged?: string; project_done?: boolean
+          move?: { text: string; kind: 'move' | 'fork' }; logged?: string; project_done?: boolean; ticked?: string[]
         }
         setResult({
           themes: Array.isArray(r.themes) ? r.themes : readThemes(project.metadata),
           changed: !!r.changed, previous: r.previous, move: r.move, logged: r.logged, projectDone: !!r.project_done,
+          ticked: Array.isArray(r.ticked) ? r.ticked : [],
         })
       }
       await useProjectStore.getState().fetchProjects()
@@ -127,6 +134,12 @@ export function UpdateSheet({ project, onClose }: { project: Project; onClose: (
 
         {result ? (
           <div className="space-y-4">
+            {(result.ticked?.length ?? 0) > 0 && (
+              <p className="flex items-start gap-1.5 text-[13px]" style={{ color: 'var(--brand-text-secondary)' }}>
+                <Check size={13} className="mt-0.5 flex-shrink-0" style={{ color: 'rgb(var(--brand-primary-rgb))' }} />
+                Ticked off: {result.ticked!.join(', ')}
+              </p>
+            )}
             {result.logged && (
               <p className="flex items-start gap-1.5 text-[13px]" style={{ color: 'var(--brand-text-secondary)' }}>
                 <Check size={13} className="mt-0.5 flex-shrink-0" style={{ color: 'rgb(var(--brand-primary-rgb))' }} />
@@ -163,6 +176,11 @@ export function UpdateSheet({ project, onClose }: { project: Project; onClose: (
                   {finishing ? 'One moment…' : repeating ? 'Line up the next one' : 'Mark it done'}
                 </button>
               </div>
+            )}
+            {onAddMade && (
+              <button onClick={() => { onClose(); onAddMade() }} className="text-[13px] min-h-[40px]" style={{ color: 'rgb(var(--brand-primary-rgb))' }}>
+                Made something? Add a photo or link of it
+              </button>
             )}
             <button onClick={onClose} className="neon-button w-full py-3 rounded-xl font-semibold text-[15px]">Done</button>
           </div>

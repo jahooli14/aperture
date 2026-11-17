@@ -20,11 +20,14 @@ import { Loader2, MoreVertical, Star, Sprout, ArrowLeft } from 'lucide-react'
 import { useProjectStore } from '../stores/useProjectStore'
 import { ProjectNotes } from '../components/projects/ProjectNotes'
 import { ProjectBrief } from '../components/projects/ProjectBrief'
+import { WhatItIs } from '../components/projects/WhatItIs'
+import { ProjectParts } from '../components/projects/ProjectParts'
+import { MadeShelf } from '../components/made/MadeShelf'
 import { ProjectThemes } from '../components/projects/ProjectThemes'
 import { UpdateSheet } from '../components/projects/UpdateSheet'
 import { ProjectUpdates, useProjectUpdates } from '../components/projects/ProjectUpdates'
-import { isActivelyWorked, projectKind, readThemes } from '../lib/projectThemes'
-import { readStoredMove } from '../stores/useMoveStore'
+import { isActivelyWorked, readThemes } from '../lib/projectThemes'
+import { projectShape, nextShape, shapeMetadata, SHAPES } from '../lib/projectShape'
 import { Button } from '../components/ui/button'
 import { useToast } from '../components/ui/toast'
 import { useConfirmDialog } from '../components/ui/confirm-dialog'
@@ -56,6 +59,7 @@ export function ProjectDetailPage() {
 
   const { fetchProjects, deleteProject, updateProject, syncProject, setPriority } = useProjectStore()
   const [updateOpen, setUpdateOpen] = useState(false)
+  const [addingMade, setAddingMade] = useState(false)
 
   const project = useProjectStore(state => state.allProjects.find(p => p.id === id))
   const updates = useProjectUpdates(project)
@@ -68,7 +72,6 @@ export function ProjectDetailPage() {
   const [showEditDialog, setShowEditDialog] = useState(false)
   const [showCompletionModal, setShowCompletionModal] = useState(false)
   const [showRetroRitual, setShowRetroRitual] = useState(false)
-  const [showAbout, setShowAbout] = useState(false)
 
   const { addToast } = useToast()
   const { confirm, dialog: confirmDialog } = useConfirmDialog()
@@ -220,16 +223,19 @@ export function ProjectDetailPage() {
 
   const parked = project.status === 'dormant'
   const lastTouched = project.last_active || project.updated_at || null
-  const description = project.description?.trim() || ''
   // An ongoing project being worked on, with threads: they lead and the move
   // steps aside. A one-off keeps its move even if it has threads. Otherwise the move is the way back in. Either way: notes below.
+  // Its shape decides the page (projectShape.ts): a quick job is its move
+  // and "Finished it"; a big project leads with what it is now and the
+  // things to tick off; something you keep at leads with its threads.
+  const shape = projectShape(project)
   const steering = project.status !== 'completed' && project.status !== 'graveyard'
     && readThemes(project.metadata).length > 0 && isActivelyWorked(project)
-    && projectKind(project, !!readStoredMove(project.metadata)) === 'ongoing'
+    && shape !== 'quick'
 
   // A one-off leads with its next move; an ongoing one leads with its
   // threads. A blocked small finish gets thinking, never a move.
-  const oneOff = projectKind(project, !!readStoredMove(project.metadata)) === 'one-off'
+  const oneOff = shape === 'quick'
   const hideMove = steering || !!blockedReason(project)
 
   return (
@@ -321,16 +327,16 @@ export function ProjectDetailPage() {
             </button>
           )}
           {!isRetired(project.status) && project.status !== 'completed' && (() => {
-            const kind = projectKind(project, !!readStoredMove(project.metadata))
-            const next = kind === 'ongoing' ? 'one-off' : 'ongoing'
+            const next = nextShape(shape)
+            const label = (s: typeof shape) => SHAPES.find(x => x.id === s)!.label
             return (
               <button
                 type="button"
                 className="quiet-pill transition-colors"
-                title={`Tap to make it ${next === 'ongoing' ? 'ongoing' : 'one job'}`}
-                onClick={() => { void useProjectStore.getState().updateProject(project.id, { metadata: { ...(project.metadata ?? {}), kind: next } }) }}
+                title={`Tap to make it a ${label(next).toLowerCase()}`}
+                onClick={() => { void useProjectStore.getState().updateProject(project.id, { metadata: { ...(project.metadata ?? {}), ...shapeMetadata(next) } }) }}
               >
-                {kind === 'ongoing' ? 'Ongoing' : 'One job'}
+                {label(shape)}
               </button>
             )
           })()}
@@ -354,21 +360,15 @@ export function ProjectDetailPage() {
           )}
         </div>
 
-        {/* What it is — for the project you've put down and want to remember. */}
-        {description && (
-          <button
-            onClick={() => setShowAbout(v => !v)}
-            className="text-left w-full mb-4"
-            aria-expanded={showAbout}
-          >
-            <p
-              className={`text-[15px] leading-relaxed ${showAbout ? '' : 'line-clamp-3'}`}
-              style={{ color: 'var(--brand-text-secondary)', fontFamily: 'var(--brand-font-body)' }}
-            >
-              {description}
-            </p>
-          </button>
+        {/* What it is now: drafted from your notes, or in your own words. */}
+        {shape === 'quick' ? (
+          project.description?.trim() ? (
+            <p className="text-[15px] leading-relaxed mb-4" style={{ color: 'var(--brand-text-secondary)' }}>{project.description}</p>
+          ) : null
+        ) : (
+          <WhatItIs project={project} />
         )}
+        {shape === 'big' && <ProjectParts project={project} />}
 
         {/* Where it came from. */}
         {sparkedByMemories.length > 0 && (
@@ -387,18 +387,28 @@ export function ProjectDetailPage() {
       </div>
 
       <div className="max-w-2xl mx-auto px-5 sm:px-6 space-y-8">
-        {updateOpen && project && <UpdateSheet project={project} onClose={() => setUpdateOpen(false)} />}
+        {updateOpen && project && <UpdateSheet project={project} onClose={() => setUpdateOpen(false)} onAddMade={() => setAddingMade(true)} />}
 
             {/* One card answers where you are, what you've said since and
                 what's next, each once (ProjectBrief). Threads are yours to
                 edit under it; the full history is folded under those. */}
             <ProjectBrief project={project} updates={updates} oneOff={oneOff} hideMove={hideMove} onUpdate={() => setUpdateOpen(true)} />
 
+            {/* Something you keep at is its pieces (each painting, each mix):
+                they sit high. Everything else keeps them under its history. */}
+            {shape === 'ongoing' && (
+              <MadeShelf project={project} adding={addingMade} onAddingChange={setAddingMade} />
+            )}
+
             {project.status !== 'completed' && project.status !== 'graveyard' && (
               <ProjectThemes project={project} quiet />
             )}
 
             <ProjectUpdates items={updates} />
+
+            {shape !== 'ongoing' && (
+              <MadeShelf project={project} adding={addingMade} onAddingChange={setAddingMade} />
+            )}
 
             <FinishedItButton project={project} />
 
