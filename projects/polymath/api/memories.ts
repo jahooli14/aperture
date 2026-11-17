@@ -1872,11 +1872,23 @@ function calculateTextScore(query: string, ...fields: (string | null | undefined
  * Processes a memory with AI extraction (entities, themes, embeddings)
  */
 async function handleProcess(req: VercelRequest, res: VercelResponse) {
+  const userId = await getUserId(req)
+  if (!userId) return res.status(401).json({ error: 'Sign in' })
+
   const { memory_id } = req.body
 
   if (!memory_id) {
     return res.status(400).json({ error: 'memory_id required' })
   }
+
+  // Processing rewrites the note's title and body, so it must be theirs.
+  const { data: owned } = await getSupabaseClient()
+    .from('memories')
+    .select('id')
+    .eq('id', memory_id)
+    .eq('user_id', userId)
+    .maybeSingle()
+  if (!owned) return res.status(404).json({ error: 'Memory not found' })
 
   try {
     await processMemory(memory_id)
@@ -1989,6 +2001,10 @@ async function handleUpdate(memoryId: string, req: VercelRequest, res: VercelRes
 }
 
 async function handleMediaAnalysis(req: VercelRequest, res: VercelResponse) {
+  // Every call is a paid Gemini request.
+  const userId = await getUserId(req)
+  if (!userId) return res.status(401).json({ error: 'Sign in' })
+
   try {
     // Parse multipart form data
     const form = formidable({

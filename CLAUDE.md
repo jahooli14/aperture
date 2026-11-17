@@ -520,6 +520,7 @@ npm run type-check           # polymath, relay (tsc)
 
 - **Frontend**: React (18 in polymath, 19 elsewhere), TypeScript (strict, no `any`), Vite
 - **Backend**: Vercel serverless functions in each project's `api/`, Supabase (Postgres + RLS)
+- **RLS (Polymath)**: the anon key ships in the browser, so every table needs RLS on and, if it has `user_id`, one `owner_only` policy (`TO authenticated`, `user_id = auth.uid()`); no `user_id` → no policy (server-only). Never `USING (true)`, never a "service role" policy without `TO service_role` (it means everyone). The API uses the service role and skips RLS, so every server query on user data must filter `user_id` itself. `20261113_lock_down_rls.sql` re-applies the rule to every table and prints what's open.
 - **AI**: Gemini for embeddings, classification, AND synthesis in Polymath (via `@google/generative-ai`). Claude is referenced in the Idea Engine project (Python) but Polymath itself does not currently call the Anthropic SDK — don't add it without asking.
 - **Naming**: PascalCase components, camelCase functions, feature-based folders, files ≤ 300 lines
 - **Embeddings** (`api/_lib/gemini-embeddings.ts`, `gemini-embedding-001` at 768 dims via MRL). Three things worth knowing, all verified against the [live docs](https://ai.google.dev/gemini-api/docs/embeddings) (Sept 2026):
