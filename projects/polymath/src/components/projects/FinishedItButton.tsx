@@ -11,7 +11,7 @@ import { api } from '../../lib/apiClient'
 import { useProjectStore } from '../../stores/useProjectStore'
 import { useToast } from '../ui/toast'
 import { blockedReason, isSmallFinish } from '../../lib/season'
-import { readThemes } from '../../lib/projectThemes'
+import { projectShape, allPartsDone } from '../../lib/projectShape'
 import type { Project } from '../../types'
 
 function niceDay(iso: string): string {
@@ -25,9 +25,12 @@ export function FinishedItButton({ project }: { project: Project }) {
   const [saving, setSaving] = useState(false)
   // Any one-off can be finished in a tap: a small finish, or any project that
   // isn't read off long-running "Keep in mind" lines (a coaster, not the book).
-  const oneOff = readThemes(project.metadata).length === 0
+  // A quick job can be finished in a tap; a big project once every row is
+  // ticked; something you keep at never (it lines up the next one instead).
+  const shape = projectShape(project)
+  const ready = shape === 'quick' || (shape === 'big' && allPartsDone(project.metadata))
   if (project.status === 'completed' || project.status === 'graveyard' || project.state === 'live') return null
-  if (!isSmallFinish(project) && !oneOff) return null
+  if (!isSmallFinish(project) && !ready) return null
   const blocked = blockedReason(project)
 
   const finish = async () => {

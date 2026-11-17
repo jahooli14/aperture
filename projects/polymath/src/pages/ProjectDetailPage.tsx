@@ -25,8 +25,8 @@ import { ProjectParts } from '../components/projects/ProjectParts'
 import { ProjectThemes } from '../components/projects/ProjectThemes'
 import { UpdateSheet } from '../components/projects/UpdateSheet'
 import { ProjectUpdates, useProjectUpdates } from '../components/projects/ProjectUpdates'
-import { isActivelyWorked, projectKind, readThemes } from '../lib/projectThemes'
-import { readStoredMove } from '../stores/useMoveStore'
+import { isActivelyWorked, readThemes } from '../lib/projectThemes'
+import { projectShape, nextShape, shapeMetadata, SHAPES } from '../lib/projectShape'
 import { Button } from '../components/ui/button'
 import { useToast } from '../components/ui/toast'
 import { useConfirmDialog } from '../components/ui/confirm-dialog'
@@ -223,13 +223,17 @@ export function ProjectDetailPage() {
   const lastTouched = project.last_active || project.updated_at || null
   // An ongoing project being worked on, with threads: they lead and the move
   // steps aside. A one-off keeps its move even if it has threads. Otherwise the move is the way back in. Either way: notes below.
+  // Its shape decides the page (projectShape.ts): a quick job is its move
+  // and "Finished it"; a big project leads with what it is now and the
+  // things to tick off; something you keep at leads with its threads.
+  const shape = projectShape(project)
   const steering = project.status !== 'completed' && project.status !== 'graveyard'
     && readThemes(project.metadata).length > 0 && isActivelyWorked(project)
-    && projectKind(project, !!readStoredMove(project.metadata)) === 'ongoing'
+    && shape !== 'quick'
 
   // A one-off leads with its next move; an ongoing one leads with its
   // threads. A blocked small finish gets thinking, never a move.
-  const oneOff = projectKind(project, !!readStoredMove(project.metadata)) === 'one-off'
+  const oneOff = shape === 'quick'
   const hideMove = steering || !!blockedReason(project)
 
   return (
@@ -321,16 +325,16 @@ export function ProjectDetailPage() {
             </button>
           )}
           {!isRetired(project.status) && project.status !== 'completed' && (() => {
-            const kind = projectKind(project, !!readStoredMove(project.metadata))
-            const next = kind === 'ongoing' ? 'one-off' : 'ongoing'
+            const next = nextShape(shape)
+            const label = (s: typeof shape) => SHAPES.find(x => x.id === s)!.label
             return (
               <button
                 type="button"
                 className="quiet-pill transition-colors"
-                title={`Tap to make it ${next === 'ongoing' ? 'ongoing' : 'one job'}`}
-                onClick={() => { void useProjectStore.getState().updateProject(project.id, { metadata: { ...(project.metadata ?? {}), kind: next } }) }}
+                title={`Tap to make it a ${label(next).toLowerCase()}`}
+                onClick={() => { void useProjectStore.getState().updateProject(project.id, { metadata: { ...(project.metadata ?? {}), ...shapeMetadata(next) } }) }}
               >
-                {kind === 'ongoing' ? 'Ongoing' : 'One job'}
+                {label(shape)}
               </button>
             )
           })()}
@@ -355,8 +359,14 @@ export function ProjectDetailPage() {
         </div>
 
         {/* What it is now: drafted from your notes, or in your own words. */}
-        <WhatItIs project={project} />
-        <ProjectParts project={project} />
+        {shape === 'quick' ? (
+          project.description?.trim() ? (
+            <p className="text-[15px] leading-relaxed mb-4" style={{ color: 'var(--brand-text-secondary)' }}>{project.description}</p>
+          ) : null
+        ) : (
+          <WhatItIs project={project} />
+        )}
+        {shape === 'big' && <ProjectParts project={project} />}
 
         {/* Where it came from. */}
         {sparkedByMemories.length > 0 && (

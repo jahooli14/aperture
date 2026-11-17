@@ -22,6 +22,7 @@
  * session cites what was actually said here rather than asking again.
  */
 
+import { SHAPES, shapeMetadata, type ProjectShape } from '../../lib/projectShape'
 import { useState, useEffect, useRef } from 'react'
 import { Plus, ArrowUp, ArrowLeft, Loader2, X, Mic, Keyboard, GripVertical } from 'lucide-react'
 import { handleInputFocus } from '../../utils/keyboard'
@@ -127,7 +128,7 @@ export function CreateProjectDialog({
   const [showAll, setShowAll] = useState(false)
   // Asked once, here, so it is never guessed later: one thing to finish,
   // or something to keep working at (read off "Keep in mind" lines).
-  const [kind, setKind] = useState<'one-off' | 'ongoing'>('one-off')
+  const [shape, setShape] = useState<ProjectShape>('quick')
 
   // Everything the user has said, which is the project brief.
   const saidByUser = () => history.filter(m => m.role === 'user').map(m => m.content.trim()).filter(Boolean)
@@ -192,7 +193,7 @@ export function CreateProjectDialog({
     setTitle('')
     setDraftTasks([])
     setShowAll(false)
-    setKind('one-off')
+    setShape('quick')
     setSaving(false)
     shapedPrefillRef.current = false
   }
@@ -297,7 +298,7 @@ export function CreateProjectDialog({
           tasks,
           progress: 0,
           is_shaped: true,
-          kind,
+          ...shapeMetadata(shape),
           // Kept only when the user actually said what done looks like.
           // Never asked for: an ongoing craft has no finish line, and
           // forcing one means rewriting it forever.
@@ -710,18 +711,15 @@ export function CreateProjectDialog({
 
                 <div className="flex-shrink-0 mb-3 mt-1">
                   <p className="eyebrow mb-2">Is this…</p>
-                  <div className="grid grid-cols-2 gap-2">
-                    {([
-                      ['one-off', 'One thing', 'You finish it and it is done'],
-                      ['ongoing', 'Something to keep at', 'You come back to it for weeks'],
-                    ] as const).map(([value, label, hint]) => (
+                  <div className="grid grid-cols-3 gap-2">
+                    {SHAPES.map(({ id: value, label, hint }) => (
                       <button
                         key={value}
                         type="button"
-                        onClick={() => setKind(value)}
-                        aria-pressed={kind === value}
+                        onClick={() => setShape(value)}
+                        aria-pressed={shape === value}
                         className="quiet-pill !h-auto !flex-col !items-start !py-2 !px-3 text-left"
-                        data-on={kind === value ? 'true' : 'false'}
+                        data-on={shape === value ? 'true' : 'false'}
                       >
                         <span className="text-[13px] font-medium">{label}</span>
                         <span className="text-[11px]" style={{ color: 'var(--brand-text-muted)' }}>{hint}</span>

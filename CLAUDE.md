@@ -145,7 +145,7 @@ Skipped entirely for a repeating project (`metadata.cycle` above) — it already
 - **Open a project**: tap its card anywhere (home card, mini cards, Projects tab, search, a note's project line) → its page. The arrow on a mini card puts it on the home card instead.
 - **Say something about it**: on its page, the + (or double-tap / hold for voice) files the note under it ("Kept on {title}" in the menu; `source_reference` `project:<id>` or `{type:'project', id}`, also offline). Anywhere else the note is free-floating and the app guesses.
 - **Where you got to, or an idea for it**: **Update** (home card or project page, same sheet). Long-running → the "Keep in mind" lines re-read off the notes; one-off → the next move is rewritten. No Go screen, no timer.
-- **Ongoing vs one job**: asked once when a project is made ("One thing" / "Something to keep at", stored as `metadata.kind`) and shown as a pill on the page. Ongoing is read off its "Keep in mind" lines (the page offers to draft them from notes); one job off its next move. Older projects with no choice fall back to: has lines → ongoing (`projectKind`, `projectThemes.ts`).
+- **Three shapes** (Nov 2026, `src/lib/projectShape.ts`, pure + tested): asked once when a project is made — **Quick job** (a few hours or a weekend), **Big project** (weeks or months, with an end), **Something to keep at** — stored as `metadata.shape` (with `kind` kept for older code) and switched with the pill on the page, which cycles all three. The shape decides everything: a **quick job**'s page is its description, next move and "Finished it" (no paragraph, no list); a **big project** leads with "What it is now" and its things to tick off, the home card shows the next unticked row ("up next: Chapter 2", never a count), an Update ticks rows and, once the last one is ticked, offers "Mark it done" (so does `FinishedItButton`); **something you keep at** leads with its threads and repeats (`metadata.cycle`), never "finished". Older projects with no choice are worked out from what they carry: a cycle → keep at; a list → big; threads plus a finish line (`end_goal`) → big (the novel); threads alone → keep at; otherwise quick. `projectKind` is legacy; read `projectShape`.
 - **Threads** (was "Keep in mind"): every project page shows a Threads card, empty or not — say them (mic), type them, or draft from notes. Only an *ongoing* project leads with them on the home card and page; a one-off keeps its next move on top and the threads sit alongside.
 - **A new project idea**: "Suggest a project" (end of the everything-else row), or + → Project to type one in.
 - **A question to mull**: the nightly take on the home card; "ask me something else" serves the next-best banked one. There is no per-project "ask me about this" route on purpose — the take already leans on the live project.
@@ -156,8 +156,8 @@ Skipped entirely for a repeating project (`metadata.cycle` above) — it already
 1. Sign in (six-digit emailed code or Google).
 2. Onboarding (`/onboarding`): one non-work project, a few lists. `startThingsMoving` makes the project live, writes its first move, bakes the first take.
 3. Land on home: the take on top, the live project under it, Update.
-4. Add another project: + → Project → say or type it → plan → pick *One thing* or *Something to keep at* → Start.
-5. Open the project page: next move (one-off) or Threads (ongoing).
+4. Add another project: + → Project → say or type it → plan → pick *Quick job*, *Big project* or *Something to keep at* → Start.
+5. Open the project page: a quick job shows its next move; a big project shows what it is now and things to tick off; something you keep at shows its threads.
 6. Set threads: *Say them*, *Write them*, or *Draft from my notes* (a new project has no notes yet, so the first two are the real route).
 7. Capture: + → Say it / Write it. On a project page it's kept on that project.
 8. Add a list item, an article or a feed when it comes up. Reading counts only once voted good.
@@ -172,7 +172,7 @@ Skipped entirely for a repeating project (`metadata.cycle` above) — it already
 
 **Now and then**
 - "Ask me something else" for another take.
-- Edit threads by hand; flip a project between Ongoing and One job with the pill.
+- Edit threads by hand; switch a project between Quick job, Big project and Something to keep at with the pill.
 - Settings: season ("what matters now"), what you want from takes, the Saturday pick-up.
 - Monthly: the mirror (days touched).
 
