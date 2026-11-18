@@ -119,7 +119,7 @@ export function EditArticleDialog({ article, open, onOpenChange }: EditArticleDi
               onChange={(e) => setFormData({ ...formData, excerpt: e.target.value })}
               onFocus={handleInputFocus}
               rows={3}
-              className="bg-[var(--glass-surface)] border-[var(--glass-surface-hover)] focus:border-brand-primary placeholder:text-[var(--brand-text-primary)]/20"
+              className="bg-[var(--glass-surface)] border-[var(--glass-surface-hover)] focus:border-brand-primary placeholder:text-[var(--brand-text-muted)]"
             />
           </div>
 
@@ -131,7 +131,7 @@ export function EditArticleDialog({ article, open, onOpenChange }: EditArticleDi
               value={formData.tags}
               onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
               onFocus={handleInputFocus}
-              className="h-14 bg-[var(--glass-surface)] border-[var(--glass-surface-hover)] focus:border-brand-primary placeholder:text-[var(--brand-text-primary)]/20"
+              className="h-14 bg-[var(--glass-surface)] border-[var(--glass-surface-hover)] focus:border-brand-primary placeholder:text-[var(--brand-text-muted)]"
               autoComplete="off"
             />
             <p className="text-[11px] text-[var(--brand-text-muted)]">Comma-separated tags</p>

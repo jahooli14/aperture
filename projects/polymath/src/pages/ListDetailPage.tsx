@@ -177,9 +177,9 @@ const CompletionCelebration = ({
                             <h3 className="text-lg font-black text-[var(--brand-text-primary)] uppercase tracking-tight mb-1">
                                 Done
                             </h3>
-                            <p className="text-sm text-[var(--brand-text-primary)]/40 mb-6 font-mono truncate">{item.content}</p>
+                            <p className="text-sm text-[var(--brand-text-muted)] mb-6 font-mono truncate">{item.content}</p>
 
-                            <p className="text-[11px] font-black uppercase tracking-[0.14em] text-[var(--brand-text-primary)]/30 mb-3">
+                            <p className="text-[11px] font-black uppercase tracking-[0.14em] text-[var(--brand-text-muted)] mb-3">
                                 How was it?
                             </p>
 
@@ -199,7 +199,7 @@ const CompletionCelebration = ({
 
                             <button
                                 onClick={() => setStep('thought')}
-                                className="text-[11px] font-bold text-[var(--brand-text-primary)]/30 uppercase tracking-widest hover:text-[var(--brand-text-primary)]/60 transition-colors"
+                                className="text-[11px] font-bold text-[var(--brand-text-muted)] uppercase tracking-widest hover:text-[var(--brand-text-primary)]/60 transition-colors"
                             >
                                 Skip rating
                             </button>
@@ -210,7 +210,7 @@ const CompletionCelebration = ({
                             <h3 className="text-base font-black text-[var(--brand-text-primary)] uppercase tracking-tight mb-1">
                                 Any thoughts?
                             </h3>
-                            <p className="text-xs text-[var(--brand-text-primary)]/30 mb-5">
+                            <p className="text-xs text-[var(--brand-text-muted)] mb-5">
                                 Capture a reaction, insight, or feeling
                             </p>
                             <textarea
@@ -218,7 +218,7 @@ const CompletionCelebration = ({
                                 value={thoughtText}
                                 onChange={e => setThoughtText(e.target.value)}
                                 placeholder={`What did you think of ${item.content}?`}
-                                className="w-full rounded-2xl px-4 py-3 text-sm text-[var(--brand-text-primary)] placeholder:text-[var(--brand-text-primary)]/20 resize-none focus:outline-none mb-4"
+                                className="w-full rounded-2xl px-4 py-3 text-sm text-[var(--brand-text-primary)] placeholder:text-[var(--brand-text-muted)] resize-none focus:outline-none mb-4"
                                 style={{ backgroundColor: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', minHeight: '80px' }}
                                 rows={3}
                                 onKeyDown={e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) handleSaveThought() }}
@@ -234,7 +234,7 @@ const CompletionCelebration = ({
                                 </button>
                                 <button
                                     onClick={onClose}
-                                    className="px-4 py-2.5 rounded-xl text-[11px] font-bold text-[var(--brand-text-primary)]/30 uppercase tracking-widest hover:text-[var(--brand-text-primary)]/60 transition-colors"
+                                    className="px-4 py-2.5 rounded-xl text-[11px] font-bold text-[var(--brand-text-muted)] uppercase tracking-widest hover:text-[var(--brand-text-primary)]/60 transition-colors"
                                     style={{ border: '1px solid rgba(255,255,255,0.08)' }}
                                 >
                                     Skip
@@ -494,10 +494,10 @@ const QuoteCard = memo(({
                                 </p>
                                 <button
                                     onClick={(e) => { e.stopPropagation(); setIsEditingAuthor(true) }}
-                                    className="p-1.5 rounded-xl bg-[var(--glass-surface)] active:bg-[rgba(255,255,255,0.1)] opacity-40 active:opacity-100 transition-all active:scale-95"
+                                    className="p-1.5 rounded-xl bg-[var(--glass-surface)] active:bg-[rgba(255,255,255,0.1)] opacity-60 active:opacity-100 transition-all active:scale-95"
                                     aria-label="Edit author"
                                 >
-                                    <Pencil className="h-3 w-3 text-[var(--brand-text-primary)]/50" />
+                                    <Pencil className="h-3 w-3 text-[var(--brand-text-muted)]" />
                                 </button>
                             </>
                         )}

@@ -3,7 +3,7 @@
  * Records audio and transcribes using Web Speech API (web) or Capacitor Voice Recorder (native)
  */
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Mic, Square, Loader2, RotateCcw } from 'lucide-react'
 import { Button } from './ui/button'
 import { useMediaRecorderVoice } from '../hooks/useMediaRecorderVoice'
@@ -268,6 +268,19 @@ export function VoiceInput({
           </p>
         </div>
       )}
+    </div>
+  )
+}
+
+/** The mic that sits inside a text field. At rest it tucks into the corner;
+ *  while recording or transcribing it drops into normal flow under the field,
+ *  because the timer and stop button need room and used to be painted on top
+ *  of the text. Must be a child of a `relative` wrapper around the field. */
+export function InFieldMic({ onTranscript, maxDuration = 60, autoStart }: { onTranscript: (text: string) => void; maxDuration?: number; autoStart?: boolean }) {
+  const [active, setActive] = useState(false)
+  return (
+    <div className={active ? 'mt-3' : 'absolute right-2 bottom-2'}>
+      <VoiceInput variant="icon" autoStart={autoStart} onTranscript={onTranscript} maxDuration={maxDuration} onRecordingChange={setActive} />
     </div>
   )
 }

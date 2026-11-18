@@ -843,7 +843,7 @@ export function ReadingPage() {
                   onFocus={() => setInlineUrlFocused(true)}
                   onBlur={() => setInlineUrlFocused(false)}
                   autoComplete="off"
-                  className="flex-1 min-w-0 h-full border-0 text-sm focus:outline-none focus:ring-0 placeholder:text-[var(--brand-text-primary)]/20 appearance-none bg-transparent"
+                  className="flex-1 min-w-0 h-full border-0 text-sm focus:outline-none focus:ring-0 placeholder:text-[var(--brand-text-muted)] appearance-none bg-transparent"
                   style={{ color: "var(--brand-text-secondary)" }}
                 />
               </div>

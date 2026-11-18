@@ -337,11 +337,12 @@ export default function App() {
             </ErrorBoundary>
 
             <div className="min-h-screen flex flex-col overflow-x-hidden">
-              <OfflineIndicator />
-              <PWAInstallBanner />
-
               {/* Safe area spacer for mobile status bar */}
               <div className="md:hidden" style={{ height: 'env(safe-area-inset-top)' }} />
+
+              {/* In the page flow (sticky), so it pushes content down instead of covering headers */}
+              <OfflineIndicator />
+              <PWAInstallBanner />
 
               <main className="flex-1 pb-floating-nav">
                 <ErrorBoundary>

@@ -34,7 +34,7 @@ const secondaryTextStyle = { color: 'var(--brand-text-secondary)', opacity: 0.7 
  * the project page all do it.
  */
 const quietOutClass = 'w-full text-[12px] py-1.5 transition-opacity hover:opacity-90 disabled:opacity-30'
-const quietOutStyle = { color: 'var(--brand-text-secondary)', opacity: 0.5 }
+const quietOutStyle = { color: 'var(--brand-text-muted)' }
 const primaryButtonStyle = {
   background: 'rgba(var(--brand-primary-rgb), 0.12)',
   border: '1px solid rgba(var(--brand-primary-rgb), 0.32)',

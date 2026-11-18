@@ -20,7 +20,7 @@ import { Check, Loader2, X } from 'lucide-react'
 import { api } from '../../lib/apiClient'
 import { useProjectStore } from '../../stores/useProjectStore'
 import { readStoredMove, useMoveStore } from '../../stores/useMoveStore'
-import { VoiceInput } from '../VoiceInput'
+import { InFieldMic } from '../VoiceInput'
 import { ThemeList } from './ProjectThemes'
 import { splitDoneWhen } from '../../lib/moveText'
 import { readThemes, type ProjectTheme } from '../../lib/projectThemes'
@@ -197,9 +197,7 @@ export function UpdateSheet({ project, onClose, onAddMade }: {
                 placeholder={fork ? 'Your answer' : 'Trimmed chapter two. Or an idea: open on the pay phone.'}
                 className="field w-full px-3 py-2.5 pr-12 text-[15px]"
               />
-              <div className="absolute right-2 bottom-2">
-                <VoiceInput variant="icon" autoStart onTranscript={t => setText(c => (c ? `${c} ${t}` : t))} maxDuration={60} />
-              </div>
+              <InFieldMic autoStart onTranscript={t => setText(c => (c ? `${c} ${t}` : t))} maxDuration={60} />
             </div>
             {error && <p className="text-[13px]" style={{ color: 'var(--brand-text-secondary)' }}>{error}</p>}
             <button

@@ -246,7 +246,7 @@ export function BookshelfStep({ onComplete, onSkip, prepopulated }: BookshelfSte
                   <div className="w-full h-full flex items-center justify-center">
                     <Book
                       className="h-6 w-6"
-                      style={{ color: 'var(--brand-text-secondary)', opacity: 0.54 }}
+                      style={{ color: 'var(--brand-text-muted)' }}
                     />
                   </div>
                 )}

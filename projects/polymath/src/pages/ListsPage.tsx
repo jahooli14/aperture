@@ -373,7 +373,7 @@ function ListsPageInner() {
                                             <p className="text-[11px] font-black uppercase tracking-wider mb-0.5"
                                                 style={{ color: `rgb(${rgb})` }}>{example.type}</p>
                                             <h4 className="text-xs font-black text-[var(--brand-text-primary)] uppercase tracking-tight leading-tight">{example.label}</h4>
-                                            <p className="text-[11px] text-[var(--brand-text-primary)]/30 mt-0.5">{example.desc}</p>
+                                            <p className="text-[11px] text-[var(--brand-text-muted)] mt-0.5">{example.desc}</p>
                                         </div>
                                     </button>
                                 )
@@ -440,7 +440,7 @@ function ListsPageInner() {
                                             style={{ backgroundColor: `rgb(${rgb})` }} />
                                     )}
                                 </div>
-                                <p className="text-[11px] font-medium text-[var(--brand-text-primary)]/40 uppercase tracking-widest">
+                                <p className="text-[11px] font-medium text-[var(--brand-text-muted)] uppercase tracking-widest">
                                     {list.item_count || 0} items
                                 </p>
                             </div>

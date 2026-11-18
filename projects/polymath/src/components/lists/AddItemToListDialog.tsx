@@ -94,7 +94,7 @@ export function AddItemToListDialog({ isOpen, onOpenChange }: AddItemToListDialo
                                     placeholder="Search your lists…"
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="pl-10 bg-[var(--glass-surface)] border-[var(--glass-surface-hover)] focus:border-brand-primary placeholder:text-[var(--brand-text-primary)]/15"
+                                    className="pl-10 bg-[var(--glass-surface)] border-[var(--glass-surface-hover)] focus:border-brand-primary placeholder:text-[var(--brand-text-muted)]"
                                     style={{ color: "var(--brand-text-secondary)" }}
                                     data-autofocus
                                 />
@@ -183,7 +183,7 @@ export function AddItemToListDialog({ isOpen, onOpenChange }: AddItemToListDialo
                                         placeholder="Enter item name..."
                                         value={content}
                                         onChange={(e) => setContent(e.target.value)}
-                                        className="bg-[var(--glass-surface)] border-[var(--glass-surface-hover)] focus:border-brand-primary placeholder:text-[var(--brand-text-primary)]/15 py-6 text-lg"
+                                        className="bg-[var(--glass-surface)] border-[var(--glass-surface-hover)] focus:border-brand-primary placeholder:text-[var(--brand-text-muted)] py-6 text-lg"
                                         style={{ color: "var(--brand-text-secondary)" }}
                                     />
                                 </div>

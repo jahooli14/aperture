@@ -714,7 +714,7 @@ export const LiveVoiceCapture = forwardRef<LiveVoiceCaptureHandle, LiveVoiceCapt
           <Mic className="h-7 w-7" style={{ color: 'var(--brand-primary)' }} />
         </motion.div>
         <span
-          className="text-[11px] uppercase tracking-wide opacity-50"
+          className="text-[11px] uppercase tracking-wide text-[var(--brand-text-muted)]"
           style={{ color: 'var(--brand-text-secondary)' }}
         >
           {status === 'speaking' ? 'speaking' : 'listening'}
