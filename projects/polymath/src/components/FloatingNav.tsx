@@ -70,7 +70,7 @@ export function FloatingNav() {
   // button the screen exists for.
   const modalOpen = useModalOpen()
 
-  const shouldHide = isReaderPage
+  const shouldHide = isReaderPage || location.pathname === '/onboarding'
   const fabHidden = shouldHide || modalOpen
 
   // Launched to record (home-screen shortcut, widget, `/?capture=voice`):

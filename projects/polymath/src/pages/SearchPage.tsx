@@ -334,8 +334,8 @@ export function SearchPage() {
 
             <header className="page-masthead">
               <div className="page-masthead-text">
-                <h1 className="page-hero-sm text-center mb-2">What are you looking for?</h1>
-                <p className="meta-serif text-center mb-10">
+                <h1 className="page-hero-sm mb-2">What are you looking for?</h1>
+                <p className="meta-serif mb-10">
                   Memories, projects, articles — anything you've kept.
                 </p>
               </div>

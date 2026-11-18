@@ -338,7 +338,7 @@ function ListsPageInner() {
 
                     {/* Example collections grid */}
                     <div>
-                        <p className="text-[11px] font-black uppercase tracking-[0.14em] text-zinc-600 mb-4 text-center">
+                        <p className="text-[11px] font-black uppercase tracking-[0.14em] text-[var(--brand-text-muted)] mb-4 text-center">
                             Some ideas to get you started
                         </p>
                         <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(min(160px, 100%), 1fr))' }}>
@@ -404,7 +404,7 @@ function ListsPageInner() {
                             className="flex items-center gap-4 bg-zinc-900/60 rounded-xl p-3 cursor-grab active:cursor-grabbing hover:bg-zinc-900/80 transition-colors"
                             style={{ boxShadow: 'inset 0 0 0 1px var(--glass-surface-hover)' }}
                         >
-                            <GripVertical className="h-5 w-5 text-zinc-600 flex-shrink-0" />
+                            <GripVertical className="h-5 w-5 text-[var(--brand-text-muted)] flex-shrink-0" />
 
                             {/* Thumbnail */}
                             <div className="w-12 h-16 rounded-lg overflow-hidden bg-zinc-950 flex-shrink-0">

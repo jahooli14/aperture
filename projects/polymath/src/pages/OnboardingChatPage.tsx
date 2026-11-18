@@ -813,7 +813,7 @@ export function OnboardingChatPage() {
             animate={{ opacity: 0.4 }}
             transition={{ delay: 1.4 }}
             onClick={() => navigate('/')}
-            className="mt-7 block mx-auto text-xs hover:opacity-80"
+            className="mt-7 block mx-auto text-[13px] min-h-[44px] hover:opacity-80"
             style={{ color: 'var(--brand-text-secondary)' }}
           >
             Not now
@@ -900,7 +900,7 @@ export function OnboardingChatPage() {
             animate={{ opacity: 0.4 }}
             transition={{ delay: 1.1 }}
             onClick={() => navigate('/')}
-            className="mt-8 block mx-auto text-xs hover:opacity-80"
+            className="mt-8 block mx-auto text-[13px] min-h-[44px] hover:opacity-80"
             style={{ color: 'var(--brand-text-secondary)' }}
           >
             Not now

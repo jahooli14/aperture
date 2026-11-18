@@ -165,7 +165,7 @@ export function AttentionSlot() {
       if (mirrorSeenThisMonth()) return
       const mirror = await getJson<{ rows: MirrorRow[] }>(`/api/utilities?resource=mirror&tz=${new Date().getTimezoneOffset()}`)
       if (cancelled) return
-      if (mirror && mirror.rows.length > 0) {
+      if (mirror?.rows?.length && mirror.rows.length > 0) {
         setMirrorRows(mirror.rows)
         markMirrorSeen()
       }

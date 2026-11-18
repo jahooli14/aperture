@@ -42,7 +42,7 @@ export function ReadingProvocation() {
           <div className="flex items-start gap-2 flex-1 min-w-0">
             <AlertTriangle className="w-4 h-4 text-brand-text-secondary mt-0.5 flex-shrink-0" />
             <div className="min-w-0">
-              <p className="text-sm text-gray-200 leading-relaxed">{provocation.message}</p>
+              <p className="text-sm text-[var(--brand-text-primary)] leading-relaxed">{provocation.message}</p>
               <button
                 onClick={() => navigate(`/reading/${provocation.article_id}`)}
                 className="flex items-center gap-1 mt-1.5 text-xs text-brand-text-secondary hover:text-brand-primary"
@@ -51,7 +51,7 @@ export function ReadingProvocation() {
               </button>
             </div>
           </div>
-          <button onClick={() => setDismissed(true)} className="text-gray-600 hover:text-[var(--brand-text-secondary)] flex-shrink-0">
+          <button onClick={() => setDismissed(true)} className="text-[var(--brand-text-muted)] hover:text-[var(--brand-text-secondary)] flex-shrink-0">
             <X className="w-3.5 h-3.5" />
           </button>
         </div>

@@ -512,7 +512,7 @@ const QuoteCard = memo(({
                             className="mt-8 pt-6 border-t border-[var(--glass-surface-hover)] space-y-4"
                         >
                             {item.metadata.description && item.metadata.description !== item.content && (
-                                <p className="text-base text-zinc-300/90 leading-relaxed italic">{item.metadata.description}</p>
+                                <p className="text-base text-[var(--brand-text-secondary)] leading-relaxed italic">{item.metadata.description}</p>
                             )}
                             {item.metadata.tags && item.metadata.tags.length > 0 && (
                                 <div className="flex flex-wrap gap-2 pt-2">
@@ -938,7 +938,7 @@ function SectionBlock({
                 style={{ color: isOver ? `rgb(${rgb})` : undefined }}
             >
                 <span className="text-[11px] font-black uppercase tracking-widest text-brand-text-muted">{label}</span>
-                <span className="text-[11px] font-bold text-zinc-600">{count}</span>
+                <span className="text-[11px] font-bold text-[var(--brand-text-muted)]">{count}</span>
                 <div className="flex-1 h-px bg-[var(--glass-surface)]" />
             </div>
             {children}
@@ -1234,13 +1234,13 @@ function ArticleListMode({ list, navigate }: ArticleListModeProps) {
                         style={{ boxShadow: 'inset 0 0 0 1px rgba(251,191,36,0.15), 0 25px 50px rgba(0,0,0,0.5)' }}
                     >
                         <form onSubmit={handleAddUrl} className="flex-1 flex px-3 items-center gap-2">
-                            <LinkIcon className="h-4 w-4 text-zinc-500 shrink-0" />
+                            <LinkIcon className="h-4 w-4 text-[var(--brand-text-muted)] shrink-0" />
                             <Input
                                 ref={inputRef}
                                 value={urlInput}
                                 onChange={e => setUrlInput(e.target.value)}
                                 placeholder="Paste a URL to save for reading..."
-                                className="border-0 bg-transparent focus-visible:ring-0 text-base text-[var(--brand-text-primary)] placeholder:text-zinc-600 h-12"
+                                className="border-0 bg-transparent focus-visible:ring-0 text-base text-[var(--brand-text-primary)] placeholder:text-[var(--brand-text-muted)] h-12"
                                 type="url"
                                 autoComplete="off"
                             />
@@ -1665,7 +1665,7 @@ export default function ListDetailPage() {
                             "8 collections"); two bordered chips above the title
                             was this page inventing its own header language. */}
                         <div className="page-eyebrow" style={{ color: `rgba(${rgb}, 0.8)` }}>
-                            <span className="inline-flex items-center gap-1.5">
+                            <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
                                 <ListIcon type={list.type} className="h-3 w-3" style={{ color: `rgb(${rgb})` }} />
                                 {list.type} · {displayItems.length} {displayItems.length === 1 ? 'item' : 'items'}
                             </span>
@@ -1677,6 +1677,7 @@ export default function ListDetailPage() {
                         <div className="relative">
                             <button
                                 onClick={(e) => { e.stopPropagation(); setShowSortMenu(v => !v) }}
+                                aria-label="Sort"
                                 className="h-11 flex items-center gap-1.5 px-3 rounded-full border transition-all"
                                 style={{
                                     borderColor: sortOption !== 'added' ? `rgba(${rgb}, 0.5)` : 'rgba(255,255,255,0.15)',
@@ -1685,7 +1686,7 @@ export default function ListDetailPage() {
                                 }}
                             >
                                 <SortAsc className="h-3.5 w-3.5" />
-                                <span className="text-[11px] font-bold uppercase tracking-widest">
+                                <span className="hidden sm:inline text-[11px] font-bold uppercase tracking-widest">
                                     {SORT_OPTIONS.find(o => o.value === sortOption)?.label ?? 'Sort'}
                                 </span>
                                 <ChevronDown className="h-3.5 w-3.5" />
@@ -1725,7 +1726,7 @@ export default function ListDetailPage() {
                         <button
                             onClick={() => setShowListSettings(true)}
                             aria-label="List settings"
-                            className="flex items-center justify-center w-11 h-11 rounded-full border transition-all border-white/10 bg-[var(--glass-surface)] text-[var(--brand-text-secondary)] hover:text-[var(--brand-text-primary)] hover:border-white/20"
+                            className="masthead-action press-spring"
                         >
                             <Settings2 className="h-4 w-4" />
                         </button>
@@ -1855,7 +1856,7 @@ export default function ListDetailPage() {
                         ))}
                     </div>
                 ) : filteredItems.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-40 text-zinc-600">
+                    <div className="flex flex-col items-center justify-center py-40 text-[var(--brand-text-muted)]">
                         <p className="text-brand-text-muted font-medium text-lg mb-1">
                             {searchQuery.trim() ? 'No matches.' : 'Add the first one.'}
                         </p>
