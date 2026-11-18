@@ -243,6 +243,9 @@ function ProjectsPageInner() {
         new Date(b.last_active || b.created_at).getTime() - new Date(a.last_active || a.created_at).getTime()
       )
       .filter(p => !p.is_priority && !priorityIds.has(p.id) && p.up_next_position == null)
+      // "Asking for your attention" can't include something you parked or
+      // put on hold; those wait in the drawer below.
+      .filter(p => p.status !== 'dormant' && p.status !== 'on-hold')
       .slice(0, Math.max(0, FOCUS_CAP - priorityProjects.length))
 
     const activeList = [...priorityProjects, ...recentActiveNonPriority] as Project[]

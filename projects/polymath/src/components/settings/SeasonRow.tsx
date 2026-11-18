@@ -50,12 +50,13 @@ export function SeasonRow() {
   const [also, setAlso] = useState<Row[]>(toRows([]))
   const [until, setUntil] = useState('')
   const [name, setName] = useState('')
+  const [failed, setFailed] = useState(false)
 
   useEffect(() => {
     let live = true
     api.post('utilities?resource=season', { action: 'get' })
       .then((r: { season: Season; projects: Pick[] }) => { if (live) { setSeason(r.season); setProjects(r.projects) } })
-      .catch(() => {})
+      .catch(() => { if (live) setFailed(true) })
     return () => { live = false }
   }, [])
 
@@ -138,7 +139,13 @@ export function SeasonRow() {
     }
   }
 
-  if (!season) return null
+  if (!season) {
+    return (
+      <p className="text-[15px]" style={{ color: 'var(--brand-text-secondary)' }}>
+        {failed ? "Couldn't load this. Try again in a moment." : 'Loading your projects…'}
+      </p>
+    )
+  }
 
   const options = (skip: string[]) => projects.filter(p => !skip.includes(p.id))
   const setRow = (i: number, patch: Partial<Row>) => setAlso(rows => rows.map((r, j) => (j === i ? { ...r, ...patch } : r)))
