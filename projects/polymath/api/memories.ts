@@ -925,8 +925,8 @@ async function handleBridges(memoryId: string | undefined, res: VercelResponse, 
         .from('bridges')
         .select(`
           *,
-          memory_a:memories!bridges_memory_a_fkey(id, title, created_at, user_id),
-          memory_b:memories!bridges_memory_b_fkey(id, title, created_at, user_id)
+          memory_a:memories!bridges_memory_a_fkey(id, title, body, created_at, user_id),
+          memory_b:memories!bridges_memory_b_fkey(id, title, body, created_at, user_id)
         `)
         .or(`memory_a.eq.${memoryId},memory_b.eq.${memoryId}`)
         .order('strength', { ascending: false })

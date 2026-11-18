@@ -1,7 +1,6 @@
 import { create } from 'zustand'
 import { v4 as uuidv4 } from 'uuid'
 import { logger } from '../lib/logger'
-import { supabase } from '../lib/supabase'
 import type { Memory, Bridge, BridgeWithMemories, SourceReference, ChecklistItem } from '../types'
 import { queueOperation } from '../lib/offlineQueue'
 import { useOfflineStore } from './useOfflineStore'
@@ -310,19 +309,12 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
     }
 
     try {
-      const { data, error } = await supabase
-        .from('bridges')
-        .select(`
-          *,
-          memory_a:memories!bridges_memory_a_fkey(*),
-          memory_b:memories!bridges_memory_b_fkey(*)
-        `)
-        .or(`memory_a.eq.${memoryId},memory_b.eq.${memoryId}`)
-        .order('strength', { ascending: false })
-
-      if (error) throw error
-
-      return data || []
+      // bridges has no user_id, so RLS keeps it server-only; the API checks
+      // both ends belong to this user.
+      const res = await fetch(`/api/memories?bridges=true&id=${encodeURIComponent(memoryId)}`)
+      if (!res.ok) throw new Error(`Bridges request failed (${res.status})`)
+      const data = await res.json()
+      return data.bridges || []
     } catch (error) {
       logger.error('[store] Failed to fetch bridges:', error)
       return []
