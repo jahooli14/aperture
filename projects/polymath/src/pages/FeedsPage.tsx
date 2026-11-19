@@ -162,7 +162,7 @@ export function FeedsPage() {
                     className="glass-card-subtle flex items-start gap-3 p-4"
                   >
                     <div className="flex-1 min-w-0">
-                      <p className={`text-[15px] font-medium truncate ${feed.enabled ? 'text-[var(--brand-text-primary)]' : 'text-[var(--brand-text-muted)] line-through'}`}>
+                      <p className={`text-[15px] font-medium truncate ${feed.enabled ? 'text-[var(--brand-text-primary)]' : 'text-[var(--brand-text-muted)]'}`}>
                         {feed.title}
                       </p>
                       {feed.description && (
@@ -178,7 +178,7 @@ export function FeedsPage() {
                         </p>
                       )}
                       <p className="text-[11px] text-[var(--brand-text-muted)] opacity-80 mt-1 truncate">
-                        Last synced {lastFetched}
+                        {feed.enabled ? `Last synced ${lastFetched}` : 'Paused. Tap the switch to start it again.'}
                       </p>
                     </div>
                     <div className="flex items-center gap-1 flex-shrink-0">

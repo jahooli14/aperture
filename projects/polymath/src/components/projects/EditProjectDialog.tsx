@@ -156,7 +156,7 @@ export function EditProjectDialog({ project, isOpen, onOpenChange }: EditProject
                     {/* Definition of Done */}
                     <div className="space-y-2 pb-4">
                         <Label htmlFor="end_goal" className="text-xs font-medium tracking-wide text-[var(--brand-text-secondary)]">
-                            definition of done
+                            what finished looks like
                         </Label>
                         <Input
                             id="end_goal"

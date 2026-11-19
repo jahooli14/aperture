@@ -683,7 +683,7 @@ function MemoriesPageInner() {
                     <Button
                       onClick={() => handleReview(memory.id)}
                       variant="default"
-                      className="w-full btn-primary mt-3"
+                      className="quiet-pill w-full justify-center mt-3 min-h-[44px] text-[13px]"
                     >
                       Reviewed
                     </Button>

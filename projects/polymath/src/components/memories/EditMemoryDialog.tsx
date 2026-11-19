@@ -372,7 +372,6 @@ export function EditMemoryDialog({ memory, open, onOpenChange, onMemoryUpdated }
                   <div className="flex flex-wrap gap-1.5">
                     {[
                       { value: '', label: 'Auto' },
-                      { value: 'foundational', label: 'Core' },
                       { value: 'event', label: 'Event' },
                       { value: 'insight', label: 'Insight' },
                       { value: 'quick-note', label: 'Note' },

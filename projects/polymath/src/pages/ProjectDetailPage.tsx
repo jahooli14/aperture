@@ -39,7 +39,7 @@ import { CompletionRitual } from '../components/projects/CompletionRitual'
 import type { Project, Memory } from '../types'
 import { supabase } from '../lib/supabase'
 import { fetchWithTimeout } from '../lib/network'
-import { isRetired, GRAVEYARD_STATUS } from '../utils/projectStatus'
+import { isRetired, isGraveyard, GRAVEYARD_STATUS } from '../utils/projectStatus'
 
 import { SubtleBackground } from '../components/SubtleBackground'
 import { ApiError } from '../lib/apiClient'
@@ -165,7 +165,8 @@ export function ProjectDetailPage() {
         setShowCompletionModal(true)
         setShowRetroRitual(true)
       } else {
-        addToast({ title: 'Status updated', description: `Project is now ${newStatus}`, variant: 'success' })
+        const said: Record<string, string> = { dormant: 'Parked. It waits in the drawer.', active: 'Back in play.', abandoned: 'Sent to the graveyard.' }
+        addToast({ title: said[newStatus] ?? 'Saved', variant: 'success' })
       }
     } catch (error) {
       addToast({
@@ -222,6 +223,7 @@ export function ProjectDetailPage() {
   }
 
   const parked = project.status === 'dormant'
+  const buried = isGraveyard(project.status)
   const lastTouched = project.last_active || project.updated_at || null
   // An ongoing project being worked on, with threads: they lead and the move
   // steps aside. A one-off keeps its move even if it has threads. Otherwise the move is the way back in. Either way: notes below.
@@ -229,7 +231,7 @@ export function ProjectDetailPage() {
   // and "Finished it"; a big project leads with what it is now and the
   // things to tick off; something you keep at leads with its threads.
   const shape = projectShape(project)
-  const steering = project.status !== 'completed' && project.status !== 'graveyard'
+  const steering = project.status !== 'completed' && !isGraveyard(project.status)
     && readThemes(project.metadata).length > 0 && isActivelyWorked(project)
     && shape !== 'quick'
 
@@ -340,9 +342,9 @@ export function ProjectDetailPage() {
               </button>
             )
           })()}
-          {(parked || project.status === 'completed') && (
+          {(parked || buried || project.status === 'completed') && (
             <span className="quiet-pill">
-              {parked ? 'Parked' : 'Finished'}
+              {buried ? 'In the graveyard' : parked ? 'Parked' : 'Finished'}
             </span>
           )}
           {((project.metadata?.tags as string[] | undefined) ?? []).slice(0, 3).map((tag) => (
@@ -392,7 +394,18 @@ export function ProjectDetailPage() {
             {/* One card answers where you are, what you've said since and
                 what's next, each once (ProjectBrief). Threads are yours to
                 edit under it; the full history is folded under those. */}
-            <ProjectBrief project={project} updates={updates} oneOff={oneOff} hideMove={hideMove} onUpdate={() => setUpdateOpen(true)} />
+            {buried ? (
+              <div className="glass-card-subtle p-5">
+                <p className="text-[15px] mb-4" style={{ color: 'var(--brand-text-secondary)' }}>
+                  This one is in the graveyard, so it stays off Home. Bring it back if you want to work on it again.
+                </p>
+                <button onClick={() => { void handleStatusChange('dormant') }} className="neon-button w-full py-3 rounded-xl font-semibold text-[15px]">
+                  Bring it back
+                </button>
+              </div>
+            ) : (
+              <ProjectBrief project={project} updates={updates} oneOff={oneOff} hideMove={hideMove} onUpdate={() => setUpdateOpen(true)} />
+            )}
 
             {/* Something you keep at is its pieces (each painting, each mix):
                 they sit high. Everything else keeps them under its history. */}
@@ -400,7 +413,7 @@ export function ProjectDetailPage() {
               <MadeShelf project={project} adding={addingMade} onAddingChange={setAddingMade} />
             )}
 
-            {project.status !== 'completed' && project.status !== 'graveyard' && (
+            {project.status !== 'completed' && !buried && (
               <ProjectThemes project={project} quiet />
             )}
 

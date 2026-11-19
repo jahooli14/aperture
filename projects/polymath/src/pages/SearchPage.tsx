@@ -336,7 +336,7 @@ export function SearchPage() {
               <div className="page-masthead-text">
                 <h1 className="page-hero-sm mb-2">What are you looking for?</h1>
                 <p className="meta-serif mb-10">
-                  Memories, projects, articles — anything you've kept.
+                  Thoughts, projects, articles — anything you've kept.
                 </p>
               </div>
             </header>
@@ -422,11 +422,11 @@ export function SearchPage() {
                   {results.total} {results.total === 1 ? 'result' : 'results'} for &ldquo;{results.query}&rdquo;
                 </h2>
                 <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm" style={{ color: "var(--brand-text-muted)" }}>
-                  <span>{results.breakdown.memories} memories</span>
+                  <span>{results.breakdown.memories} {results.breakdown.memories === 1 ? 'thought' : 'thoughts'}</span>
                   <span></span>
-                  <span>{results.breakdown.projects} projects</span>
+                  <span>{results.breakdown.projects} {results.breakdown.projects === 1 ? 'project' : 'projects'}</span>
                   <span></span>
-                  <span>{results.breakdown.articles} articles</span>
+                  <span>{results.breakdown.articles} {results.breakdown.articles === 1 ? 'article' : 'articles'}</span>
                   {results.breakdown.suggestions > 0 && (
                     <>
                       <span></span>
@@ -478,7 +478,7 @@ export function SearchPage() {
                               className="text-xs font-semibold px-2 py-1 rounded-lg capitalize text-[var(--brand-text-primary)]"
                               style={{ backgroundColor: getResultBadgeColor(result.type) }}
                             >
-                              {result.type}
+                              {result.type === 'memory' ? 'thought' : result.type}
                             </span>
                           </div>
 

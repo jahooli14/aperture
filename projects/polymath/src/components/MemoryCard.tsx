@@ -72,12 +72,6 @@ const getListIcon = (type?: string) => type ? (LIST_TYPE_ICON[type] || Box) : Bo
 
 // Memory type badge config
 const MEMORY_TYPE_CONFIG: Record<string, { label: string; bg: string; border: string; text: string }> = {
-  foundational: {
-    label: 'Core',
-    bg: 'rgba(var(--brand-primary-rgb),0.12)',
-    border: '1px solid rgba(var(--brand-primary-rgb),0.3)',
-    text: 'rgba(var(--brand-primary-rgb),0.9)',
-  },
   insight: {
     label: 'Insight',
     bg: 'rgba(var(--brand-primary-rgb),0.12)',
@@ -412,7 +406,7 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
           {(typeConfig || firstTag) && (
             <>
               <span aria-hidden>·</span>
-              <span className="truncate">{typeConfig ? typeConfig.label : firstTag}</span>
+              <span className="truncate capitalize">{typeConfig ? typeConfig.label : firstTag}</span>
             </>
           )}
         </div>

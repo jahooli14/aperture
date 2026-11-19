@@ -15,6 +15,7 @@
  * - One Update button.
  */
 
+import { isGraveyard } from '../../utils/projectStatus'
 import { useEffect, useState } from 'react'
 import { Flag, Loader2, Mic } from 'lucide-react'
 import { api } from '../../lib/apiClient'
@@ -60,7 +61,7 @@ export function ProjectBrief({ project, updates, onUpdate, oneOff, hideMove }: {
   /** Threads are leading (ongoing, worked lately) or it can't be started yet. */
   hideMove?: boolean
 }) {
-  const live = project.status !== 'completed' && project.status !== 'graveyard'
+  const live = project.status !== 'completed' && !isGraveyard(project.status)
   const { data: summary, loading } = useUpToSpeed(project)
 
   const stored = readStoredMove(project.metadata)

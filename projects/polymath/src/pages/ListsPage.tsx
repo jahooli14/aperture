@@ -543,20 +543,6 @@ function ListsPageInner() {
                                                 style={{ color: '#ffffff' }}
                                             />
                                         </div>
-                                        {/* Serif title — feels like a poster, not an icon-card */}
-                                        <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 px-4 text-center">
-                                            <p
-                                                className="text-[var(--brand-text-primary)] leading-tight"
-                                                style={{
-                                                    fontFamily: 'var(--brand-font-body)',
-                                                    fontSize: 'clamp(18px, 4.5vw, 24px)',
-                                                    fontStyle: 'italic',
-                                                    textShadow: '0 2px 12px rgba(0,0,0,0.6)',
-                                                }}
-                                            >
-                                                {list.title}
-                                            </p>
-                                        </div>
                                     </div>
                                 )}
                                 <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent opacity-90" />

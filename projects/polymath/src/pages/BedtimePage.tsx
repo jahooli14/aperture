@@ -371,7 +371,7 @@ export function BedtimePage() {
               style={{ opacity: 0.75, gap: '4px', display: 'inline-flex', alignItems: 'center' }}
             >
               <Wind className="h-3 w-3" />
-              drift mode
+              clear your head by day
             </Link>
           </div>
         </motion.div>

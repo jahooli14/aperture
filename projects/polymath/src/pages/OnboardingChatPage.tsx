@@ -861,7 +861,7 @@ export function OnboardingChatPage() {
               color: 'var(--brand-text-primary)',
             }}
           >
-            The hidden depth of your curiosity.
+            Tell it what you're making.
           </motion.h1>
 
           <motion.p
@@ -875,7 +875,7 @@ export function OnboardingChatPage() {
               opacity: 0.85,
             }}
           >
-            A few minutes of talking. Aperture maps the connections.
+            Talk for a few minutes about what you're working on and what you read and watch. It sets up your first project.
           </motion.p>
 
           <motion.button

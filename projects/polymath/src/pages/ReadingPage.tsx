@@ -937,7 +937,7 @@ export function ReadingPage() {
 
         {/* Continue Reading  Zeigarnik effect: surface in-progress articles prominently */}
         <AnimatePresence>
-          {continueReadingArticles.length > 0 && activeTab !== 'reading' && (
+          {continueReadingArticles.length > 0 && (activeTab === 'queue' || activeTab === 'unread') && (
             <motion.div
               initial={{ opacity: 0, y: -8 }}
               animate={{ opacity: 1, y: 0 }}

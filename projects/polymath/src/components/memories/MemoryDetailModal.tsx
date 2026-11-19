@@ -177,7 +177,7 @@ const [bridges, setBridges] = useState<BridgeWithMemories[]>([])
                 <X className="h-5 w-5" />
               </button>
 
-              <div className="flex items-start justify-between gap-3 mb-2 pr-14">
+              <div className="flex items-start justify-between gap-3 mb-4 pr-28">
                 <h2 className="text-xl sm:text-2xl font-bold text-[var(--brand-text-primary)] leading-tight flex-1 min-w-0 break-words">
                   {memory.title}
                 </h2>
@@ -211,7 +211,7 @@ const [bridges, setBridges] = useState<BridgeWithMemories[]>([])
                   line meant stepping over a toolbar to reach the writing.
                   Pin stays out because it is a state you can SEE, and the
                   kebab matches the one on the project page. */}
-              <div className="flex items-center gap-1 mb-4">
+              <div className="absolute top-3 right-[3.75rem] flex items-center">
                 <div className="relative">
                   <button
                     onClick={() => setMenuOpen(v => !v)}
@@ -226,7 +226,7 @@ const [bridges, setBridges] = useState<BridgeWithMemories[]>([])
                     <>
                       <div className="fixed inset-0 z-[60]" onClick={() => setMenuOpen(false)} />
                       <div
-                        className="dialog-surface absolute left-0 top-full mt-2 w-56 max-w-[calc(100vw-3rem)] p-1.5 z-[70]"
+                        className="dialog-surface absolute right-0 top-full mt-2 w-56 max-w-[calc(100vw-3rem)] p-1.5 z-[70]"
                       >
                         {/* "What connects here" used to live in this menu,
                             opening the Context Engine sidebar — removed
