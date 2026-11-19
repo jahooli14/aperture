@@ -78,7 +78,9 @@ export function UpdateSheet({ project, onClose, onAddMade }: {
       }
       await useProjectStore.getState().fetchProjects()
     } catch {
-      setError("Couldn't save that. What you wrote is still here.")
+      setError(navigator.onLine
+        ? "Couldn't save that. What you wrote is still here, so try again."
+        : "You're offline. What you wrote is still here. Try again when you're back.")
     } finally {
       setBusy(false)
     }

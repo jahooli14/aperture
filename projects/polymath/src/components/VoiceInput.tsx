@@ -261,7 +261,8 @@ export function VoiceInput({
         </p>
       )}
 
-      {transcript && !isProcessing && (
+      {/* In a field the words are already in the box, so quoting them again just covers it. */}
+      {transcript && !isProcessing && variant !== 'icon' && (
         <div className="p-4 bg-[var(--glass-surface)] rounded-xl" style={{ boxShadow: 'inset 0 0 0 1px var(--glass-surface-hover)' }}>
           <p className="text-sm text-[var(--brand-text-secondary)] italic leading-relaxed">
             "{transcript}"
