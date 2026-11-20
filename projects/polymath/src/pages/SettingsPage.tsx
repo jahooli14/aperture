@@ -406,16 +406,23 @@ export function SettingsPage() {
           </div>
         </section>
 
+        {/* Two places to look back: what it has worked out about you, and what you've finished. */}
+        <section id="set-keeps" className="scroll-mt-4 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mb-10">
+          <h2 className="section-heading">what it <span className="accent">keeps</span></h2>
+          <div className="flex flex-col items-start">
+            <button className="text-[15px] min-h-[44px] font-medium" style={{ color: 'rgb(var(--brand-primary-rgb))' }} onClick={() => navigate('/you')}>
+              What it knows about you →
+            </button>
+            <button className="text-[15px] min-h-[44px] font-medium" style={{ color: 'rgb(var(--brand-primary-rgb))' }} onClick={() => navigate('/made')}>
+              Everything you've made →
+            </button>
+          </div>
+        </section>
+
         {/* What you want from the to-mull takes, in your own words. */}
         <section id="set-takes" className="scroll-mt-4 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mb-10">
           <div>
             <h2 className="section-heading">what you want from <span className="accent">takes</span></h2>
-            <button className="text-[15px] min-h-[44px] font-medium" style={{ color: 'rgb(var(--brand-primary-rgb))' }} onClick={() => navigate('/you')}>
-              What it knows about you →
-            </button>
-            <button className="text-[15px] min-h-[44px] font-medium block" style={{ color: 'rgb(var(--brand-primary-rgb))' }} onClick={() => navigate('/made')}>
-              Everything you've made →
-            </button>
             <TakeBriefRow />
             <FullPrompt which="take_draft" label="the whole prompt that writes a take" />
             <FullPrompt which="take_judge" label="the whole prompt that scores a take" />
@@ -957,10 +964,10 @@ export function SettingsPage() {
         </section>
 
         <p className="eyebrow max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mb-3 mt-2">Account</p>
-        <section className="mt-8">
+        <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mb-10">
           <button
             onClick={handleSignOut}
-            className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-medium transition-all"
+            className="w-full min-h-[44px] flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-[15px] font-medium transition-all"
             style={{
               background: 'var(--glass-surface)',
               border: '1px solid rgba(255,255,255,0.08)',

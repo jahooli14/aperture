@@ -813,7 +813,7 @@ export function OnboardingChatPage() {
             animate={{ opacity: 0.4 }}
             transition={{ delay: 1.4 }}
             onClick={() => navigate('/')}
-            className="mt-7 block mx-auto text-xs hover:opacity-80"
+            className="mt-7 block mx-auto text-[13px] min-h-[44px] hover:opacity-80"
             style={{ color: 'var(--brand-text-secondary)' }}
           >
             Not now
@@ -861,7 +861,7 @@ export function OnboardingChatPage() {
               color: 'var(--brand-text-primary)',
             }}
           >
-            The hidden depth of your curiosity.
+            Tell it what you're making.
           </motion.h1>
 
           <motion.p
@@ -875,7 +875,7 @@ export function OnboardingChatPage() {
               opacity: 0.85,
             }}
           >
-            A few minutes of talking. Aperture maps the connections.
+            Talk for a few minutes about what you're working on and what you read and watch. It sets up your first project.
           </motion.p>
 
           <motion.button
@@ -900,7 +900,7 @@ export function OnboardingChatPage() {
             animate={{ opacity: 0.4 }}
             transition={{ delay: 1.1 }}
             onClick={() => navigate('/')}
-            className="mt-8 block mx-auto text-xs hover:opacity-80"
+            className="mt-8 block mx-auto text-[13px] min-h-[44px] hover:opacity-80"
             style={{ color: 'var(--brand-text-secondary)' }}
           >
             Not now

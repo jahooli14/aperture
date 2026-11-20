@@ -85,8 +85,16 @@ export async function saveProjectUpdate(
     const parts = readParts(fresh?.metadata)
     allTicked = parts.length > 0 && parts.every(p => p.done)
   }
-  const refreshed = await refreshThemes(supabase, userId, projectId, true)
-  const moved = await moveFromUpdate(supabase, userId, projectId, clean)
+  // The note is saved by now, so a model failure below must not read as
+  // "couldn't save": the person would retry and file it twice.
+  const refreshed = await refreshThemes(supabase, userId, projectId, true).catch((e: unknown) => {
+    console.warn('[project-update] lines not re-read:', e instanceof Error ? e.message : e)
+    return null
+  })
+  const moved = await moveFromUpdate(supabase, userId, projectId, clean).catch((e: unknown) => {
+    console.warn('[project-update] move not rewritten:', e instanceof Error ? e.message : e)
+    return null
+  })
   return {
     ok: true,
     ...(ticked.length ? { ticked } : {}),

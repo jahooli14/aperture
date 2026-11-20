@@ -690,7 +690,6 @@ export function CreateMemoryDialog({
                 <div className="flex items-center gap-0.5 mr-2">
                   {([
                     { value: '', label: 'Auto' },
-                    { value: 'foundational', label: 'Core' },
                     { value: 'event', label: 'Event' },
                     { value: 'insight', label: 'Insight' },
                   ] as const).map((type) => (
@@ -702,7 +701,7 @@ export function CreateMemoryDialog({
                       style={{
                         background: formData.memory_type === type.value ? 'rgba(255,255,255,0.1)' : 'transparent',
                         color: 'var(--brand-text-secondary)',
-                        opacity: formData.memory_type === type.value ? 1 : 0.35,
+                        opacity: formData.memory_type === type.value ? 1 : 0.7,
                       }}
                     >
                       {type.label}

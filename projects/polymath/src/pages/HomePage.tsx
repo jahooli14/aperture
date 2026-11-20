@@ -160,7 +160,7 @@ export function HomePage() {
             that makes "now → later" feel like a real axis on the page. */}
         <div className="home-atmosphere" aria-hidden />
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative" style={{ zIndex: 1 }}>
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 relative" style={{ zIndex: 1 }}>
 
           {/* Masthead: bedtime/search actions (right). The mode label lives
               with each section header below ("today's answer", "still warm")

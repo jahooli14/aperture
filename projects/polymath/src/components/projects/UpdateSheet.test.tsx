@@ -6,7 +6,7 @@ vi.mock('../../lib/apiClient', () => ({ api: { post: (...a: unknown[]) => post(.
 const updateProject = vi.fn()
 const startNextCycle = vi.fn()
 vi.mock('../../stores/useProjectStore', () => ({ useProjectStore: { getState: () => ({ fetchProjects: vi.fn(), updateProject, allProjects: [] }), setState: vi.fn() } }))
-vi.mock('../VoiceInput', () => ({ VoiceInput: () => <button aria-label="mic" /> }))
+vi.mock('../VoiceInput', () => ({ VoiceInput: () => <button aria-label="mic" />, InFieldMic: () => <button aria-label="mic" /> }))
 
 import { UpdateSheet } from './UpdateSheet'
 import type { Project } from '../../types'

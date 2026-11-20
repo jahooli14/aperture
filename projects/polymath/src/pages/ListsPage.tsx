@@ -338,7 +338,7 @@ function ListsPageInner() {
 
                     {/* Example collections grid */}
                     <div>
-                        <p className="text-[11px] font-black uppercase tracking-[0.14em] text-zinc-600 mb-4 text-center">
+                        <p className="text-[11px] font-black uppercase tracking-[0.14em] text-[var(--brand-text-muted)] mb-4 text-center">
                             Some ideas to get you started
                         </p>
                         <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(min(160px, 100%), 1fr))' }}>
@@ -373,7 +373,7 @@ function ListsPageInner() {
                                             <p className="text-[11px] font-black uppercase tracking-wider mb-0.5"
                                                 style={{ color: `rgb(${rgb})` }}>{example.type}</p>
                                             <h4 className="text-xs font-black text-[var(--brand-text-primary)] uppercase tracking-tight leading-tight">{example.label}</h4>
-                                            <p className="text-[11px] text-[var(--brand-text-primary)]/30 mt-0.5">{example.desc}</p>
+                                            <p className="text-[11px] text-[var(--brand-text-muted)] mt-0.5">{example.desc}</p>
                                         </div>
                                     </button>
                                 )
@@ -404,7 +404,7 @@ function ListsPageInner() {
                             className="flex items-center gap-4 bg-zinc-900/60 rounded-xl p-3 cursor-grab active:cursor-grabbing hover:bg-zinc-900/80 transition-colors"
                             style={{ boxShadow: 'inset 0 0 0 1px var(--glass-surface-hover)' }}
                         >
-                            <GripVertical className="h-5 w-5 text-zinc-600 flex-shrink-0" />
+                            <GripVertical className="h-5 w-5 text-[var(--brand-text-muted)] flex-shrink-0" />
 
                             {/* Thumbnail */}
                             <div className="w-12 h-16 rounded-lg overflow-hidden bg-zinc-950 flex-shrink-0">
@@ -440,7 +440,7 @@ function ListsPageInner() {
                                             style={{ backgroundColor: `rgb(${rgb})` }} />
                                     )}
                                 </div>
-                                <p className="text-[11px] font-medium text-[var(--brand-text-primary)]/40 uppercase tracking-widest">
+                                <p className="text-[11px] font-medium text-[var(--brand-text-muted)] uppercase tracking-widest">
                                     {list.item_count || 0} items
                                 </p>
                             </div>
@@ -542,20 +542,6 @@ function ListsPageInner() {
                                                 className="h-44 w-44"
                                                 style={{ color: '#ffffff' }}
                                             />
-                                        </div>
-                                        {/* Serif title — feels like a poster, not an icon-card */}
-                                        <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 px-4 text-center">
-                                            <p
-                                                className="text-[var(--brand-text-primary)] leading-tight"
-                                                style={{
-                                                    fontFamily: 'var(--brand-font-body)',
-                                                    fontSize: 'clamp(18px, 4.5vw, 24px)',
-                                                    fontStyle: 'italic',
-                                                    textShadow: '0 2px 12px rgba(0,0,0,0.6)',
-                                                }}
-                                            >
-                                                {list.title}
-                                            </p>
                                         </div>
                                     </div>
                                 )}

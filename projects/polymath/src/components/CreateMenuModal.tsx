@@ -134,7 +134,7 @@ export function CreateMenuModal({ isOpen, onClose, onAction, projectTitle }: Cre
                                             >
                                                 {action.label}
                                             </p>
-                                            <p className="text-[11.5px] text-white/55 mt-0.5 leading-snug">
+                                            <p className="text-[11.5px] text-[var(--brand-text-muted)] mt-0.5 leading-snug">
                                                 {projectTitle && (action.id === 'voice' || action.id === 'thought') ? `Kept on ${projectTitle}` : action.description}
                                             </p>
                                         </div>

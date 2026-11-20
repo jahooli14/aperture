@@ -63,13 +63,13 @@ export function ProjectArc({ milestones, targetDate }: ProjectArcProps) {
               {m.reached ? (
                 <CheckCircle2 className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.9 }} />
               ) : (
-                <Circle className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" style={{ ...secondaryTextStyle, opacity: 0.35 }} />
+                <Circle className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" style={{ ...secondaryTextStyle, color: "var(--brand-text-muted)" }} />
               )}
               <div className="flex-1 min-w-0 space-y-0.5">
                 <p className="text-[13px] leading-snug" style={{ color: 'var(--brand-text-primary)', opacity: 0.85 }}>
                   {m.reason}
                 </p>
-                <p className="text-[11px]" style={{ ...secondaryTextStyle, opacity: 0.45 }}>
+                <p className="text-[11px]" style={{ ...secondaryTextStyle, color: "var(--brand-text-muted)" }}>
                   {shortDate(m.at)}{m.steps.length > 0 ? ` · ${m.steps.length} step${m.steps.length === 1 ? '' : 's'}` : ''}
                 </p>
               </div>
@@ -79,7 +79,7 @@ export function ProjectArc({ milestones, targetDate }: ProjectArcProps) {
       )}
 
       {hiddenCount > 0 && (
-        <p className="text-[11px]" style={{ ...secondaryTextStyle, opacity: 0.4 }}>
+        <p className="text-[11px]" style={{ ...secondaryTextStyle, color: "var(--brand-text-muted)" }}>
           +{hiddenCount} further back
         </p>
       )}

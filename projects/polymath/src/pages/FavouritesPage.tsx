@@ -250,7 +250,7 @@ export default function FavouritesPage() {
                     </div>
                 ) : items.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-32 text-center">
-                        <Star className="h-10 w-10 text-zinc-700 mb-4 mx-auto" />
+                        <Star className="h-10 w-10 text-[var(--brand-text-muted)] mb-4 mx-auto" />
                         <p className="text-brand-text-muted font-medium text-lg mb-1">
                             No favourites yet.
                         </p>
@@ -266,7 +266,7 @@ export default function FavouritesPage() {
                                     <span className="text-[11px] font-black uppercase tracking-widest text-brand-text-muted">
                                         {label}
                                     </span>
-                                    <span className="text-[11px] font-bold text-zinc-600">{groupItems.length}</span>
+                                    <span className="text-[11px] font-bold text-[var(--brand-text-muted)]">{groupItems.length}</span>
                                     <div className="flex-1 h-px bg-[var(--glass-surface)]" />
                                 </div>
                                 <MasonryGroup

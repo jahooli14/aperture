@@ -90,6 +90,9 @@ export function WhatItIs({ project }: { project: { id: string; description?: str
           >
             {text}
           </p>
+          {!open && text.length > 170 && (
+            <span className="text-[13px]" style={{ color: 'var(--brand-text-muted)' }}>Read all of it</span>
+          )}
         </button>
       ) : null}
       <button

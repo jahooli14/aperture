@@ -843,7 +843,7 @@ export function ReadingPage() {
                   onFocus={() => setInlineUrlFocused(true)}
                   onBlur={() => setInlineUrlFocused(false)}
                   autoComplete="off"
-                  className="flex-1 min-w-0 h-full border-0 text-sm focus:outline-none focus:ring-0 placeholder:text-[var(--brand-text-primary)]/20 appearance-none bg-transparent"
+                  className="flex-1 min-w-0 h-full border-0 text-sm focus:outline-none focus:ring-0 placeholder:text-[var(--brand-text-muted)] appearance-none bg-transparent"
                   style={{ color: "var(--brand-text-secondary)" }}
                 />
               </div>
@@ -937,7 +937,7 @@ export function ReadingPage() {
 
         {/* Continue Reading  Zeigarnik effect: surface in-progress articles prominently */}
         <AnimatePresence>
-          {continueReadingArticles.length > 0 && activeTab !== 'reading' && (
+          {continueReadingArticles.length > 0 && (activeTab === 'queue' || activeTab === 'unread') && (
             <motion.div
               initial={{ opacity: 0, y: -8 }}
               animate={{ opacity: 1, y: 0 }}

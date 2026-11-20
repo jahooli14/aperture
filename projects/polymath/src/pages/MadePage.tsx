@@ -41,8 +41,9 @@ export function MadePage() {
       <div className="max-w-2xl mx-auto px-4 sm:px-6">
         <header className="page-masthead">
           <div className="page-masthead-text">
-            <button onClick={() => navigate(-1)} className="masthead-action press-spring mb-2" aria-label="Back">
-              <ArrowLeft className="h-5 w-5" />
+            <button onClick={() => navigate(-1)} className="back-link">
+              <ArrowLeft className="h-3.5 w-3.5" />
+              Back
             </button>
             <h1 className="page-hero">What you've made.</h1>
           </div>

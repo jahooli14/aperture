@@ -97,7 +97,7 @@ export function ZenMode({ prompts, onClose, onMarkViewed }: ZenModeProps) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      data-hides-fab role="dialog" aria-label="Zen mode" className="fixed inset-0 z-50 flex items-center justify-center p-4"
       style={{
         backgroundColor: 'rgba(0, 0, 10, 0.95)',
         backdropFilter: 'blur(20px)'

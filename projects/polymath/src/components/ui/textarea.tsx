@@ -15,7 +15,7 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
           "appearance-none",
           // Dark glass appearance
           "bg-brand-surface",
-          "text-[var(--brand-text-primary)]/90 placeholder:text-[var(--brand-text-primary)]/25",
+          "text-[var(--brand-text-primary)]/90 placeholder:text-[var(--brand-text-muted)]",
           // Focus  background brightens subtly
           "focus:outline-none focus:bg-brand-surface/80",
           // Smooth transitions

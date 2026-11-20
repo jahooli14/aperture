@@ -4,7 +4,7 @@ import type { ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { motion } from 'framer-motion'
 import { X } from 'lucide-react'
-import { VoiceInput } from '../VoiceInput'
+import { InFieldMic } from '../VoiceInput'
 
 export function Sheet({ eyebrow, title, onClose, busy, children }: { eyebrow?: string; title: string; onClose: () => void; busy?: boolean; children: ReactNode }) {
   return createPortal(
@@ -65,9 +65,7 @@ function NoteField({ note, setNote, disabled }: { note: string; setNote: (f: (s:
         className="field w-full px-3 py-2.5 pr-12 text-[15px]"
         aria-label="A few words"
       />
-      <div className="absolute right-2 bottom-2">
-        <VoiceInput variant="icon" onTranscript={t => setNote(c => (c ? `${c} ${t}` : t))} maxDuration={90} />
-      </div>
+      <InFieldMic onTranscript={t => setNote(c => (c ? `${c} ${t}` : t))} maxDuration={90} />
     </div>
   )
 }

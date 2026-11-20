@@ -371,7 +371,7 @@ export function BedtimePage() {
               style={{ opacity: 0.75, gap: '4px', display: 'inline-flex', alignItems: 'center' }}
             >
               <Wind className="h-3 w-3" />
-              drift mode
+              clear your head by day
             </Link>
           </div>
         </motion.div>
@@ -403,7 +403,7 @@ export function BedtimePage() {
                       scale: { duration: 0.2 }
                     }}
                     className="glass-card glass-card-hover p-4 sm:p-6 relative overflow-hidden group cursor-pointer"
-                    style={{ opacity: isViewed ? 0.6 : 1 }}
+                    style={{ opacity: isViewed ? 0.8 : 1 }}
                   >
                     {/* Content */}
                     <div className="relative z-10">
@@ -442,7 +442,7 @@ export function BedtimePage() {
                         <div className="mt-4 pt-4 border-t" style={{ borderColor: 'var(--glass-surface)' }}>
                           <div className="flex items-start gap-2">
                             <Star className="h-3 w-3 mt-1 flex-shrink-0" style={{ color: "var(--brand-primary)" }} />
-                            <p className="text-xs italic" style={{ color: "var(--brand-text-muted)" }}>
+                            <p className="text-[13px] italic" style={{ color: "var(--brand-text-muted)" }}>
                               {prompt.metaphor}
                             </p>
                           </div>
@@ -451,9 +451,9 @@ export function BedtimePage() {
 
                       {/* Feedback Section */}
                       <div className="mt-6 pt-4 border-t" style={{ borderColor: 'var(--glass-surface)' }}>
-                        <div className="flex items-center justify-between">
+                        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
                           {/* Star Rating */}
-                          <div className="flex items-center gap-1">
+                          <div className="flex items-center">
                             <span className="text-xs mr-2" style={{ color: "var(--brand-text-muted)" }}>
                               Rate:
                             </span>
@@ -464,7 +464,7 @@ export function BedtimePage() {
                                   e.stopPropagation()
                                   ratePrompt(prompt.id, star)
                                 }}
-                                className="h-9 w-9 flex items-center justify-center rounded-lg hover:scale-110 hover:bg-white/5 transition-all"
+                                className="h-11 w-9 flex items-center justify-center rounded-lg hover:scale-110 hover:bg-white/5 transition-all"
                                 title={`${star} star${star !== 1 ? 's' : ''}`}
                               >
                                 <Star
@@ -472,7 +472,7 @@ export function BedtimePage() {
                                   style={{
                                     color: (prompt.rating && star <= prompt.rating)
                                       ? 'var(--premium-gold)'
-                                      : 'rgba(255, 255, 255, 0.25)',
+                                      : 'var(--brand-text-muted)',
                                     fill: (prompt.rating && star <= prompt.rating)
                                       ? 'var(--premium-gold)'
                                       : 'transparent'
@@ -488,7 +488,7 @@ export function BedtimePage() {
                               e.stopPropagation()
                               toggleBreakthrough(prompt.id)
                             }}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${prompt.resulted_in_breakthrough
+                            className={`px-3 py-2 min-h-[44px] rounded-lg text-[13px] font-medium transition-all flex items-center gap-1.5 ${prompt.resulted_in_breakthrough
                               ? 'bg-gradient-to-r from-brand-primary/20 to-brand-primary/20 border border-brand-primary/40'
                               : 'border border-[var(--glass-surface-hover)] hover:border-brand-primary/30'
                               }`}

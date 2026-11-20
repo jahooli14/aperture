@@ -239,7 +239,7 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
   const driftSeed = currentPrompt?.context?.trim() || currentPrompt?.metaphor?.trim() || null
 
   return (
-    <div className="fixed inset-0 z-50 bg-[#0F1829] text-[var(--brand-text-primary)] flex flex-col items-center justify-center overflow-hidden">
+    <div data-hides-fab role="dialog" aria-label="Drift mode" className="fixed inset-0 z-50 bg-[#0F1829] text-[var(--brand-text-primary)] flex flex-col items-center justify-center overflow-hidden">
       {/* Wake-up Flash Overlay */}
       <AnimatePresence>
         {showFlash && (

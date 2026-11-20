@@ -87,14 +87,18 @@ export function OfflineIndicator() {
   // Show offline warning
   if (!isOnline) {
     return (
-      <div className="fixed top-0 left-0 right-0 z-[60]">
-        <div className="flex items-center justify-center gap-2 px-4 h-9 bg-brand-primary text-[var(--brand-text-primary)]">
+      <div className="sticky top-0 z-[60]">
+        <div
+          className="flex items-center justify-center gap-2 px-4 h-9 text-[var(--brand-text-primary)]"
+          style={{ background: 'color-mix(in srgb, rgb(var(--brand-primary-rgb)) 22%, var(--brand-bg))', borderBottom: '1px solid rgba(var(--brand-primary-rgb), 0.35)' }}
+          role="status"
+        >
           <WifiOff className="h-4 w-4" />
-          <span className="text-sm font-medium">
+          <span className="text-[13px] font-medium">
             You're offline - changes will sync when reconnected
           </span>
           {queueSize > 0 && (
-            <span className="ml-2 px-2 py-0.5 bg-brand-primary rounded-full text-xs font-bold">
+            <span className="ml-2 px-2 py-0.5 bg-black/25 rounded-full text-[11px] font-bold">
               {queueSize} pending
             </span>
           )}

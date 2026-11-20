@@ -4,6 +4,7 @@
  * tag is written by the server (api/_lib/season.ts); this only reads it.
  */
 
+import { isGraveyard } from '../utils/projectStatus'
 import type { Project } from '../types'
 
 export interface SeasonTag {
@@ -42,7 +43,7 @@ export function blockedReason(
 export function isSmallFinish(
   project: Pick<Project, 'metadata' | 'status' | 'state' | 'is_priority'>, now = new Date(),
 ): boolean {
-  if (project.status === 'completed' || project.status === 'graveyard' || project.state === 'live' || project.is_priority) return false
+  if (project.status === 'completed' || isGraveyard(project.status) || project.state === 'live' || project.is_priority) return false
   const tag = readSeasonTag(project.metadata)
   if (!tag || tag.role !== 'also') return false
   if (!tag.until) return true

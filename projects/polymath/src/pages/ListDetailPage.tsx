@@ -177,9 +177,9 @@ const CompletionCelebration = ({
                             <h3 className="text-lg font-black text-[var(--brand-text-primary)] uppercase tracking-tight mb-1">
                                 Done
                             </h3>
-                            <p className="text-sm text-[var(--brand-text-primary)]/40 mb-6 font-mono truncate">{item.content}</p>
+                            <p className="text-sm text-[var(--brand-text-muted)] mb-6 font-mono truncate">{item.content}</p>
 
-                            <p className="text-[11px] font-black uppercase tracking-[0.14em] text-[var(--brand-text-primary)]/30 mb-3">
+                            <p className="text-[11px] font-black uppercase tracking-[0.14em] text-[var(--brand-text-muted)] mb-3">
                                 How was it?
                             </p>
 
@@ -199,7 +199,7 @@ const CompletionCelebration = ({
 
                             <button
                                 onClick={() => setStep('thought')}
-                                className="text-[11px] font-bold text-[var(--brand-text-primary)]/30 uppercase tracking-widest hover:text-[var(--brand-text-primary)]/60 transition-colors"
+                                className="text-[11px] font-bold text-[var(--brand-text-muted)] uppercase tracking-widest hover:text-[var(--brand-text-primary)]/60 transition-colors"
                             >
                                 Skip rating
                             </button>
@@ -210,7 +210,7 @@ const CompletionCelebration = ({
                             <h3 className="text-base font-black text-[var(--brand-text-primary)] uppercase tracking-tight mb-1">
                                 Any thoughts?
                             </h3>
-                            <p className="text-xs text-[var(--brand-text-primary)]/30 mb-5">
+                            <p className="text-xs text-[var(--brand-text-muted)] mb-5">
                                 Capture a reaction, insight, or feeling
                             </p>
                             <textarea
@@ -218,7 +218,7 @@ const CompletionCelebration = ({
                                 value={thoughtText}
                                 onChange={e => setThoughtText(e.target.value)}
                                 placeholder={`What did you think of ${item.content}?`}
-                                className="w-full rounded-2xl px-4 py-3 text-sm text-[var(--brand-text-primary)] placeholder:text-[var(--brand-text-primary)]/20 resize-none focus:outline-none mb-4"
+                                className="w-full rounded-2xl px-4 py-3 text-sm text-[var(--brand-text-primary)] placeholder:text-[var(--brand-text-muted)] resize-none focus:outline-none mb-4"
                                 style={{ backgroundColor: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', minHeight: '80px' }}
                                 rows={3}
                                 onKeyDown={e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) handleSaveThought() }}
@@ -234,7 +234,7 @@ const CompletionCelebration = ({
                                 </button>
                                 <button
                                     onClick={onClose}
-                                    className="px-4 py-2.5 rounded-xl text-[11px] font-bold text-[var(--brand-text-primary)]/30 uppercase tracking-widest hover:text-[var(--brand-text-primary)]/60 transition-colors"
+                                    className="px-4 py-2.5 rounded-xl text-[11px] font-bold text-[var(--brand-text-muted)] uppercase tracking-widest hover:text-[var(--brand-text-primary)]/60 transition-colors"
                                     style={{ border: '1px solid rgba(255,255,255,0.08)' }}
                                 >
                                     Skip
@@ -494,10 +494,10 @@ const QuoteCard = memo(({
                                 </p>
                                 <button
                                     onClick={(e) => { e.stopPropagation(); setIsEditingAuthor(true) }}
-                                    className="p-1.5 rounded-xl bg-[var(--glass-surface)] active:bg-[rgba(255,255,255,0.1)] opacity-40 active:opacity-100 transition-all active:scale-95"
+                                    className="p-1.5 rounded-xl bg-[var(--glass-surface)] active:bg-[rgba(255,255,255,0.1)] opacity-60 active:opacity-100 transition-all active:scale-95"
                                     aria-label="Edit author"
                                 >
-                                    <Pencil className="h-3 w-3 text-[var(--brand-text-primary)]/50" />
+                                    <Pencil className="h-3 w-3 text-[var(--brand-text-muted)]" />
                                 </button>
                             </>
                         )}
@@ -512,7 +512,7 @@ const QuoteCard = memo(({
                             className="mt-8 pt-6 border-t border-[var(--glass-surface-hover)] space-y-4"
                         >
                             {item.metadata.description && item.metadata.description !== item.content && (
-                                <p className="text-base text-zinc-300/90 leading-relaxed italic">{item.metadata.description}</p>
+                                <p className="text-base text-[var(--brand-text-secondary)] leading-relaxed italic">{item.metadata.description}</p>
                             )}
                             {item.metadata.tags && item.metadata.tags.length > 0 && (
                                 <div className="flex flex-wrap gap-2 pt-2">
@@ -938,7 +938,7 @@ function SectionBlock({
                 style={{ color: isOver ? `rgb(${rgb})` : undefined }}
             >
                 <span className="text-[11px] font-black uppercase tracking-widest text-brand-text-muted">{label}</span>
-                <span className="text-[11px] font-bold text-zinc-600">{count}</span>
+                <span className="text-[11px] font-bold text-[var(--brand-text-muted)]">{count}</span>
                 <div className="flex-1 h-px bg-[var(--glass-surface)]" />
             </div>
             {children}
@@ -1234,13 +1234,13 @@ function ArticleListMode({ list, navigate }: ArticleListModeProps) {
                         style={{ boxShadow: 'inset 0 0 0 1px rgba(251,191,36,0.15), 0 25px 50px rgba(0,0,0,0.5)' }}
                     >
                         <form onSubmit={handleAddUrl} className="flex-1 flex px-3 items-center gap-2">
-                            <LinkIcon className="h-4 w-4 text-zinc-500 shrink-0" />
+                            <LinkIcon className="h-4 w-4 text-[var(--brand-text-muted)] shrink-0" />
                             <Input
                                 ref={inputRef}
                                 value={urlInput}
                                 onChange={e => setUrlInput(e.target.value)}
                                 placeholder="Paste a URL to save for reading..."
-                                className="border-0 bg-transparent focus-visible:ring-0 text-base text-[var(--brand-text-primary)] placeholder:text-zinc-600 h-12"
+                                className="border-0 bg-transparent focus-visible:ring-0 text-base text-[var(--brand-text-primary)] placeholder:text-[var(--brand-text-muted)] h-12"
                                 type="url"
                                 autoComplete="off"
                             />
@@ -1665,7 +1665,7 @@ export default function ListDetailPage() {
                             "8 collections"); two bordered chips above the title
                             was this page inventing its own header language. */}
                         <div className="page-eyebrow" style={{ color: `rgba(${rgb}, 0.8)` }}>
-                            <span className="inline-flex items-center gap-1.5">
+                            <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
                                 <ListIcon type={list.type} className="h-3 w-3" style={{ color: `rgb(${rgb})` }} />
                                 {list.type} · {displayItems.length} {displayItems.length === 1 ? 'item' : 'items'}
                             </span>
@@ -1677,6 +1677,7 @@ export default function ListDetailPage() {
                         <div className="relative">
                             <button
                                 onClick={(e) => { e.stopPropagation(); setShowSortMenu(v => !v) }}
+                                aria-label="Sort"
                                 className="h-11 flex items-center gap-1.5 px-3 rounded-full border transition-all"
                                 style={{
                                     borderColor: sortOption !== 'added' ? `rgba(${rgb}, 0.5)` : 'rgba(255,255,255,0.15)',
@@ -1685,7 +1686,7 @@ export default function ListDetailPage() {
                                 }}
                             >
                                 <SortAsc className="h-3.5 w-3.5" />
-                                <span className="text-[11px] font-bold uppercase tracking-widest">
+                                <span className="hidden sm:inline text-[11px] font-bold uppercase tracking-widest">
                                     {SORT_OPTIONS.find(o => o.value === sortOption)?.label ?? 'Sort'}
                                 </span>
                                 <ChevronDown className="h-3.5 w-3.5" />
@@ -1725,7 +1726,7 @@ export default function ListDetailPage() {
                         <button
                             onClick={() => setShowListSettings(true)}
                             aria-label="List settings"
-                            className="flex items-center justify-center w-11 h-11 rounded-full border transition-all border-white/10 bg-[var(--glass-surface)] text-[var(--brand-text-secondary)] hover:text-[var(--brand-text-primary)] hover:border-white/20"
+                            className="masthead-action press-spring"
                         >
                             <Settings2 className="h-4 w-4" />
                         </button>
@@ -1855,7 +1856,7 @@ export default function ListDetailPage() {
                         ))}
                     </div>
                 ) : filteredItems.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-40 text-zinc-600">
+                    <div className="flex flex-col items-center justify-center py-40 text-[var(--brand-text-muted)]">
                         <p className="text-brand-text-muted font-medium text-lg mb-1">
                             {searchQuery.trim() ? 'No matches.' : 'Add the first one.'}
                         </p>

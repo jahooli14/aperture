@@ -49,7 +49,7 @@ function GraveyardSection({ projects, onNavigate, onRevive }: { projects: Projec
       >
         <span className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--brand-text-muted)' }}>
           <Skull className="h-3.5 w-3.5" style={{ opacity: 0.6 }} />
-          Parked ({sorted.length})
+          Graveyard ({sorted.length})
         </span>
         <span className="text-xs" style={{ color: 'var(--brand-text-muted)' }}>{expanded ? 'Hide' : 'Show'}</span>
       </button>
@@ -57,7 +57,7 @@ function GraveyardSection({ projects, onNavigate, onRevive }: { projects: Projec
       {expanded && (
         <div className="space-y-3 mt-4">
           <p className="text-xs mb-1" style={{ color: 'var(--brand-text-secondary)' }}>
-            Projects you park land here. You can bring any of them back.
+            Projects you send to the graveyard land here. You can bring any of them back.
           </p>
           {sorted.map((project, i) => {
             const buriedDate = project.updated_at ? new Date(project.updated_at) : null
@@ -75,7 +75,7 @@ function GraveyardSection({ projects, onNavigate, onRevive }: { projects: Projec
                   </h3>
                   {buriedDate && (
                     <p className="text-[11px] font-bold uppercase tracking-widest" style={{ color: 'var(--brand-text-muted)' }}>
-                      Parked {buriedDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
+                      Sent {buriedDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
                     </p>
                   )}
                 </button>
@@ -243,6 +243,9 @@ function ProjectsPageInner() {
         new Date(b.last_active || b.created_at).getTime() - new Date(a.last_active || a.created_at).getTime()
       )
       .filter(p => !p.is_priority && !priorityIds.has(p.id) && p.up_next_position == null)
+      // "Asking for your attention" can't include something you parked or
+      // put on hold; those wait in the drawer below.
+      .filter(p => p.status !== 'dormant' && p.status !== 'on-hold')
       .slice(0, Math.max(0, FOCUS_CAP - priorityProjects.length))
 
     const activeList = [...priorityProjects, ...recentActiveNonPriority] as Project[]
@@ -283,7 +286,7 @@ function ProjectsPageInner() {
                 <div className="page-eyebrow">
                   {view === 'completed'
                     ? `${projects.filter(p => p.status === 'completed').length} finished`
-                    : `${projects.filter(p => !isRetired(p.status)).length} on the go`}
+                    : `${projects.filter(p => !isRetired(p.status) && p.status !== 'dormant' && p.status !== 'on-hold').length} on the go`}
                 </div>
               </div>
             </div>

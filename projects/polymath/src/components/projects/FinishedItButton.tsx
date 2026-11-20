@@ -5,6 +5,7 @@
  * big project owns the page's one bright button.
  */
 
+import { isGraveyard } from '../../utils/projectStatus'
 import { useState } from 'react'
 import { Check } from 'lucide-react'
 import { api } from '../../lib/apiClient'
@@ -29,7 +30,7 @@ export function FinishedItButton({ project }: { project: Project }) {
   // ticked; something you keep at never (it lines up the next one instead).
   const shape = projectShape(project)
   const ready = shape === 'quick' || (shape === 'big' && allPartsDone(project.metadata))
-  if (project.status === 'completed' || project.status === 'graveyard' || project.state === 'live') return null
+  if (project.status === 'completed' || isGraveyard(project.status) || project.state === 'live') return null
   if (!isSmallFinish(project) && !ready) return null
   const blocked = blockedReason(project)
 

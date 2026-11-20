@@ -156,7 +156,7 @@ export function EditProjectDialog({ project, isOpen, onOpenChange }: EditProject
                     {/* Definition of Done */}
                     <div className="space-y-2 pb-4">
                         <Label htmlFor="end_goal" className="text-xs font-medium tracking-wide text-[var(--brand-text-secondary)]">
-                            definition of done
+                            what finished looks like
                         </Label>
                         <Input
                             id="end_goal"
@@ -164,7 +164,7 @@ export function EditProjectDialog({ project, isOpen, onOpenChange }: EditProject
                             value={formData.end_goal}
                             onChange={(e) => setFormData({ ...formData, end_goal: e.target.value })}
                             onFocus={handleInputFocus}
-                            className="h-12 bg-[var(--glass-surface)] border-[var(--glass-surface-hover)] focus:border-brand-primary placeholder:text-[var(--brand-text-primary)]/20"
+                            className="h-12 bg-[var(--glass-surface)] border-[var(--glass-surface-hover)] focus:border-brand-primary placeholder:text-[var(--brand-text-muted)]"
                             autoComplete="off"
                         />
                     </div>

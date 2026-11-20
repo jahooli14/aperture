@@ -10,6 +10,7 @@ This file is the **single source of truth** for working on this repo. If somethi
 - Concise. Short sentences. Bullets over paragraphs.
 - Say what you did and why — skip the "I will now..." preamble.
 - If something is uncertain, say so in one line and ask.
+- On any UI review, for every page ask: does this content make sense here, for this person, at this moment? A section's heading must match what's under it, and nothing empty, mislabelled or in the wrong place. Looking right is not enough.
 - Don't create new docs. Edit the ones that exist.
 - **Never push without asking.** Commit as often as you like — pushing is the
   step that needs a yes, every time, on every branch. See Commits & PRs below
