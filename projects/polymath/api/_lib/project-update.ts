@@ -16,6 +16,18 @@ import { refreshThemes } from './project-catchup-routes.js'
 import { moveFromUpdate } from './move-say.js'
 
 export const MAX_UPDATE_CHARS = 2000
+/** The note is saved first; the rest (reading it, re-reading the lines, the next move) gets this long in total, so the request answers before the phone gives up and the function is cut off. */
+export const UPDATE_BUDGET_MS = 45_000
+
+/** Resolves to `fallback` if `p` hasn't finished by the deadline. */
+function within<T>(p: Promise<T>, deadline: number, fallback: T): Promise<T> {
+  const left = deadline - Date.now()
+  if (left <= 0) return Promise.resolve(fallback)
+  return new Promise<T>(resolve => {
+    const t = setTimeout(() => resolve(fallback), left)
+    p.then(v => { clearTimeout(t); resolve(v) }, () => { clearTimeout(t); resolve(fallback) })
+  })
+}
 
 export async function saveProjectUpdate(
   supabase: SupabaseClient, userId: string, projectId: string, text: string,
@@ -24,6 +36,7 @@ export async function saveProjectUpdate(
       ok: true
       themes: { text: string; at: string }[]
       changed: boolean
+      ticked?: string[]
       previous?: string[]
       /** A project with a stored move: the next one, and what it logged as done. */
       move?: { text: string; kind: 'move' | 'fork' }
@@ -39,6 +52,7 @@ export async function saveProjectUpdate(
     .from('projects').select('id').eq('id', projectId).eq('user_id', userId).single()
   if (projErr || !project) return { ok: false, status: 404, error: 'project not found' }
 
+  const deadline = Date.now() + UPDATE_BUDGET_MS
   const now = new Date().toISOString()
   const { data: memory, error: insertErr } = await supabase
     .from('memories')
@@ -65,9 +79,13 @@ export async function saveProjectUpdate(
 
   // Inside the request: a note that is only "saved" and not yet read changes
   // nothing the person can see. A failed read is retried by the daily job.
-  try { await processMemory(memory.id as string) } catch (e) {
-    console.warn('[project-update] processing failed, the daily job will retry:', e instanceof Error ? e.message : e)
-  }
+  // Capped well short of the whole budget so the lines and the move still get a go.
+  await within(
+    processMemory(memory.id as string).catch((e: unknown) => {
+      console.warn('[project-update] processing failed, the daily job will retry:', e instanceof Error ? e.message : e)
+    }),
+    Math.min(deadline, Date.now() + 15_000), undefined,
+  )
 
   await supabase
     .from('projects')
@@ -77,7 +95,7 @@ export async function saveProjectUpdate(
   // One after the other: both read-then-write the project's metadata, and
   // run together the second write would wipe the first.
   // "Finished chapter 4" ticks Chapter 4 (project-parts.ts).
-  const ticked = await tickFromSaid(supabase, userId, projectId, clean).catch(() => [] as string[])
+  const ticked = await within(tickFromSaid(supabase, userId, projectId, clean).catch(() => [] as string[]), deadline, [] as string[])
   // The last row just ticked: offer to call it finished.
   let allTicked = false
   if (ticked.length) {
@@ -87,14 +105,14 @@ export async function saveProjectUpdate(
   }
   // The note is saved by now, so a model failure below must not read as
   // "couldn't save": the person would retry and file it twice.
-  const refreshed = await refreshThemes(supabase, userId, projectId, true).catch((e: unknown) => {
+  const refreshed = await within(refreshThemes(supabase, userId, projectId, true).catch((e: unknown) => {
     console.warn('[project-update] lines not re-read:', e instanceof Error ? e.message : e)
     return null
-  })
-  const moved = await moveFromUpdate(supabase, userId, projectId, clean).catch((e: unknown) => {
+  }), deadline, null)
+  const moved = await within(moveFromUpdate(supabase, userId, projectId, clean).catch((e: unknown) => {
     console.warn('[project-update] move not rewritten:', e instanceof Error ? e.message : e)
     return null
-  })
+  }), deadline, null)
   return {
     ok: true,
     ...(ticked.length ? { ticked } : {}),
