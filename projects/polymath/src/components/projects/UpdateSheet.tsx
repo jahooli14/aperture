@@ -65,6 +65,7 @@ export function UpdateSheet({ project, onClose, onAddMade }: {
         const s = useMoveStore.getState()
         if (s.error || !s.move) throw new Error(s.error ?? 'no move')
         setResult({ themes: [], changed: false, move: { text: s.move.text, kind: s.move.kind } })
+        useProjectStore.getState().fetchProjects().catch(() => {})
       } else {
         const r = await api.post('utilities?resource=project-update', { project_id: project.id, text: text.trim() }, { timeout: 60_000 }) as {
           themes?: ProjectTheme[]; changed?: boolean; previous?: string[]
@@ -75,8 +76,9 @@ export function UpdateSheet({ project, onClose, onAddMade }: {
           changed: !!r.changed, previous: r.previous, move: r.move, logged: r.logged, projectDone: !!r.project_done,
           ticked: Array.isArray(r.ticked) ? r.ticked : [],
         })
+        // Saved by now: a failed refresh must not read as "couldn't save".
+        useProjectStore.getState().fetchProjects().catch(() => {})
       }
-      await useProjectStore.getState().fetchProjects()
     } catch {
       setError(navigator.onLine
         ? "Couldn't save that. What you wrote is still here, so try again."
