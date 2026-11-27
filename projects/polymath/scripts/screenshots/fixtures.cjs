@@ -4,6 +4,25 @@
  * Anything not listed answers `{}`; add a fixture when a page looks empty
  * for the wrong reason.
  */
+function yearFixture() {
+  const days = []
+  for (let i = 0; i < 365; i++) {
+    const r = Math.sin(i * 12.9898) * 43758.5453; const f = r - Math.floor(r)
+    const busy = i > 120 && i < 200 ? 0.55 : i > 300 ? 0.4 : 0.12
+    if (f < busy) days.push(new Date(Date.now() - (364 - i) * 86400000).toISOString().slice(0, 10))
+  }
+  return {
+    from: new Date(Date.now() - 364 * 86400000).toISOString().slice(0, 10), to: new Date().toISOString().slice(0, 10), days,
+    projects: [
+      { project_id: 'p-book', title: 'Going Analogue', days: 58, first: '', last: '' },
+      { project_id: 'p-mixes', title: 'DJ mixes', days: 21, first: '', last: '' },
+      { project_id: 'p-toy', title: "Oscar's wooden train", days: 6, first: '', last: '' },
+    ],
+    comebacks: [{ project_id: 'p-book', title: 'Going Analogue', day: '2026-10-03', gap: 52 }],
+    busiest_month: { month: '2026-05', days: 17 },
+  }
+}
+
 const now = new Date().toISOString()
 const daysAgo = n => new Date(Date.now() - n * 86400000).toISOString()
 
@@ -67,6 +86,7 @@ const routes = {
   projects,
   memories: { memories },
   'utilities?resource=today': { spark },
+  'utilities?resource=mirror&span=year&tz=0': { year: yearFixture() },
   'utilities?resource=season': {
     season: { main: { id: 'p-book', title: 'Going Analogue' }, also: [{ id: 'p-toy', title: "Oscar's wooden train", size: 'weekend' }], until: '2026-12-25', label: 'Christmas', active: true },
     projects: projects.map(p => ({ id: p.id, title: p.title })),
