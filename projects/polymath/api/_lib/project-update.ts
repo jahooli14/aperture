@@ -64,7 +64,8 @@ export async function saveProjectUpdate(
       orig_transcript: clean,
       tags: [],
       audiopen_created_at: now,
-      memory_type: 'quick-note',
+      // No memory_type: the live check constraint may not allow 'quick-note'
+      // (migration 010 not run), and processing sets the type anyway.
       // Pins the note to this project (explicit-project.ts), whatever the
       // model would have guessed.
       source_reference: `project:${projectId}`,
