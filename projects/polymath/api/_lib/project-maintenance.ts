@@ -49,7 +49,8 @@ export async function generateZebraReport(project: any): Promise<string> {
 export async function buryProject(projectId: string, userId: string): Promise<void> {
   const { error } = await supabase
     .from('projects')
-    .update({ status: 'graveyard' })
+    .update({ status: 'abandoned', state: 'mull', is_priority: false, up_next_position: null })
+    // 'graveyard' is not allowed by projects_status_check; 'abandoned' is the stored word.
     .eq('id', projectId)
     .eq('user_id', userId)
 
@@ -83,7 +84,7 @@ export async function pickSynthesisResurfaceCandidate(userId: string): Promise<a
     .from('projects')
     .select('id, title, description, metadata, updated_at, created_at, status')
     .eq('user_id', userId)
-    .eq('status', 'graveyard')
+    .in('status', ['abandoned', 'graveyard'])
 
   if (error) {
     console.error('[pickSynthesisResurfaceCandidate] Error fetching graveyard projects:', error)

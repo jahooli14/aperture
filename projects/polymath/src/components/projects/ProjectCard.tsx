@@ -159,7 +159,10 @@ export function ProjectCard({ project, prominent = false }: { project: Project, 
   const handleMarkComplete = async (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    await updateProject(project.id, { status: 'completed' })
+    try { await updateProject(project.id, { status: 'completed' }) } catch {
+      addToast({ title: "Couldn't mark it done", description: 'Nothing changed. Try again.', variant: 'destructive' })
+      return
+    }
     addToast({ title: 'Project completed!', description: `"${project.title}" marked as complete.`, variant: 'success' })
     setShowContextMenu(false)
   }
@@ -167,7 +170,10 @@ export function ProjectCard({ project, prominent = false }: { project: Project, 
   const handleSendToGraveyard = async (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    await updateProject(project.id, { status: 'graveyard' })
+    try { await updateProject(project.id, { status: 'graveyard' }) } catch {
+      addToast({ title: "Couldn't send it to the graveyard", description: 'Nothing changed. Try again.', variant: 'destructive' })
+      return
+    }
     addToast({ title: 'Sent to Graveyard', description: `"${project.title}" archived.` })
     setShowContextMenu(false)
   }

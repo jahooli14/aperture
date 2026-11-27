@@ -55,6 +55,7 @@ export function UpdateSheet({ project, onClose, onAddMade }: {
   const [result, setResult] = useState<Result | null>(null)
   const [undone, setUndone] = useState(false)
   const [finishing, setFinishing] = useState(false)
+  const [finishError, setFinishError] = useState<string | null>(null)
   const online = typeof navigator === 'undefined' || navigator.onLine
   // The keyboard overlays the page (resizes-visual), so lift the sheet above it.
   const keyboardInset = useKeyboardInset()
@@ -117,11 +118,18 @@ export function UpdateSheet({ project, onClose, onAddMade }: {
   }
 
   const finish = async () => {
+    if (finishing) return
     setFinishing(true)
+    setFinishError(null)
     try {
-      if (repeating) await useMoveStore.getState().startNextCycle(project.id)
-      else await useProjectStore.getState().updateProject(project.id, { status: 'completed' })
+      if (repeating) {
+        // startNextCycle reports failure by returning false, not throwing.
+        if (!(await useMoveStore.getState().startNextCycle(project.id))) throw new Error('next cycle failed')
+      } else await useProjectStore.getState().updateProject(project.id, { status: 'completed' })
       onClose()
+    } catch {
+      // Don't close as if it worked: say so and leave the button to try again.
+      setFinishError("Couldn't do that just now. Try again.")
     } finally { setFinishing(false) }
   }
 
@@ -197,6 +205,7 @@ export function UpdateSheet({ project, onClose, onAddMade }: {
                 <button onClick={() => { void finish() }} disabled={finishing} className="neon-button px-4 py-2 rounded-lg text-[13px] font-semibold disabled:opacity-50">
                   {finishing ? 'One moment…' : repeating ? 'Line up the next one' : 'Mark it done'}
                 </button>
+                {finishError && <p className="text-[13px]" style={{ color: 'var(--brand-text-secondary)' }}>{finishError}</p>}
               </div>
             )}
             {onAddMade && (

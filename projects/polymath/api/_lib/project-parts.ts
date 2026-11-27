@@ -88,7 +88,11 @@ async function write(supabase: SupabaseClient, userId: string, projectId: string
   const { data, error } = await supabase.from('projects').select('metadata').eq('id', projectId).eq('user_id', userId).single()
   if (error || !data) throw new Error(error?.message ?? 'project not found')
   const metadata = (data.metadata as Record<string, unknown>) ?? {}
-  const parts = change(readParts(metadata))
+  const before = readParts(metadata)
+  const parts = change(before)
+  // Nothing changed: don't rewrite the whole metadata blob from a read that
+  // may already be stale (an Update with no ticks used to do this every time).
+  if (JSON.stringify(before) === JSON.stringify(parts)) return parts
   const { error: upErr } = await supabase.from('projects').update({ metadata: { ...metadata, parts } }).eq('id', projectId).eq('user_id', userId)
   if (upErr) throw new Error(upErr.message)
   return parts

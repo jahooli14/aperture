@@ -1857,6 +1857,9 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
       return res.status(200).json({ move })
     }
 
+    const ctx = await loadMoveContext(supabase, userId, project_id)
+    if (!ctx) return res.status(404).json({ error: 'project not found' })
+    // Only once the project is known to be theirs: the fragment names project_id.
     if (action === 'answer' && said) {
       // The answer is theirs and it's about the project, so it's kept the
       // same way the planner's own questions always kept answers.
@@ -1866,8 +1869,6 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
       if (fragErr) console.warn('[utilities/move] could not keep the answer as a note:', fragErr.message)
     }
 
-    const ctx = await loadMoveContext(supabase, userId, project_id)
-    if (!ctx) return res.status(404).json({ error: 'project not found' })
     if (action === 'get' && ctx.current) return res.status(200).json({ move: ctx.current })
 
     let feedback = ctx.input.feedback
