@@ -11,7 +11,7 @@ const fs = require('fs')
 const { chromium } = require('playwright')
 const { routes, tables } = require('./fixtures.cjs')
 
-const PORT = 5199
+const PORT = Number(process.env.SHOTS_PORT) || 5199
 const BASE = `http://localhost:${PORT}`
 const PAGES = {
   home: '/', projects: '/projects', 'project-big': '/projects/p-book', 'project-quick': '/projects/p-toy',
