@@ -19,6 +19,7 @@ import { updateItemConnections } from './_lib/connection-logic.js'
 import { backfillProjectTags } from './_lib/project-tags.js'
 import { isGraveyarded } from './_lib/project-state.js'
 import { preserveServerOwned } from './_lib/server-owned-metadata.js'
+import { withErrorLog } from './_lib/error-log.js'
 
 // Validation schema for rating suggestions
 const RateRequestSchema = z.object({
@@ -2171,7 +2172,7 @@ Good: ["Record a 60-second voice memo titled chapter-1-opening", "Phone Mum and 
 
 
 // Error handling wrapper
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+async function route(req: VercelRequest, res: VercelResponse) {
   try {
     return await internalHandler(req, res)
   } catch (error: any) {
@@ -2183,3 +2184,5 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     })
   }
 }
+
+export default withErrorLog('projects', route)

@@ -47,6 +47,7 @@ function missingColumnError(error: unknown): { status: number; body: Record<stri
   }
 }
 import { articleEmbeddingText } from './_lib/article-text.js'
+import { withErrorLog } from './_lib/error-log.js'
 
 // rss-parser is used only for XML parsing now — fetching is done manually
 // in robustParseFeed below so we can present a full browser identity to
@@ -3138,7 +3139,7 @@ async function storeCapabilitiesFromArticle(
 
 
 // Error handling wrapper
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+async function route(req: VercelRequest, res: VercelResponse) {
   try {
     return await internalHandler(req, res)
   } catch (error: any) {
@@ -3150,3 +3151,5 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     })
   }
 }
+
+export default withErrorLog('reading', route)
