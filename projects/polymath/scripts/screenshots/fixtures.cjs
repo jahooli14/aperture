@@ -48,7 +48,21 @@ const lists = [
   { id: 'l2', user_id: 'u1', title: 'Books', type: 'book', created_at: daysAgo(90), updated_at: now, item_count: 1 },
 ]
 
+const art = (i, title, source, status = 'unread') => ({
+  id: 'a' + i, url: 'https://example.com/' + i, title, excerpt: 'A short teaser for the piece.', source,
+  favicon_url: null, thumbnail_url: null, published_date: daysAgo(i), read_time_minutes: 4 + i, status,
+  tags: ['rss'], created_at: daysAgo(i), pinned_at: null,
+})
+const consuming = {
+  saved: [art(1, 'Why constraint makes better art', 'Aeon', 'reading')],
+  new: [art(2, 'The slow web, revisited', 'Kottke'), art(3, 'How a dazzle ship disappears', '99% Invisible')],
+  recently_dismissed: [], recently_archived: [], new_has_more: false, new_next_offset: null,
+}
+const activeItems = [{ id: 'i1', list_id: 'l2', content: 'Flowers for Algernon', list: { title: 'Books', type: 'book' } }]
+
 const routes = {
+  'lists?scope=items&resource=active-items&types=book&limit=3': activeItems,
+  'reading?resource=consuming': consuming,
   lists,
   projects,
   memories: { memories },
