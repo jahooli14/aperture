@@ -42,6 +42,7 @@ import { checkCandidate, crossingDepth, CROSSING_BONUS, TRIFECTA_BONUS, slotOf, 
 import { draftPrompt, judgePrompt } from './mull-prompts.js'
 import { checkFactSafely } from './fact-check.js'
 import { loadPortrait, type Portrait } from './portrait.js'
+import { MODELS } from './models.js'
 
 /**
  * Four days.
@@ -75,7 +76,7 @@ const CANDIDATES_PER_RUN = 4
  *  ~24s, almost all of it hidden reasoning before a word of the answer.
  *  The draft reasons in the open instead -- `noticing` and `doubt` per
  *  candidate. `minimal` is not supported on this model: it 400s. */
-const MODEL = 'gemini-flash-latest'
+const MODEL = MODELS.FLASH
 
 /**
  * The whole run -- history, corpus, draft, judge -- inside ten seconds,

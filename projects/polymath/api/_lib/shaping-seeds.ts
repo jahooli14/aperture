@@ -26,12 +26,13 @@ import { parseModelJson } from './schemas.js'
 import { findVoiceViolations, PLAIN_ENGLISH_RULES, CHAT_TURN_RULES } from './plain-english.js'
 import { loadCorpus, evidenceText, type Corpus, type CorpusRow } from './mull-corpus.js'
 import { quoteIsReal, resolveEvidence, unsupportedSpecifics, type Evidence } from './mull.js'
+import { MODELS } from './models.js'
 
 /** An offer is built from two things only they have. Its own constant since
  *  the take channel dropped to one (mull.ts). */
 const MIN_EVIDENCE_ROWS = 2
 
-const MODEL = 'gemini-flash-latest'
+const MODEL = MODELS.FLASH
 /** Someone is waiting on this turn. Over it, the plain chat answers. */
 export const SEED_BUDGET_MS = 9_000
 const MAX_OFFERS = 3

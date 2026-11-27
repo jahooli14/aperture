@@ -13,14 +13,23 @@
  * dial GEMINI_THINKING_LEVEL. Aliases verified against
  * https://ai.google.dev/gemini-api/docs/models (June 2026):
  *   gemini-flash-lite-latest → Flash-Lite tier (cheapest; thinking model)
- *   gemini-flash-latest      → full Flash
+ *   gemini-flash-latest      → full Flash (stays on the Flash line: it did NOT
+ *                              move to Gemini 4, so the everyday tier is pinned below)
  *   gemini-pro-latest        → Pro (3.1 Pro as of Mar 2026)
  *
  * Embeddings stay PINNED: an alias swap would change the vector space and
  * break cosine similarity against every stored embedding. Never alias these.
  */
 
+// The everyday tier. Gemini 4 Hydrogen (Nov 2026 docs): fast, 1M context, thinking
+// low/medium/high(default)/xhigh -- no `minimal`. Aliases never reach it
+// (`gemini-flash-latest` stays on the Flash line), so it is named here, once.
+// Roll back without a deploy of code: set GEMINI_FLASH_MODEL in Vercel (for
+// example `gemini-flash-latest`) and redeploy.
+const FLASH = process.env.GEMINI_FLASH_MODEL?.trim() || 'gemini-4-hydrogen'
+
 export const MODELS = {
+  FLASH,
   // Flash-Lite, latest. Thinking model — callers must give maxOutputTokens
   // enough headroom for reasoning + the answer (see generator.ts fast path).
   DEFAULT_CHAT: 'gemini-flash-lite-latest',       // bulk + default everywhere
@@ -28,14 +37,14 @@ export const MODELS = {
   // Full Flash, not Lite: the spine is the plan for the whole project,
   // written once at creation/replan — worth the extra cost and thinking
   // depth "Record the vocals" not "make the album" needs.
-  TASK_SPINE_CHAT: 'gemini-flash-latest',
+  TASK_SPINE_CHAT: FLASH,
   // Full Flash, not Lite: this is the plan the user is looking at right
   // now, being reasoned about live -- readiness, sizing, splitting,
   // reshaping and topping up (session-ready.ts, session-split.ts,
   // session-shaper.ts's reshape, session-topup.ts) all happen here. Was
   // Lite; moved after Lite let a bundled task through as one item for an
   // hour and then couldn't reliably act on "add more" once split.
-  SESSION_SHAPE_CHAT: 'gemini-flash-latest',
+  SESSION_SHAPE_CHAT: FLASH,
   FLASH_LIVE: 'gemini-3.1-flash-live-preview',    // Live API audio-to-audio (onboarding); pinned — no GA -latest alias
   PRO: 'gemini-pro-latest',                       // Reserved — high-stakes reasoning, off by default
   DEFAULT_EMBEDDING: 'gemini-embedding-001',      // PINNED — aliasing would break stored vectors

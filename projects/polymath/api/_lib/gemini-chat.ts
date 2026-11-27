@@ -112,7 +112,7 @@ export async function generateText(
         ...(options.responseFormat === 'json' && {
           responseMimeType: 'application/json'
         }),
-        ...thinkingFragment(options.thinkingLevel)
+        ...thinkingFragment(options.thinkingLevel, options.model || MODELS.DEFAULT_CHAT)
       }
     }, options.timeoutMs ? { timeout: options.timeoutMs } : undefined)
 

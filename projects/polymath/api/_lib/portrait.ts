@@ -20,8 +20,9 @@ import { generateText } from './gemini-chat.js'
 import { parseModelJson } from './schemas.js'
 import { PLAIN_ENGLISH_RULES, findVoiceViolations } from './plain-english.js'
 import { loadCorpus, type Corpus, type CorpusRow } from './mull-corpus.js'
+import { MODELS } from './models.js'
 
-const MODEL = 'gemini-flash-latest'
+const MODEL = MODELS.FLASH
 export const MIN_ROWS = 3
 export const MAX_LINES = 8
 /** Rebuilt at most this often. */

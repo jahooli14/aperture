@@ -23,8 +23,9 @@ import { unsupportedSpecifics } from './mull.js'
 import { loadProjectMaterial } from './project-material.js'
 import { readParts, partsLine } from './project-parts.js'
 import { madeSummary } from './made.js'
+import { MODELS } from './models.js'
 
-const MODEL = 'gemini-flash-latest'
+const MODEL = MODELS.FLASH
 export const SUMMARY_MAX_WORDS = 110
 const ANSWERS = 8
 
