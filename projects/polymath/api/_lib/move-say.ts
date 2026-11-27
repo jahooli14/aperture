@@ -25,8 +25,11 @@ export async function applySaidToMove(
   let loggedDone: string | null = null
   let projectDone = false
   if (ctx.current?.kind === 'move') {
+    // A two-boolean read, not writing. Lite agreed with Flash on 6 of 6 hand-made
+    // cases (done, not done, partly, whole project done) at a third of the
+    // wait (0.6s vs 1.6s): the person is waiting on this, so the faster tier.
     const verdict = await readSaid(ctx.current.text, said, prompt => generateText(prompt, {
-      model: MODELS.SESSION_SHAPE_CHAT, responseFormat: 'json', temperature: 0, maxTokens: 80, thinkingLevel: 'low',
+      model: MODELS.DEFAULT_CHAT, responseFormat: 'json', temperature: 0, maxTokens: 80, thinkingLevel: 'low',
     }))
     if (verdict.moveDone) {
       loggedDone = await logMoveDone(supabase, userId, projectId, ctx.current.text)

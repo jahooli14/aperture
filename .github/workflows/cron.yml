@@ -20,7 +20,7 @@ on:
     - cron: '0 */2 * * *'    # every 2h: idea-engine generator + voice-note reminder
     - cron: '0 8 * * *'      # 08:00 UTC daily: project ideas + today's question
     - cron: '0 9 * * *'      # 09:00 UTC daily: idea-engine review + email digest
-    - cron: '0 8 * * 0'      # Sunday 08:00 UTC: drift-decay + outside find
+    - cron: '0 8 * * 0'      # Sunday 08:00 UTC: drift-decay
   workflow_dispatch:
     inputs:
       force:
@@ -180,8 +180,9 @@ jobs:
           if [ "$SCHEDULE" = "0 8 * * 0" ] || [ "$FORCE" = "true" ]; then
             # Silent, no-confirmation harvest of drifted + stalled projects.
             hit "/api/utilities?resource=drift-decay" &
-            # One thing from outside for the live project's next step.
-            hit "/api/utilities?resource=find-outside" &
+            # find-outside no longer runs weekly: its find is shown nowhere and
+            # nothing reads it (a search-grounded Gemini call a week for
+            # nothing). Still runnable by hand: job=find-outside.
           fi
 
           wait

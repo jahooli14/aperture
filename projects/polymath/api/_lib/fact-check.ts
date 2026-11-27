@@ -19,8 +19,9 @@
 import { GoogleGenAI } from '@google/genai'
 import { parseModelJson } from './schemas.js'
 import { checkPage } from './outside-find.js'
+import { MODELS } from './models.js'
 
-const MODEL = 'gemini-flash-latest'
+const MODEL = MODELS.FLASH
 const PAGE_TIMEOUT_MS = 4_000
 
 export type Verdict = 'true' | 'false' | 'unsure'

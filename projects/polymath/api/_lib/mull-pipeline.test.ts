@@ -10,6 +10,7 @@
  * judge's say-so.
  */
 
+import { MODELS } from './models.js'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 const generateText = vi.fn()
@@ -567,10 +568,10 @@ describe('the mull channel, end to end', () => {
     expect(judgePrompt.match(/SHOWN TO THEM:/g)).toHaveLength(2)
   })
 
-  it('never uses Pro', async () => {
+  it('never uses Pro: only the everyday Flash tier', async () => {
     respond({ draft: [ONE_TAKE], judge: [ship(1)] })
     await bakeMull(fakeSupabase(corpus()).client, 'u1')
-    for (const call of generateText.mock.calls) expect(call[1].model).toBe('gemini-flash-latest')
+    for (const call of generateText.mock.calls) expect(call[1].model).toBe(MODELS.FLASH)
   })
 
   it('keeps hidden thinking off -- that is where the time goes', async () => {

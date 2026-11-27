@@ -24,8 +24,9 @@ import { parseModelJson } from './schemas.js'
 import { PLAIN_ENGLISH_RULES, findVoiceViolations } from './plain-english.js'
 import { checkFactSafely } from './fact-check.js'
 import { SHELF_LIFE_HOURS } from './mull-generator.js'
+import { MODELS } from './models.js'
 
-const MODEL = 'gemini-flash-latest'
+const MODEL = MODELS.FLASH
 /** How many steps back the prompt sees. Enough to not repeat itself. */
 export const THREAD_MEMORY = 6
 /** One press, whole. Under the function ceiling with room to spare. */

@@ -45,8 +45,10 @@ export function resolveThinkingLevel(requested?: ThinkingLevel): ThinkingLevel |
  * into a generationConfig object. Returns {} when no level applies, so the
  * model keeps its own default. Only valid for Gemini 3.x models.
  */
-export function thinkingFragment(requested?: ThinkingLevel): Partial<GenerationConfig> {
-  const level = resolveThinkingLevel(requested)
+export function thinkingFragment(requested?: ThinkingLevel, model?: string): Partial<GenerationConfig> {
+  let level = resolveThinkingLevel(requested)
+  // `minimal` is Flash-Lite only; Gemini 4 and Pro 400 on it. Say `low` instead.
+  if (level === 'minimal' && model && !/lite/i.test(model)) level = 'low'
   if (!level) return {}
   // thinkingConfig is a v1beta field not yet in the legacy SDK's type; the
   // cast keeps it type-safe to spread while still reaching the API at runtime.

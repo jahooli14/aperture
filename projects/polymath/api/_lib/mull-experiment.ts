@@ -19,8 +19,9 @@ import { loadCorpus, formatRow, type Corpus, type CorpusRow } from './mull-corpu
 import { checkCandidate, judgePercent, judgeRank, parseJudgeScores, type Candidate, type Grounded, type JudgeScore } from './mull.js'
 import { judgePrompt } from './mull-prompts.js'
 import { buildDraftPrompt, loadEchoContext, readCandidates } from './mull-generator.js'
+import { MODELS } from './models.js'
 
-const FLASH = 'gemini-flash-latest'
+const FLASH = MODELS.FLASH
 const LITE = 'gemini-flash-lite-latest'
 
 /** $ per 1M tokens, from Google's pricing page (Oct 2026): Gemini 3.8 Flash at
