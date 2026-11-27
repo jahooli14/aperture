@@ -2036,7 +2036,9 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
     const { aggregateMonthlyMirror, monthStart } = await import('./_lib/mirror.js')
     const { isAppAuthored } = await import('./_lib/corpus-provenance.js')
     const { explicitProjectId } = await import('./_lib/explicit-project.js')
-    const start = monthStart(new Date())
+    // `span=year` lays the same days out over twelve months (year-ledger.ts).
+    const wantYear = req.query.span === 'year'
+    const start = wantYear ? new Date(Date.now() - 366 * 86_400_000) : monthStart(new Date())
     // Days, not minutes: nobody remembers to press start and stop. A day
     // counts when something you did leaves a trace on the project: a session
     // or close-out, or a note filed under it (not one the app prompted).
@@ -2055,7 +2057,10 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
         .select('created_at, tags, triage, source_reference')
         .eq('user_id', userId)
         .gte('created_at', start.toISOString()),
-      supabase.from('projects').select('id, title, state').eq('user_id', userId).neq('state', 'harvested'),
+      // The year keeps finished projects: the work on them still happened.
+      wantYear
+        ? supabase.from('projects').select('id, title, state').eq('user_id', userId)
+        : supabase.from('projects').select('id, title, state').eq('user_id', userId).neq('state', 'harvested'),
       // Something made on it that day (a painting, a mix), dated by the day made.
       supabase
         .from('project_outputs')
@@ -2081,6 +2086,10 @@ async function handleExecutionSessions(req: VercelRequest, res: VercelResponse) 
         .map(m => ({ project_id: explicitProjectId(m.source_reference) ?? m.triage?.project_id ?? '', at: m.created_at }))
         .filter(t => t.project_id),
     ]
+    if (wantYear) {
+      const { buildYear } = await import('./_lib/year-ledger.js')
+      return res.status(200).json({ year: buildYear(traces, (projectsData ?? []) as any, new Date(), tzOffsetMin) })
+    }
     const rows = aggregateMonthlyMirror(traces, (projectsData ?? []) as any, tzOffsetMin)
     return res.status(200).json({ month: start.toISOString().slice(0, 7), rows })
   }

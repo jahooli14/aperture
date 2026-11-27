@@ -9,6 +9,7 @@ import { useNavigate } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
 import { api } from '../lib/apiClient'
 import { SubtleBackground } from '../components/SubtleBackground'
+import { YearLedger } from '../components/you/YearLedger'
 
 interface LineRow { kind: string; id: string; title: string; at?: string }
 interface Line { name: string; rows: LineRow[]; first?: string; last?: string }
@@ -47,6 +48,9 @@ export function WhatItKnowsPage() {
           </div>
         </header>
 
+        <YearLedger />
+
+        <p className="eyebrow mb-2">What you keep coming back to</p>
         <p className="text-[15px] mb-6" style={{ color: 'var(--brand-text-secondary)' }}>
           The things you keep coming back to. It reads everything you add, every night, so this fills up as you go.
         </p>
