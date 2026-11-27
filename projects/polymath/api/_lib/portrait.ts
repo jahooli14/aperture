@@ -22,7 +22,8 @@ import { PLAIN_ENGLISH_RULES, findVoiceViolations } from './plain-english.js'
 import { loadCorpus, type Corpus, type CorpusRow } from './mull-corpus.js'
 import { MODELS } from './models.js'
 
-const MODEL = MODELS.FLASH
+// Rebuilt overnight, nobody waiting: the slower, sharper tier.
+const MODEL = MODELS.QUALITY
 export const MIN_ROWS = 3
 export const MAX_LINES = 8
 /** Rebuilt at most this often. */

@@ -21,15 +21,19 @@
  * break cosine similarity against every stored embedding. Never alias these.
  */
 
-// The everyday tier. Gemini 4 Hydrogen (Nov 2026 docs): fast, 1M context, thinking
-// low/medium/high(default)/xhigh -- no `minimal`. Aliases never reach it
-// (`gemini-flash-latest` stays on the Flash line), so it is named here, once.
-// Roll back without a deploy of code: set GEMINI_FLASH_MODEL in Vercel (for
-// example `gemini-flash-latest`) and redeploy.
-const FLASH = process.env.GEMINI_FLASH_MODEL?.trim() || 'gemini-4-hydrogen'
+// Two tiers of "full Flash". Measured on the live API (Nov 2026, same prompt):
+//   gemini-flash-latest  ~3.5s   cheap     good enough once facts are checked
+//   gemini-4-hydrogen    ~11s    ~5x price best answers: precise, relevant cases
+// Hydrogen is for work nobody waits on (the overnight portrait). Anything a
+// person is waiting for (a take, go further, a summary, the new-project chat)
+// stays on FLASH. Override either from Vercel without a code change:
+// GEMINI_FLASH_MODEL, GEMINI_QUALITY_MODEL (then redeploy).
+const FLASH = process.env.GEMINI_FLASH_MODEL?.trim() || 'gemini-flash-latest'
+const QUALITY = process.env.GEMINI_QUALITY_MODEL?.trim() || 'gemini-4-hydrogen'
 
 export const MODELS = {
   FLASH,
+  QUALITY,
   // Flash-Lite, latest. Thinking model — callers must give maxOutputTokens
   // enough headroom for reasoning + the answer (see generator.ts fast path).
   DEFAULT_CHAT: 'gemini-flash-lite-latest',       // bulk + default everywhere
