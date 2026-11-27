@@ -414,7 +414,7 @@ export function ProjectsPageCarousel({
   archiveSpotlight,
 }: ProjectsPageCarouselProps) {
 
-  if (loading) return <div className="p-8 text-center text-[var(--brand-text-muted)] animate-pulse aperture-header uppercase tracking-widest text-xs">Loading dashboard...</div>
+  if (loading) return <div className="p-8 text-center text-[var(--brand-text-muted)] animate-pulse aperture-header uppercase tracking-widest text-xs">Loading...</div>
 
   return (
     <div className="space-y-12 pb-20">
@@ -424,7 +424,7 @@ export function ProjectsPageCarousel({
         <section>
           <h2 className="section-heading">active <span className="accent">focus</span></h2>
           <p className="text-[12px] mb-4 -mt-2" style={{ color: 'var(--brand-text-muted)' }}>
-            The ones currently asking for your attention.
+            What you're working on right now.
           </p>
           <MasonryGrid projects={activeList} prominent={true} />
         </section>

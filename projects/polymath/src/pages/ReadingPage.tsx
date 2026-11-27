@@ -1128,27 +1128,18 @@ export function ReadingPage() {
                         activeTab === 'unread' ? 'All clear.' :
                         activeTab === 'reading' ? 'Nothing in progress.' :
                         activeTab === 'archived' ? 'Archive is empty.' :
-                        `No ${activeTab} articles`
+                        activeTab === 'good' ? 'Nothing marked good yet.' : `No ${activeTab} articles`
                       }
                       description={
                         activeTab === 'queue'
-                          ? 'Drop a URL in the bar above. Articles, essays, research — anything worth reading.'
+                          ? 'Paste a link in the bar above to save something to read.'
                           : activeTab === 'unread'
                           ? 'You\'re up to date. Save something new to read next.'
                           : activeTab === 'reading'
                           ? 'Open an article to start reading. It\'ll show here so you can pick up where you left off.'
+                          : activeTab === 'good'
+                          ? 'Tap "This was good" at the end of an article and it lands here.'
                           : 'Articles you archive will live here.'
-                      }
-                      action={
-                        activeTab === 'queue' ? (
-                          <div className="flex flex-wrap justify-center gap-2">
-                            {['essays', 'research', 'long reads', 'tutorials', 'news'].map(example => (
-                              <span key={example} className="px-2 py-1 rounded-lg text-[11px] font-bold uppercase tracking-wide" style={{ background: 'var(--brand-glass-bg)', border: '1.5px solid var(--glass-surface-hover)', boxShadow: '0 2px 8px rgba(0,0,0,0.5)', color: "var(--brand-text-secondary)" }}>
-                                {example}
-                              </span>
-                            ))}
-                          </div>
-                        ) : undefined
                       }
                     />
                   ) : (
