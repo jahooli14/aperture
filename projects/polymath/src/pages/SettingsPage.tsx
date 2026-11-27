@@ -438,7 +438,7 @@ export function SettingsPage() {
             <h2 className="section-heading">the idea <span className="accent">brief</span></h2>
 
             <p className="text-sm mb-4" style={{ color: 'var(--brand-text-secondary)' }}>
-              This is what the home "suggest a project" button asks the model. Rewrite it in your own words — what kind of idea you want, what to avoid, how to phrase it. Leave it blank to use the default. Voice notes, projects, and the JSON output stay structural; only this brief is editable.
+              Tell the "suggest a project" button what kind of idea you want and what to steer clear of. Leave it blank and it uses the default.
             </p>
 
             <div

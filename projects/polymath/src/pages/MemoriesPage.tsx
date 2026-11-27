@@ -498,7 +498,7 @@ function MemoriesPageInner() {
             <PremiumTabs
               tabs={[
                 { id: 'recent', label: `Thoughts (${memories.length})` },
-                { id: 'resurfacing', label: `Resurface (${resurfacing.length})` },
+                { id: 'resurfacing', label: `Old ones (${resurfacing.length})` },
               ]}
               activeTab={view}
               onChange={(tabId) => setView(tabId as typeof view)}
@@ -525,7 +525,7 @@ function MemoriesPageInner() {
                 <div className="mb-8">
                   <div className="page-eyebrow mt-0 mb-2">Worth a second look</div>
                   <p className="meta-serif">
-                    Older thoughts surfacing again. Mark them reviewed when you're done.
+                    Older thoughts, brought back. Mark each one when you've had another look.
                   </p>
                 </div>
               )}
