@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { readStep, threadPrompt } from './mull-thread.js'
+import { readStep, readSteps, threadPrompt } from './mull-thread.js'
 
 describe('the thread', () => {
   it('carries every step and what they said back', () => {
@@ -14,5 +14,17 @@ describe('the thread', () => {
     expect(readStep({ take: Array(30).fill('word').join(' ') })).toBeNull()
     expect(readStep(null)).toBeNull()
   })
-})
 
+  it('asks for three candidates and not to answer the last line', () => {
+    const p = threadPrompt(['Readers miss word changes in a sentence'])
+    expect(p).toContain('THREE different candidates')
+    expect(p).toContain('Do NOT answer the question')
+  })
+
+  it('reads three candidates, or the old single step, and drops the unusable', () => {
+    const ok = 'Horseflies crash into the stripes and cannot land.'
+    expect(readSteps({ steps: [{ take: ok, outside: 'x' }, { take: '' }, { take: ok + ' Again here.', outside: 'y' }] })).toHaveLength(2)
+    expect(readSteps({ take: ok, outside: 'x' })).toHaveLength(1)
+    expect(readSteps(null)).toEqual([])
+  })
+})
