@@ -66,6 +66,7 @@ export function PWAInstallBanner() {
           {/* Close Button */}
           <button
             onClick={handleDismiss}
+            aria-label="Dismiss"
             className="absolute top-3 right-3 p-1 rounded-lg hover:bg-[rgba(255,255,255,0.1)] transition-colors"
             style={{ color: "var(--brand-primary)" }}
           >

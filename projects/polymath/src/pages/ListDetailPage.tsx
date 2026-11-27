@@ -482,7 +482,7 @@ const QuoteCard = memo(({
                                         }
                                     }}
                                 />
-                                <button onClick={handleSaveAuthor} className="p-1.5 rounded-xl bg-[rgba(255,255,255,0.1)] hover:bg-white/20 transition-colors">
+                                <button onClick={handleSaveAuthor} aria-label="Save" className="p-1.5 rounded-xl bg-[rgba(255,255,255,0.1)] hover:bg-white/20 transition-colors">
                                     <Check className="h-3.5 w-3.5 text-[var(--brand-text-primary)]/70" />
                                 </button>
                             </div>

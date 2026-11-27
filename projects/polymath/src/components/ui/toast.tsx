@@ -158,6 +158,7 @@ function ToastItem({ toast, isRemoving, onClose }: { toast: Toast; isRemoving: b
       </div>
       <button
         onClick={onClose}
+        aria-label="Dismiss"
         className="absolute right-1.5 top-1.5 h-8 w-8 flex items-center justify-center rounded-md text-white/60 hover:text-white hover:bg-white/10 transition-colors focus:outline-none focus:ring-2"
       >
         <X className="h-4 w-4" />

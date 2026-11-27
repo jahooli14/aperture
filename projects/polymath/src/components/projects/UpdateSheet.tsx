@@ -13,7 +13,7 @@
  * is waiting for its first move.
  */
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { motion } from 'framer-motion'
 import { Check, Loader2, X } from 'lucide-react'
@@ -21,6 +21,7 @@ import { api } from '../../lib/apiClient'
 import { useProjectStore } from '../../stores/useProjectStore'
 import { readStoredMove, useMoveStore } from '../../stores/useMoveStore'
 import { InFieldMic } from '../VoiceInput'
+import { useKeyboardInset } from '../../hooks/useKeyboardInset'
 import { ThemeList } from './ProjectThemes'
 import { splitDoneWhen } from '../../lib/moveText'
 import { readThemes, type ProjectTheme } from '../../lib/projectThemes'
@@ -46,13 +47,28 @@ export function UpdateSheet({ project, onClose, onAddMade }: {
   const fork = stored?.kind === 'fork' ? stored.text : null
   const repeating = !!(project.metadata as { cycle?: unknown } | undefined)?.cycle
 
-  const [text, setText] = useState('')
+  // An unsent update survives closing the sheet, so a spoken thought is never lost.
+  const draftKey = `update-draft:${project.id}`
+  const [text, setText] = useState(() => { try { return localStorage.getItem(draftKey) ?? '' } catch { return '' } })
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<Result | null>(null)
   const [undone, setUndone] = useState(false)
   const [finishing, setFinishing] = useState(false)
   const online = typeof navigator === 'undefined' || navigator.onLine
+  // The keyboard overlays the page (resizes-visual), so lift the sheet above it.
+  const keyboardInset = useKeyboardInset()
+  // Words typed or spoken are never thrown away by a stray tap or Escape.
+  useEffect(() => {
+    try { if (text.trim() && !result) localStorage.setItem(draftKey, text); else localStorage.removeItem(draftKey) } catch { /* private window */ }
+  }, [text, result, draftKey])
+  const hasDraft = !result && !!text.trim()
+  const dismiss = () => { if (!busy && !hasDraft) onClose() }
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') dismiss() }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  })
 
   const save = async () => {
     if (!text.trim() || busy) return
@@ -115,19 +131,19 @@ export function UpdateSheet({ project, onClose, onAddMade }: {
   // In a portal: opened from the home card, whose glass blurs and clips
   // anything fixed inside it, so the sheet has to live on the body.
   return createPortal(
-    <div className="fixed inset-0 z-[60] flex items-end justify-center" role="dialog" aria-modal="true" aria-label="Update">
+    <div className="fixed inset-x-0 top-0 z-[60] flex items-end justify-center" style={{ bottom: keyboardInset }} role="dialog" aria-modal="true" aria-label="Update">
       <motion.div
         className="absolute inset-0 bg-black/70"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.15 }}
-        onClick={busy ? undefined : onClose}
+        onClick={dismiss}
       />
       <motion.div
         initial={{ y: '100%' }}
         animate={{ y: 0 }}
         transition={{ type: 'spring', damping: 38, stiffness: 560, mass: 0.4 }}
-        className="relative w-full max-w-lg neon-edge rounded-t-[24px] rounded-b-none p-5 space-y-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] max-h-[88vh] overflow-y-auto"
+        className="relative w-full max-w-lg neon-edge rounded-t-[24px] rounded-b-none p-5 space-y-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] max-h-[88dvh] overflow-y-auto"
         style={{ background: '#0c1322' }}
       >
         <div className="flex items-start justify-between gap-3">
@@ -135,7 +151,7 @@ export function UpdateSheet({ project, onClose, onAddMade }: {
             <p className="eyebrow truncate">{project.title}</p>
             <p className="type-lead mt-1">{result ? 'Saved' : fork ? fork : 'Where did you get to?'}</p>
           </div>
-          <button onClick={onClose} aria-label="Close" className="p-1.5 -mr-1.5" style={{ color: 'var(--brand-text-muted)' }}><X size={18} /></button>
+          <button onClick={onClose} aria-label="Close" className="min-h-[44px] min-w-[44px] -mt-2 -mr-2 flex items-center justify-center" style={{ color: 'var(--brand-text-muted)' }}><X size={18} /></button>
         </div>
 
         {result ? (

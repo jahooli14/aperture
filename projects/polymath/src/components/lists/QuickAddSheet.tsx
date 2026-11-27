@@ -95,6 +95,7 @@ export function QuickAddSheet({ list, isOpen, onClose, listRgb }: QuickAddSheetP
                                 </div>
                                 <button
                                     onClick={onClose}
+                                    aria-label="Close"
                                     className="h-8 w-8 flex items-center justify-center rounded-full bg-[var(--glass-surface)] hover:bg-[rgba(255,255,255,0.1)] text-[var(--brand-text-muted)] hover:text-[var(--brand-text-primary)] transition-all"
                                 >
                                     <X className="h-4 w-4" />

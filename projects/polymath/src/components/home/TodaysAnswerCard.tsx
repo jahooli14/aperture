@@ -287,7 +287,14 @@ export function TodaysAnswerCard() {
           />
         </div>
 
-        <div className="relative px-5 pt-1 pb-5 cursor-pointer" onClick={() => navigate(`/projects/${focusProject!.id}`)}>
+        <div
+          className="relative px-5 pt-1 pb-5 cursor-pointer"
+          role="link"
+          tabIndex={0}
+          aria-label={`Open ${focusProject.title}`}
+          onClick={() => navigate(`/projects/${focusProject!.id}`)}
+          onKeyDown={e => { if (e.target === e.currentTarget && e.key === 'Enter') navigate(`/projects/${focusProject!.id}`) }}
+        >
           <div className="flex items-start justify-between gap-2">
             <h3 className="card-title-lg line-clamp-2 flex-1">{focusProject.title}</h3>
             {dormancyLabel && (

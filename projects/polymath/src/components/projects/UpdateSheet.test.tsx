@@ -14,7 +14,20 @@ import type { Project } from '../../types'
 const project = { id: 'p1', title: 'Going Analogue', metadata: { themes: [{ text: 'Do the full trim', at: '2026-10-01T00:00:00Z' }] } } as unknown as Project
 
 describe('UpdateSheet', () => {
-  beforeEach(() => { post.mockReset(); updateProject.mockReset(); startNextCycle.mockReset() })
+  beforeEach(() => { try { localStorage.clear() } catch { /* */ } post.mockReset(); updateProject.mockReset(); startNextCycle.mockReset() })
+
+  it('keeps an unsent update for next time, and ignores a tap outside while there is one', () => {
+    try { localStorage.removeItem('update-draft:p1') } catch { /* */ }
+    const onClose = vi.fn()
+    const first = render(<UpdateSheet project={project} onClose={onClose} />)
+    fireEvent.change(screen.getByPlaceholderText(/Trimmed chapter two/), { target: { value: 'Half a thought' } })
+    fireEvent.keyDown(document, { key: 'Escape' })
+    expect(onClose).not.toHaveBeenCalled()
+    first.unmount()
+    render(<UpdateSheet project={project} onClose={() => {}} />)
+    expect((screen.getByPlaceholderText(/Trimmed chapter two/) as HTMLTextAreaElement).value).toBe('Half a thought')
+    try { localStorage.removeItem('update-draft:p1') } catch { /* */ }
+  })
 
   it('asks where you got to and saves what you say to this project', async () => {
     post.mockResolvedValue({ themes: [{ text: 'Do the full trim', at: 'x' }], changed: false })
@@ -58,7 +71,7 @@ describe('UpdateSheet', () => {
 
 describe('UpdateSheet on a one-off project', () => {
   const oneOff = { id: 'c1', title: 'Graham coaster', metadata: { next_move: { text: 'Cut the cork square. Done when it sits flat.', kind: 'move' } } } as unknown as Project
-  beforeEach(() => { post.mockReset(); updateProject.mockReset() })
+  beforeEach(() => { try { localStorage.clear() } catch { /* */ } post.mockReset(); updateProject.mockReset() })
 
   it('logs what you did and shows the next move', async () => {
     post.mockResolvedValue({ themes: [], changed: false, logged: 'Cut the cork square. Done when it sits flat.', move: { text: 'Glue the felt on. Done when it holds.', kind: 'move' } })
