@@ -493,7 +493,7 @@ function MemoriesPageInner() {
                 reachable from the home masthead's moon at the same hour. */}
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 [&>*]:flex-1 [&>*]:min-w-0">
             {/* View Toggle */}
             <PremiumTabs
               tabs={[
@@ -502,7 +502,7 @@ function MemoriesPageInner() {
               ]}
               activeTab={view}
               onChange={(tabId) => setView(tabId as typeof view)}
-              className="flex-nowrap"
+              className="flex-nowrap [&>button]:flex-1 [&>button]:justify-center"
             />
           </div>
         </div>

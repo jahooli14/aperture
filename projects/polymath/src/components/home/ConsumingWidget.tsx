@@ -963,9 +963,9 @@ export function ConsumingWidget() {
           <div className="h-5 w-px bg-white/[0.05]" aria-hidden />
           <Link
             to="/reading"
-            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 text-[11px] uppercase tracking-[0.1em] text-[var(--brand-text-muted)] opacity-85 hover:opacity-100 hover:bg-white/[0.025] transition-all"
+            className="flex-1 flex items-center justify-center gap-1.5 px-2 py-2.5 text-[11px] uppercase tracking-[0.1em] text-[var(--brand-text-muted)] opacity-85 hover:opacity-100 hover:bg-white/[0.025] transition-all"
           >
-            <span>All reading</span>
+            <span className="whitespace-nowrap">All reading</span>
             <ArrowRight className="h-3 w-3" />
           </Link>
           <div className="h-5 w-px bg-white/[0.05]" aria-hidden />

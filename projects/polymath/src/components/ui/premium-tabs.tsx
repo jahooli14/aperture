@@ -48,7 +48,7 @@ export function PremiumTabs({ tabs, activeTab, onChange, className }: PremiumTab
           <button
             key={tab.id}
             onClick={() => onChange(tab.id)}
-            className="flex items-center gap-1.5 px-4 min-h-[44px] text-[12px] font-bold uppercase tracking-wider transition-all duration-150 flex-shrink-0"
+            className="flex items-center gap-1.5 px-3 min-h-[44px] text-[12px] font-bold uppercase tracking-wide transition-all duration-150 flex-shrink-0"
             style={{
               color: isActive ? 'var(--brand-text-primary)' : 'var(--brand-text-muted)',
               borderBottom: isActive ? '2px solid var(--brand-primary)' : '2px solid transparent',

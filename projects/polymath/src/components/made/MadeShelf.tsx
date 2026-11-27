@@ -60,7 +60,7 @@ export function MadeShelf({ project, adding, onAddingChange }: { project: Projec
       </div>
 
       {items.length === 0 ? (
-        <p className="text-[13px]" style={{ color: 'var(--brand-text-muted)' }}>
+        <p className="glass-card-subtle rounded-xl p-4 text-[13px] leading-relaxed" style={{ color: 'var(--brand-text-muted)' }}>
           {project.status === 'completed'
             ? 'Finished. Add a photo of it so it is kept.'
             : <>Photos, recordings or links of what came out of it. {unit ? `Each ${unit} gets a number.` : 'Old ones too: the date comes from the photo.'}</>}

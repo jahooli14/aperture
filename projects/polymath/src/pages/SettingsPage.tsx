@@ -454,11 +454,11 @@ export function SettingsPage() {
                 disabled={!briefLoaded || briefSaving}
                 placeholder={briefLoaded ? '' : 'Loading…'}
                 spellCheck={false}
-                rows={16}
+                rows={7}
                 className="w-full p-3 rounded-lg text-sm leading-relaxed font-mono resize-y outline-none bg-transparent"
                 style={{
                   color: 'var(--brand-text-primary)',
-                  minHeight: '320px',
+                  minHeight: '200px',
                 }}
               />
             </div>
