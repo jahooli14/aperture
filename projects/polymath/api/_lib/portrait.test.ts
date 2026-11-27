@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { groundLines } from './portrait.js'
+import { groundLines, portraitInputHash } from './portrait.js'
 import type { Corpus, CorpusRow } from './mull-corpus.js'
 
 const row = (ref: string, kind: CorpusRow['kind'], at?: string, captureId = ref): CorpusRow =>
@@ -21,5 +21,14 @@ describe('groundLines', () => {
   it('reads junk as nothing', () => {
     expect(groundLines(null, corpus)).toEqual([])
     expect(groundLines({ lines: 'x' }, corpus)).toEqual([])
+  })
+})
+
+describe('portraitInputHash', () => {
+  it('is steady for the same notebook and changes with a new row or a correction', () => {
+    const a = portraitInputHash('[N1] one\n[N2] two', '')
+    expect(portraitInputHash('[N1] one\n[N2] two', '')).toBe(a)
+    expect(portraitInputHash('[N1] one\n[N2] two\n[N3] three', '')).not.toBe(a)
+    expect(portraitInputHash('[N1] one\n[N2] two', 'not true')).not.toBe(a)
   })
 })

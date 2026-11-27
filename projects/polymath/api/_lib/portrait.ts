@@ -15,6 +15,7 @@
  * run, the bake rebuilds it each night and keeps it for that run only.
  */
 
+import { createHash } from 'node:crypto'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { generateText } from './gemini-chat.js'
 import { parseModelJson } from './schemas.js'
@@ -36,7 +37,20 @@ export interface PortraitLine {
   first?: string
   last?: string
 }
-export interface Portrait { lines: PortraitLine[]; built_at: string }
+export interface Portrait {
+  lines: PortraitLine[]
+  built_at: string
+  /** Fingerprint of what the lines were read from (portraitInputHash). Lets a
+   *  night with nothing new skip the model call. Absent on older pictures. */
+  input_hash?: string
+}
+
+/** What the model would be shown, boiled down. Same text and same corrections
+ *  give the same lines to within noise, so there is nothing to pay for. The
+ *  corpus text carries absolute dates only, so it does not drift by itself. */
+export function portraitInputHash(corpusText: string, corrections: string): string {
+  return createHash('sha1').update(corpusText).update('\u0000').update(corrections).digest('hex').slice(0, 16)
+}
 
 export function portraitPrompt(corpusText: string, previous: PortraitLine[], corrections: string): string {
   return `Below is everything one person has put into their notebook. Each row has a ref and a date.
@@ -99,13 +113,22 @@ export async function buildPortrait(
   }
   try {
     const corpus = await loadCorpus(supabase, userId, [], { withAnswers: true })
+    const input_hash = portraitInputHash(corpus.text, opts.corrections ?? '')
+    if (!opts.force && previous && previous.input_hash === input_hash) {
+      // Nothing was captured or answered since the last build: keep the lines,
+      // restart the clock so the next caller doesn't reload the corpus either.
+      const kept: Portrait = { ...previous, built_at: new Date().toISOString() }
+      await supabase.from('user_settings').upsert({ user_id: userId, portrait: kept }, { onConflict: 'user_id' })
+      trace.push(`portrait: nothing new since last build, kept ${previous.lines.length} lines`)
+      return kept
+    }
     const raw = await generateText(portraitPrompt(corpus.text, previous?.lines ?? [], opts.corrections ?? ''), {
       responseFormat: 'json', model: MODEL, maxTokens: 8192, thinkingLevel: 'low', timeoutMs: opts.timeoutMs ?? 25_000,
     })
     const lines = groundLines(parseModelJson(raw), corpus)
     trace.push(`portrait: ${lines.length} lines (${lines.map(l => `${l.name} [${l.rows.length}]`).join('; ')})`)
     if (lines.length === 0) return previous
-    const portrait: Portrait = { lines, built_at: new Date().toISOString() }
+    const portrait: Portrait = { lines, built_at: new Date().toISOString(), input_hash }
     const { error } = await supabase.from('user_settings').upsert({ user_id: userId, portrait }, { onConflict: 'user_id' })
     if (error) trace.push(`portrait not saved (run 20261116_portrait.sql): ${error.message}`)
     return portrait
