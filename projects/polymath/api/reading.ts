@@ -2987,7 +2987,9 @@ Return ONLY the JSON, no other text.`
       })
 
       if (!imgRes.ok) {
-        throw new Error(`Upstream returned ${imgRes.status}`)
+        // A picture that no longer exists is normal for old articles: say so, don't log an error.
+        console.warn(`[Image Proxy] Upstream returned ${imgRes.status}: ${imageUrl}`)
+        return res.status(imgRes.status === 404 || imgRes.status === 410 ? 404 : 502).json({ error: 'Image not available' })
       }
 
       const contentType = imgRes.headers.get('content-type') || 'image/jpeg'

@@ -4,7 +4,6 @@ import { APP_AUTHORED_TAGS } from './corpus-provenance.js'
 import { getSupabaseClient } from './supabase.js'
 import type { Entities, ExtractedMetadata } from '../../src/types'
 import { updateItemConnections } from './connection-logic.js'
-import { detectProjectGenesis, mergeGenesisInsights } from './project-genesis.js'
 import { generateText } from './gemini-chat.js'
 import { MODELS } from './models.js'
 import { generateEmbedding } from './gemini-embeddings.js'
@@ -268,12 +267,7 @@ export async function processMemory(memoryId: string, opts: ProcessOptions = {})
       }
     }
 
-    // 7. Project genesis detection — find theme clusters with no active project.
-    // Non-AI: pure theme clustering, writes 'opportunity' rows into
-    // synthesis_insights for the ItemInsightStrip to surface on reader/list pages.
-    detectProjectGenesis(userId)
-      .then(genesisInsights => mergeGenesisInsights(userId, genesisInsights))
-      .catch(() => {}) // Non-critical
+    // (Project genesis detection removed: its synthesis_insights table was never created in production.)
 
     // 8a. Generate thought bridge — one sentence connecting this memory to the most relevant project.
     // Stored inside the triage JSONB as bridge_insight (no schema change needed).
