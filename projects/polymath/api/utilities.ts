@@ -63,6 +63,7 @@ import { handleProjectOutputs } from './_lib/project-outputs.js'
 import { findOutside, handleOutsideFind } from './_lib/outside-find.js'
 import { handleThemes, handleUpToSpeed } from './_lib/project-catchup-routes.js'
 import { handleSeason } from './_lib/season-routes.js'
+import { withErrorLog } from './_lib/error-log.js'
 
 /** Bearer-token cron auth, duplicated per-file to match this codebase's
  *  existing convention (projects.ts and idea-engine.ts each keep their own
@@ -97,7 +98,7 @@ export const config = {
   },
 }
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+async function route(req: VercelRequest, res: VercelResponse) {
   const resource = req.query.resource as string
 
   // Execution rebuild (SPEC.md) — routed by disjoint resource-name sets so
@@ -3092,3 +3093,5 @@ async function handleExecutionProposals(req: VercelRequest, res: VercelResponse)
 
   return res.status(404).json({ error: `Unknown resource: ${resource}` })
 }
+
+export default withErrorLog('utilities', route)

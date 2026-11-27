@@ -14,6 +14,7 @@ import { MODELS } from './_lib/models.js'
 import { thinkingFragment } from './_lib/gemini-thinking.js'
 import { CaptureMemoryBody, CaptureTitleResponse, validate, tryValidate } from './_lib/schemas.js'
 import { PLAIN_ENGLISH_RULES } from './_lib/plain-english.js'
+import { withErrorLog } from './_lib/error-log.js'
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
 
@@ -101,7 +102,7 @@ interface UserPromptStatus {
  * POST /api/memories?action=transcribe - Transcribe audio file (merged from transcribe.ts)
  * POST /api/memories?action=process - Background memory processing (merged from process.ts)
  */
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+async function route(req: VercelRequest, res: VercelResponse) {
   const supabase = getSupabaseClient()
 
   try {
@@ -2557,3 +2558,5 @@ async function handleUpdateThemes(req: any, res: any) {
 
   return res.status(200).json({ themes: cleaned })
 }
+
+export default withErrorLog('memories', route)
