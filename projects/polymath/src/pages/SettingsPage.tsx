@@ -438,7 +438,7 @@ export function SettingsPage() {
             <h2 className="section-heading">the idea <span className="accent">brief</span></h2>
 
             <p className="text-sm mb-4" style={{ color: 'var(--brand-text-secondary)' }}>
-              This is what the home "suggest a project" button asks the model. Rewrite it in your own words — what kind of idea you want, what to avoid, how to phrase it. Leave it blank to use the default. Voice notes, projects, and the JSON output stay structural; only this brief is editable.
+              This is what the home "suggest a project" button asks the model. Rewrite it in your own words — what kind of idea you want, what to avoid, how to phrase it. Leave it blank to use the default. Your notes and projects are always added for you. Only this part is yours to change.
             </p>
 
             <div
@@ -452,7 +452,7 @@ export function SettingsPage() {
                 value={draftBrief}
                 onChange={(e) => setDraftBrief(e.target.value)}
                 disabled={!briefLoaded || briefSaving}
-                placeholder={briefLoaded ? '' : 'Loading…'}
+                placeholder={briefLoaded ? 'e.g. Something I can finish in a weekend, with my hands. Nothing that needs an app.' : 'Loading…'}
                 spellCheck={false}
                 rows={16}
                 className="w-full p-3 rounded-lg text-sm leading-relaxed font-mono resize-y outline-none bg-transparent"
@@ -467,7 +467,7 @@ export function SettingsPage() {
               <div className="text-xs" style={{ color: 'var(--brand-text-secondary)' }}>
                 {briefIsDefault ? 'On the default brief.' : 'Using your custom brief.'}
                 {' '}
-                {draftBrief.length} chars
+                {draftBrief.length} characters
               </div>
               <div className="flex gap-2">
                 <button

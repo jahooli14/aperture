@@ -9,7 +9,7 @@ const { spawn } = require('child_process')
 const path = require('path')
 const fs = require('fs')
 const { chromium } = require('playwright')
-const { routes } = require('./fixtures.cjs')
+const { routes, tables } = require('./fixtures.cjs')
 
 const PORT = 5199
 const BASE = `http://localhost:${PORT}`
@@ -49,7 +49,10 @@ async function main() {
     const browser = await chromium.launch()
     const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, colorScheme: 'dark' })
     await ctx.addInitScript(s => { localStorage.setItem('sb-localhost-auth-token', s) }, JSON.stringify(fakeSession()))
-    await ctx.route('**/localhost:54321/**', r => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }))
+    await ctx.route('**/localhost:54321/**', r => {
+      const m = new URL(r.request().url()).pathname.match(/\/rest\/v1\/(\w+)/)
+      r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify((m && tables[m[1]]) || []) })
+    })
     await ctx.route('**/api/**', route => {
       const u = new URL(route.request().url())
       const key = u.pathname.replace(/^\/api\//, '') + u.search

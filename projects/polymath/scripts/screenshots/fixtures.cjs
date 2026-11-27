@@ -51,9 +51,15 @@ const lists = [
 const routes = {
   lists,
   projects,
-  memories,
-  'memories?action=list': memories,
+  memories: { memories },
   'utilities?resource=today': { spark },
+  'utilities?resource=season': {
+    season: { main: { id: 'p-book', title: 'Going Analogue' }, also: [{ id: 'p-toy', title: "Oscar's wooden train", size: 'weekend' }], until: '2026-12-25', label: 'Christmas', active: true },
+    projects: projects.map(p => ({ id: p.id, title: p.title })),
+  },
 }
 
-module.exports = { routes, projects, memories }
+// Supabase REST tables the app reads directly (by table name).
+const tables = { memories }
+
+module.exports = { routes, projects, memories, tables }
