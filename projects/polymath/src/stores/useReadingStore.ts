@@ -142,7 +142,11 @@ export const useReadingStore = create<ReadingState>((set, get) => {
           throw new Error('Failed to fetch articles')
         }
 
-        const { articles } = await response.json()
+        const payload = await response.json()
+        // An odd body must read as a failed fetch (keeps what's cached), not
+        // as "no articles", which would clear the cache below.
+        if (!payload || !Array.isArray(payload.articles)) throw new Error('Unexpected articles response')
+        const articles = payload.articles
 
         // 4. Update Cache & State
         try {
