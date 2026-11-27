@@ -79,9 +79,11 @@ export function UpdateSheet({ project, onClose, onAddMade }: {
         // Saved by now: a failed refresh must not read as "couldn't save".
         useProjectStore.getState().fetchProjects().catch(() => {})
       }
-    } catch {
+    } catch (e) {
+      // Say what actually went wrong, so a repeat failure can be diagnosed from the screen.
+      const why = e instanceof Error && e.message ? ` (${(e as { status?: number }).status ?? ''} ${e.message})`.replace('( ', '(') : ''
       setError(navigator.onLine
-        ? "Couldn't save that. What you wrote is still here, so try again."
+        ? `Couldn't save that. What you wrote is still here, so try again.${why}`
         : "You're offline. What you wrote is still here. Try again when you're back.")
     } finally {
       setBusy(false)
