@@ -11,6 +11,7 @@ This file is the **single source of truth** for working on this repo. If somethi
 - Say what you did and why — skip the "I will now..." preamble.
 - If something is uncertain, say so in one line and ask.
 - On any UI review, for every page ask: does this content make sense here, for this person, at this moment? A section's heading must match what's under it, and nothing empty, mislabelled or in the wrong place. Looking right is not enough.
+- UI work: look at it, don't just read the code. `npm run shots` (in `projects/polymath/`) screenshots every key page at phone width with no login; use the `ui-pass` skill, and put before/after shots in the PR. Aperture's neon-glass look is fixed: don't restyle it.
 - Don't create new docs. Edit the ones that exist.
 - **Never push without asking.** Commit as often as you like — pushing is the
   step that needs a yes, every time, on every branch. See Commits & PRs below

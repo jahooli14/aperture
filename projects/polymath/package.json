@@ -11,6 +11,7 @@
     "build": "tsc -p tsconfig.api.json && vite build",
     "build:analyze": "npm run build && node scripts/analyze-bundle.js",
     "preview": "vite preview",
+    "shots": "node scripts/screenshots/shoot.cjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "eslint src/ api/",
