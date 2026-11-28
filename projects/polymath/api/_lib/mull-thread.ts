@@ -40,16 +40,19 @@ export function threadPrompt(chain: string[], answer?: string, retryNote?: strin
 THE THREAD SO FAR:
 ${chain.map((t, i) => `${i + 1}. ${t}`).join('\n')}
 ${answer ? `\nWHAT THEY SAID BACK TO THE LAST STEP, in their words -- build on this, it matters more than anything above:\n"${answer}"\n` : ''}
-Write the NEXT LINE. One plain, surprising fact that follows from the last line: the next thing a curious person would find if they kept pulling this thread${answer ? ', starting from what they just said' : ''}. Not sideways, not back over old ground.
-- One sentence, under 15 words. Like: "Horseflies crash into the stripes and can't land." Then: "Japanese farmers painted stripes on cows, and fly bites halved."
-- No question. No "you". No moral, no wondering, no "what if". Just the fact.
-- Only facts you are certain are true; it is checked against the web. Encyclopedia wording, no absolutes ("halved", not "stopped").
+Write THREE different candidates for the NEXT LINE, best first. Each is one plain, surprising fact that a curious person would not guess, found by pulling this thread${answer ? ', starting from what they just said' : ''}.
+- Each candidate goes a different way: a different field, place or person. Not three versions of one fact.
+- Do NOT answer the question the last line asks. If it wonders how many, or whether, leave that open. Open a door next to it instead, with something that makes the question stranger.
+- One sentence, under 20 words, naming the specific thing (a person, place, year or experiment). Like: "Horseflies crash into the stripes and can't land." Then: "Japanese farmers painted stripes on cows, and fly bites halved."
+- Not a general finding ("readers miss changes"). A named, concrete case.
+- No question. No "you". No moral, no wondering, no "what if".
+- Only facts you are certain are true; each is checked against the web. Encyclopedia wording, no absolutes ("halved", not "stopped").
 - Never clever: no big ideas, no debunking. A fact about the thing itself.
-- Every few lines, it may land back on something of theirs -- a note or a project -- in one plain line. Never force it.
+- Every few lines, one may land back on something of theirs -- a note or a project -- in one plain line. Never force it.
 - No advice, no tasks, nothing about their health or family.
 ${retryNote ? `- ${retryNote}\n` : ''}${PLAIN_ENGLISH_RULES}
 
-JSON only: {"take": "the line", "outside": "the same fact, said plainly enough to check"}`
+JSON only: {"steps": [{"take": "the line", "outside": "the same fact, said plainly enough to check"}, {...}, {...}]}`
 }
 
 /** Pure: the model's answer, or null if it isn't usable. */
@@ -59,9 +62,16 @@ export function readStep(raw: unknown): { take: string; outside: string } | null
   const outside = typeof r.outside === 'string' ? r.outside.trim() : ''
   // One line: a fact, not a paragraph and not a question.
   const words = take.split(/\s+/).length
-  if (!take || words < 4 || words > 25 || take.includes('?')) return null
+  if (!take || words < 4 || words > 28 || take.includes('?')) return null
   if (findVoiceViolations(take).length > 0) return null
   return { take, outside }
+}
+
+/** Pure: every usable candidate, in the model's order. Accepts the old single-step shape too. */
+export function readSteps(raw: unknown): { take: string; outside: string }[] {
+  const r = (raw ?? {}) as Record<string, unknown>
+  const list = Array.isArray(r.steps) ? r.steps : [r]
+  return list.map(readStep).filter((x): x is { take: string; outside: string } => x !== null).slice(0, 3)
 }
 
 interface SparkRow {
@@ -127,23 +137,26 @@ export async function goFurther(
       trace.push(`draft failed: ${e instanceof Error ? e.message : String(e)}`)
       continue
     }
-    const candidate = readStep(raw)
-    if (!candidate) {
+    const candidates = readSteps(raw)
+    if (!candidates.length) {
       trace.push('draft unusable')
-      retryNote = 'Keep it under 50 words and in plain words.'
+      retryNote = 'Keep each under 28 words and in plain words.'
       continue
     }
-    if (!candidate.outside) {
-      step = candidate
-      break
-    }
-    const fact = await checkFactSafely(candidate.outside, Math.max(1_000, deadline - Date.now() - 2_000))
-    trace.push(`fact ${fact.verdict}: ${candidate.outside.slice(0, 80)}`)
-    if (fact.verdict === 'true') {
-      step = candidate
-      link = fact.source
+    // Check every candidate at once: the wait is one check, not three, and a
+    // failed fact no longer costs a whole new draft.
+    const left = Math.max(1_000, deadline - Date.now() - 2_000)
+    const checked = await Promise.all(candidates.map(async c => ({
+      c, fact: c.outside ? await checkFactSafely(c.outside, left) : { verdict: 'unsure' as const, source: undefined },
+    })))
+    for (const { c, fact } of checked) trace.push(`fact ${fact.verdict}: ${(c.outside || c.take).slice(0, 80)}`)
+    // Best first: the model's own order, among those that checked out.
+    const win = checked.find(x => x.fact.verdict === 'true')
+    if (win) {
+      step = win.c
+      link = win.fact.source
     } else {
-      retryNote = `Last time you said "${candidate.outside}", and it didn't check out. Use a different fact.`
+      retryNote = `None of these held up: ${candidates.map(c => `"${c.outside}"`).join('; ')}. Use different facts.`
     }
   }
   if (!step) return { ok: false, status: 200, error: 'nothing held up', slow: true }
